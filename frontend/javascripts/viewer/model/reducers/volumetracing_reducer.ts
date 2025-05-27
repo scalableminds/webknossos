@@ -1,7 +1,6 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import _ from "lodash";
 import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {

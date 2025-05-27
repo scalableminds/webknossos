@@ -10,7 +10,6 @@ import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
 import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
-import _ from "lodash";
 import React from "react";
 import { connect } from "react-redux";
 import type {

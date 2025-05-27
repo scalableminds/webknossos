@@ -1,5 +1,5 @@
-import { BLEND_MODES } from "oxalis/constants";
-import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import { BLEND_MODES } from "viewer/constants";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
@@ -79,7 +79,7 @@ export const layerViewConfiguration = {
     additionalProperties: false,
   },
 };
-export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
+export const defaultDatasetViewConfiguration: DatasetConfiguration = {
   fourBit: false,
   interpolation: false,
   renderMissingDataBlack: false,
@@ -89,13 +89,6 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
   nativelyRenderedLayerName: null,
-  selectiveSegmentVisibility: false,
-};
-export const defaultDatasetViewConfiguration = {
-  ...defaultDatasetViewConfigurationWithoutNull,
-  zoom: null,
-  position: null,
-  rotation: null,
 };
 export const baseDatasetViewConfiguration = {
   fourBit: {

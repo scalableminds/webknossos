@@ -1,14 +1,14 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import Toast from "libs/toast";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import Store from "oxalis/store";
 import { Link } from "react-router-dom";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import Store from "viewer/store";
 
 const FormItem = Form.Item;
 const { Password } = Input;

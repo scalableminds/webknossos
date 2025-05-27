@@ -5,9 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 import com.scalableminds.webknossos.datastore.storage
-import net.liftweb.common.{Empty, Failure, Full}
-
-import scala.concurrent.ExecutionContext
+import net.liftweb.common.Failure
 
 case class CachedMapping(
     organization: String,
@@ -19,10 +17,12 @@ case class CachedMapping(
 object CachedMapping {
 
   def fromMappingRequest(mappingRequest: DataServiceMappingRequest): CachedMapping =
-    storage.CachedMapping(mappingRequest.dataSource.id.organizationId,
-                          mappingRequest.dataSource.id.directoryName,
-                          mappingRequest.dataLayer.name,
-                          mappingRequest.mapping)
+    storage.CachedMapping(
+      mappingRequest.dataSourceIdOrVolumeDummy.organizationId,
+      mappingRequest.dataSourceIdOrVolumeDummy.directoryName,
+      mappingRequest.dataLayer.name,
+      mappingRequest.mapping
+    )
 }
 
 class ParsedMappingCache(val maxEntries: Int)
@@ -30,21 +30,16 @@ class ParsedMappingCache(val maxEntries: Int)
     with FoxImplicits {
 
   def withCache[T](mappingRequest: DataServiceMappingRequest)(
-      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T)(
-      implicit ec: ExecutionContext): Fox[T] = {
+      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
 
     val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 
     def handleUncachedMapping() = {
-      val mappingFox = loadFn(mappingRequest).futureBox.map {
-        case Full(cube) =>
-          Full(cube)
-        case f: Failure =>
-          remove(cachedMappingInfo)
-          f
-        case _ =>
-          Empty
-      }.toFox
+      val mappingFox = loadFn(mappingRequest)
+      mappingFox.onComplete {
+        case _: Failure => remove(cachedMappingInfo)
+        case _          => ()
+      }
 
       put(cachedMappingInfo, mappingFox)
 

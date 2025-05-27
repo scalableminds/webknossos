@@ -79,9 +79,9 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      dataSource <- Fox.option2Fox(dataSourceRepository.get(composeLayer.dataSourceId))
-      ds <- Fox.option2Fox(dataSource.toUsable)
-      layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
+      dataSource <- dataSourceRepository.get(composeLayer.dataSourceId).toFox
+      ds <- dataSource.toUsable.toFox
+      layer <- ds.dataLayers.find(_.name == composeLayer.sourceName).toFox
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
         cOpt match {
           case Some(c) => Some(c ++ composeLayer.transformations.toList)

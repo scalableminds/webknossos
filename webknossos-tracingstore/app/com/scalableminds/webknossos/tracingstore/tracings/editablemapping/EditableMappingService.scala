@@ -22,12 +22,8 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{
-  AdHocMeshRequest,
-  AdHocMeshService,
-  AdHocMeshServiceHolder,
-  BinaryDataService
-}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelper, TSDatasetErrorLoggingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -184,7 +180,7 @@ class EditableMappingService @Inject()(
   }
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
-    bool2Fox(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
+    Fox.fromBool(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
@@ -202,15 +198,15 @@ class EditableMappingService @Inject()(
       pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
       voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(remoteFallbackLayer, pos, mag)
       voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
-      _ <- Fox.bool2Fox(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
-      voxelAsLong <- voxelAsLongArray.headOption
+      _ <- Fox.fromBool(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
+      voxelAsLong <- voxelAsLongArray.headOption.toFox
     } yield voxelAsLong
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(
       r =>
-        DataServiceDataRequest(null,
+        DataServiceDataRequest(None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -221,7 +217,7 @@ class EditableMappingService @Inject()(
       implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
     val requests = dataRequests.map(
       r =>
-        DataServiceDataRequest(null,
+        DataServiceDataRequest(None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -254,7 +250,7 @@ class EditableMappingService @Inject()(
       (tracingId, chunkId, version),
       _ =>
         for {
-          chunkBox: Box[Seq[(Long, Long)]] <- getSegmentToAgglomerateChunk(tracingId, chunkId, Some(version)).futureBox
+          chunkBox: Box[Seq[(Long, Long)]] <- getSegmentToAgglomerateChunk(tracingId, chunkId, Some(version)).shiftBox
           segmentToAgglomerate <- chunkBox match {
             case Full(chunk) => Fox.successful(chunk)
             case Empty       => Fox.successful(Seq.empty[(Long, Long)])
@@ -302,7 +298,7 @@ class EditableMappingService @Inject()(
                                          remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
@@ -380,19 +376,19 @@ class EditableMappingService @Inject()(
 
   private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield segmentIntArray.map(_.toLong)
 
   private def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield segmentIntArray
 
   private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray: Array[SegmentInteger] = longs.map(SegmentInteger.fromLongWithElementClass(_, elementClass))
       bytes = SegmentIntegerArray.toByteArray(segmentIntArray, elementClass)
     } yield bytes
@@ -400,7 +396,7 @@ class EditableMappingService @Inject()(
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
       implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
-      dataSource = None,
+      dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid(editableMappingLayer),
       segmentId = request.segmentId,
@@ -434,7 +430,7 @@ class EditableMappingService @Inject()(
       agglomerateId: Long,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
-      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
+      agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>
@@ -456,7 +452,7 @@ class EditableMappingService @Inject()(
                                                                version,
                                                                parameters.agglomerateId,
                                                                remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
-      edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
+      edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
 

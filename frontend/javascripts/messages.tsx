@@ -1,10 +1,10 @@
 import _ from "lodash";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
   UserConfiguration,
-} from "oxalis/store";
+} from "viewer/store";
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -475,7 +475,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
   ),
   "users.set_admin": _.template(
-    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capabilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(

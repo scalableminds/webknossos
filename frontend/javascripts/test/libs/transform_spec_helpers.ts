@@ -1,24 +1,19 @@
-import type { ExecutionContext } from "ava";
-import type { Vector3 } from "oxalis/constants";
+import type { ExpectStatic } from "vitest";
+import type { Vector3 } from "viewer/constants";
 
 export function almostEqual(
-  t: ExecutionContext,
+  expect: ExpectStatic,
   vec1: Vector3,
   vec2: Vector3,
   threshold: number = 1,
 ) {
-  t.true(
-    Math.abs(vec1[0] - vec2[0]) < threshold,
-    `Values are not similar enough: diff_x=${vec1[0] - vec2[0]}`,
-  );
-  t.true(
-    Math.abs(vec1[1] - vec2[1]) < threshold,
-    `Values are not similar enough: diff_y=${vec1[1] - vec2[1]}`,
-  );
-  t.true(
-    Math.abs(vec1[2] - vec2[2]) < threshold,
-    `Values are not similar enough: diff_z=${vec1[2] - vec2[2]}`,
-  );
+  const diffX = Math.abs(vec1[0] - vec2[0]);
+  const diffY = Math.abs(vec1[1] - vec2[1]);
+  const diffZ = Math.abs(vec1[2] - vec2[2]);
+
+  expect(diffX).toBeLessThan(threshold);
+  expect(diffY).toBeLessThan(threshold);
+  expect(diffZ).toBeLessThan(threshold);
 }
 
 export function getPointsC555() {

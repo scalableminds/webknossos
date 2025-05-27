@@ -7,6 +7,78 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.05.1](https://github.com/scalableminds/webknossos/releases/tag/25.05.1) - 2025-05-19
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...25.05.1)
+
+### Fixed
+- Fixed viewing datasets with legacy-style links (without ids) by sharing token. [#8625](https://github.com/scalableminds/webknossos/pull/8625)
+
+## [25.05.0](https://github.com/scalableminds/webknossos/releases/tag/25.05.0) - 2025-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...25.05.0)
+
+### Highlights
+- Added the concept of "toolkits". By default, all tools are available to the user (as before), but one can select a specific toolkit to only see certain tools. Some toolkits also change the behavior of the tools. For example, the "Split Segments" toolkit (see below). [#8434](https://github.com/scalableminds/webknossos/pull/8434)
+- Added a workflow for splitting segments. Select the "Split Segments" toolkit and create a bounding box in which you want to execute the split. Then, use the skeleton tool to place nodes on the boundary between two (merged) segments. The nodes will be used to construct a 3D surface. Finally, use the floodfill tool (enable 3D and bounding-box restriction) to relabel a part of the segment. the floodfill won't cross the 3D surface. [#8434](https://github.com/scalableminds/webknossos/pull/8434)
+- Added a new "draw" mode for the skeleton tool. When enabled, one can rapidly create notes by keeping the left mouse button pressed and moving the cursor. [#8434](https://github.com/scalableminds/webknossos/pull/8434)
+
+### Added
+- Added more layer specific settings to the configurations included in sharing links. [#8539](https://github.com/scalableminds/webknossos/pull/8539)
+- When uploading multiple NMLs at once, the description is now kept, if all NMLs with non-empty descriptions have the same description. [#8533](https://github.com/scalableminds/webknossos/pull/8533)
+
+### Changed
+- Updated E2E tests to use `vitest` framework instead of `ava`. [#8543](https://github.com/scalableminds/webknossos/pull/8543)
+- Adjusted the names of custom model inference jobs and train model jobs to match the worker's naming. [#8524](https://github.com/scalableminds/webknossos/pull/8524)
+- Updated screenshot tests to use `vitest` framework instead of `ava`. [#8553](https://github.com/scalableminds/webknossos/pull/8553)
+- The mapping dropdown for segmentation is wider now so that mapping names are fully readable. [#8570](https://github.com/scalableminds/webknossos/pull/8570)
+
+### Fixed
+- Fixed that the Version Restore sidebar did load forever when very large volume annotations were created. [#8574](https://github.com/scalableminds/webknossos/pull/8574)
+- Fixed rendering bug that could occur for transformed datasets when toggling the transform. [#8568](https://github.com/scalableminds/webknossos/pull/8568)
+- Fixed a bug in the trees tab where the color change of a tree would affect the tree on which the context menu was previously opened. [#8562](https://github.com/scalableminds/webknossos/pull/8562)
+
+### Removed
+- The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)
+
+## [25.04.0](https://github.com/scalableminds/webknossos/releases/tag/25.04.0) - 2025-04-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.1...25.04.0)
+
+### Highlights
+- The opacity of meshes can be adjusted using the 'Change Segment Color' context menu entry in the segments tab. [#8443](https://github.com/scalableminds/webknossos/pull/8443)
+- Allow to mirror datasets along an axis in the dataset settings as part of the rotation feature. [#8485](https://github.com/scalableminds/webknossos/pull/8485)
+
+### Added
+- Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
+- Added that the dataset name is automatically corrected in view mode URLs upon loading. [#8514](https://github.com/scalableminds/webknossos/pull/8514)
+- Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
+- New config option `datastore.dataVaults.credentials` allows admins to set up global credentials for remote dataset loading. [#8509](https://github.com/scalableminds/webknossos/pull/8509)
+
+### Changed
+- When deleting a dataset / layer, layers that are referenced in other datasets are moved there instead of being deleted. [#8437](https://github.com/scalableminds/webknossos/pull/8437/)
+- Added a parameter to the reserve manual upload route allowing to make the request fail if the name is already taken. Moreover, the new dataset's id and directory name are returned in the response. [#8476](https://github.com/scalableminds/webknossos/pull/8476)
+- The skeleton tool can no longer be activated if the skeleton layer is invisible. [#8501](https://github.com/scalableminds/webknossos/pull/8501)
+- Improved speed of mesh rendering and mouse interaction in 3D viewport. [#8106](https://github.com/scalableminds/webknossos/pull/8106)
+- Numbered docker image now use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
+- Replace frontend unit testing framework `ava` with `vitest`. Minimum required nodejs version is now `22+`. [#8479](https://github.com/scalableminds/webknossos/pull/8479)
+
+### Fixed
+- Fixed a Bug where the "Save view configuration as default" modal's text included undefined.  [#8514](https://github.com/scalableminds/webknossos/pull/8514)
+- Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388)
+- Fixed that it was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
+- Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)
+- Fixed a bug where segment statistics would sometimes be wrong in case of an on-disk segmentation fallback layer with segment index file. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- Fixed a bug where sometimes outdated segment statistics would be displayed. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- Fixed a bug where outbound zarr streaming would contain a typo in the zarr header dimension_separator field. [#8510](https://github.com/scalableminds/webknossos/pull/8510)
+- Fixed a bug where sometimes large skeletons were not saved correctly, making them inaccessible on the next load. [#8513](https://github.com/scalableminds/webknossos/pull/8513)
+- Fixed that meshes weren't loaded correctly if the precomputed mesh file contained multiple levels-of-detail. [#8519](https://github.com/scalableminds/webknossos/pull/8519)
+- Fixed that authentication-related token renewal did not work properly in certain scenarios. [#8532](https://github.com/scalableminds/webknossos/pull/8532)
+- Fixed resolution of legacy links having dataset names with `-`. [#8548](https://github.com/scalableminds/webknossos/pull/8548)
+- Fixed that adding a layer using the dataset settings' advanced tab would crash WEBKNOSSOS. Bug was introduced by [#8503](https://github.com/scalableminds/webknossos/pull/8503). [#8550](https://github.com/scalableminds/webknossos/pull/8550)
+
+### Breaking Changes
+- Removed `docker-compose.yml` in favor of `tools/hosting/docker-compose.yml` [#8147](https://github.com/scalableminds/webknossos/pull/8147)
+
+
 ## [25.03.1](https://github.com/scalableminds/webknossos/releases/tag/25.03.1) - 2025-04-10
 [Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...25.03.1)
 

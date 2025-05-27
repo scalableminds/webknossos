@@ -1,14 +1,13 @@
-import "test/mocks/lz4";
 import update from "immutability-helper";
-import test from "ava";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { describe, it, expect } from "vitest";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { initialState } from "test/fixtures/hybridtracing_object";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
-import type { CoordinateTransformation } from "types/api_flow_types";
+import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
+import type { CoordinateTransformation } from "types/api_types";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(
-  (name) => name !== AnnotationToolEnum.PICK_CELL,
-) as AnnotationToolEnum[];
+  (name) => name !== AnnotationTool.PICK_CELL,
+) as AnnotationTool[];
 
 const zoomedInInitialState = update(initialState, {
   flycam: { zoomStep: { $set: 0.1 } },
@@ -120,62 +119,62 @@ const rotatedState = update(initialState, {
   },
 });
 
-test("Zoomed in main tools should be enabled.", (t) => {
-  const disabledInfo = getDisabledInfoForTools(zoomedInInitialState);
+describe("Annotation Tool Disabled Info", () => {
+  it("Zoomed in main tools should be enabled.", () => {
+    const disabledInfo = getDisabledInfoForTools(zoomedInInitialState);
 
-  for (const toolName in AnnotationToolEnum) {
-    if (toolName === AnnotationToolEnum.PROOFREAD) {
-      t.assert(disabledInfo[toolName]?.isDisabled === true);
-    } else {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === false);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
     }
-  }
-});
-
-test("Volume tools should be disabled when zoomed out.", (t) => {
-  const disabledInfo = getDisabledInfoForTools(zoomedOutState);
-
-  for (const toolName in AnnotationToolEnum) {
-    if (
-      toolName === AnnotationToolEnum.PROOFREAD ||
-      zoomSensitiveVolumeTools.includes(toolName as AnnotationToolEnum)
-    ) {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === true);
-    } else {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === false);
-    }
-  }
-});
-
-test("Tools should be disabled when dataset is rotated", (t) => {
-  const toolsDisregardingRotation = [
-    AnnotationToolEnum.MOVE,
-    AnnotationToolEnum.LINE_MEASUREMENT,
-    AnnotationToolEnum.AREA_MEASUREMENT,
-    AnnotationToolEnum.BOUNDING_BOX,
-  ];
-  const disabledInfo = getDisabledInfoForTools(rotatedState);
-  for (const toolName in AnnotationToolEnum) {
-    if (toolsDisregardingRotation.includes(toolName as AnnotationToolEnum)) {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === false);
-    } else {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === true);
-    }
-  }
-});
-
-test("Tools should not be disabled when dataset rotation is toggled off", (t) => {
-  const rotationTurnedOffState = update(rotatedState, {
-    datasetConfiguration: {
-      nativelyRenderedLayerName: { $set: rotatedState.dataset.dataSource.dataLayers[0].name },
-    },
   });
-  const disabledInfo = getDisabledInfoForTools(rotationTurnedOffState);
-  for (const toolName in AnnotationToolEnum) {
-    if (toolName === AnnotationToolEnum.PROOFREAD) {
-      t.assert(disabledInfo[toolName]?.isDisabled === true);
-    } else {
-      t.assert(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled === false);
+
+  it("Volume tools should be disabled when zoomed out.", () => {
+    const disabledInfo = getDisabledInfoForTools(zoomedOutState);
+
+    for (const tool of Object.values(AnnotationTool)) {
+      if (
+        tool === AnnotationTool.PROOFREAD ||
+        zoomSensitiveVolumeTools.includes(tool as AnnotationTool)
+      ) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
     }
-  }
+  });
+
+  it("Tools should be disabled when dataset is rotated", () => {
+    const toolsDisregardingRotation = [
+      AnnotationTool.MOVE,
+      AnnotationTool.LINE_MEASUREMENT,
+      AnnotationTool.AREA_MEASUREMENT,
+    ] as AnnotationTool[];
+    const disabledInfo = getDisabledInfoForTools(rotatedState);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (toolsDisregardingRotation.includes(tool)) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      }
+    }
+  });
+  it("Tools should not be disabled when dataset rotation is toggled off", () => {
+    const rotationTurnedOffState = update(rotatedState, {
+      datasetConfiguration: {
+        nativelyRenderedLayerName: { $set: rotatedState.dataset.dataSource.dataLayers[0].name },
+      },
+    });
+    const disabledInfo = getDisabledInfoForTools(rotationTurnedOffState);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
+      } else {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
+      }
+    }
+  });
 });

@@ -1,10 +1,10 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { createDatasetComposition, updateDatasetPartial } from "admin/admin_rest_api";
 import {
   AllowedTeamsFormItem,
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
+import { createDatasetComposition, updateDatasetPartial } from "admin/rest_api";
 import {
   Button,
   Checkbox,
@@ -22,20 +22,19 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import Toast, { guardedWithErrorToast } from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { WkDevFlags } from "oxalis/api/wk_dev";
-import type { Vector3 } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
-import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
-import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
 import { syncValidator } from "types/validation";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
@@ -51,7 +50,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
   };
 
   const [isLoading, setIsLoading] = useState(false);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);

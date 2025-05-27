@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { spawnSync } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+const fs = require("node:fs");
 const { Command } = require("commander");
 
 const schemaPath = path.join(__dirname, "schema.sql");
@@ -235,7 +235,7 @@ function findEvolutionFiles() {
     .readdirSync(evolutionsPath)
     .filter((filename) => filename.endsWith(".sql"))
     .map((filename) => {
-      const num = parseInt(filename.split("-")[0], 10);
+      const num = Number.parseInt(filename.split("-")[0], 10);
       return [num, filename];
     })
     .sort((a, b) => a[0] - b[0]);
@@ -272,7 +272,7 @@ function checkEvolutionsSchema() {
 }
 
 function applyEvolutions() {
-  const schemaVersion = parseInt(
+  const schemaVersion = Number.parseInt(
     callPsql("SELECT schemaVersion FROM webknossos.releaseInformation;").trim(),
     10,
   );
@@ -309,7 +309,7 @@ function applyEvolutions() {
 function assertUniqueEvolutionNumbers() {
   const groupedEvolutions = new Map();
   for (const filename of fs.readdirSync(evolutionsPath)) {
-    const num = parseInt(filename.split("-")[0], 10);
+    const num = Number.parseInt(filename.split("-")[0], 10);
     if (isNaN(num)) {
       console.log("Found invalid evolution filename:", filename);
     }
@@ -383,7 +383,9 @@ program
 
 program
   .command("insert-local-datastore")
-  .description("Inserts local datastore (note that this is redundant to initialData on webknossos startup)")
+  .description(
+    "Inserts local datastore (note that this is redundant to initialData on webknossos startup)",
+  )
   .action(() => {
     console.log("Inserting local datastore in the local database");
     console.log(
@@ -401,7 +403,7 @@ program
     console.log("Enabling jobs in the local database by inserting a worker.");
     console.log(
       callPsql(
-        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_model, infer_with_model, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
+        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_neuron_model, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
       ),
     );
     console.log("✨✨ Done");

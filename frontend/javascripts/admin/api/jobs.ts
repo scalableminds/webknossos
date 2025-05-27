@@ -1,6 +1,5 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
   APIEffectiveJobState,
@@ -10,7 +9,8 @@ import type {
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-} from "types/api_flow_types";
+} from "types/api_types";
+import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
@@ -39,6 +39,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
     creditCost: job.creditCost,
+    modelId: job.commandArgs.model_id,
   };
 }
 
@@ -367,8 +368,8 @@ type RunTrainingParameters = {
   workflowYaml?: string;
 };
 
-export function runTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runTraining", {
+export function runNeuronTraining(params: RunTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });
@@ -386,8 +387,8 @@ type RunInferenceParameters = {
   // maskAnnotationLayerName?: string | null
 };
 
-export function runInferenceJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInference", {
+export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });

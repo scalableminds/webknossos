@@ -1,3 +1,4 @@
+import type * as THREE from "three";
 import type { MeshBVH } from "three-mesh-bvh";
 // @ts-ignore
 import { GenerateMeshBVHWorker } from "three-mesh-bvh/src/workers/GenerateMeshBVHWorker";

@@ -2,10 +2,10 @@ import _ from "lodash";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import test, { type ExecutionContext } from "ava";
-import constants from "oxalis/constants";
-import type { ElementClass } from "types/api_flow_types";
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
+import { describe, it, expect } from "vitest";
+import constants from "viewer/constants";
+import type { ElementClass } from "types/api_types";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
@@ -54,74 +54,75 @@ function createLayers(grayscaleCount: number, volumeCount: number) {
   return grayscaleLayers.concat(volumeLayers);
 }
 
-test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    minSpecs,
-    grayscaleElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, minSpecs.supportedTextureSize);
-  t.is(textureCount, 1);
-});
+describe("calculateTextureSizeAndCountForLayer", () => {
+  it("grayscale data + minSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      minSpecs,
+      grayscaleElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(minSpecs.supportedTextureSize);
+    expect(textureCount).toBe(1);
+  });
 
-test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    midSpecs,
-    grayscaleElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, minSpecs.supportedTextureSize);
-  t.is(textureCount, 1);
-});
+  it("grayscale data + midSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      midSpecs,
+      grayscaleElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(minSpecs.supportedTextureSize);
+    expect(textureCount).toBe(1);
+  });
 
-test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    betterSpecs,
-    grayscaleElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, minSpecs.supportedTextureSize);
-  t.is(textureCount, 1);
-});
+  it("grayscale data + betterSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      betterSpecs,
+      grayscaleElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(minSpecs.supportedTextureSize);
+    expect(textureCount).toBe(1);
+  });
 
-test("calculateTextureSizeAndCountForLayer: color data + minSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    minSpecs,
-    volumeElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, minSpecs.supportedTextureSize);
-  t.is(textureCount, 4);
-});
+  it("color data + minSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      minSpecs,
+      volumeElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(minSpecs.supportedTextureSize);
+    expect(textureCount).toBe(4);
+  });
 
-test("calculateTextureSizeAndCountForLayer: color data + midSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    midSpecs,
-    volumeElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, midSpecs.supportedTextureSize);
-  t.is(textureCount, 1);
-});
+  it("color data + midSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      midSpecs,
+      volumeElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(midSpecs.supportedTextureSize);
+    expect(textureCount).toBe(1);
+  });
 
-test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", (t) => {
-  const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
-    betterSpecs,
-    volumeElementClass,
-    DEFAULT_REQUIRED_BUCKET_CAPACITY,
-  );
-  t.is(textureSize, midSpecs.supportedTextureSize);
-  t.is(textureCount, 1);
+  it("color data + betterSpecs", () => {
+    const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
+      betterSpecs,
+      volumeElementClass,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
+    expect(textureSize).toBe(midSpecs.supportedTextureSize);
+    expect(textureCount).toBe(1);
+  });
 });
 
 type Layer = ReturnType<typeof createGrayscaleLayer>;
 
 function testSupportFlags(
-  t: ExecutionContext,
   supportFlags: ReturnType<typeof computeDataTexturesSetup>,
   expectedMaximumLayerCountToRender: number,
 ) {
-  t.is(supportFlags.maximumLayerCountToRender, expectedMaximumLayerCountToRender);
+  expect(supportFlags.maximumLayerCountToRender).toBe(expectedMaximumLayerCountToRender);
 }
 
 function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation: boolean) {
@@ -134,44 +135,34 @@ function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation:
     );
 }
 
-test("Basic support (no segmentation): all specs", (t) => {
-  // All specs should support up to three grayscale layers
-  const specs: [typeof minSpecs, number][] = [
-    [minSpecs, 7],
-    [midSpecs, 15],
-    [betterSpecs, 31],
-  ];
-  const hundredGrayscaleLayers = createLayers(100, 0);
-  for (const [spec, expectedLayerCount] of specs) {
-    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(spec, false);
-    testSupportFlags(
-      t,
-      computeDataTexturesSetupPartial(hundredGrayscaleLayers),
-      expectedLayerCount,
-    );
-    testSupportFlags(
-      t,
-      computeDataTexturesSetupPartial(hundredGrayscaleLayers),
-      expectedLayerCount,
-    );
-    testSupportFlags(
-      t,
-      computeDataTexturesSetupPartial(hundredGrayscaleLayers),
-      expectedLayerCount,
-    );
-  }
-});
+describe("computeDataTexturesSetup", () => {
+  it("Basic support (no segmentation): all specs", () => {
+    // All specs should support up to three grayscale layers
+    const specs: [typeof minSpecs, number][] = [
+      [minSpecs, 7],
+      [midSpecs, 15],
+      [betterSpecs, 31],
+    ];
+    const hundredGrayscaleLayers = createLayers(100, 0);
+    for (const [spec, expectedLayerCount] of specs) {
+      const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(spec, false);
+      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
+      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
+      testSupportFlags(computeDataTexturesSetupPartial(hundredGrayscaleLayers), expectedLayerCount);
+    }
+  });
 
-test("Basic support + volume: min specs", (t) => {
-  const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(10, 0)), 4);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
-});
+  it("Basic support + volume: min specs", () => {
+    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 0)), 4);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(10, 1)), 1);
+  });
 
-test("Basic support + volume: mid specs", (t) => {
-  const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(20, 1)), 12);
-  testSupportFlags(t, computeDataTexturesSetupPartial(createLayers(5, 1)), 6);
+  it("Basic support + volume: mid specs", () => {
+    const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(20, 1)), 12);
+    testSupportFlags(computeDataTexturesSetupPartial(createLayers(5, 1)), 6);
+  });
 });

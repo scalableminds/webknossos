@@ -655,15 +655,15 @@ export function* diffBoundingBoxes(
     }
     if (currentBbox === prevBbox) continue;
 
-    const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
-    if (_.isEmpty(diffBBox)) continue;
+    const diffBbox = Utils.diffObjects(prevBbox, currentBbox);
 
-    const { isVisible: maybeIsVisible, ...changedKeys } = diffBBox;
+    const { isVisible: maybeIsVisible, ...changedKeys } = diffBbox;
     if (maybeIsVisible != null) {
       yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
-      continue;
     }
-    yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
+    if (!_.isEmpty(changedKeys)) {
+      yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
+    }
   }
 }
 

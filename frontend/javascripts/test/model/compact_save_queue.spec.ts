@@ -1,14 +1,114 @@
+import { AnnotationLayerEnum } from "types/api_types";
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
+import { diffBoundingBoxes } from "viewer/model/sagas/skeletontracing_saga";
 import {
   updateUserBoundingBoxInSkeletonTracing,
   type UpdateUserBoundingBoxInSkeletonTracingAction,
   updateUserBoundingBoxInVolumeTracing,
   type UpdateUserBoundingBoxInVolumeTracingAction,
 } from "viewer/model/sagas/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
 describe("Compact Save Queue", () => {
+  it("It should create correct update actions when diffing user bounding boxes", () => {
+    const oldBboxes: UserBoundingBox[] = [
+      {
+        id: 1,
+        boundingBox: {
+          min: [1, 2, 3],
+          max: [10, 20, 30],
+        },
+        name: "bbox 1",
+        color: [1, 1, 1],
+        isVisible: true,
+      },
+      {
+        id: 2,
+        boundingBox: {
+          min: [1, 10, 3],
+          max: [10, 20, 30],
+        },
+        name: "bbox 2",
+        color: [1, 2, 3],
+        isVisible: true,
+      },
+    ];
+    const newBboxes: UserBoundingBox[] = [
+      // Removed 1
+      // Changed 2
+      {
+        id: 2,
+        boundingBox: {
+          min: [1, 5, 3], // <-- changed
+          max: [10, 20, 30],
+        },
+        name: "bbox 2",
+        color: [1, 1, 1], // <-- changed
+        isVisible: false, // <-- changed
+      },
+      // Added 3
+      {
+        id: 3,
+        boundingBox: {
+          min: [1, 10, 3],
+          max: [10, 20, 30],
+        },
+        name: "bbox 3",
+        color: [1, 1, 1],
+        isVisible: false,
+      },
+    ];
+
+    const diff = Array.from(
+      diffBoundingBoxes(oldBboxes, newBboxes, "skeletonTracing1", AnnotationLayerEnum.Skeleton),
+    );
+
+    expect(diff.length).toBe(4);
+
+    const [deleteFirst, addThird, updateVisibilityForSecond, changeSecond] = diff;
+
+    expect(deleteFirst.name).toBe("deleteUserBoundingBoxInSkeletonTracing");
+    expect(deleteFirst.value).toEqual({
+      boundingBoxId: 1,
+      actionTracingId: "skeletonTracing1",
+    });
+
+    expect(addThird.name).toBe("addUserBoundingBoxInSkeletonTracing");
+    expect(addThird.value).toEqual({
+      boundingBox: {
+        ...newBboxes[1],
+        boundingBox: {
+          topLeft: [1, 10, 3],
+          width: 9,
+          height: 10,
+          depth: 27,
+        },
+      },
+      actionTracingId: "skeletonTracing1",
+    });
+
+    expect(updateVisibilityForSecond.name).toBe("updateUserBoundingBoxVisibilityInSkeletonTracing");
+    expect(updateVisibilityForSecond.value).toEqual({
+      boundingBoxId: 2,
+      actionTracingId: "skeletonTracing1",
+      isVisible: false,
+    });
+
+    expect(changeSecond.name).toBe("updateUserBoundingBoxInSkeletonTracing");
+    expect(changeSecond.value).toEqual({
+      boundingBoxId: 2,
+      actionTracingId: "skeletonTracing1",
+      color: [1, 1, 1],
+      boundingBox: {
+        topLeft: [1, 5, 3],
+        width: 9,
+        height: 15,
+        depth: 27,
+      },
+    });
+  });
+
   it("UpdateUserBoundingBoxActions of the same tracing should be compacted", () => {
     const actions: SaveQueueEntry[] = [
       {

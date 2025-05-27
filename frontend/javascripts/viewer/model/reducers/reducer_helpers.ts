@@ -48,7 +48,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
   const idToVisible = userState
-    ? Object.fromEntries(_.zip(userState.boundingBoxIds, userState.boundingBoxVisibilities))
+    ? Utils.safeZipObject(userState.boundingBoxIds, userState.boundingBoxVisibilities)
     : {};
 
   return boundingBoxes.map((bb) => {

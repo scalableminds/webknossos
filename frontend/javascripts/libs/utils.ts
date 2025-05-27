@@ -1339,3 +1339,13 @@ export function mapGroupsDeep<T extends { children: T[] }, R>(
     return mapFn(group, mappedChildren);
   });
 }
+
+export function safeZipObject<K extends string | number | symbol, V>(
+  keys: K[],
+  values: V[],
+): Record<K, V> {
+  if (keys.length !== values.length) {
+    throw new Error("Cannot construct objects because keys and values don't match in length.");
+  }
+  return _.zipObject(keys, values) as Record<K, V>;
+}

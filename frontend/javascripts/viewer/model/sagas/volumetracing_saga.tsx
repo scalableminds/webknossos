@@ -479,7 +479,7 @@ export function* diffVolumeTracing(
     prevVolumeTracing.userBoundingBoxes,
     volumeTracing.userBoundingBoxes,
     volumeTracing.tracingId,
-    AnnotationLayerEnum.Skeleton,
+    AnnotationLayerEnum.Volume,
   );
 
   if (prevVolumeTracing.segments !== volumeTracing.segments) {

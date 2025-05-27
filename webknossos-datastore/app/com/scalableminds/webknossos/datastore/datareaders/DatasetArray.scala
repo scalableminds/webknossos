@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
@@ -26,7 +27,8 @@ class DatasetArray(vaultPath: VaultPath,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
@@ -242,6 +244,7 @@ class DatasetArray(vaultPath: VaultPath,
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
+        _ = logger.info(s"chunk cache miss for $shardPath chunk ${chunkIndex.mkString(",")} ")
         chunkShape = chunkShapeAtIndex(chunkIndex)
         multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
       } yield multiArray

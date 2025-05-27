@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
@@ -39,6 +39,9 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = ""
 
+  private lazy val openArraysCache = AlfuCache[String, DatasetArray]()
+
+  // TODO unify with existing chunkContentsCache from binaryDataService
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
     // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
 
@@ -54,14 +57,32 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
   }
 
-  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext): Fox[ucar.ma2.Array] = {
+  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext, tc: TokenContext): Fox[ucar.ma2.Array] =
+    for {
+      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
+      read <- zarrArray.readAsMultiArray(Array(10), Array(2))
+      _ = logger.info(s"read ${read.getSize} elements from agglomerate file segmentToAgglomerate")
+    } yield read
+
+  private def mapSingleSegment(segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
+      // TODO remove the toInt
+      asMultiArray <- zarrArray.readAsMultiArray(offset = Array(segmentId.toInt), shape = Array(1))
+    } yield asMultiArray.getLong(0)
+
+  private def openZarrArrayCached(zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext) =
+    openArraysCache.getOrLoad(zarrArrayName, zarrArrayName => openZarrArray(zarrArrayName))
+
+  private def openZarrArray(zarrArrayName: String)(implicit ec: ExecutionContext,
+                                                   tc: TokenContext): Fox[DatasetArray] = {
     val zarrGroupPath =
       dataBaseDir
         .resolve("sample_organization/test-agglomerate-file-zarr/segmentation/agglomerates/agglomerate_view_55")
         .toAbsolutePath
     for {
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(s"file://$zarrGroupPath"), None))
-      segmentToAgglomeratePath = groupVaultPath / "segment_to_agglomerate"
+      segmentToAgglomeratePath = groupVaultPath / zarrArrayName
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
                                    DataSourceId("zarr", "test"),
                                    "layer",
@@ -69,21 +90,50 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
                                    None,
                                    None,
                                    sharedChunkContentsCache)(ec, TokenContext(None))
-      read <- zarrArray.readAsMultiArray(Array(10), Array(2))(ec, TokenContext(None))
-      _ = logger.info(s"read ${read.getSize} bytes from agglomerate file")
-    } yield read
+    } yield zarrArray
   }
 
-  def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte])(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,
+                                                                           tc: TokenContext): Fox[Array[Byte]] = {
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
-
     val zarrGroupPath = agglomerateFileKey.zarrGroupPath(dataBaseDir, agglomerateDir).toAbsolutePath
 
-    for {
-      _ <- readFromSegmentToAgglomerate
-    } yield data
+    def convertToAgglomerate(segmentIds: Array[Long],
+                             bytesPerElement: Int,
+                             putToBufferFunction: (ByteBuffer, Long) => ByteBuffer): Fox[Array[Byte]] =
+      for {
+        agglomerateIds <- Fox.serialCombined(segmentIds)(mapSingleSegment)
+        mappedBytes = agglomerateIds
+          .foldLeft(ByteBuffer.allocate(bytesPerElement * segmentIds.length).order(ByteOrder.LITTLE_ENDIAN))(
+            putToBufferFunction)
+          .array
+      } yield mappedBytes
+
+    val bytesPerElement = ElementClass.bytesPerElement(request.dataLayer.elementClass)
+    /* Every value of the segmentation data needs to be converted to Long to then look up the
+       agglomerate id in the segment-to-agglomerate array.
+       The value is first converted to the primitive signed number types, and then converted
+       to Long via uByteToLong, uShortToLong etc, which perform bitwise and to take care of
+       the unsigned semantics. Using functions avoids allocating intermediate SegmentInteger objects.
+       Allocating a fixed-length LongBuffer first is a further performance optimization.
+     */
+    convertData(data, request.dataLayer.elementClass) match {
+      case data: Array[Byte] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uByteToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putByte)
+      case data: Array[Short] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uShortToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putShort)
+      case data: Array[Int] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uIntToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putInt)
+      case data: Array[Long] => convertToAgglomerate(data, bytesPerElement, putLong)
+      case _                 => Fox.successful(data)
+    }
 
   }
 
@@ -122,7 +172,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     if (true) {
-      zarrAgglomerateService.applyAgglomerateHdf5(request)(data)
+      zarrAgglomerateService.applyAgglomerate(request)(data)(ec, TokenContext(None))
     } else applyAgglomerateHdf5(request)(data).toFox
 
   private def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {

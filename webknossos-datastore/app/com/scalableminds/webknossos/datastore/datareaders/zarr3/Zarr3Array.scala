@@ -121,7 +121,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
                                                            tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
-      shardIndexRaw <- readShardIndex(shardPath)
+      shardIndexRaw <- readShardIndex(shardPath) ?~> "readShardIndex.failed"
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 

@@ -4,7 +4,13 @@ import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
-import type { NumberLike, SegmentGroup, UserBoundingBox, VolumeTracing } from "viewer/store";
+import type {
+  NumberLike,
+  SegmentGroup,
+  UserBoundingBox,
+  UserBoundingBoxWithOptIsVisible,
+  VolumeTracing,
+} from "viewer/store";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -492,7 +498,7 @@ export function LEGACY_updateUserBoundingBoxesInVolumeTracing(
   } as const;
 }
 export function addUserBoundingBoxInSkeletonTracing(
-  boundingBox: UserBoundingBox,
+  boundingBox: UserBoundingBoxWithOptIsVisible,
   actionTracingId: string,
 ) {
   return {
@@ -505,7 +511,7 @@ export function addUserBoundingBoxInSkeletonTracing(
 }
 
 export function addUserBoundingBoxInVolumeTracing(
-  boundingBox: UserBoundingBox,
+  boundingBox: UserBoundingBoxWithOptIsVisible,
   actionTracingId: string,
 ) {
   return {

@@ -110,6 +110,9 @@ export type UserBoundingBoxWithoutId = {
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
+export type UserBoundingBoxWithOptIsVisible = Omit<UserBoundingBox, "isVisible"> & {
+  isVisible?: boolean;
+};
 
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;

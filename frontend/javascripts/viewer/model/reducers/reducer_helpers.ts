@@ -18,10 +18,11 @@ import type {
   BoundingBoxObject,
   UserBoundingBox,
   UserBoundingBoxToServer,
+  UserBoundingBoxWithOptIsVisible,
   WebknossosState,
 } from "viewer/store";
-import type { Tree, TreeGroup } from "../types/tree_types";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { Tree, TreeGroup } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -64,7 +65,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 }
 
 export function convertUserBoundingBoxFromFrontendToServer(
-  boundingBox: UserBoundingBox,
+  boundingBox: UserBoundingBoxWithOptIsVisible,
 ): UserBoundingBoxToServer {
   const { boundingBox: bb, ...rest } = boundingBox;
   return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };

@@ -65,7 +65,6 @@ import {
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
 import {
-  LEGACY_updateUserBoundingBoxesInVolumeTracing,
   type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
@@ -78,15 +77,13 @@ import {
   updateSegmentGroupsExpandedState,
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxVisibilityInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { diffGroups, diffUserBoundingBoxes } from "../helpers/diff_helpers";
+import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkReady } from "./ready_sagas";
-import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -478,32 +475,12 @@ export function* diffVolumeTracing(
     yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
   }
 
-  const boxDiff = diffUserBoundingBoxes(
+  yield* diffBoundingBoxes(
     prevVolumeTracing.userBoundingBoxes,
     volumeTracing.userBoundingBoxes,
+    volumeTracing.tracingId,
+    AnnotationLayerEnum.Skeleton,
   );
-  if (boxDiff.didContentChange) {
-    yield LEGACY_updateUserBoundingBoxesInVolumeTracing(
-      volumeTracing.userBoundingBoxes,
-      volumeTracing.tracingId,
-    );
-  }
-
-  // todop:
-  // yield* diffBoundingBoxes(
-  //   prevVolumeTracing.userBoundingBoxes,
-  //   volumeTracing.userBoundingBoxes,
-  //   volumeTracing.tracingId,
-  //   AnnotationLayerEnum.Volume,
-  // );
-
-  for (const id of boxDiff.newlyVisibleIds) {
-    yield updateUserBoundingBoxVisibilityInVolumeTracing(id, true, volumeTracing.tracingId);
-  }
-
-  for (const id of boxDiff.newlyInvisibleIds) {
-    yield updateUserBoundingBoxVisibilityInVolumeTracing(id, false, volumeTracing.tracingId);
-  }
 
   if (prevVolumeTracing.segments !== volumeTracing.segments) {
     for (const action of cachedDiffSegmentLists(

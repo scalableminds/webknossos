@@ -468,6 +468,8 @@ export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: 
   } as const;
 }
 
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
 export function LEGACY_updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
@@ -483,6 +485,8 @@ export function LEGACY_updateUserBoundingBoxesInSkeletonTracing(
   } as const;
 }
 
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
 export function LEGACY_updateUserBoundingBoxesInVolumeTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,

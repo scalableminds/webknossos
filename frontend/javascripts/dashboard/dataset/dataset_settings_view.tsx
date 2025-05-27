@@ -20,7 +20,7 @@ import type {
 } from "history";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import { diffObjects, jsonStringify } from "libs/utils";
+import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
@@ -313,7 +313,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
-    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
+    return _.isEqual(dataSource, this.state.savedDataSourceOnServer || {});
   }
 
   didDatasourceIdChange(dataSource: Record<string, any>) {

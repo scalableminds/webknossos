@@ -654,18 +654,16 @@ export function* diffBoundingBoxes(
       throw new Error(getErrorMessage(id));
     }
     if (currentBbox === prevBbox) continue;
+
     const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
     if (_.isEmpty(diffBBox)) continue;
-    const changedKeys = Object.keys(diffBBox);
-    if (changedKeys.includes("isVisible")) {
+
+    const { isVisible: maybeIsVisible, ...changedKeys } = diffBBox;
+    if (maybeIsVisible != null) {
       yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
       continue;
     }
-    if (changedKeys.includes("boundingBox")) {
-      diffBBox.boundingBox.min = currentBbox.boundingBox.min;
-      diffBBox.boundingBox.max = currentBbox.boundingBox.max;
-    }
-    yield updateBBoxAction(currentBbox.id, diffBBox, tracingId);
+    yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
   }
 }
 

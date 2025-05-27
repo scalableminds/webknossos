@@ -190,32 +190,35 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   def readAsMultiArray(shape: Array[Int], offset: Array[Long])(implicit ec: ExecutionContext,
-                                                               tc: TokenContext): Fox[MultiArray] = {
-    val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
-    val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
-    if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
-      for {
-        chunkIndex <- chunkIndices.headOption.toFox
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
-      } yield sourceChunk
+                                                               tc: TokenContext): Fox[MultiArray] =
+    if (shape.product == 0) {
+      Fox.successful(MultiArrayUtils.createEmpty(rank))
     } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
-      val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
-      val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+      val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
+      val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
+      if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
         for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-          offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
-          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(
-            offsetInChunk,
-            sourceChunk,
-            targetMultiArray)
-        } yield ()
-      })
-      for {
-        _ <- copiedFuture
-      } yield targetMultiArray
+          chunkIndex <- chunkIndices.headOption.toFox
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex, useSkipTypingShortcut = true)
+        } yield sourceChunk
+      } else {
+        val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
+        val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
+        val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+          for {
+            sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
+            offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
+            _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(
+              offsetInChunk,
+              sourceChunk,
+              targetMultiArray)
+          } yield ()
+        })
+        for {
+          _ <- copiedFuture
+        } yield targetMultiArray
+      }
     }
-  }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
     s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsOuterF(sourceChunk.getShape)}, target shape (F): ${printAsOuterF(

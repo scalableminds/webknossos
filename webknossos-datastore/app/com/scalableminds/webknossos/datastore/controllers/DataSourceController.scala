@@ -297,11 +297,9 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateGraph <- agglomerateService
-          .generateAgglomerateGraph(
-            AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-            agglomerateId)
-          .toFox ?~> "agglomerateGraph.failed"
+        agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
+          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+          agglomerateId) ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -335,16 +333,14 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        largestAgglomerateId: Long <- agglomerateService
-          .largestAgglomerateId(
-            AgglomerateFileKey(
-              organizationId,
-              datasetDirectoryName,
-              dataLayerName,
-              mappingName
-            )
+        largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(
+          AgglomerateFileKey(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName,
+            mappingName
           )
-          .toFox
+        )
       } yield Ok(Json.toJson(largestAgglomerateId))
     }
   }

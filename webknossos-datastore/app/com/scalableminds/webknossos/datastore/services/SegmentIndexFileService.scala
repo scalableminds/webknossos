@@ -185,11 +185,11 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         ))
       bucketData <- binaryDataServiceHolder.binaryDataService.handleMultipleBucketRequests(bucketRequests)
     } yield (bucketData, dataLayer.elementClass)
-  private def getBucketPositions(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[Set[Vec3IntProto]] =
+  private def getBucketPositions(organizationId: String,
+                                 datasetDirectoryName: String,
+                                 dataLayerName: String,
+                                 mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int)(
+      implicit tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationId,
                                                           datasetDirectoryName,
@@ -212,11 +212,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
     } yield bucketPositions
 
-  private def getSegmentIdsForAgglomerateIdIfNeeded(organizationId: String,
-                                                    datasetDirectoryName: String,
-                                                    dataLayerName: String,
-                                                    segmentOrAgglomerateId: Long,
-                                                    mappingNameOpt: Option[String]): Fox[List[Long]] =
+  private def getSegmentIdsForAgglomerateIdIfNeeded(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      segmentOrAgglomerateId: Long,
+      mappingNameOpt: Option[String])(implicit tc: TokenContext): Fox[Seq[Long]] =
     // Editable mappings cannot happen here since those requests go to the tracingstore
     mappingNameOpt match {
       case Some(mappingName) =>
@@ -228,14 +229,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
             dataLayerName,
             mappingName
           )
-          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
           segmentIds <- if (segmentOrAgglomerateId <= largestAgglomerateId) {
-            agglomerateService
-              .segmentIdsForAgglomerateId(
-                agglomerateFileKey,
-                segmentOrAgglomerateId
-              )
-              .toFox
+            agglomerateService.segmentIdsForAgglomerateId(
+              agglomerateFileKey,
+              segmentOrAgglomerateId
+            )
           } else
             Fox.successful(List.empty) // agglomerate id is outside of file range, was likely created during brushing
         } yield segmentIds

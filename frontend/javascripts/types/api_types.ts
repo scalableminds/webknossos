@@ -919,15 +919,15 @@ export type SkeletonUserState = {
   // ids and visibilities form the entries for a
   // id->isVisible map
   boundingBoxIds: number[];
-  boundingBoxVisibilities: [];
+  boundingBoxVisibilities: boolean[];
   // ids and states form the entries for a
   // id->isExpanded map
-  treeGroupIds: [];
-  treeGroupExpandedStates: [];
+  treeGroupIds: number[];
+  treeGroupExpandedStates: boolean[];
   // ids and visibilities form the entries for a
   // id->isVisible map
   treeIds: number[];
-  treeVisibilities: [];
+  treeVisibilities: boolean[];
 };
 
 export type ServerSkeletonTracing = ServerTracingBase & {
@@ -949,7 +949,7 @@ export type VolumeUserState = {
   // ids and visibilities form the entries for a
   // bbox id -> isVisible map
   boundingBoxIds: number[];
-  boundingBoxVisibilities: [];
+  boundingBoxVisibilities: boolean[];
   // These two properties are the dictionary entries
   // for an segment group id -> expanded mapping.
   segmentGroupIds: number[];

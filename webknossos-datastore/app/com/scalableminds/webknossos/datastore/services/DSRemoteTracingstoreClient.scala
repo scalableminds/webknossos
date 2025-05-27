@@ -58,7 +58,7 @@ class DSRemoteTracingstoreClient @Inject()(
 
   def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent.withTokenFromContext.getWithBytesResponse
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silentEvenOnFailure.withTokenFromContext.getWithBytesResponse
 
   def getDataLayerMagDirectoryContents(tracingId: String, mag: String, tracingStoreUri: String, zarrVersion: Int)(
       implicit tc: TokenContext): Fox[List[String]] =

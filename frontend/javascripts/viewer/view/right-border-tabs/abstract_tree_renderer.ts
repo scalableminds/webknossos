@@ -1,7 +1,7 @@
 import _ from "lodash";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
-import type { Tree } from "viewer/store";
+import type { Tree } from "viewer/model/types/tree_types";
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;

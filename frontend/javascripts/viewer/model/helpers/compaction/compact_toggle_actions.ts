@@ -6,12 +6,20 @@
 import _ from "lodash";
 import type {
   UpdateActionWithoutIsolationRequirement,
+  UpdateSegmentVisibilityVolumeAction,
   UpdateTreeVisibilityUpdateAction,
 } from "viewer/model/sagas/update_actions";
-import { updateTreeGroupVisibility, updateTreeVisibility } from "viewer/model/sagas/update_actions";
-import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "viewer/store";
+import {
+  updateSegmentGroupVisibilityVolumeAction,
+  updateSegmentVisibilityVolumeAction,
+  updateTreeGroupVisibility,
+  updateTreeVisibility,
+} from "viewer/model/sagas/update_actions";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
   MISSING_GROUP_ID,
+  createGroupToSegmentsMap,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -22,7 +30,9 @@ type GroupNode = {
 };
 
 // Returns an object which maps from group id to group node
-function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number, GroupNode> {
+function buildTreeGroupHashMap(
+  tracing: SkeletonTracing | VolumeTracing,
+): Record<number, GroupNode> {
   const root: GroupNode = {
     children: [],
     groupId: null,
@@ -41,7 +51,7 @@ function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number,
     }
   }
 
-  createSubTree(root, skeletonTracing.treeGroups);
+  createSubTree(root, "treeGroups" in tracing ? tracing.treeGroups : tracing.segmentGroups);
 
   function buildHashMap(subTreeRoot: GroupNode, hashMap: Record<number, GroupNode>) {
     const groupId = subTreeRoot.groupId != null ? subTreeRoot.groupId : MISSING_GROUP_ID;
@@ -60,9 +70,9 @@ function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number,
 
 // Finds the id of the common group for the used trees in the toggleActions
 function findCommonAncestor(
-  treeIdMap: TreeMap,
+  itemIdMap: TreeMap | SegmentMap,
   groupIdMap: Record<number, GroupNode>,
-  toggleActions: UpdateTreeVisibilityUpdateAction[],
+  toggleActions: Array<UpdateTreeVisibilityUpdateAction | UpdateSegmentVisibilityVolumeAction>,
 ): number | undefined {
   function getAncestorPath(groupId: number | null | undefined): number[] {
     const path = [];
@@ -83,8 +93,13 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
+  const getAncestor = (itemId: number) => itemIdMap.getNullable(itemId);
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(treeIdMap[toggleAction.value.treeId].groupId);
+    const ancestorPath = getAncestorPath(
+      getAncestor(
+        "treeId" in toggleAction.value ? toggleAction.value.treeId : toggleAction.value.id,
+      )?.groupId,
+    );
 
     if (commonPath == null) {
       commonPath = ancestorPath;
@@ -108,49 +123,63 @@ function findCommonAncestor(
   return _.last(commonPath);
 }
 
-function isCommonAncestorToggler(
-  skeletonTracing: SkeletonTracing,
+function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
+  tracing: T,
   commonAncestor: number | undefined,
-): [boolean, Tree[], number] {
-  const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
-  const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);
-  const allTreesOfAncestor: Tree[] =
-    groupWithSubgroups.length === 0
-      ? _.values(skeletonTracing.trees)
-      : _.flatMap(groupWithSubgroups, (groupId: number): Tree[] => groupToTreesMap[groupId] || []);
+): [boolean, Array<T extends SkeletonTracing ? Tree : Segment>, number] {
+  let allItemsOfAncestor: Array<Tree | Segment> = [];
 
-  const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, (tree) => tree.isVisible);
+  if (tracing.type === "skeleton") {
+    const items = tracing.trees;
+    const groups = tracing.treeGroups;
+    const groupToTreesMap = createGroupToTreesMap(items);
+    const groupWithSubgroups = getGroupByIdWithSubgroups(groups, commonAncestor);
+    allItemsOfAncestor =
+      groupWithSubgroups.length === 0
+        ? Array.from(items.values())
+        : groupWithSubgroups.flatMap((groupId: number): Tree[] => groupToTreesMap[groupId] || []);
+  } else {
+    const items = tracing.segments;
+    const groups = tracing.segmentGroups;
+    const groupToTreesMap = createGroupToSegmentsMap(items);
+    const groupWithSubgroups = getGroupByIdWithSubgroups(groups, commonAncestor);
+    allItemsOfAncestor =
+      groupWithSubgroups.length === 0
+        ? Array.from(items.values())
+        : groupWithSubgroups.flatMap(
+            (groupId: number): Segment[] => groupToTreesMap[groupId] || [],
+          );
+  }
 
-  const affectedTreeCount = allTreesOfAncestor.length;
+  const [visibleItems, invisibleItems] = _.partition(allItemsOfAncestor, (tree) => tree.isVisible);
+
+  const affectedItemCount = allItemsOfAncestor.length;
   let commonVisibility;
   let exceptions;
 
-  if (visibleTrees.length > invisibleTrees.length) {
+  if (visibleItems.length > invisibleItems.length) {
     commonVisibility = true;
-    exceptions = invisibleTrees;
+    exceptions = invisibleItems;
   } else {
     commonVisibility = false;
-    exceptions = visibleTrees;
+    exceptions = visibleItems;
   }
 
-  return [commonVisibility, exceptions, affectedTreeCount];
+  return [
+    commonVisibility,
+    exceptions as Array<T extends SkeletonTracing ? Tree : Segment>,
+    affectedItemCount,
+  ];
 }
 
 export default function compactToggleActions(
   updateActions: UpdateActionWithoutIsolationRequirement[],
   tracing: SkeletonTracing | VolumeTracing,
 ): UpdateActionWithoutIsolationRequirement[] {
-  if (tracing.type !== "skeleton") {
-    // Don't do anything if this is not a skeleton tracing
-    return updateActions;
-  }
-
-  const skeletonTracing = tracing;
-
   // Extract the toggleActions which we are interested in
   const [toggleActions, remainingActions] = _.partition<UpdateActionWithoutIsolationRequirement>(
     updateActions,
-    (ua) => ua.name === "updateTreeVisibility",
+    (ua) => ua.name === "updateTreeVisibility" || ua.name === "updateSegmentVisibility",
   );
 
   if (toggleActions.length <= 1) {
@@ -158,27 +187,46 @@ export default function compactToggleActions(
     return updateActions;
   }
 
+  const items = tracing.type === "skeleton" ? tracing.trees : tracing.segments;
+
   // Build up some helper data structures
-  const hashMap = buildTreeGroupHashMap(skeletonTracing);
+  const hashMap = buildTreeGroupHashMap(tracing);
   // Find the group id of the common ancestor of all toggled trees
   const commonAncestor = findCommonAncestor(
-    skeletonTracing.trees,
+    items,
     hashMap,
-    toggleActions as UpdateTreeVisibilityUpdateAction[],
+    toggleActions as Array<UpdateTreeVisibilityUpdateAction | UpdateSegmentVisibilityVolumeAction>,
   );
   // commonVisibility is the new visibility which should be applied to all ascendants
   // of the common ancestor. The exceptions array lists all trees which differ from
   // that common visibility. These will receive separate updateActions.
-  const [commonVisibility, exceptions, affectedTreeCount] = isCommonAncestorToggler(
-    skeletonTracing,
+  const [commonVisibility, exceptions, affectedItemCount] = isCommonAncestorToggler(
+    tracing,
     commonAncestor,
   );
   // If less than 50% of the toggled trees are exceptions, we should use the compaction
-  const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
-  const compactedToggleActions = [
-    updateTreeGroupVisibility(commonAncestor, commonVisibility, tracing.tracingId),
-    ...exceptions.map((tree) => updateTreeVisibility(tree, tracing.tracingId)),
-  ];
+  const shouldUseToggleGroup = exceptions.length < 0.5 * affectedItemCount;
+  const compactedToggleActions =
+    tracing.type === "skeleton"
+      ? [
+          updateTreeGroupVisibility(commonAncestor, commonVisibility, tracing.tracingId),
+          ...exceptions.map((tree) => updateTreeVisibility(tree as Tree, tracing.tracingId)),
+        ]
+      : [
+          updateSegmentGroupVisibilityVolumeAction(
+            commonAncestor ?? null,
+            commonVisibility,
+            tracing.tracingId,
+          ),
+          ...exceptions.map((_segment) => {
+            const segment = _segment as Segment;
+            return updateSegmentVisibilityVolumeAction(
+              segment.id,
+              segment.isVisible,
+              tracing.tracingId,
+            );
+          }),
+        ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
   return remainingActions.concat(finalToggleActions);
 }

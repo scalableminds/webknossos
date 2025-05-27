@@ -16,6 +16,7 @@ import type {
 import type { BoundingBoxObject, NumberLike } from "viewer/store";
 
 type UrlParams = Record<string, string>;
+
 // Fix JS modulo bug
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {
@@ -1083,32 +1084,27 @@ export function getWindowBounds(): [number, number] {
   return [width, height];
 }
 
-/**
- * Deep diff between two object, using lodash
- * @param  {Object} object Object compared
- * @param  {Object} base   Object to compare with
- * @return {Object}        Return a new object who represent the diff
- *
- * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
- */
-export function diffObjects(
-  object: Record<string, any>,
-  base: Record<string, any>,
-): Record<string, any> {
-  function changes(_object: Record<string, any>, _base: Record<string, any>) {
-    let arrayIndexCounter = 0;
-    return _.transform(_object, (result, value, key) => {
-      if (!_.isEqual(value, _base[key])) {
-        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-        result[resultKey] =
-          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
-      }
-    });
-  }
-
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'Record<s... Remove this comment to see the full error message
-  return changes(object, base);
+export function diffObjects<K extends string | number | symbol, V, Dict extends Record<K, V>>(
+  a: Dict,
+  b: Dict,
+): Partial<Dict> {
+  /**
+   * Returns the difference between two objects as a partial object.
+   *
+   * Compares two objects `a` and `b` and returns a new object containing the key-value
+   * pairs that are present in `b` but not in `a`, using deep equality comparison.
+   * Note that keys that are not present in b but in a are *not* returned.
+   *
+   * @param {Dict} a - The "original" object to compare to as a base.
+   * @param {Dict} b - The "newer" object that will be used for the returned values.
+   * @returns {Partial<Dict>} - A partial object containing the key-value pairs that differ.
+   *
+   * @example
+   * const a = { x: 1, y: 2, z: 3 };
+   * const b = { x: 1, y: 3, q: 4 }; // y is different, z is missing, q was added
+   * diffObjects(a, b); // returns { y: 3, q: 4 }
+   */
+  return _.fromPairs(_.differenceWith(_.toPairs(b), _.toPairs(a), _.isEqual)) as Partial<Dict>;
 }
 
 export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {

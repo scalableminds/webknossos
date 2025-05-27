@@ -1,8 +1,10 @@
 import type DiffableMap from "libs/diffable_map";
-import type { Matrix4x4 } from "libs/mjs";
 import { type Middleware, applyMiddleware, createStore } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
+
+// Type imports
+import type { Matrix4x4 } from "libs/mjs";
 import type {
   APIAllowedMode,
   APIAnnotationType,
@@ -42,17 +44,25 @@ import type {
   OverwriteMode,
   Rect,
   TDViewDisplayMode,
-  TreeType,
   Vector2,
   Vector3,
   ViewMode,
 } from "viewer/constants";
 import type { BLEND_MODES, ControlModeEnum } from "viewer/constants";
-import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type EdgeCollection from "viewer/model/edge_collection";
+import type { UpdateAction } from "viewer/model/sagas/update_actions";
+import type { Toolkit } from "./model/accessors/tool_accessor";
+import type {
+  MutableTreeGroup,
+  TreeGroup,
+  TreeGroupTypeFlat,
+  TreeMap,
+} from "./model/types/tree_types";
+
+// Value imports
+import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
@@ -68,42 +78,10 @@ import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import type { UpdateAction } from "viewer/model/sagas/update_actions";
-import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
-export type MutableCommentType = {
-  content: string;
-  nodeId: number;
-};
-export type CommentType = Readonly<MutableCommentType>;
-export type MutableEdge = {
-  source: number;
-  target: number;
-};
-export type Edge = Readonly<MutableEdge>;
-export type MutableNode = {
-  id: number;
-  untransformedPosition: Vector3;
-  additionalCoordinates: AdditionalCoordinate[] | null;
-  rotation: Vector3;
-  bitDepth: number;
-  viewport: number;
-  mag: number;
-  radius: number;
-  timestamp: number;
-  interpolation: boolean;
-};
-export type Node = Readonly<MutableNode>;
-export type MutableBranchPoint = {
-  timestamp: number;
-  nodeId: number;
-};
-export type BranchPoint = Readonly<MutableBranchPoint>;
-export type MutableNodeMap = DiffableMap<number, MutableNode>;
-export type NodeMap = DiffableMap<number, Node>;
 export type BoundingBoxObject = {
   readonly topLeft: Vector3;
   readonly width: number;
@@ -132,52 +110,6 @@ export type UserBoundingBoxWithoutId = {
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
-// When changing MutableTree, remember to also update Tree
-export type MutableTree = {
-  treeId: number;
-  groupId: number | null | undefined;
-  color: Vector3;
-  name: string;
-  timestamp: number;
-  comments: MutableCommentType[];
-  branchPoints: MutableBranchPoint[];
-  edges: EdgeCollection;
-  isVisible: boolean;
-  nodes: MutableNodeMap;
-  type: TreeType;
-  edgesAreVisible: boolean;
-  metadata: MetadataEntryProto[];
-};
-// When changing Tree, remember to also update MutableTree
-export type Tree = {
-  readonly treeId: number;
-  readonly groupId: number | null | undefined;
-  readonly color: Vector3;
-  readonly name: string;
-  readonly timestamp: number;
-  readonly comments: CommentType[];
-  readonly branchPoints: BranchPoint[];
-  readonly edges: EdgeCollection;
-  readonly isVisible: boolean;
-  readonly nodes: NodeMap;
-  readonly type: TreeType;
-  readonly edgesAreVisible: boolean;
-  readonly metadata: MetadataEntryProto[];
-};
-export type TreeGroupTypeFlat = {
-  readonly name: string;
-  readonly groupId: number;
-  readonly isExpanded?: boolean;
-};
-export type TreeGroup = TreeGroupTypeFlat & {
-  readonly children: TreeGroup[];
-};
-export type MutableTreeGroup = {
-  name: string;
-  groupId: number;
-  children: MutableTreeGroup[];
-};
-
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
@@ -187,8 +119,6 @@ export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
-export type MutableTreeMap = Record<number, MutableTree>;
-export type TreeMap = Record<number, Tree>;
 export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
@@ -247,6 +177,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
+  readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;
@@ -276,6 +207,7 @@ export type VolumeTracing = TracingBase & {
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
+  readonly hideUnregisteredSegments: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -339,7 +271,6 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
-  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
@@ -540,6 +471,16 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
+export type ContextMenuInfo = {
+  readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+  readonly clickedNodeId: number | null | undefined;
+  readonly meshId: number | null | undefined;
+  readonly meshIntersectionPosition: Vector3 | null | undefined;
+  readonly clickedBoundingBoxId: number | null | undefined;
+  readonly globalPosition: Vector3 | null | undefined;
+  readonly viewport: OrthoView | null | undefined;
+  readonly unmappedSegmentId?: number | null;
+};
 type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
@@ -569,16 +510,7 @@ type UiInformation = {
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
-  readonly contextInfo: {
-    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
-    readonly clickedNodeId: number | null | undefined;
-    readonly meshId: number | null | undefined;
-    readonly meshIntersectionPosition: Vector3 | null | undefined;
-    readonly clickedBoundingBoxId: number | null | undefined;
-    readonly globalPosition: Vector3 | null | undefined;
-    readonly viewport: OrthoView | null | undefined;
-    readonly unmappedSegmentId?: number | null;
-  };
+  readonly contextInfo: ContextMenuInfo;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -605,6 +537,25 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
+export type LocalSegmentationData = {
+  // For meshes, the string represents additional coordinates, number is the segment ID.
+  // The undefined types were added to enforce null checks when using this structure.
+  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
+  readonly currentMeshFile: APIMeshFileInfo | null | undefined;
+  // Note that for a volume tracing, this information should be stored
+  // in state.annotation.volume.segments, as this is also persisted on the
+  // server (i.e., not "local").
+  // The `segments` here should only be used for non-annotation volume
+  // layers.
+  readonly segments: SegmentMap;
+  // Note that segments that are not in the segment tab could be stored as selected.
+  // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+  readonly selectedIds: { segments: number[]; group: number | null };
+  readonly connectomeData: ConnectomeData;
+  readonly hideUnregisteredSegments: boolean;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -622,24 +573,8 @@ export type WebknossosState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
-    string, //layerName
-    {
-      // For meshes, the string represents additional coordinates, number is the segment ID.
-      // The undefined types were added to enforce null checks when using this structure.
-      readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
-      readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
-      readonly currentMeshFile: APIMeshFileInfo | null | undefined;
-      // Note that for a volume tracing, this information should be stored
-      // in state.annotation.volume.segments, as this is also persisted on the
-      // server (i.e., not "local").
-      // The `segments` here should only be used for non-annotation volume
-      // layers.
-      readonly segments: SegmentMap;
-      // Note that segments that are not in the segment tab could be stored as selected.
-      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
-      readonly selectedIds: { segments: number[]; group: number | null };
-      readonly connectomeData: ConnectomeData;
-    }
+    string, // layerName
+    LocalSegmentationData
   >;
 };
 const sagaMiddleware = createSagaMiddleware();

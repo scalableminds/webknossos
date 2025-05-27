@@ -277,9 +277,11 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        skeleton <- agglomerateService
-          .generateSkeleton(organizationId, datasetDirectoryName, dataLayerName, mappingName, agglomerateId)
-          .toFox ?~> "agglomerateSkeleton.failed"
+        skeleton <- agglomerateService.generateSkeleton(organizationId,
+                                                        datasetDirectoryName,
+                                                        dataLayerName,
+                                                        mappingName,
+                                                        agglomerateId) ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }

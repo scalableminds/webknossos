@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -201,7 +202,7 @@ class DatasetArray(vaultPath: VaultPath,
       val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-          offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset).reverse
+          offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
           _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(
             offsetInChunk,
             sourceChunk,
@@ -244,7 +245,6 @@ class DatasetArray(vaultPath: VaultPath,
     if (header.isSharded) {
       for {
         (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
-        _ = logger.info(s"chunk cache miss for $shardPath chunk ${chunkIndex.mkString(",")} ")
         chunkShape = chunkShapeAtIndex(chunkIndex)
         multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
       } yield multiArray

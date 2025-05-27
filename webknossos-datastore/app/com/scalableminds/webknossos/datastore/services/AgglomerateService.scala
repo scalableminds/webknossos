@@ -10,10 +10,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
-import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
+import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
@@ -21,7 +21,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
-import ucar.ma2.{Array => MultiArray}
+import ucar.ma2.{DataType, Index2D, Array => MultiArray}
 
 import java.net.URI
 import java.nio._
@@ -37,17 +37,16 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     with LazyLogging {
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val agglomerateDir = "agglomerates"
-  private val agglomerateFileExtension = ""
 
   private lazy val openArraysCache = AlfuCache[String, DatasetArray]()
 
-  // TODO unify with existing chunkContentsCache from binaryDataService
+  // TODO unify with existing chunkContentsCache from binaryDataService?
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
     // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
 
     val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
 
-    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
+    def cacheWeight(_key: String, arrayBox: Box[MultiArray]): Int =
       arrayBox match {
         case Full(array) =>
           (array.getSizeBytes / 1000L).toInt
@@ -57,6 +56,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
   }
 
+  protected lazy val bucketScanner = new NativeBucketScanner()
+
   def readFromSegmentToAgglomerate(implicit ec: ExecutionContext, tc: TokenContext): Fox[ucar.ma2.Array] =
     for {
       zarrArray <- openZarrArrayCached("segment_to_agglomerate")
@@ -64,10 +65,10 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       _ = logger.info(s"read ${read.getSize} elements from agglomerate file segmentToAgglomerate")
     } yield read
 
-  private def mapSingleSegment(segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  private def mapSingleSegment(zarrArray: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
+                                                                         tc: TokenContext): Fox[Long] =
     for {
-      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
-      asMultiArray <- zarrArray.readAsMultiArray(offset = Array(segmentId), shape = Array(1))
+      asMultiArray <- zarrArray.readAsMultiArray(shape = Array(1), offset = Array(segmentId))
     } yield asMultiArray.getLong(0)
 
   private def openZarrArrayCached(zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext) =
@@ -88,7 +89,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
                                    None,
                                    None,
                                    None,
-                                   sharedChunkContentsCache)(ec, TokenContext(None))
+                                   sharedChunkContentsCache)
     } yield zarrArray
   }
 
@@ -99,43 +100,126 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     val zarrGroupPath = agglomerateFileKey.zarrGroupPath(dataBaseDir, agglomerateDir).toAbsolutePath
 
     def convertToAgglomerate(segmentIds: Array[Long],
+                             relevantAgglomerateMap: Map[Long, Long],
                              bytesPerElement: Int,
-                             putToBufferFunction: (ByteBuffer, Long) => ByteBuffer): Fox[Array[Byte]] =
-      for {
-        agglomerateIds <- Fox.serialCombined(segmentIds)(mapSingleSegment)
-        mappedBytes = agglomerateIds
-          .foldLeft(ByteBuffer.allocate(bytesPerElement * segmentIds.length).order(ByteOrder.LITTLE_ENDIAN))(
-            putToBufferFunction)
-          .array
-      } yield mappedBytes
-
-    val bytesPerElement = ElementClass.bytesPerElement(request.dataLayer.elementClass)
-    /* Every value of the segmentation data needs to be converted to Long to then look up the
-       agglomerate id in the segment-to-agglomerate array.
-       The value is first converted to the primitive signed number types, and then converted
-       to Long via uByteToLong, uShortToLong etc, which perform bitwise and to take care of
-       the unsigned semantics. Using functions avoids allocating intermediate SegmentInteger objects.
-       Allocating a fixed-length LongBuffer first is a further performance optimization.
-     */
-    convertData(data, request.dataLayer.elementClass) match {
-      case data: Array[Byte] =>
-        val longBuffer = LongBuffer.allocate(data.length)
-        data.foreach(e => longBuffer.put(uByteToLong(e)))
-        convertToAgglomerate(longBuffer.array, bytesPerElement, putByte)
-      case data: Array[Short] =>
-        val longBuffer = LongBuffer.allocate(data.length)
-        data.foreach(e => longBuffer.put(uShortToLong(e)))
-        convertToAgglomerate(longBuffer.array, bytesPerElement, putShort)
-      case data: Array[Int] =>
-        val longBuffer = LongBuffer.allocate(data.length)
-        data.foreach(e => longBuffer.put(uIntToLong(e)))
-        convertToAgglomerate(longBuffer.array, bytesPerElement, putInt)
-      case data: Array[Long] => convertToAgglomerate(data, bytesPerElement, putLong)
-      case _                 => Fox.successful(data)
+                             putToBufferFunction: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
+      val agglomerateIds = segmentIds.map(relevantAgglomerateMap)
+      agglomerateIds
+        .foldLeft(ByteBuffer.allocate(bytesPerElement * segmentIds.length).order(ByteOrder.LITTLE_ENDIAN))(
+          putToBufferFunction)
+        .array
     }
 
+    val bytesPerElement = ElementClass.bytesPerElement(request.dataLayer.elementClass)
+    val distinctSegmentIds =
+      bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
+
+    for {
+      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
+      beforeBuildMap = Instant.now
+      relevantAgglomerateMap: Map[Long, Long] <- Fox
+        .serialCombined(distinctSegmentIds) { segmentId =>
+          mapSingleSegment(zarrArray, segmentId).map((segmentId, _))
+        }
+        .map(_.toMap)
+      _ = Instant.logSince(beforeBuildMap, "build map")
+      mappedBytes: Array[Byte] = convertData(data, request.dataLayer.elementClass) match {
+        case data: Array[Byte] =>
+          val longBuffer = LongBuffer.allocate(data.length)
+          data.foreach(e => longBuffer.put(uByteToLong(e)))
+          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putByte)
+        case data: Array[Short] =>
+          val longBuffer = LongBuffer.allocate(data.length)
+          data.foreach(e => longBuffer.put(uShortToLong(e)))
+          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putShort)
+        case data: Array[Int] =>
+          val longBuffer = LongBuffer.allocate(data.length)
+          data.foreach(e => longBuffer.put(uIntToLong(e)))
+          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putInt)
+        case data: Array[Long] => convertToAgglomerate(data, relevantAgglomerateMap, bytesPerElement, putLong)
+        case _                 => data
+      }
+    } yield mappedBytes
   }
 
+  def generateSkeleton(organizationId: String,
+                       datasetDirectoryName: String,
+                       dataLayerName: String,
+                       mappingName: String,
+                       agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+    for {
+      before <- Instant.nowFox
+      agglomerate_to_segments_offsets <- openZarrArrayCached("agglomerate_to_segments_offsets")
+      agglomerate_to_edges_offsets <- openZarrArrayCached("agglomerate_to_edges_offsets")
+
+      positionsRange: MultiArray <- agglomerate_to_segments_offsets.readAsMultiArray(shape = Array(2),
+                                                                                     offset = Array(agglomerateId))
+      edgesRange: MultiArray <- agglomerate_to_edges_offsets.readAsMultiArray(shape = Array(2),
+                                                                              offset = Array(agglomerateId))
+      nodeCount = positionsRange.getLong(1) - positionsRange.getLong(0)
+      edgeCount = edgesRange.getLong(1) - edgesRange.getLong(0)
+      edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
+      _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
+      positions: MultiArray <- if (nodeCount == 0L) {
+        Fox.successful(MultiArray.factory(DataType.LONG, Array(0, 0)))
+      } else {
+        for {
+          agglomerate_to_positions <- openZarrArrayCached("agglomerate_to_positions")
+          positions <- agglomerate_to_positions.readAsMultiArray(offset = Array(positionsRange.getLong(0), 0),
+                                                                 shape = Array(nodeCount.toInt, 3))
+        } yield positions
+      }
+      edges: MultiArray <- if (edgeCount == 0L) {
+        Fox.successful(MultiArray.factory(DataType.LONG, Array(0, 0)))
+      } else {
+        for {
+          agglomerate_to_edges <- openZarrArrayCached("agglomerate_to_edges")
+          edges <- agglomerate_to_edges.readAsMultiArray(offset = Array(edgesRange.getLong(0), 0),
+                                                         shape = Array(edgeCount.toInt, 2))
+        } yield edges
+      }
+
+      nodeIdStartAtOneOffset = 1
+
+      nodes = (0 until nodeCount.toInt).map { nodeIdx =>
+        NodeDefaults.createInstance.copy(
+          id = nodeIdx + nodeIdStartAtOneOffset,
+          position = Vec3IntProto(positions.getInt(new Index2D(Array(nodeIdx, 0))),
+                                  positions.getInt(new Index2D(Array(nodeIdx, 1))),
+                                  positions.getInt(new Index2D(Array(nodeIdx, 2))))
+        )
+      }
+
+      skeletonEdges = (0 until edges.getShape()(1)).map { edgeIdx =>
+        Edge(source = edges.getInt(new Index2D(Array(edgeIdx, 0))) + nodeIdStartAtOneOffset,
+             target = edges.getInt(new Index2D(Array(edgeIdx, 1))) + nodeIdStartAtOneOffset)
+      }
+
+      trees = Seq(
+        Tree(
+          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
+          createdTimestamp = System.currentTimeMillis(),
+          // unsafeWrapArray is fine, because the underlying arrays are never mutated
+          nodes = nodes,
+          edges = skeletonEdges,
+          name = s"agglomerate $agglomerateId ($mappingName)",
+          `type` = Some(TreeTypeProto.AGGLOMERATE)
+        ))
+
+      skeleton = SkeletonTracingDefaults.createInstance.copy(
+        datasetName = datasetDirectoryName,
+        trees = trees
+      )
+
+      _ = if (Instant.since(before) > (100 milliseconds)) {
+        Instant.logSince(
+          before,
+          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
+          logger)
+      }
+
+    } yield skeleton
 }
 
 class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
@@ -229,7 +313,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
     reader.uint64().readArrayBlockWithOffset(hdf5Dataset, blockSize.toInt, segmentId)
 
-  // This uses the datasetDirectoryName, which allows us to call it on the same hdf file in parallel.
+  // This uses the datasetName, which allows us to call it on the same hdf file in parallel.
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
     reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
@@ -268,89 +352,97 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
                        datasetDirectoryName: String,
                        dataLayerName: String,
                        mappingName: String,
-                       agglomerateId: Long): Box[SkeletonTracing] =
-    try {
-      val before = Instant.now
-      val hdfFile =
-        dataBaseDir
-          .resolve(organizationId)
-          .resolve(datasetDirectoryName)
-          .resolve(dataLayerName)
-          .resolve(agglomerateDir)
-          .resolve(s"$mappingName.$agglomerateFileExtension")
-          .toFile
+                       agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+    if (true) {
+      zarrAgglomerateService.generateSkeleton(organizationId,
+                                              datasetDirectoryName,
+                                              dataLayerName,
+                                              mappingName,
+                                              agglomerateId)
+    } else {
+      (try {
+        val before = Instant.now
+        val hdfFile =
+          dataBaseDir
+            .resolve(organizationId)
+            .resolve(datasetDirectoryName)
+            .resolve(dataLayerName)
+            .resolve(agglomerateDir)
+            .resolve(s"$mappingName.$agglomerateFileExtension")
+            .toFile
 
-      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-      val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
-      val edgesRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+        val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+        val positionsRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+        val edgesRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
 
-      val nodeCount = positionsRange(1) - positionsRange(0)
-      val edgeCount = edgesRange(1) - edgesRange(0)
-      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
-      if (nodeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
-      }
-      if (edgeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
-      }
-      val positions: Array[Array[Long]] =
-        if (nodeCount == 0L) {
-          Array.empty[Array[Long]]
-        } else {
-          reader
-            .uint64()
-            .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+        val nodeCount = positionsRange(1) - positionsRange(0)
+        val edgeCount = edgesRange(1) - edgesRange(0)
+        val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+        if (nodeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
         }
-      val edges: Array[Array[Long]] = {
-        if (edgeCount == 0L) {
-          Array.empty[Array[Long]]
-        } else {
-          reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+        if (edgeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
         }
-      }
+        val positions: Array[Array[Long]] =
+          if (nodeCount == 0L) {
+            Array.empty[Array[Long]]
+          } else {
+            reader
+              .uint64()
+              .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+          }
+        val edges: Array[Array[Long]] = {
+          if (edgeCount == 0L) {
+            Array.empty[Array[Long]]
+          } else {
+            reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+          }
+        }
 
-      val nodeIdStartAtOneOffset = 1
+        val nodeIdStartAtOneOffset = 1
 
-      val nodes = positions.zipWithIndex.map {
-        case (pos, idx) =>
-          NodeDefaults.createInstance.copy(
-            id = idx + nodeIdStartAtOneOffset,
-            position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
-          )
-      }
+        val nodes = positions.zipWithIndex.map {
+          case (pos, idx) =>
+            NodeDefaults.createInstance.copy(
+              id = idx + nodeIdStartAtOneOffset,
+              position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
+            )
+        }
 
-      val skeletonEdges = edges.map { e =>
-        Edge(source = e(0).toInt + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
-      }
+        val skeletonEdges = edges.map { e =>
+          Edge(source = e(0).toInt + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
+        }
 
-      val trees = Seq(
-        Tree(
-          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
-          createdTimestamp = System.currentTimeMillis(),
-          // unsafeWrapArray is fine, because the underlying arrays are never mutated
-          nodes = ArraySeq.unsafeWrapArray(nodes),
-          edges = ArraySeq.unsafeWrapArray(skeletonEdges),
-          name = s"agglomerate $agglomerateId ($mappingName)",
-          `type` = Some(TreeTypeProto.AGGLOMERATE)
-        ))
+        val trees = Seq(
+          Tree(
+            treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
+            createdTimestamp = System.currentTimeMillis(),
+            // unsafeWrapArray is fine, because the underlying arrays are never mutated
+            nodes = ArraySeq.unsafeWrapArray(nodes),
+            edges = ArraySeq.unsafeWrapArray(skeletonEdges),
+            name = s"agglomerate $agglomerateId ($mappingName)",
+            `type` = Some(TreeTypeProto.AGGLOMERATE)
+          ))
 
-      val skeleton = SkeletonTracingDefaults.createInstance.copy(
-        datasetName = datasetDirectoryName,
-        trees = trees
-      )
+        val skeleton = SkeletonTracingDefaults.createInstance.copy(
+          datasetName = datasetDirectoryName,
+          trees = trees
+        )
 
-      if (Instant.since(before) > (100 milliseconds)) {
-        Instant.logSince(
-          before,
-          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
-          logger)
-      }
+        if (Instant.since(before) > (100 milliseconds)) {
+          Instant.logSince(
+            before,
+            s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
+            logger)
+        }
 
-      Full(skeleton)
-    } catch {
-      case e: Exception => Failure(e.getMessage)
+        Full(skeleton)
+      } catch {
+        case e: Exception => Failure(e.getMessage)
+      }).toFox
     }
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] = {

@@ -10,8 +10,8 @@ import {
 import type { SaveQueueEntry, UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
-describe("Compact Save Queue", () => {
-  it("It should create correct update actions when diffing user bounding boxes", () => {
+describe("Bounding box diffing and compaction", () => {
+  it("should create correct update actions when diffing user bounding boxes", () => {
     const oldBboxes: UserBoundingBox[] = [
       {
         id: 1,

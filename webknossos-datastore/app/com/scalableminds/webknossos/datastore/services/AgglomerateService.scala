@@ -509,15 +509,6 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
 
   }
 
-  def agglomerateIdsForAllSegmentIds(agglomerateFileKey: AgglomerateFileKey): Box[Array[Long]] = {
-    val file = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
-    tryo {
-      val reader = HDF5FactoryProvider.get.openForReading(file)
-      val agglomerateIds: Array[Long] = reader.uint64().readArray("/segment_to_agglomerate")
-      agglomerateIds
-    }
-  }
-
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
     val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
     val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)

@@ -1,16 +1,16 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 object ChunkUtils {
-  def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
+  def computeChunkIndices(arrayShapeOpt: Option[Array[Long]],
                           arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Long]): List[Array[Int]] = {
+                          selectedOffset: Array[Long]): Seq[Array[Int]] = {
     val nDims = arrayChunkShape.length
     val start = new Array[Int](nDims)
     val end = new Array[Int](nDims)
     var numChunks = 1
     for (dim <- 0 until nDims) {
-      val largestPossibleIndex = arrayShapeOpt.map(arrayShape => (arrayShape(dim) - 1) / arrayChunkShape(dim))
+      val largestPossibleIndex = arrayShapeOpt.map(arrayShape => ((arrayShape(dim) - 1) / arrayChunkShape(dim)).toInt)
       val smallestPossibleIndex = 0
       val startIndexRaw = (selectedOffset(dim) / arrayChunkShape(dim)).toInt
       val startIndexClamped =
@@ -38,6 +38,6 @@ object ChunkUtils {
         dimIndex = -1
       }
     }
-    chunkIndices.toList
+    chunkIndices.toSeq
   }
 }

@@ -51,7 +51,7 @@ class DatasetArray(vaultPath: VaultPath,
     header.rank + 1
   }
 
-  lazy val datasetShape: Option[Array[Int]] = if (axisOrder.hasZAxis) {
+  lazy val datasetShape: Option[Array[Long]] = if (axisOrder.hasZAxis) {
     header.datasetShape
   } else {
     header.datasetShape.map(shape => shape :+ 1)
@@ -156,10 +156,12 @@ class DatasetArray(vaultPath: VaultPath,
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
                                                                         tc: TokenContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
-    val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(fullAxisOrder.permuteIndicesArrayToWk),
-                                                      fullAxisOrder.permuteIndicesArrayToWk(chunkShape),
-                                                      shape,
-                                                      totalOffset.map(_.toLong))
+    val chunkIndices = ChunkUtils.computeChunkIndices(
+      datasetShape.map(fullAxisOrder.permuteIndicesArrayToWkLong),
+      fullAxisOrder.permuteIndicesArrayToWk(chunkShape),
+      shape,
+      totalOffset.map(_.toLong)
+    )
     if (partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
@@ -263,7 +265,7 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def partialCopyingIsNotNeededForMultiArray(bufferShape: Array[Int],
                                                      globalOffset: Array[Long],
-                                                     chunkIndices: List[Array[Int]]): Boolean =
+                                                     chunkIndices: Seq[Array[Int]]): Boolean =
     chunkIndices match {
       case chunkIndex :: Nil =>
         val offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, globalOffset)
@@ -274,7 +276,7 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def partialCopyingIsNotNeededForWkOrder(bufferShape: Array[Int],
                                                   globalOffset: Array[Int],
-                                                  chunkIndices: List[Array[Int]]): Boolean =
+                                                  chunkIndices: Seq[Array[Int]]): Boolean =
     chunkIndices match {
       case chunkIndex :: Nil =>
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
@@ -301,8 +303,9 @@ class DatasetArray(vaultPath: VaultPath,
       (globalOffset(dim) - (chunkIndex(dim).toLong * chunkShape(dim).toLong)).toInt
     }.toArray
 
+  // TODO works only for wk dataet arrays, not agglomerate files
   override def toString: String =
-    s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(s => printAsInner(s))} chunkShape=${printAsInner(
+    s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(s => printAsInner(s.map(_.toInt)))} chunkShape=${printAsInner(
       header.chunkShape)} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"
 
 }

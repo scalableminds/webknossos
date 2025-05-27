@@ -38,6 +38,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val agglomerateDir = "agglomerates"
 
+  // TODO clear on dataset reload
   private lazy val openArraysCache = AlfuCache[String, DatasetArray]()
 
   // TODO unify with existing chunkContentsCache from binaryDataService?
@@ -46,7 +47,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
 
     val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
 
-    def cacheWeight(_key: String, arrayBox: Box[MultiArray]): Int =
+    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
       arrayBox match {
         case Full(array) =>
           (array.getSizeBytes / 1000L).toInt
@@ -225,6 +226,15 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       }
 
     } yield skeleton
+
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext,
+                                                                   tc: TokenContext): Fox[Long] =
+    for {
+      array <- openZarrArrayCached("agglomerate_to_segments_offsets")
+      shape <- array.datasetShape.toFox ?~> "Could not determine array shape"
+      shapeFirstElement <- tryo(shape(0)).toFox
+    } yield shapeFirstElement
+
 }
 
 class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {

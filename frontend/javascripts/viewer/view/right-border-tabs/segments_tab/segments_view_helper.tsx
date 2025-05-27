@@ -113,7 +113,7 @@ export function withMappingActivationConfirmation(
   const recommendationStr =
     editableMapping == null
       ? ""
-      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mapping instead.";
+      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mesh file instead.";
 
   const confirmMappingActivation: MenuClickEventHandler = (menuClickEvent) => {
     confirm({

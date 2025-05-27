@@ -23,6 +23,8 @@ import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumet
 import type {
   AddLayerToAnnotationUpdateAction,
   AddSegmentIndexUpdateAction,
+  AddUserBoundingBoxInSkeletonTracingAction,
+  AddUserBoundingBoxInVolumeTracingAction,
   CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
   CreateSegmentUpdateAction,
@@ -32,6 +34,10 @@ import type {
   DeleteSegmentDataUpdateAction,
   DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
+  DeleteUserBoundingBoxInSkeletonTracingAction,
+  DeleteUserBoundingBoxInVolumeTracingAction,
+  LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
+  LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
   MergeTreeUpdateAction,
   MoveTreeComponentUpdateAction,
@@ -56,8 +62,10 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
-  UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
-  UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
+  UpdateUserBoundingBoxInSkeletonTracingAction,
+  UpdateUserBoundingBoxInVolumeTracingAction,
+  UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
+  UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -85,13 +93,53 @@ const descriptionFns: Record<
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  updateUserBoundingBoxesInSkeletonTracing: (): Description => ({
-    description: "Updated a bounding box.",
+  updateUserBoundingBoxesInSkeletonTracing: (
+    firstAction: LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
+  ): Description => ({
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
   }),
-  updateUserBoundingBoxesInVolumeTracing: (): Description => ({
-    description: "Updated a bounding box.",
+  updateUserBoundingBoxesInVolumeTracing: (
+    firstAction: LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
+  ): Description => ({
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
+  }),
+  addUserBoundingBoxInSkeletonTracing: (
+    firstAction: AddUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
+    icon: <PlusOutlined />,
+  }),
+  addUserBoundingBoxInVolumeTracing: (
+    firstAction: AddUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
+    icon: <PlusOutlined />,
+  }),
+  deleteUserBoundingBoxInSkeletonTracing: (
+    firstAction: DeleteUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <DeleteOutlined />,
+  }),
+  deleteUserBoundingBoxInVolumeTracing: (
+    firstAction: DeleteUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <DeleteOutlined />,
+  }),
+  updateUserBoundingBoxInSkeletonTracing: (
+    firstAction: UpdateUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxInVolumeTracing: (
+    firstAction: UpdateUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <EditOutlined />,
   }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
@@ -392,21 +440,17 @@ const descriptionFns: Record<
     };
   },
   updateUserBoundingBoxVisibilityInSkeletonTracing: (
-    _action: UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
-  ): Description => {
-    return {
-      description: "Changed visibility of a bounding box.",
-      icon: <EyeOutlined />,
-    };
-  },
+    firstAction: UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
+  ): Description => ({
+    description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <EyeOutlined />,
+  }),
   updateUserBoundingBoxVisibilityInVolumeTracing: (
-    _action: UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
-  ): Description => {
-    return {
-      description: "Changed visibility of a bounding box.",
-      icon: <EyeOutlined />,
-    };
-  },
+    firstAction: UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  ): Description => ({
+    description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
+    icon: <EyeOutlined />,
+  }),
 } as const;
 
 function maybeGetReadableVolumeTracingName(annotation: StoreAnnotation, tracingId: string): string {

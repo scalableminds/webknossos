@@ -5,6 +5,7 @@ import ErrorHandling from "libs/error_handling";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
@@ -19,7 +20,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_types";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -57,6 +58,8 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 import {
+  addUserBoundingBoxInSkeletonTracing,
+  addUserBoundingBoxInVolumeTracing,
   createEdge,
   createNode,
   createTree,
@@ -64,6 +67,8 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  deleteUserBoundingBoxInSkeletonTracing,
+  deleteUserBoundingBoxInVolumeTracing,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -71,9 +76,13 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
   updateUserBoundingBoxVisibilityInSkeletonTracing,
-  updateUserBoundingBoxesInSkeletonTracing,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
+  updateUserBoundingBoxVisibilityInVolumeTracing,
+  LEGACY_updateUserBoundingBoxesInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
+import type { UserBoundingBox } from "viewer/store";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { diffGroups, diffUserBoundingBoxes } from "../helpers/diff_helpers";
@@ -588,6 +597,68 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
   Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
 
+export function* diffBoundingBoxes(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  if (prevBoundingBoxes === currentBoundingBoxes) return;
+  const {
+    onlyA: deletedBBoxIds,
+    onlyB: addedBBoxIds,
+    both: maybeChangedBBoxIds,
+  } = Utils.diffArrays(
+    prevBoundingBoxes.map((bbox) => bbox.id),
+    currentBoundingBoxes.map((bbox) => bbox.id),
+  );
+  const [addBBoxAction, deleteBBoxAction, updateBBoxAction, updateBBoxVisibilityAction] =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? [
+          addUserBoundingBoxInSkeletonTracing,
+          deleteUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxVisibilityInSkeletonTracing,
+        ]
+      : [
+          addUserBoundingBoxInVolumeTracing,
+          deleteUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxVisibilityInVolumeTracing,
+        ];
+  const getErrorMessage = (id: number) =>
+    `User bounding box with id ${id} not found in ${tracingType} tracing.`;
+  for (const id of deletedBBoxIds) {
+    yield deleteBBoxAction(id, tracingId);
+  }
+  for (const id of addedBBoxIds) {
+    const bbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    if (bbox) {
+      yield addBBoxAction(bbox, tracingId);
+    } else {
+      throw new Error(getErrorMessage(id));
+    }
+  }
+  for (const id of maybeChangedBBoxIds) {
+    const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
+    if (currentBbox == null || prevBbox == null) {
+      throw new Error(getErrorMessage(id));
+    }
+    if (currentBbox === prevBbox) continue;
+
+    const diffBbox = Utils.diffObjects(prevBbox, currentBbox);
+
+    const { isVisible: maybeIsVisible, ...changedKeys } = diffBbox;
+    if (maybeIsVisible != null) {
+      yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
+    }
+    if (!_.isEmpty(changedKeys)) {
+      yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
+    }
+  }
+}
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
@@ -633,7 +704,8 @@ export function* diffSkeletonTracing(
     );
 
     if (boxDiff.didContentChange) {
-      yield updateUserBoundingBoxesInSkeletonTracing(
+      // todop
+      yield LEGACY_updateUserBoundingBoxesInSkeletonTracing(
         skeletonTracing.userBoundingBoxes,
         skeletonTracing.tracingId,
       );
@@ -647,6 +719,14 @@ export function* diffSkeletonTracing(
       yield updateUserBoundingBoxVisibilityInSkeletonTracing(id, false, skeletonTracing.tracingId);
     }
   }
+
+  // todop: integrate this?
+  // yield* diffBoundingBoxes(
+  //   prevSkeletonTracing.userBoundingBoxes,
+  //   skeletonTracing.userBoundingBoxes,
+  //   skeletonTracing.tracingId,
+  //   AnnotationLayerEnum.Skeleton,
+  // );
 }
 export default [
   watchSkeletonTracingAsync,

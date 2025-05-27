@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   Edge,
   Node,
@@ -653,6 +655,79 @@ case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundi
     this.copy(actionTracingId = newTracingId)
 }
 
+case class AddUserBoundingBoxSkeletonAction(boundingBox: NamedBoundingBox,
+                                            actionTracingId: String,
+                                            actionTimestamp: Option[Long] = None,
+                                            actionAuthorId: Option[String] = None,
+                                            info: Option[String] = None)
+    extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class DeleteUserBoundingBoxSkeletonAction(boundingBoxId: Int,
+                                               actionTracingId: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
+    extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
+                                               name: Option[Option[String]],
+                                               color: Option[Option[Color]],
+                                               boundingBox: Option[Option[BoundingBox]],
+                                               actionTracingId: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
+    extends SkeletonUpdateAction
+    with ProtoGeometryImplicits {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
+    def updateUserBoundingBoxes() =
+      tracing.userBoundingBoxes.map { currentBoundingBox =>
+        if (boundingBoxId == currentBoundingBox.id) {
+          currentBoundingBox.copy(
+            name = name.getOrElse(currentBoundingBox.name),
+            color = if (color.isDefined) color.flatMap(colorOptToProto) else currentBoundingBox.color,
+            boundingBox =
+              if (boundingBox.isDefined)
+                boundingBox.flatMap(boundingBoxOptToProto).getOrElse(currentBoundingBox.boundingBox)
+              else currentBoundingBox.boundingBox
+          )
+        } else
+          currentBoundingBox
+      }
+    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
 case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int],
                                                          isVisible: Boolean,
                                                          actionTracingId: String,
@@ -745,6 +820,18 @@ object UpdateTreeEdgesVisibilitySkeletonAction {
 object UpdateUserBoundingBoxesSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesSkeletonAction] =
     Json.format[UpdateUserBoundingBoxesSkeletonAction]
+}
+object AddUserBoundingBoxSkeletonAction {
+  implicit val jsonFormat: OFormat[AddUserBoundingBoxSkeletonAction] =
+    Json.format[AddUserBoundingBoxSkeletonAction]
+}
+object DeleteUserBoundingBoxSkeletonAction {
+  implicit val jsonFormat: OFormat[DeleteUserBoundingBoxSkeletonAction] =
+    Json.format[DeleteUserBoundingBoxSkeletonAction]
+}
+object UpdateUserBoundingBoxSkeletonAction extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxSkeletonAction] =
+    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxSkeletonAction]
 }
 object UpdateUserBoundingBoxVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =

@@ -10,12 +10,8 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxType } from "viewer/constants";
-import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
-import {
-  isVolumeAnnotationDisallowedForZoom,
-  isVolumeTool,
-} from "viewer/model/accessors/volumetracing_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
@@ -24,8 +20,8 @@ import type {
   UserBoundingBoxToServer,
   WebknossosState,
 } from "viewer/store";
-import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import type { Tree, TreeGroup } from "../types/tree_types";
+import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -67,13 +63,11 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   });
 }
 
-export function convertUserBoundingBoxesFromFrontendToServer(
-  boundingBoxes: Array<UserBoundingBox>,
-): Array<UserBoundingBoxToServer> {
-  return boundingBoxes.map((bb) => {
-    const { boundingBox, ...rest } = bb;
-    return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
-  });
+export function convertUserBoundingBoxFromFrontendToServer(
+  boundingBox: UserBoundingBox,
+): UserBoundingBoxToServer {
+  const { boundingBox: bb, ...rest } = boundingBox;
+  return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }
 
 export function convertFrontendBoundingBoxToServer(
@@ -153,6 +147,21 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
+export function isToolAvailable(
+  state: WebknossosState,
+  disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
+  tool: AnnotationTool,
+) {
+  const { isDisabled } = disabledToolInfo[tool.id];
+  if (isDisabled) {
+    return false;
+  }
+  if (!state.annotation.restrictions.allowUpdate) {
+    return Toolkits.READ_ONLY_TOOLS.includes(tool);
+  }
+  return true;
+}
+
 export function getNextTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
@@ -166,7 +175,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (!disabledToolInfo[newTool.id].isDisabled) {
+    if (isToolAvailable(state, disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -187,7 +196,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (!disabledToolInfo[newTool.id].isDisabled) {
+    if (isToolAvailable(state, disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -200,7 +209,8 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
     return state;
   }
 
-  if (isVolumeTool(tool) && isVolumeAnnotationDisallowedForZoom(tool, state)) {
+  const disabledToolInfo = getDisabledInfoForTools(state);
+  if (!isToolAvailable(state, disabledToolInfo, tool)) {
     return state;
   }
 

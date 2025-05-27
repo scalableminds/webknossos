@@ -163,8 +163,7 @@ let didShowFailedSimultaneousTracingError = false;
 
 export function* sendSaveRequestToServer(): Saga<number> {
   /*
-   * Saves a reasonably-sized part of the save queue (that corresponds to the
-   * tracingId) to the server (plus retry-mechanism).
+   * Saves a reasonably-sized part of the save queue to the server (plus retry-mechanism).
    * The saga returns the number of save queue items that were saved.
    */
 

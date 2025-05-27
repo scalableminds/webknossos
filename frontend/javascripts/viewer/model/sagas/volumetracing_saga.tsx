@@ -12,6 +12,7 @@ import _ from "lodash";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { AnnotationLayerEnum } from "types/api_types";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -64,6 +65,7 @@ import {
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
 import {
+  LEGACY_updateUserBoundingBoxesInVolumeTracing,
   type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
@@ -77,7 +79,6 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
   updateUserBoundingBoxVisibilityInVolumeTracing,
-  updateUserBoundingBoxesInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
@@ -85,6 +86,7 @@ import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffGroups, diffUserBoundingBoxes } from "../helpers/diff_helpers";
 import { ensureWkReady } from "./ready_sagas";
+import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -481,11 +483,19 @@ export function* diffVolumeTracing(
     volumeTracing.userBoundingBoxes,
   );
   if (boxDiff.didContentChange) {
-    yield updateUserBoundingBoxesInVolumeTracing(
+    yield LEGACY_updateUserBoundingBoxesInVolumeTracing(
       volumeTracing.userBoundingBoxes,
       volumeTracing.tracingId,
     );
   }
+
+  // todop:
+  // yield* diffBoundingBoxes(
+  //   prevVolumeTracing.userBoundingBoxes,
+  //   volumeTracing.userBoundingBoxes,
+  //   volumeTracing.tracingId,
+  //   AnnotationLayerEnum.Volume,
+  // );
 
   for (const id of boxDiff.newlyVisibleIds) {
     yield updateUserBoundingBoxVisibilityInVolumeTracing(id, true, volumeTracing.tracingId);

@@ -21,7 +21,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
-import ucar.ma2.{DataType, Index2D, Array => MultiArray}
+import ucar.ma2.{DataType, Array => MultiArray}
 
 import java.net.URI
 import java.nio._
@@ -182,18 +182,23 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
 
       nodeIdStartAtOneOffset = 1
 
+      // TODO use multiarray index iterators?
       nodes = (0 until nodeCount.toInt).map { nodeIdx =>
         NodeDefaults.createInstance.copy(
           id = nodeIdx + nodeIdStartAtOneOffset,
-          position = Vec3IntProto(positions.getInt(new Index2D(Array(nodeIdx, 0))),
-                                  positions.getInt(new Index2D(Array(nodeIdx, 1))),
-                                  positions.getInt(new Index2D(Array(nodeIdx, 2))))
+          position = Vec3IntProto(
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
+          )
         )
       }
 
-      skeletonEdges = (0 until edges.getShape()(1)).map { edgeIdx =>
-        Edge(source = edges.getInt(new Index2D(Array(edgeIdx, 0))) + nodeIdStartAtOneOffset,
-             target = edges.getInt(new Index2D(Array(edgeIdx, 1))) + nodeIdStartAtOneOffset)
+      skeletonEdges = (0 until edges.getShape()(0)).map { edgeIdx =>
+        Edge(
+          source = edges.getInt(edges.getIndex.set(Array(edgeIdx, 0))) + nodeIdStartAtOneOffset,
+          target = edges.getInt(edges.getIndex.set(Array(edgeIdx, 1))) + nodeIdStartAtOneOffset
+        )
       }
 
       trees = Seq(

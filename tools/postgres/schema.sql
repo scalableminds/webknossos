@@ -450,6 +450,19 @@ CREATE TABLE webknossos.multiUsers(
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
+CREATE TABLE webknossos.webauthnCredentials(
+  _id TEXT PRIMARY KEY,
+  _multiUser CHAR(24) NOT NULL,
+  credentialId BYTEA NOT NULL,
+  name TEXT NOT NULL,
+  serializedAttestationStatement BYTEA NOT NULL,
+  serializedAttestedCredential BYTEA NOT NULL,
+  serializedExtensions BYTEA NOT NULL,
+  signatureCount INTEGER NOT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_id, credentialId)
+);
+
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
@@ -920,6 +933,8 @@ ALTER TABLE webknossos.aiModel_trainingAnnotations
 ALTER TABLE webknossos.aiModel_organizations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.webauthnCredentials
+  ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
@@ -1064,7 +1079,3 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
-
-
-
-

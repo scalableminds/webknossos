@@ -5,8 +5,20 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
+}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
-import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, datasource}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
@@ -17,8 +29,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
+  DataFormat,
   DataSourceId,
   ElementClass,
+  SegmentationLayerLike,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -839,6 +853,30 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos
 
+  def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
+    for {
+      mag <- parseMag(row.mag)
+      axisOrderParsed = row.axisorder match {
+        case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
+        case None            => None
+      }
+    } yield
+      MagLocator(
+        mag,
+        row.path, // Does this make sense -> mag path may be something different than path in DB :/
+        None,
+        axisOrderParsed,
+        row.channelindex,
+        row.credentialid
+      )
+
+  def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
+    for {
+      // We assume non-WKW Datasets here (WKW Resolutions are not handled)
+      rows <- run(q"""SELECT * FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
+      mags <- Fox.combined(rows.map(parseMagLocator))
+    } yield rows.map(r => r.datalayername).zip(mags)
+
 }
 
 class DatasetLayerDAO @Inject()(
@@ -853,7 +891,7 @@ class DatasetLayerDAO @Inject()(
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
-        .toFox ?~> "Could not parse boundingbox"
+        .toFox ?~> "Could not parse bounding box"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
@@ -865,6 +903,7 @@ class DatasetLayerDAO @Inject()(
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
       additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
+      dataFormat = row.dataformat.flatMap(df => DataFormat.fromString(df))
     } yield {
       category match {
         case Category.segmentation =>
@@ -881,7 +920,9 @@ class DatasetLayerDAO @Inject()(
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalAxesOpt
+              additionalAxesOpt,
+              numChannels = row.numchannels,
+              dataFormat = dataFormat
             ))
         case Category.color =>
           Fox.successful(
@@ -894,7 +935,9 @@ class DatasetLayerDAO @Inject()(
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalAxesOpt
+              additionalAxesOpt,
+              numChannels = row.numchannels,
+              dataFormat = dataFormat
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -905,12 +948,14 @@ class DatasetLayerDAO @Inject()(
   def findAllForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
       rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
-                          defaultViewConfiguration, adminViewConfiguration
+                          defaultViewConfiguration, adminViewConfiguration, numChannels, dataFormat
                       FROM webknossos.dataset_layers
                       WHERE _dataset = $datasetId
                       ORDER BY name""".as[DatasetLayersRow])
       rowsParsed <- Fox.combined(rows.toList.map(parseRow(_, datasetId)))
     } yield rowsParsed
+
+
 
   private def insertLayerQuery(datasetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
     layer match {

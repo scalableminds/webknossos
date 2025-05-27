@@ -4,12 +4,25 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractDataLayer,
+  AbstractSegmentationLayer,
+  DataFormat,
   DataSourceId,
   GenericDataSource,
   DataLayerLike => DataLayer
@@ -198,6 +211,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                     dataSource.hashCode,
                                                     dataSource,
                                                     dataSource.isUsable)
+        _ <- notifyDSOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(
@@ -219,6 +233,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                       dataSource.hashCode,
                                                       dataSource,
                                                       dataSource.isUsable)(GlobalAccessContext)
+          _ <- notifyDSOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
         logger.info(
@@ -272,6 +287,188 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       else
         Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
     }).flatten
+
+  // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
+  def fullDataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
+    (for {
+      dataLayers <- findLayersForDatasetWithMags(dataset._id)
+      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
+    } yield {
+      if (dataset.isUsable)
+        for {
+          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
+        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+      else
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
+    }).flatten
+
+  private def findLayersForDatasetWithMags(datasetId: ObjectId): Fox[List[DataLayer]] =
+    for {
+      layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
+      layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
+      layersWithMags = layers.map { layer =>
+        val mags = layerNamesAndMags.filter(_._1 == layer.name).map(_._2).toList
+        layer match {
+          case AbstractDataLayer(name,
+                                 category,
+                                 boundingBox,
+                                 _,
+                                 elementClass,
+                                 defaultViewConfiguration,
+                                 adminViewConfiguration,
+                                 coordinateTransformations,
+                                 additionalAxes,
+                                 _,
+                                 numChannels,
+                                 dataFormat,
+                                 _) =>
+            dataFormat match {
+              case Some(df) =>
+                df match {
+                  case DataFormat.wkw =>
+                    throw new NotImplementedError(
+                      "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                  case DataFormat.neuroglancerPrecomputed =>
+                    PrecomputedDataLayer(name,
+                                         boundingBox,
+                                         category,
+                                         elementClass,
+                                         mags,
+                                         defaultViewConfiguration,
+                                         adminViewConfiguration,
+                                         coordinateTransformations,
+                                         numChannels,
+                                         additionalAxes)
+                  case DataFormat.n5 =>
+                    N5DataLayer(name,
+                                category,
+                                boundingBox,
+                                elementClass,
+                                mags,
+                                defaultViewConfiguration,
+                                adminViewConfiguration,
+                                coordinateTransformations,
+                                numChannels,
+                                additionalAxes)
+                  case DataFormat.zarr =>
+                    ZarrDataLayer(name,
+                                  category,
+                                  boundingBox,
+                                  elementClass,
+                                  mags,
+                                  defaultViewConfiguration,
+                                  adminViewConfiguration,
+                                  coordinateTransformations,
+                                  numChannels,
+                                  additionalAxes,
+                                  df)
+                  case DataFormat.zarr3 =>
+                    Zarr3DataLayer(name,
+                                   category,
+                                   boundingBox,
+                                   elementClass,
+                                   mags,
+                                   defaultViewConfiguration,
+                                   adminViewConfiguration,
+                                   coordinateTransformations,
+                                   numChannels,
+                                   additionalAxes)
+                }
+              case None => ???
+            }
+          case AbstractSegmentationLayer(name,
+                                         _,
+                                         boundingBox,
+                                         _,
+                                         elementClass,
+                                         largestSegmentId,
+                                         mappings,
+                                         defaultViewConfiguration,
+                                         adminViewConfiguration,
+                                         coordinateTransformations,
+                                         additionalAxes,
+                                         _,
+                                         numChannels,
+                                         dataFormat,
+                                         _) =>
+            dataFormat match {
+              case Some(df) =>
+                df match {
+                  case DataFormat.wkw =>
+                    throw new NotImplementedError(
+                      "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                  case DataFormat.neuroglancerPrecomputed =>
+                    PrecomputedSegmentationLayer(
+                      name,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      largestSegmentId,
+                      mappings,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                    )
+                  case DataFormat.n5 =>
+                    N5SegmentationLayer(
+                      name,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      largestSegmentId,
+                      mappings,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes
+                    )
+                  case DataFormat.zarr =>
+                    ZarrSegmentationLayer(
+                      name,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      largestSegmentId,
+                      mappings,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                      df
+                    )
+                  case DataFormat.zarr3 =>
+                    Zarr3SegmentationLayer(
+                      name,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      largestSegmentId,
+                      mappings,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes
+                    )
+                }
+              case None => ???
+            }
+          case _ => throw new NotImplementedError("DataLayer type mismatch (unreachable)")
+        }
+      }
+    } yield layersWithMags
+
+  def notifyDSOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
+      dataSource <- fullDataSourceFor(dataset)
+      dataStoreClient <- clientFor(dataset)
+      _ <- dataStoreClient.updateDatasetInDSCache(dataset._organization, dataset._id.toString, dataSource)
+    } yield ()
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =
     dataset.logoUrl match {

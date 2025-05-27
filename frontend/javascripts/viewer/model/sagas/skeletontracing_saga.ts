@@ -21,7 +21,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_types";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
@@ -60,31 +60,32 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 import {
+  addUserBoundingBoxInSkeletonTracing,
+  addUserBoundingBoxInVolumeTracing,
   createEdge,
   createNode,
   createTree,
   deleteEdge,
   deleteNode,
   deleteTree,
+  deleteUserBoundingBoxInSkeletonTracing,
+  deleteUserBoundingBoxInVolumeTracing,
   updateNode,
   updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
   updateTreeVisibility,
-  updateUserBoundingBoxesInSkeletonTracing,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
+  updateUserBoundingBoxVisibilityInSkeletonTracing,
+  updateUserBoundingBoxVisibilityInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type {
-  Flycam,
-  Node,
-  NodeMap,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
-} from "viewer/store";
+import type { UserBoundingBox } from "viewer/store";
+import type { Flycam, SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -134,7 +135,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: WebknossosState) => (getBranchPoints(state.annotation) ?? []).length > 0,
+        (state: WebknossosState) => (getBranchPoints(state.annotation)?.toArray() ?? []).length > 0,
       );
 
       if (hasBranchPoints) {
@@ -176,9 +177,9 @@ function* watchFailedNodeCreations(): Saga<void> {
 
 function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
-  const invalidTreeDetails = [];
+  const invalidTreeDetails: Array<Record<string, any>> = [];
 
-  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
+  for (const tree of enforceSkeletonTracing(state.annotation).trees.values()) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
 
@@ -209,7 +210,7 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
+  for (const tree of enforceSkeletonTracing(state.annotation).trees.values()) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
@@ -559,31 +560,28 @@ export function* diffTrees(
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
+    changed: bothTreeIds,
     onlyA: deletedTreeIds,
     onlyB: addedTreeIds,
-    both: bothTreeIds,
-  } = Utils.diffArrays(
-    _.map(prevTrees, (tree) => tree.treeId),
-    _.map(trees, (tree) => tree.treeId),
-  );
+  } = diffDiffableMaps(prevTrees, trees);
 
   for (const treeId of deletedTreeIds) {
-    const prevTree = prevTrees[treeId];
+    const prevTree = prevTrees.getOrThrow(treeId);
     yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId);
     yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId);
     yield deleteTree(treeId, tracingId);
   }
 
   for (const treeId of addedTreeIds) {
-    const tree = trees[treeId];
+    const tree = trees.getOrThrow(treeId);
     yield createTree(tree, tracingId);
     yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId);
     yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId);
   }
 
   for (const treeId of bothTreeIds) {
-    const tree = trees[treeId];
-    const prevTree: Tree = prevTrees[treeId];
+    const tree = trees.getOrThrow(treeId);
+    const prevTree: Tree = prevTrees.getOrThrow(treeId);
 
     if (tree !== prevTree) {
       yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId);
@@ -606,6 +604,68 @@ export function* diffTrees(
 export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap, trees: TreeMap) =>
   Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
+
+export function* diffBoundingBoxes(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  if (prevBoundingBoxes === currentBoundingBoxes) return;
+  const {
+    onlyA: deletedBBoxIds,
+    onlyB: addedBBoxIds,
+    both: maybeChangedBBoxIds,
+  } = Utils.diffArrays(
+    prevBoundingBoxes.map((bbox) => bbox.id),
+    currentBoundingBoxes.map((bbox) => bbox.id),
+  );
+  const [addBBoxAction, deleteBBoxAction, updateBBoxAction, updateBBoxVisibilityAction] =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? [
+          addUserBoundingBoxInSkeletonTracing,
+          deleteUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxVisibilityInSkeletonTracing,
+        ]
+      : [
+          addUserBoundingBoxInVolumeTracing,
+          deleteUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxVisibilityInVolumeTracing,
+        ];
+  const getErrorMessage = (id: number) =>
+    `User bounding box with id ${id} not found in ${tracingType} tracing.`;
+  for (const id of deletedBBoxIds) {
+    yield deleteBBoxAction(id, tracingId);
+  }
+  for (const id of addedBBoxIds) {
+    const bbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    if (bbox) {
+      yield addBBoxAction(bbox, tracingId);
+    } else {
+      throw new Error(getErrorMessage(id));
+    }
+  }
+  for (const id of maybeChangedBBoxIds) {
+    const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
+    if (currentBbox == null || prevBbox == null) {
+      throw new Error(getErrorMessage(id));
+    }
+    if (currentBbox === prevBbox) continue;
+
+    const diffBbox = Utils.diffObjects(prevBbox, currentBbox);
+
+    const { isVisible: maybeIsVisible, ...changedKeys } = diffBbox;
+    if (maybeIsVisible != null) {
+      yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
+    }
+    if (!_.isEmpty(changedKeys)) {
+      yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
+    }
+  }
+}
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
@@ -637,12 +697,12 @@ export function* diffSkeletonTracing(
     );
   }
 
-  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
-      skeletonTracing.userBoundingBoxes,
-      skeletonTracing.tracingId,
-    );
-  }
+  yield* diffBoundingBoxes(
+    prevSkeletonTracing.userBoundingBoxes,
+    skeletonTracing.userBoundingBoxes,
+    skeletonTracing.tracingId,
+    AnnotationLayerEnum.Skeleton,
+  );
 }
 export default [
   watchSkeletonTracingAsync,

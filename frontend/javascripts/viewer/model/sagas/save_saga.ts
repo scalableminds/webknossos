@@ -683,6 +683,8 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         /////////////
         // Skeleton
         /////////////
+        case "createTree":
+        case "updateTree":
         case "createNode":
         case "createEdge":
         // Skeleton User Bounding Boxes
@@ -807,11 +809,9 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Skeleton
-        case "createTree":
         case "deleteEdge":
         case "deleteNode":
         case "deleteTree":
-        case "updateTree":
         case "updateTreeEdgesVisibility":
         case "updateTreeGroups":
         case "moveTreeComponent":

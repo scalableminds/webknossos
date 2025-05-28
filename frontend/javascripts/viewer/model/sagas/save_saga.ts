@@ -688,6 +688,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
   for (const actionBatch of newerActions) {
     for (const action of actionBatch.value) {
       switch (action.name) {
+        /////////////
         // Updates to user-specific state can be ignored:
         //   Camera
         case "updateCamera":
@@ -707,13 +708,22 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "updateSegmentGroupsExpandedState": {
           break;
         }
+        /////////////
+        // Skeleton
+        /////////////
         case "createNode":
-        case "createEdge": {
+        case "createEdge":
+        // Skeleton User Bounding Boxes
+        case "addUserBoundingBoxInSkeletonTracing":
+        case "updateUserBoundingBoxInSkeletonTracing":
+        case "deleteUserBoundingBoxInSkeletonTracing": {
           yield* put(applySkeletonUpdateActionsFromServerAction([action]));
           break;
         }
 
+        /////////////
         // Volume
+        /////////////
         case "updateBucket": {
           const { value } = action;
           const cube = Model.getCubeByLayerName(value.actionTracingId);
@@ -745,7 +755,11 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "updateLargestSegmentId":
         case "createSegment":
         case "deleteSegment":
-        case "updateSegment": {
+        case "updateSegment":
+        // Volume User Bounding Boxes
+        case "addUserBoundingBoxInVolumeTracing":
+        case "deleteUserBoundingBoxInVolumeTracing":
+        case "updateUserBoundingBoxInVolumeTracing": {
           yield* put(applyVolumeUpdateActionsFromServerAction([action]));
           break;
         }

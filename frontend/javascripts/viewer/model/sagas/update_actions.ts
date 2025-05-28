@@ -5,6 +5,7 @@ import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_a
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type {
+  BoundingBoxObject,
   NumberLike,
   SegmentGroup,
   UserBoundingBox,
@@ -105,13 +106,21 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
-export type ApplicableSkeletonUpdateAction = CreateNodeUpdateAction | CreateEdgeUpdateAction;
+export type ApplicableSkeletonUpdateAction =
+  | CreateNodeUpdateAction
+  | CreateEdgeUpdateAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction;
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateSegmentUpdateAction
   | CreateSegmentUpdateAction
-  | DeleteSegmentUpdateAction;
+  | DeleteSegmentUpdateAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
@@ -571,24 +580,26 @@ export function deleteUserBoundingBoxInVolumeTracing(
 }
 
 function _updateUserBoundingBoxHelper(
-  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
-) {
+): {
+  boundingBoxId: number;
+  actionTracingId: string;
+  boundingBox?: BoundingBoxObject;
+  name?: string;
+  color?: Vector3;
+} {
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropsForServer =
     boundingBox != null
       ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
-      : updatedProps;
+      : (updatedProps as Omit<PartialBoundingBoxWithoutVisibility, "boundingBox">);
   return {
-    name: actionName,
-    value: {
-      boundingBoxId,
-      actionTracingId,
-      ...updatedPropsForServer,
-    },
-  } as const;
+    boundingBoxId,
+    actionTracingId,
+    ...updatedPropsForServer,
+  };
 }
 
 export function updateUserBoundingBoxInVolumeTracing(
@@ -596,12 +607,10 @@ export function updateUserBoundingBoxInVolumeTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInVolumeTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInVolumeTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxInSkeletonTracing(
@@ -609,12 +618,10 @@ export function updateUserBoundingBoxInSkeletonTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInSkeletonTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInSkeletonTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxVisibilityInSkeletonTracing(

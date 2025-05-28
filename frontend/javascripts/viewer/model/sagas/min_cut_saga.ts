@@ -7,7 +7,7 @@ import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import type { APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxType, TypedArray, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType, TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -170,7 +170,10 @@ function removeOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: n
   edgeBuffer[idx] &= ~(2 ** neighborIdx);
 }
 
-export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, nodes: Array<Node>) {
+export function isBoundingBoxUsableForMinCut(
+  boundingBoxObj: BoundingBoxMinMaxType,
+  nodes: Array<Node>,
+) {
   const bbox = new BoundingBox(boundingBoxObj);
   return (
     bbox.containsPoint(nodes[0].untransformedPosition) &&

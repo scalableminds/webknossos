@@ -54,8 +54,8 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
-import { handleUserBoundingBoxUpdateInTracing } from "./annotation_reducer";
 import type { ApplicableSkeletonUpdateAction } from "../sagas/update_actions";
+import { handleUserBoundingBoxUpdateInTracing } from "./annotation_reducer";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   if (action.type === "INITIALIZE_SKELETONTRACING") {

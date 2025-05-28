@@ -8,7 +8,7 @@ import _ from "lodash";
 import * as THREE from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   OrthoView,
   OrthoViewMap,
   OrthoViewWithoutTDMap,
@@ -325,7 +325,7 @@ class SceneController {
   }
 
   updateTaskBoundingBoxes(
-    taskCubeByTracingId: Record<string, BoundingBoxType | null | undefined>,
+    taskCubeByTracingId: Record<string, BoundingBoxMinMaxType | null | undefined>,
   ): void {
     /*
      Ensures that a green task bounding box is rendered in the scene for

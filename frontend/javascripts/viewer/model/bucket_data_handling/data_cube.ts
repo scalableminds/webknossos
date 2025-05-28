@@ -15,7 +15,7 @@ import * as THREE from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   BucketAddress,
   LabelMasksByBucketAndW,
   Vector3,
@@ -570,7 +570,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
-    _floodfillBoundingBox: BoundingBoxType,
+    _floodfillBoundingBox: BoundingBoxMinMaxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
@@ -578,7 +578,7 @@ class DataCube {
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
     wasBoundingBoxExceeded: boolean;
-    coveredBoundingBox: BoundingBoxType;
+    coveredBoundingBox: BoundingBoxMinMaxType;
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data

@@ -22,7 +22,7 @@ import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "ty
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Writeable } from "types/globals";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   BucketAddress,
   ControlMode,
   LabeledVoxelsMap,
@@ -1887,7 +1887,7 @@ class DataApi {
    */
   async getDataFor2DBoundingBox(
     layerName: string,
-    bbox: BoundingBoxType,
+    bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
   ) {
     return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
@@ -1900,7 +1900,7 @@ class DataApi {
    */
   async getDataForBoundingBox(
     layerName: string,
-    mag1Bbox: BoundingBoxType,
+    mag1Bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
@@ -1989,7 +1989,7 @@ class DataApi {
   }
 
   getBucketAddressesInCuboid(
-    bbox: BoundingBoxType,
+    bbox: BoundingBoxMinMaxType,
     magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
@@ -2036,7 +2036,7 @@ class DataApi {
 
   cutOutCuboid(
     buckets: Array<Bucket>,
-    bbox: BoundingBoxType,
+    bbox: BoundingBoxMinMaxType,
     elementClass: ElementClass,
     magnifications: Array<Vector3>,
     zoomStep: number,

@@ -47,7 +47,6 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
-import { stlMeshConstants } from "viewer/view/right-border-tabs/segments_tab/segments_view";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
 
@@ -70,13 +69,6 @@ function marchingCubeSizeInTargetMag(): Vector3 {
   return WkDevFlags.meshing.marchingCubeSizeInTargetMag;
 }
 const modifiedCells: Set<number> = new Set();
-export function isMeshSTL(buffer: ArrayBuffer): boolean {
-  const dataView = new DataView(buffer);
-  const isMesh = stlMeshConstants.meshMarker.every(
-    (marker, index) => dataView.getUint8(index) === marker,
-  );
-  return isMesh;
-}
 
 function getOrAddMapForSegment(
   layerName: string,
@@ -554,12 +546,17 @@ function* refreshMeshes(): Saga<void> {
       continue;
     }
 
+    const meshInfo = yield* select((state) =>
+      getMeshInfoForSegment(state, additionalCoordinates, segmentationLayer.name, segmentId),
+    );
+
     yield* call(
       refreshMeshWithMap,
       segmentId,
       threeDMap,
       segmentationLayer.name,
       additionalCoordinates,
+      meshInfo?.opacity || Constants.DEFAULT_MESH_OPACITY,
     );
   }
 }

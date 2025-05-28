@@ -71,7 +71,7 @@ export type AdditionalAxis = {
   name: string;
 };
 
-export type ServerAdditionalAxis = {
+export type AdditionalAxisProto = {
   bounds: { x: number; y: number };
   index: number;
   name: string;
@@ -898,7 +898,7 @@ export type ServerTracingBase = {
   userBoundingBox?: BoundingBoxProto;
   createdTimestamp: number;
   error?: string;
-  additionalAxes: ServerAdditionalAxis[];
+  additionalAxes: AdditionalAxisProto[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove
   // the property.

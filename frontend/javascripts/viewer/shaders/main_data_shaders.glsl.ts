@@ -59,6 +59,7 @@ export type Params = {
   magnificationsCount: number;
   voxelSizeFactor: Vector3;
   voxelSizeFactorInverted: Vector3;
+  isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
 
@@ -69,6 +70,7 @@ uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
+uniform bool isFlycamRotated;
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -479,10 +481,15 @@ void main() {
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  // Early return shader as optimized vertex positioning at bucket borders currently does not work while rotations are active.
+  // This shouldn't really impact the performance as isFlycamRotated is a uniform.
+  if(isFlycamRotated){
+    return;
+  }
   // Remember the original z position, since it can subtly diverge in the
   // following calculations due to floating point inaccuracies. This can
   // result in artifacts, such as the crosshair disappearing.
-  /*float originalZ = gl_Position.z;
+  float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
   vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
@@ -593,7 +600,7 @@ void main() {
       }
     }
   }
-  <% }) %>*/
+  <% }) %>
 }
   `)({
     ...params,

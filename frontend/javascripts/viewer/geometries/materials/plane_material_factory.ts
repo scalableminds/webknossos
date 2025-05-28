@@ -31,6 +31,7 @@ import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
@@ -112,6 +113,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 
 class PlaneMaterialFactory {
   planeID: OrthoView;
+  isOrthogonal: boolean;
   material: THREE.ShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
@@ -125,8 +127,9 @@ class PlaneMaterialFactory {
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
-  constructor(planeID: OrthoView, shaderId: number) {
+  constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
+    this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
     this.leastRecentlyVisibleLayers = [];
   }
@@ -244,6 +247,7 @@ class PlaneMaterialFactory {
         value: false,
       },
       blendMode: { value: 1.0 },
+      isFlycamRotated: { value: false },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -579,6 +583,12 @@ class PlaneMaterialFactory {
           this.uniforms.blendMode.value = blendMode === BLEND_MODES.Additive ? 1.0 : 0.0;
         },
         true,
+      ),
+      listenToStoreProperty(
+        (storeState) => isRotated(storeState.flycam),
+        (isRotated) => {
+          this.uniforms.isFlycamRotated.value = isRotated;
+        },
       ),
     );
     const oldVisibilityPerLayer: Record<string, boolean> = {};
@@ -1089,6 +1099,7 @@ class PlaneMaterialFactory {
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       voxelSizeFactorInverted,
+      isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [
@@ -1125,6 +1136,7 @@ class PlaneMaterialFactory {
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       voxelSizeFactorInverted,
+      isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }

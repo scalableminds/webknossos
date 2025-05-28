@@ -70,6 +70,7 @@ class Plane {
 
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
+      true,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();

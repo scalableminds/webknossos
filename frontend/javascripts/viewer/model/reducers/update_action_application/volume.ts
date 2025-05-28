@@ -50,15 +50,27 @@ export function applyVolumeUpdateActionsFromServer(
         break;
       }
       case "updateUserBoundingBoxInVolumeTracing": {
-        newState = applyUpdateUserBoundingBox(newState, ua);
+        newState = applyUpdateUserBoundingBox(
+          newState,
+          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
+          ua,
+        );
         break;
       }
       case "addUserBoundingBoxInVolumeTracing": {
-        newState = applyAddUserBoundingBox(newState, ua);
+        newState = applyAddUserBoundingBox(
+          newState,
+          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
+          ua,
+        );
         break;
       }
       case "deleteUserBoundingBoxInVolumeTracing": {
-        newState = applyDeleteUserBoundingBox(newState, ua);
+        newState = applyDeleteUserBoundingBox(
+          newState,
+          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
+          ua,
+        );
         break;
       }
       default: {

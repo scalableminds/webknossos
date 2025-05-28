@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import { getTree } from "viewer/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing, getTree } from "viewer/model/accessors/skeletontracing_accessor";
 import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/update_actions";
 import type { WebknossosState } from "viewer/store";
 import {
@@ -103,15 +103,27 @@ export function applySkeletonUpdateActionsFromServer(
         break;
       }
       case "updateUserBoundingBoxInSkeletonTracing": {
-        newState = applyUpdateUserBoundingBox(newState, ua);
+        newState = applyUpdateUserBoundingBox(
+          newState,
+          enforceSkeletonTracing(newState.annotation),
+          ua,
+        );
         break;
       }
       case "addUserBoundingBoxInSkeletonTracing": {
-        newState = applyAddUserBoundingBox(newState, ua);
+        newState = applyAddUserBoundingBox(
+          newState,
+          enforceSkeletonTracing(newState.annotation),
+          ua,
+        );
         break;
       }
       case "deleteUserBoundingBoxInSkeletonTracing": {
-        newState = applyDeleteUserBoundingBox(newState, ua);
+        newState = applyDeleteUserBoundingBox(
+          newState,
+          enforceSkeletonTracing(newState.annotation),
+          ua,
+        );
         break;
       }
       default: {

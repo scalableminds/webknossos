@@ -40,6 +40,11 @@ import {
   getMaximumBrushSize,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import {
+  pitchFlycamAction,
+  rollFlycamAction,
+  yawFlycamAction,
+} from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   createBranchPointAction,
@@ -61,6 +66,7 @@ import {
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
+import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { Model, api } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
@@ -70,12 +76,6 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
-import {
-  pitchFlycamAction,
-  rollFlycamAction,
-  yawFlycamAction,
-} from "viewer/model/actions/flycam_actions";
-import Dimensions from "viewer/model/dimensions";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,

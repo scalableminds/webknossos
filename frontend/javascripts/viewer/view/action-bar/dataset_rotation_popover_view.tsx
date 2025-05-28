@@ -5,10 +5,10 @@ import type React from "react";
 import { useCallback } from "react";
 import type { EmptyObject } from "types/globals";
 import type { Vector3 } from "viewer/constants";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import Store from "viewer/store";
 import { NumberSliderSetting } from "../components/setting_input_views";
-import { isRotated } from "viewer/model/accessors/flycam_accessor";
 
 export const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",

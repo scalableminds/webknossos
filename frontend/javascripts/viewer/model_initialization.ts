@@ -118,7 +118,7 @@ import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
-  convertPointToVecInBoundingBox,
+  convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
@@ -612,7 +612,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
+      boundingBox: convertBoundingBoxProtoToObject(tracing.boundingBox),
       resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,

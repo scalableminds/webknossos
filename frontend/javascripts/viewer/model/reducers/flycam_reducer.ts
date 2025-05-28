@@ -56,33 +56,11 @@ function rotateOnAxisWithDistance(
   return M4x4.translate(distanceVecPositive, matrix, []);
 }
 
-const AxisToDimensionMap = {
-  x: 0,
-  y: 1,
-  z: 2,
-};
-
-function rotateAroundMainAxis(
-  state: WebknossosState,
-  angleInRadian: number,
-  axis: "x" | "y" | "z",
-  regardDistance: boolean,
-): WebknossosState {
-  const dimIndex = AxisToDimensionMap[axis];
-  const updatedRotation = [...state.flycam.rotation] as Vector3;
-  const angleInDegrees = (angleInRadian * 180) / Math.PI;
-  updatedRotation[dimIndex] = Utils.mod(updatedRotation[dimIndex] + angleInDegrees, 360);
-  const rotationAxis = [0, 0, 0] as Vector3;
-  rotationAxis[dimIndex] = 1;
-  return rotateReducer(state, angleInRadian, rotationAxis, regardDistance, updatedRotation);
-}
-
 function rotateReducer(
   state: WebknossosState,
   angle: number,
   axis: Vector3,
   regardDistance: boolean,
-  maybeUpdatedRotation?: Vector3,
 ): WebknossosState {
   if (Number.isNaN(angle)) {
     return state;
@@ -98,7 +76,7 @@ function rotateReducer(
         axis,
       )
     : rotateOnAxis(flycam.currentMatrix, angle, axis);
-  const updatedRotation = maybeUpdatedRotation ?? getRotationInDegrees(updatedMatrix);
+  const updatedRotation = getRotationInDegrees(updatedMatrix);
 
   return update(state, {
     flycam: {
@@ -384,13 +362,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "YAW_FLYCAM":
-      return rotateAroundMainAxis(state, action.angle, "y", action.regardDistance);
+      return rotateReducer(state, action.angle, [0, 1, 0], action.regardDistance);
 
     case "ROLL_FLYCAM":
-      return rotateAroundMainAxis(state, action.angle, "z", action.regardDistance);
+      return rotateReducer(state, action.angle, [0, 0, 1], action.regardDistance);
 
     case "PITCH_FLYCAM":
-      return rotateAroundMainAxis(state, action.angle, "x", action.regardDistance);
+      return rotateReducer(state, action.angle, [1, 0, 0], action.regardDistance);
 
     case "ROTATE_FLYCAM":
       return rotateReducer(state, action.angle, action.axis, action.regardDistance);

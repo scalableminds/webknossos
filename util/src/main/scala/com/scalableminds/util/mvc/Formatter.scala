@@ -92,7 +92,7 @@ trait Formatter {
           if (includeStackTraces)
             s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
           else
-            exception.toString
+            s" ${exception.toString}"
         case _ => ""
       }
 

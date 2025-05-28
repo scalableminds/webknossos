@@ -14,11 +14,17 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   AdditionalAxis,
+  AgglomerateFileInfo,
+  AttachedFile,
   Category,
+  ConnectomeFileInfo,
   CoordinateTransformation,
   CoordinateTransformationType,
+  CumsumFileInfo,
   DataSourceId,
   ElementClass,
+  MeshFileInfo,
+  SegmentIndexFileInfo,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -841,11 +847,11 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
 }
 
-class DatasetLayerDAO @Inject()(
-    sqlClient: SqlClient,
-    datasetMagsDAO: DatasetMagsDAO,
-    datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
-    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
+class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
+                                datasetMagsDAO: DatasetMagsDAO,
+                                datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
+                                datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
+                                datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[DataLayer] = {
@@ -970,6 +976,7 @@ class DatasetLayerDAO @Inject()(
       _ <- datasetMagsDAO.updateMags(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId,
                                                                                source.toUsable.map(_.dataLayers))
+      _ <- datasetLayerAttachmentsDAO.updateAttachments(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }
@@ -1007,6 +1014,37 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
+  }
+}
+
+class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+  def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    def insertQuery(attachment: AttachedFile, layerName: String, fileType: String) =
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
+          VALUES($datasetId, $layerName, ${attachment.path.toString}, $fileType::webknossos.ATTACHMENT_FILE_TYPE,
+          ${attachment.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)""".asUpdate
+    val clearQuery =
+      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      layer.attachments match {
+        case Some(attachments) =>
+          attachments.agglomerates.map { agglomerate =>
+            insertQuery(agglomerate, layer.name, AgglomerateFileInfo.typ)
+          } ++ attachments.connectomes.map { connectome =>
+            insertQuery(connectome, layer.name, ConnectomeFileInfo.typ)
+          } ++ attachments.segmentIndex.map { segmentIndex =>
+            insertQuery(segmentIndex, layer.name, SegmentIndexFileInfo.typ)
+          } ++ attachments.meshes.map { mesh =>
+            insertQuery(mesh, layer.name, MeshFileInfo.typ)
+          } ++ attachments.cumsum.map { cumsumFile =>
+            insertQuery(cumsumFile, layer.name, CumsumFileInfo.typ)
+          }
+        case None =>
+          List.empty
+      }
+    }
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 }
 

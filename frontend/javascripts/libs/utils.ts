@@ -3,16 +3,9 @@ import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
-import type {
-  BoundingBoxMinMaxType,
-  ColorObject,
-  Point3,
-  TypedArray,
-  Vector3,
-  Vector4,
-  Vector6,
-} from "viewer/constants";
+import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
 

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.credential.CredentialRecordImpl
-import com.webauthn4j.data.attestation.statement.AttestationStatement
+import com.webauthn4j.data.attestation.statement.NoneAttestationStatement
 import com.webauthn4j.data.extension.authenticator.{AuthenticationExtensionsAuthenticatorOutputs, RegistrationExtensionAuthenticatorOutput}
 import net.liftweb.common.Box.tryo
 import slick.lifted.Rep
@@ -26,39 +26,14 @@ case class WebAuthnCredential(
     credentialRecord: CredentialRecordImpl,
     isDeleted: Boolean,
 ) {
-  def serializeAttestationStatement(converter: ObjectConverter): Array[Byte] = {
-    AttestationStatementEnvelope(credentialRecord.getAttestationStatement).serialize(converter)
-  }
-
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
     val converter = new AttestedCredentialDataConverter(objectConverter);
     converter.convert(credentialRecord.getAttestedCredentialData)
   }
 
-  def serializedExtensions(converter: ObjectConverter): Array[Byte] = {
-    converter.getCborConverter.writeValueAsBytes(credentialRecord.getAuthenticatorExtensions)
+  def serializedExtensions(converter: ObjectConverter): String = {
+    converter.getJsonConverter.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
   }
-}
-
-// Define the AttestationStatementEnvelope class
-case class AttestationStatementEnvelope(@JsonProperty("attStmt") attestationStatement: AttestationStatement) {
-  // The JSON type information annotation for polymorphism
-  @JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
-    property = "fmt"
-  )
-  private val attStmt: AttestationStatement = attestationStatement
-
-  // Getter for the 'fmt' property
-  @JsonProperty("fmt")
-  def getFormat: String = attestationStatement.getFormat
-
-  // Getter for the AttestationStatement instance
-  def getAttestationStatement: AttestationStatement = attestationStatement
-
-  def serialize(converter: ObjectConverter): Array[Byte] =
-    converter.getJsonConverter.writeValueAsBytes(this)
 }
 
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -71,15 +46,13 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
     val objectConverter = new ObjectConverter()
-    val converter = objectConverter.getCborConverter
+    val converter = objectConverter.getJsonConverter
     val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
     for {
-      envelope <- tryo(converter.readValue(r.serializedattestationstatement, new TypeReference[AttestationStatementEnvelope] {})).toFox
-      attestationStatement = envelope.attestationStatement
       attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox
       authenticatorExtensions <- tryo(converter.readValue(r.serializedextensions, new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {})).toFox
       record = new CredentialRecordImpl(
-        attestationStatement,
+        new NoneAttestationStatement(),
         null,
         null,
         null,
@@ -112,14 +85,15 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
   def insertOne(c: WebAuthnCredential): Fox[Unit] = {
     val converter = new ObjectConverter()
-    val serializedAttestationStatement = c.serializeAttestationStatement(converter)
     val serializedAttestedCredential = c.serializeAttestedCredential(converter)
+    print(serializedAttestedCredential)
     val serializedAuthenticatorExtensions = c.serializedExtensions(converter)
+    print(serializedAuthenticatorExtensions)
     val credentialId = c.credentialRecord.getAttestedCredentialData.getCredentialId
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, credentialId, name, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${serializedAttestationStatement}, ${serializedAttestedCredential},
+        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, credentialId, name, serializedAttestedCredential, serializedExtensions, signatureCount)
+                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${serializedAttestedCredential},
                               ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate)
     } yield ()
   }

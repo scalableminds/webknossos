@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(133);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(134);
 COMMIT TRANSACTION;
 
 
@@ -455,9 +455,8 @@ CREATE TABLE webknossos.webauthnCredentials(
   _multiUser CHAR(24) NOT NULL,
   credentialId BYTEA NOT NULL,
   name TEXT NOT NULL,
-  serializedAttestationStatement BYTEA NOT NULL,
   serializedAttestedCredential BYTEA NOT NULL,
-  serializedExtensions BYTEA NOT NULL,
+  serializedExtensions TEXT NOT NULL,
   signatureCount INTEGER NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (_id, credentialId)

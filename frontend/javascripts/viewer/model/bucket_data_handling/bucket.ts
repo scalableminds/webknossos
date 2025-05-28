@@ -6,7 +6,7 @@ import { type Emitter, createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxType, BucketAddress, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType, BucketAddress, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type { MaybeUnmergedBucketLoadedPromise } from "viewer/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "viewer/model/actions/volumetracing_actions";
@@ -165,7 +165,7 @@ export class DataBucket {
     this.emitter.emit(event, ...args);
   }
 
-  getBoundingBox(): BoundingBoxType {
+  getBoundingBox(): BoundingBoxMinMaxType {
     const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
     const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [

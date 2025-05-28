@@ -38,7 +38,7 @@ export type ColorObject = {
   b: number;
   a: number;
 };
-export type BoundingBoxType = {
+export type BoundingBoxMinMaxType = {
   min: Vector3;
   max: Vector3;
 };

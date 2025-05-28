@@ -18,35 +18,24 @@ import { convertUserBoundingBoxFromUpdateActionToFrontend } from "../reducer_hel
 
 export function applyUpdateUserBoundingBox(
   newState: WebknossosState,
+  tracing: SkeletonTracing | VolumeTracing,
   ua: UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction,
 ) {
-  // todop: this won't work for volume actions
-  // todop: dont pass state and instead do the update here?
-  const { skeleton } = newState.annotation;
-  if (skeleton == null) {
-    throw new Error("No skeleton found to apply update to.");
-  }
-
-  const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.map(
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(
     (bbox): UserBoundingBox =>
       bbox.id === ua.value.boundingBoxId
         ? { ...bbox, ...convertUserBoundingBoxFromUpdateActionToFrontend(ua.value) }
         : bbox,
   );
 
-  return handleUserBoundingBoxUpdateInTracing(newState, skeleton, updatedUserBoundingBoxes);
+  return handleUserBoundingBoxUpdateInTracing(newState, tracing, updatedUserBoundingBoxes);
 }
 
 export function applyAddUserBoundingBox(
   newState: WebknossosState,
+  tracing: SkeletonTracing | VolumeTracing,
   ua: AddUserBoundingBoxInSkeletonTracingAction | AddUserBoundingBoxInVolumeTracingAction,
 ) {
-  // todop: dont pass state and instead do the update here?
-  const { skeleton } = newState.annotation;
-  if (skeleton == null) {
-    throw new Error("No skeleton found to apply update to.");
-  }
-
   const { boundingBox, ...valueWithoutBoundingBox } = ua.value.boundingBox;
   const maybeBoundingBoxValue = {
     boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox),
@@ -57,25 +46,21 @@ export function applyAddUserBoundingBox(
     ...valueWithoutBoundingBox,
     ...maybeBoundingBoxValue,
   };
-  const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.concat([newUserBBox]);
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.concat([newUserBBox]);
 
-  return handleUserBoundingBoxUpdateInTracing(newState, skeleton, updatedUserBoundingBoxes);
+  return handleUserBoundingBoxUpdateInTracing(newState, tracing, updatedUserBoundingBoxes);
 }
 
 export function applyDeleteUserBoundingBox(
   newState: WebknossosState,
+  tracing: SkeletonTracing | VolumeTracing,
   ua: DeleteUserBoundingBoxInSkeletonTracingAction | DeleteUserBoundingBoxInVolumeTracingAction,
 ) {
-  const { skeleton } = newState.annotation;
-  if (skeleton == null) {
-    throw new Error("No skeleton found to apply update to.");
-  }
-
-  const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.filter(
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
     (bbox) => bbox.id !== ua.value.boundingBoxId,
   );
 
-  return handleUserBoundingBoxUpdateInTracing(newState, skeleton, updatedUserBoundingBoxes);
+  return handleUserBoundingBoxUpdateInTracing(newState, tracing, updatedUserBoundingBoxes);
 }
 
 function handleUserBoundingBoxUpdateInTracing(

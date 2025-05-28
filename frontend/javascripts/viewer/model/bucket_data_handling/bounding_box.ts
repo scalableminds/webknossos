@@ -1,7 +1,8 @@
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
-import type { BoundingBoxMinMaxType, OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
 import constants from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
 import Dimensions from "../dimensions";

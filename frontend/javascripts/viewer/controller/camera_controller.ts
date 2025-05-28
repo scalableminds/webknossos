@@ -66,6 +66,11 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
 class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  // Properties are only created here to avoid new creating objects for each update call.
+  flycamRotationEuler = new THREE.Euler();
+  flycamRotationMatrix = new THREE.Matrix4();
+  baseRotationMatrix = new THREE.Matrix4();
+  totalRotationMatrix = new THREE.Matrix4();
 
   componentDidMount() {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
@@ -161,37 +166,18 @@ class CameraController extends React.PureComponent<Props> {
     this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
     // Now set rotation for all cameras respecting the base rotation of each camera.
     const gRot = getRotationInRadian(state.flycam);
-    // Copies are needed because multiply modifies the matrix in-place.
-    const rotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
-    );
-    const rotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
-    );
-    const rotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
-    );
-    const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
-      OrthoBaseRotations[OrthoViews.PLANE_XY],
-    );
-    const baseRotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
-      OrthoBaseRotations[OrthoViews.PLANE_YZ],
-    );
-    const baseRotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
-      OrthoBaseRotations[OrthoViews.PLANE_XZ],
-    );
-    this.props.cameras[OrthoViews.PLANE_XY].setRotationFromMatrix(
-      rotationMatrixXY.multiply(baseRotationMatrixXY),
-    );
-    this.props.cameras[OrthoViews.PLANE_YZ].setRotationFromMatrix(
-      rotationMatrixYZ.multiply(baseRotationMatrixYZ),
-    );
-    this.props.cameras[OrthoViews.PLANE_XZ].setRotationFromMatrix(
-      rotationMatrixXZ.multiply(baseRotationMatrixXZ),
-    );
-    this.props.cameras[OrthoViews.PLANE_XY].updateProjectionMatrix();
-    this.props.cameras[OrthoViews.PLANE_YZ].updateProjectionMatrix();
-    this.props.cameras[OrthoViews.PLANE_XZ].updateProjectionMatrix();
+    this.flycamRotationEuler.set(gRot[0], gRot[1], gRot[2], "ZYX");
+    this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
+    for (const viewport of OrthoViewValuesWithoutTDView) {
+      this.baseRotationMatrix.makeRotationFromEuler(OrthoBaseRotations[viewport]);
+      this.props.cameras[viewport].setRotationFromMatrix(
+        this.totalRotationMatrix
+          .identity()
+          .multiply(this.flycamRotationMatrix)
+          .multiply(this.baseRotationMatrix),
+      );
+      this.props.cameras[viewport].updateProjectionMatrix();
+    }
   }
 
   bindToEvents() {

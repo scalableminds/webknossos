@@ -42,6 +42,11 @@ export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vect
   return M4x4.rotate(angle, axis, currentMatrix, []);
 }
 
+// Avoid creating new THREE object for some actions.
+const flycamRotationEuler = new THREE.Euler();
+const flycamRotationMatrix = new THREE.Matrix4();
+const movementVectorInWorld = new THREE.Vector3();
+
 function rotateOnAxisWithDistance(
   zoomStep: number,
   distance: number,
@@ -309,23 +314,23 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
 
       const { planeId } = action;
 
-      const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-        new THREE.Euler(...state.flycam.rotation, "ZYX"),
-      );
-      let movementVectorInWorld = new THREE.Vector3(...vector)
-        .applyMatrix4(rotationMatrix)
+      const flycamRotation = getRotationInRadian(state.flycam);
+      flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+      let movementVectorInWorldV3 = movementVectorInWorld
+        .set(...vector)
+        .applyMatrix4(flycamRotationMatrix)
         .toArray();
 
       // if planeID is given, use it to manipulate z
       if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
         // change direction of the value connected to space, based on the last direction
-        movementVectorInWorld = V3.multiply(
-          movementVectorInWorld,
+        movementVectorInWorldV3 = V3.multiply(
+          movementVectorInWorldV3,
           state.flycam.spaceDirectionOrtho,
         );
       }
 
-      return moveReducer(state, movementVectorInWorld);
+      return moveReducer(state, movementVectorInWorldV3);
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
@@ -336,16 +341,15 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         const vector = Dimensions.transDim(action.vector, planeId);
         const flycamRotation = getRotationInRadian(flycam);
 
-        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-          new THREE.Euler(...flycamRotation, "ZYX"),
+        flycamRotationMatrix.makeRotationFromEuler(
+          flycamRotationEuler.set(...flycamRotation, "ZYX"),
         );
-        const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+        movementVectorInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
         const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        let movementInWorldZoomed = movementVectorInWorld
-          .multiplyScalar(zoomFactor)
-          .multiply(new THREE.Vector3(...scaleFactor))
-          .toArray();
+        const movementInWorld = movementVectorInWorld.multiplyScalar(zoomFactor).toArray();
+
+        let movementInWorldZoomed = V3.multiply(movementInWorld, scaleFactor);
 
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction

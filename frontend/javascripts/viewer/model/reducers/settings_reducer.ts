@@ -178,10 +178,9 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
       const { allowedModes } = state.annotation.restrictions;
 
       if (allowedModes.includes(action.viewMode)) {
-        const newState = updateTemporaryConfig(state, {
+        return updateTemporaryConfig(state, {
           viewMode: action.viewMode,
         });
-        return newState;
       } else {
         return state;
       }

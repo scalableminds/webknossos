@@ -94,6 +94,13 @@ export function getViewportScale(state: WebknossosState, viewport: Viewport): [n
 
 export type GlobalPosition = { rounded: Vector3; floating: Vector3 };
 
+// Avoiding object creation with each call.
+const flycamRotationEuler = new THREE.Euler();
+const flycamRotationMatrix = new THREE.Matrix4();
+const flycamPositionMatrix = new THREE.Matrix4();
+const rotatedPositionVector = new THREE.Vector3();
+const planeRationVector = new THREE.Vector3();
+
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
@@ -111,17 +118,11 @@ function _calculateMaybeGlobalPos(
   const diffY = clickPos.y === 0 ? 0 : (height / 2 - clickPos.y) * state.flycam.zoomStep;
   const positionInPlane = [diffX, diffY, 0] as Vector3;
   const positionPlaneDefaultRotation = Dimensions.transDim(positionInPlane, planeIdFilled);
-  const flycamRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    new THREE.Euler(...flycamRotation, "ZYX"),
-  );
-  const flycamPositionMatrix = new THREE.Matrix4().makeTranslation(
-    new THREE.Vector3(...curGlobalPos),
-  );
-  const rotatedPosition = new THREE.Vector3(...positionPlaneDefaultRotation).applyMatrix4(
-    flycamRotationMatrix,
-  );
-  const scaledRotatedPosition = rotatedPosition
-    .multiply(new THREE.Vector3(...planeRatio))
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  flycamPositionMatrix.makeTranslation(...curGlobalPos);
+  rotatedPositionVector.set(...positionPlaneDefaultRotation).applyMatrix4(flycamRotationMatrix);
+  const scaledRotatedPosition = rotatedPositionVector
+    .multiply(planeRationVector.set(...planeRatio))
     .multiplyScalar(-1);
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);

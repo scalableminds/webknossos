@@ -118,7 +118,6 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 export const OrthoBaseRotations = {
-  //[OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
   [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
   [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
   [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),

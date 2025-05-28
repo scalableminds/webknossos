@@ -48,6 +48,10 @@ class Plane {
   storePropertyUnsubscribes: Array<() => void> = [];
   datasetScaleFactor: Vector3 = [1, 1, 1];
 
+  // Properties are only created here to avoid new creating objects for each setRotation call.
+  baseRotationMatrix = new THREE.Matrix4();
+  flycamRotationMatrix = new THREE.Matrix4();
+
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
@@ -160,13 +164,13 @@ class Plane {
 
   setBaseRotation = (rotVec: THREE.Euler): void => {
     this.baseRotation.copy(rotVec);
+    this.baseRotationMatrix.makeRotationFromEuler(this.baseRotation);
   };
 
   setRotation = (rotVec: THREE.Euler): void => {
     // rotVec must be in "ZYX" order as this is how the flycam operates (see flycam_reducer setRotationReducer)
-    const baseRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.baseRotation);
-    const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
-    const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
+    this.flycamRotationMatrix.makeRotationFromEuler(rotVec);
+    const combinedMatrix = this.flycamRotationMatrix.multiply(this.baseRotationMatrix);
     this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
   };
 

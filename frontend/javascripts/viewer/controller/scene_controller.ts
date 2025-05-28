@@ -101,6 +101,10 @@ class SceneController {
   storePropertyUnsubscribers: Array<() => void>;
   splitBoundaryMesh: THREE.Mesh | null = null;
 
+  // Created as instance properties to avoid creating objects in each update call.
+  private rotatedPositionOffsetVector = new THREE.Vector3();
+  private flycamRotationEuler = new THREE.Euler();
+
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
   constructor() {
@@ -420,23 +424,22 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
+          this.flycamRotationEuler.set(...rotation, "ZYX");
 
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane.
           // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
-          const unrotatedPositionOffset = [0, 0, 0];
+          const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
             planeId === OrthoViews.PLANE_XY
               ? Math.floor(this.clippingDistance)
               : Math.floor(-this.clippingDistance);
-          const rotatedPositionOffsetVector = new THREE.Vector3(
-            ...unrotatedPositionOffset,
-          ).applyEuler(new THREE.Euler(...rotation, "ZYX"));
-          const rotatedPositionOffset = rotatedPositionOffsetVector.toArray();
+          this.rotatedPositionOffsetVector
+            .set(...unrotatedPositionOffset)
+            .applyEuler(this.flycamRotationEuler);
+          const rotatedPositionOffset = this.rotatedPositionOffsetVector.toArray();
           this.planes[planeId].setPosition(originalPosition, rotatedPositionOffset);
-          this.planes[planeId].setRotation(
-            new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"),
-          );
+          this.planes[planeId].setRotation(this.flycamRotationEuler);
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {

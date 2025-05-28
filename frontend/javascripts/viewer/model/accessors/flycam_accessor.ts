@@ -297,6 +297,9 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3((x) => Math.floor(x), _getPosition(flycam));
 }
 
+// Avoiding object creation with each call.
+const flycamMatrixObject = new THREE.Matrix4();
+
 // Returns the current rotation of the flycam in radians as an euler xyz tuple.
 // As the order in which the angles are applied is zyx (see flycam_reducer setRotationReducer),
 // this order must be followed when this euler angle is applied to 2d computations.
@@ -304,17 +307,13 @@ function _getRotationInRadianFromMatrix(flycamMatrix: Matrix4x4, invertZ: boolea
   // Somehow z rotation is inverted but the others are not.
   const zInvertFactor = invertZ ? -1 : 1;
   const object = new THREE.Object3D();
-  const matrix = new THREE.Matrix4().fromArray(flycamMatrix).transpose();
-  object.applyMatrix4(matrix);
-  const rotation: Vector3 = [
-    object.rotation.x,
-    object.rotation.y,
-    (object.rotation.z - Math.PI) * zInvertFactor,
-  ];
+  flycamMatrixObject.fromArray(flycamMatrix).transpose();
+  object.applyMatrix4(flycamMatrixObject);
+  // Must be used with zyx euler order when using for rotation calculation.
   return [
-    mod(rotation[0], Math.PI * 2),
-    mod(rotation[1], Math.PI * 2),
-    mod(rotation[2], Math.PI * 2),
+    mod(object.rotation.x, Math.PI * 2),
+    mod(object.rotation.y, Math.PI * 2),
+    mod((object.rotation.z - Math.PI) * zInvertFactor, Math.PI * 2),
   ];
 }
 

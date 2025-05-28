@@ -173,6 +173,12 @@ export function handleOpenContextMenu(
     0,
   );
 }
+
+// Already defined here at toplevel to avoid object recreation with each call. Make sure to no do anything async between read and writes.
+const flycamRotationEuler = new THREE.Euler();
+const flycamRotationMatrix = new THREE.Matrix4();
+const movementVector = new THREE.Vector3();
+
 export function moveNode(
   dx: number,
   dy: number,
@@ -198,10 +204,8 @@ export function moveNode(
   const flycamRotation = getRotationInRadian(state.flycam);
   const isRotated = V3.equals(flycamRotation, [0, 0, 0]);
 
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    new THREE.Euler(...flycamRotation, "ZYX"),
-  );
-  const vectorRotated = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
 
   const zoomFactor = state.flycam.zoomStep;
   const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
@@ -288,6 +292,11 @@ export function handleCreateNodeFromGlobalPosition(
   );
 }
 
+// Already defined here at toplevel to avoid object recreation with each call. Make sure to no do anything async between read and writes.
+const flycamRotationQuaternion = new THREE.Quaternion();
+const totalRotationQuaternion = new THREE.Quaternion();
+const initialViewportRotationEuler = new THREE.Euler();
+
 export function getOptionsForCreateSkeletonNode(
   activeViewport: OrthoView | null = null,
   ctrlIsPressed: boolean = false,
@@ -296,14 +305,16 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
+  // TODOM: Why is this different to the OrthoBaseRotations???
   const initialViewportRotation = getRotationOrthoInRadian(
     activeViewport || state.viewModeData.plane.activeViewport,
   );
   const flycamRotation = getRotationInRadian(state.flycam);
-  const totalRotationQuaternion = new THREE.Quaternion()
-    .setFromEuler(new THREE.Euler(...initialViewportRotation))
-    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation, "ZYX")));
-  const rotationEuler = new THREE.Euler().setFromQuaternion(totalRotationQuaternion);
+  flycamRotationQuaternion.setFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  totalRotationQuaternion
+    .setFromEuler(initialViewportRotationEuler.set(...initialViewportRotation))
+    .multiply(flycamRotationQuaternion);
+  const rotationEuler = initialViewportRotationEuler.setFromQuaternion(totalRotationQuaternion);
   const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
     (a) => (a * 180) / Math.PI,
   ) as Vector3;

@@ -79,7 +79,6 @@ export const getTrilinearColorFor: ShaderModule = {
 const getMaybeFilteredColor: ShaderModule = {
   requirements: [getColorForCoords, getBilinearColorFor, getTrilinearColorFor],
   code: `
-    // TODOM: Consider passing an argument like "isRotated" to determine whether bilinear or trilinear filtering should be used.
     vec4 getMaybeFilteredColor(
       float layerIndex,
       float d_texture_width,

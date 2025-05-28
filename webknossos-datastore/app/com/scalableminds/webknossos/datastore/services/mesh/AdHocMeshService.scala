@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.{BinaryDataService, MappingService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import net.liftweb.common.{Box, Failure, Full}
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool
@@ -111,7 +111,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
           Fox.successful(data)
       }
 
-    def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
+    def applyAgglomerate(data: Array[Byte]): Box[Array[Byte]] =
       request.mapping match {
         case Some(_) =>
           request.mappingType match {
@@ -124,12 +124,12 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                   DataServiceRequestSettings(halfByte = false, request.mapping, None)
                 )
                 agglomerateService.applyAgglomerate(dataRequest)(data)
-              }.getOrElse(Fox.successful(data))
+              }.getOrElse(Full(data))
             case _ =>
-              Fox.successful(data)
+              Full(data)
           }
         case _ =>
-          Fox.successful(data)
+          Full(data)
       }
 
     def convertData(data: Array[Byte]): Array[T] = {
@@ -193,7 +193,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
+      agglomerateMappedData <- applyAgglomerate(data).toFox ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)

@@ -1,6 +1,6 @@
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
-import type { ServerBoundingBox } from "types/bounding_box";
+import type { BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
   ColorObject,
@@ -28,7 +28,7 @@ import type {
 import type { EmptyObject } from "./globals";
 
 // Re-export
-export type { ServerBoundingBox } from "types/bounding_box";
+export type { BoundingBoxProto } from "types/bounding_box";
 export type { AdditionalCoordinate } from "viewer/constants";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
@@ -840,7 +840,7 @@ export type ServerBranchPoint = {
   nodeId: number;
 };
 export type UserBoundingBoxFromServer = {
-  boundingBox: ServerBoundingBox;
+  boundingBox: BoundingBoxProto;
   id: number;
   name?: string;
   color?: ColorObject;
@@ -895,7 +895,7 @@ type ServerSegment = {
 export type ServerTracingBase = {
   id: string;
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
-  userBoundingBox?: ServerBoundingBox;
+  userBoundingBox?: BoundingBoxProto;
   createdTimestamp: number;
   error?: string;
   additionalAxes: ServerAdditionalAxis[];
@@ -929,7 +929,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   // This is done to simplify the selection for the type.
   typ: "Skeleton";
   activeNodeId?: number; // only use as a fallback if userStates is empty
-  boundingBox?: ServerBoundingBox;
+  boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
@@ -952,7 +952,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // This is done to simplify the selection for the type.
   typ: "Volume";
   activeSegmentId?: number; // only use as a fallback if userStates is empty
-  boundingBox: ServerBoundingBox;
+  boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;

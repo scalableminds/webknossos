@@ -7,7 +7,7 @@ export type BoundingBoxMinMaxType = {
 };
 
 // 10 matches
-export type ServerBoundingBox = {
+export type BoundingBoxProto = {
   topLeft: Point3;
   width: number;
   height: number;

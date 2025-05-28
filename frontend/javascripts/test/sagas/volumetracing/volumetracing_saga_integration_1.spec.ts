@@ -1,5 +1,5 @@
 /*
- * Also have a look at the sibiling module volumetracing_saga_integration_2.spec.ts.
+ * Also have a look at the sibling module volumetracing_saga_integration_2.spec.ts.
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */

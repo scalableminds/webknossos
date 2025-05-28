@@ -33,7 +33,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   ContourMode,
   ControlMode,
   FillMode,
@@ -96,13 +96,13 @@ export type UserBoundingBoxToServer = {
   isVisible?: boolean;
 };
 export type UserBoundingBoxWithoutIdMaybe = {
-  boundingBox?: BoundingBoxType;
+  boundingBox?: BoundingBoxMinMaxType;
   name?: string;
   color?: Vector3;
   isVisible?: boolean;
 };
 export type UserBoundingBoxWithoutId = {
-  boundingBox: BoundingBoxType;
+  boundingBox: BoundingBoxMinMaxType;
   name: string;
   color: Vector3;
   isVisible: boolean;
@@ -154,7 +154,7 @@ export type Annotation = {
 type TracingBase = {
   readonly createdTimestamp: number;
   readonly tracingId: string;
-  readonly boundingBox: BoundingBoxType | null | undefined;
+  readonly boundingBox: BoundingBoxMinMaxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
   readonly additionalAxes: AdditionalAxis[];
 };

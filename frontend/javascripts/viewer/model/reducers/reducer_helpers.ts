@@ -8,7 +8,7 @@ import type {
   UserBoundingBoxFromServer,
   VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxType } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
@@ -26,7 +26,7 @@ import type { Tree, TreeGroup } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
-): BoundingBoxType {
+): BoundingBoxMinMaxType {
   return Utils.computeBoundingBoxFromArray(
     Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
       boundingBox.width,
@@ -38,7 +38,7 @@ export function convertServerBoundingBoxToBoundingBox(
 
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
-): BoundingBoxType | null | undefined {
+): BoundingBoxMinMaxType | null | undefined {
   if (!boundingBox) return null;
   return convertServerBoundingBoxToBoundingBox(boundingBox);
 }
@@ -70,7 +70,7 @@ export function convertUserBoundingBoxFromFrontendToServer(
 }
 
 export function convertFrontendBoundingBoxToServer(
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBoxMinMaxType,
 ): BoundingBoxObject {
   return {
     topLeft: boundingBox.min,

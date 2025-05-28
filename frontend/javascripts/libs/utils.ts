@@ -5,7 +5,7 @@ import _ from "lodash";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   ColorObject,
   Point3,
   TypedArray,
@@ -276,7 +276,7 @@ export function getRandomColor(): Vector3 {
   return randomColor as any as Vector3;
 }
 
-export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {
   const [x, y, z, width, height, depth] = bb;
   return {
     min: [x, y, z],
@@ -284,11 +284,15 @@ export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   };
 }
 
-export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
+export function computeBoundingBoxFromBoundingBoxObject(
+  bb: BoundingBoxObject,
+): BoundingBoxMinMaxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
 }
 
-export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
+export function computeBoundingBoxObjectFromBoundingBox(
+  bb: BoundingBoxMinMaxType,
+): BoundingBoxObject {
   const boundingBoxArray = computeArrayFromBoundingBox(bb);
   return {
     topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],
@@ -298,7 +302,7 @@ export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): Bo
   };
 }
 
-export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
+export function computeArrayFromBoundingBox(bb: BoundingBoxMinMaxType): Vector6 {
   return [
     bb.min[0],
     bb.min[1],
@@ -309,11 +313,13 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
   ];
 }
 
-export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 {
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
-export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+export function aggregateBoundingBox(
+  boundingBoxes: Array<BoundingBoxObject>,
+): BoundingBoxMinMaxType {
   if (boundingBoxes.length === 0) {
     return {
       min: [0, 0, 0],
@@ -344,8 +350,8 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
 }
 
 export function areBoundingBoxesOverlappingOrTouching(
-  firstBB: BoundingBoxType,
-  secondBB: BoundingBoxType,
+  firstBB: BoundingBoxMinMaxType,
+  secondBB: BoundingBoxMinMaxType,
 ) {
   let areOverlapping = true;
 

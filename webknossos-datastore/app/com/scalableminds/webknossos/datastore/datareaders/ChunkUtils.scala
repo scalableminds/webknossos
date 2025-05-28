@@ -4,7 +4,7 @@ object ChunkUtils {
   def computeChunkIndices(arrayShapeOpt: Option[Array[Long]],
                           arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Long]): Seq[Array[Int]] = {
+                          selectedOffset: Array[Long]): List[Array[Int]] = {
     val nDims = arrayChunkShape.length
     val start = new Array[Int](nDims)
     val end = new Array[Int](nDims)
@@ -38,6 +38,6 @@ object ChunkUtils {
         dimIndex = -1
       }
     }
-    chunkIndices.toSeq
+    chunkIndices.toList
   }
 }

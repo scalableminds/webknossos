@@ -2,7 +2,7 @@ import * as Utils from "libs/utils";
 import type {
   APIAnnotation,
   AdditionalAxis,
-  ServerAdditionalAxis,
+  AdditionalAxisProto,
   BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxProto,
@@ -155,7 +155,7 @@ export function convertServerAnnotationToFrontendAnnotation(
 }
 
 export function convertServerAdditionalAxesToFrontEnd(
-  additionalAxes: ServerAdditionalAxis[],
+  additionalAxes: AdditionalAxisProto[],
 ): AdditionalAxis[] {
   return additionalAxes.map((coords) => ({
     ...coords,

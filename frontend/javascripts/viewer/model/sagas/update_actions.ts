@@ -107,6 +107,7 @@ export type UpdateAction =
   | UpdateActionWithIsolationRequirement;
 
 export type ApplicableSkeletonUpdateAction =
+  | UpdateTreeUpdateAction
   | CreateNodeUpdateAction
   | CreateEdgeUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction

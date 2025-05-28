@@ -1,6 +1,9 @@
 import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
 import { enforceSkeletonTracing, getTree } from "viewer/model/accessors/skeletontracing_accessor";
+import EdgeCollection from "viewer/model/edge_collection";
 import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/update_actions";
+import type { Tree } from "viewer/model/types/tree_types";
 import type { WebknossosState } from "viewer/store";
 import {
   applyAddUserBoundingBox,
@@ -14,58 +17,54 @@ export function applySkeletonUpdateActionsFromServer(
 ): { value: WebknossosState } {
   for (const ua of actions) {
     switch (ua.name) {
-      // case "createTree": {
-      //   const { id, color, name, comments, timestamp, branchPoints, isVisible, groupId } =
-      //     ua.value;
-      //   newState = update(newState, {
-      //     tracing: {
-      //       skeleton: {
-      //         trees: {
-      //           [id]: {
-      //             $set: {
-      //               name,
-      //               treeId: id,
-      //               nodes: new DiffableMap(),
-      //               timestamp,
-      //               color,
-      //               branchPoints,
-      //               edges: new EdgeCollection(),
-      //               comments,
-      //               isVisible,
-      //               groupId,
-      //             },
-      //           },
-      //         },
-      //       },
-      //     },
-      //   });
-      //   break;
-      // }
-      case "createNode": {
-        if (newState.annotation.skeleton == null) {
-          continue;
-        }
+      case "createTree": {
+        const { id, ...rest } = ua.value;
+        const newTree: Tree = {
+          treeId: id,
+          ...rest,
+          nodes: new DiffableMap(),
+          edges: new EdgeCollection(),
+        };
+        const newTrees = enforceSkeletonTracing(newState.annotation).trees.set(id, newTree);
 
+        newState = update(newState, {
+          annotation: {
+            skeleton: {
+              trees: {
+                $set: newTrees,
+              },
+            },
+          },
+        });
+        break;
+      }
+      case "updateTree": {
+        // todop
+        break;
+      }
+      case "createNode": {
         const { treeId, ...serverNode } = ua.value;
         // eslint-disable-next-line no-loop-func
         const { position: untransformedPosition, resolution: mag, ...node } = serverNode;
         const clientNode = { untransformedPosition, mag, ...node };
 
-        const tree = getTree(newState.annotation.skeleton, treeId);
+        const skeleton = enforceSkeletonTracing(newState.annotation);
+        const tree = getTree(skeleton, treeId);
         if (tree == null) {
-          // todop: escalate error?
-          continue;
+          throw new Error("Could not create node because tree was not found.");
         }
         const diffableNodeMap = tree.nodes;
         const newDiffableMap = diffableNodeMap.set(node.id, clientNode);
         const newTree = update(tree, {
           nodes: { $set: newDiffableMap },
         });
+        const newTrees = skeleton.trees.set(newTree.treeId, newTree);
+
         newState = update(newState, {
           annotation: {
             skeleton: {
               trees: {
-                [tree.treeId]: { $set: newTree },
+                $set: newTrees,
               },
               cachedMaxNodeId: { $set: node.id },
             },

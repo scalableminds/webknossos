@@ -339,8 +339,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
   private val cumsumFileName = "cumsum.json"
 
   // TODO remove
-  private val useZarr = true
+  private val useZarr = false
 
+  // TODO clear on reload
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
   def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] = {

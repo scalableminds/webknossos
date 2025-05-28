@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 object ChunkUtils {
-  def computeChunkIndices(arrayShapeOpt: Option[Array[Long]],
+  def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
                           arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Long]): Seq[Array[Int]] = {
+                          selectedOffset: Array[Int]): Seq[Array[Int]] = {
     val nDims = arrayChunkShape.length
     val start = new Array[Int](nDims)
     val end = new Array[Int](nDims)

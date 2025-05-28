@@ -25,7 +25,7 @@ import java.nio.ByteOrder
 case class Zarr3ArrayHeader(
     zarr_format: Int, // must be 3
     node_type: String, // must be "array"
-    shape: Array[Long],
+    shape: Array[Int],
     data_type: Either[String, ExtensionDataType],
     chunk_grid: Either[ChunkGridSpecification, ExtensionChunkGridSpecification],
     chunk_key_encoding: ChunkKeyEncoding,
@@ -36,7 +36,7 @@ case class Zarr3ArrayHeader(
     dimension_names: Option[Array[String]]
 ) extends DatasetHeader {
 
-  override def datasetShape: Option[Array[Long]] = Some(shape)
+  override def datasetShape: Option[Array[Int]] = Some(shape)
 
   override def chunkShape: Array[Int] = getChunkSize
 
@@ -168,7 +168,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       for {
         zarr_format <- (json \ "zarr_format").validate[Int]
         node_type <- (json \ "node_type").validate[String]
-        shape <- (json \ "shape").validate[Array[Long]]
+        shape <- (json \ "shape").validate[Array[Int]]
         data_type <- (json \ "data_type").validate[String]
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
@@ -271,7 +271,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       zarr_format = 3,
       node_type = "array",
       // channel, additional axes, XYZ
-      shape = (Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds).map(_.toLong),
+      shape = (Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds),
       data_type = Left(dataLayer.elementClass.toString),
       chunk_grid = Left(
         ChunkGridSpecification(

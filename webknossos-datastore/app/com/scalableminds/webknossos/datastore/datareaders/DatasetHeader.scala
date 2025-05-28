@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 trait DatasetHeader {
 
   // Note that in DatasetArray, datasetShape and chunkShape are adapted for 2d datasets
-  def datasetShape: Option[Array[Long]] // shape of the entire array
+  def datasetShape: Option[Array[Int]] // shape of the entire array
   def chunkShape: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator

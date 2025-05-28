@@ -182,7 +182,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]]
 
   protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {

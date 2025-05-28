@@ -96,7 +96,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
       parsedHeader <- zarrayPath.parseAsJson[ZarrHeader] ?~> s"failed to read zarr header at $zarrayPath"
       header = parsedHeader.shape.length match {
         case 2 =>
-          parsedHeader.copy(shape = parsedHeader.shape ++ Array(1L), chunks = parsedHeader.chunks ++ Array(1))
+          parsedHeader.copy(shape = parsedHeader.shape ++ Array(1), chunks = parsedHeader.chunks ++ Array(1))
         case _ => parsedHeader
       }
     } yield header
@@ -125,7 +125,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
         elementClass,
         boundingBox)
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape

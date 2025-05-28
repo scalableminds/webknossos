@@ -323,7 +323,7 @@ export function serverVolumeToClientVolumeTracing(
   return volumeTracing;
 }
 
-type VolumeTracingReducerAction =
+export type VolumeTracingReducerAction =
   | VolumeTracingAction
   | SetMappingAction
   | FinishMappingInitializationAction

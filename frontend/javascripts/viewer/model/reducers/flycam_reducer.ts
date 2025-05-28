@@ -1,11 +1,14 @@
 import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import * as THREE from "three";
 import type { Vector3 } from "viewer/constants";
 import {
   ZOOM_STEP_INTERVAL,
+  getRotationInDegrees,
+  getRotationInRadian,
   getValidZoomRangeForUser,
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -39,6 +42,11 @@ export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vect
   return M4x4.rotate(angle, axis, currentMatrix, []);
 }
 
+// Avoid creating new THREE object for some actions.
+const flycamRotationEuler = new THREE.Euler();
+const flycamRotationMatrix = new THREE.Matrix4();
+const movementVectorInWorld = new THREE.Vector3();
+
 function rotateOnAxisWithDistance(
   zoomStep: number,
   distance: number,
@@ -64,27 +72,24 @@ function rotateReducer(
   }
 
   const { flycam } = state;
-
-  if (regardDistance) {
-    return update(state, {
-      flycam: {
-        currentMatrix: {
-          $set: rotateOnAxisWithDistance(
-            flycam.zoomStep,
-            state.userConfiguration.sphericalCapRadius,
-            flycam.currentMatrix,
-            angle,
-            axis,
-          ),
-        },
-      },
-    });
-  }
+  const updatedMatrix = regardDistance
+    ? rotateOnAxisWithDistance(
+        flycam.zoomStep,
+        state.userConfiguration.sphericalCapRadius,
+        flycam.currentMatrix,
+        angle,
+        axis,
+      )
+    : rotateOnAxis(flycam.currentMatrix, angle, axis);
+  const updatedRotation = getRotationInDegrees(updatedMatrix);
 
   return update(state, {
     flycam: {
       currentMatrix: {
-        $set: rotateOnAxis(flycam.currentMatrix, angle, axis),
+        $set: updatedMatrix,
+      },
+      rotation: {
+        $set: updatedRotation,
       },
     },
   });
@@ -178,6 +183,9 @@ export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
         currentMatrix: {
           $set: matrix,
         },
+        rotation: {
+          $set: rotation,
+        },
       },
     });
   }
@@ -192,6 +200,9 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         flycam: {
           currentMatrix: {
             $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+          },
+          rotation: {
+            $set: [0, 0, 0],
           },
         },
       });
@@ -275,13 +286,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "SET_ROTATION": {
-      // This action should only be dispatched when *not* being in orthogonal mode,
-      // because this would lead to incorrect buckets being selected for rendering.
-      if (state.temporaryConfiguration.viewMode !== "orthogonal") {
-        return setRotationReducer(state, action.rotation);
-      }
-      // No-op
-      return state;
+      return setRotationReducer(state, action.rotation);
     }
 
     case "SET_DIRECTION": {
@@ -309,37 +314,52 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
 
       const { planeId } = action;
 
+      const flycamRotation = getRotationInRadian(state.flycam);
+      flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+      let movementVectorInWorldV3 = movementVectorInWorld
+        .set(...vector)
+        .applyMatrix4(flycamRotationMatrix)
+        .toArray();
+
       // if planeID is given, use it to manipulate z
       if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
         // change direction of the value connected to space, based on the last direction
-        const dim = Dimensions.getIndices(planeId)[2];
-        vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
+        movementVectorInWorldV3 = V3.multiply(
+          movementVectorInWorldV3,
+          state.flycam.spaceDirectionOrtho,
+        );
       }
 
-      return moveReducer(state, vector);
+      return moveReducer(state, movementVectorInWorldV3);
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
-      const { dataset } = state;
+      const { dataset, flycam } = state;
 
       if (dataset != null) {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
-        const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
+        const flycamRotation = getRotationInRadian(flycam);
+
+        flycamRotationMatrix.makeRotationFromEuler(
+          flycamRotationEuler.set(...flycamRotation, "ZYX"),
+        );
+        movementVectorInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
+        const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        const delta: Vector3 = [
-          vector[0] * zoomFactor * scaleFactor[0],
-          vector[1] * zoomFactor * scaleFactor[1],
-          vector[2] * zoomFactor * scaleFactor[2],
-        ];
+        const movementInWorld = movementVectorInWorld.multiplyScalar(zoomFactor).toArray();
+
+        let movementInWorldZoomed = V3.multiply(movementInWorld, scaleFactor);
 
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction
-          const dim = Dimensions.getIndices(planeId)[2];
-          delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
+          movementInWorldZoomed = V3.multiply(
+            movementInWorldZoomed,
+            state.flycam.spaceDirectionOrtho,
+          );
         }
 
-        return moveReducer(state, delta);
+        return moveReducer(state, movementInWorldZoomed);
       }
 
       return state;

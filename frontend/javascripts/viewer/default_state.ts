@@ -197,6 +197,7 @@ const defaultState: WebknossosState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+    rotation: [0, 0, 0],
   },
   flycamInfoCache: {
     maximumZoomForAllMags: {},
@@ -259,6 +260,7 @@ const defaultState: WebknossosState = {
     measurementToolInfo: {
       lastMeasuredPosition: null,
       isMeasuring: false,
+      viewportPosition: null,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
     contextInfo: {

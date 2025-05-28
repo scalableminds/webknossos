@@ -42,6 +42,7 @@ import type {
   OrthoView,
   OrthoViewWithoutTD,
   OverwriteMode,
+  Point2,
   Rect,
   TDViewDisplayMode,
   Vector2,
@@ -423,6 +424,7 @@ export type Flycam = {
   readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
+  readonly rotation: Vector3;
 };
 export type CameraData = {
   readonly near: number;
@@ -508,7 +510,11 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
-  readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly measurementToolInfo: {
+    lastMeasuredPosition: Vector3 | null;
+    isMeasuring: boolean;
+    viewportPosition: Point2 | null;
+  };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
 };

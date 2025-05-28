@@ -9,16 +9,14 @@ import {
 } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
+import _ from "lodash";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
-import {
-  calculateMaybePlaneScreenPos,
-  getInputCatcherRect,
-} from "viewer/model/accessors/view_mode_accessor";
+import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import dimensions from "viewer/model/dimensions";
 
@@ -41,17 +39,20 @@ function DistanceEntry({ distance }: { distance: string }) {
 }
 
 export default function DistanceMeasurementTooltip() {
-  const position = useWkSelector(
+  const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+  );
+  const lastMeasuredViewportPosition = useWkSelector(
+    (state) => state.uiInformation.measurementToolInfo.viewportPosition,
   );
   const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
   const flycam = useWkSelector((state) => state.flycam);
-  const state = useWkSelector((state) => state);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);
+  const rotation = getRotationInDegrees(flycam);
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
   const activeGeometry =
     activeTool === AnnotationTool.LINE_MEASUREMENT
@@ -60,24 +61,35 @@ export default function DistanceMeasurementTooltip() {
   const orthoView = activeGeometry.viewport;
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(thirdDim): thirdDim is more or less a constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(position[thirdDim]):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(lastMeasuredGlobalPosition[thirdDim]):
   // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
   // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(position):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(lastMeasuredGlobalPosition):
   // biome-ignore lint/correctness/useExhaustiveDependencies(activeGeometry.resetAndHide):
   useEffect(() => {
     if (
-      position != null &&
-      Math.floor(currentPosition[thirdDim]) !== Math.floor(position[thirdDim])
+      lastMeasuredGlobalPosition != null &&
+      _.isEqual(rotation, [0, 0, 0]) && // TODOM: Improve this check to remove the tooltip once moved back / forth regardless of what the current rotation is.
+      Math.floor(currentPosition[thirdDim]) !== Math.floor(lastMeasuredGlobalPosition[thirdDim])
     ) {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }
-  }, [currentPosition[thirdDim]]);
+  }, [currentPosition[thirdDim], rotation]);
 
-  if (position == null || !MeasurementTools.includes(activeTool)) {
+  if (
+    lastMeasuredGlobalPosition == null ||
+    lastMeasuredViewportPosition == null ||
+    !MeasurementTools.includes(activeTool)
+  ) {
     return null;
   }
 
@@ -101,29 +113,19 @@ export default function DistanceMeasurementTooltip() {
     );
   }
 
-  const {
-    left: viewportLeft,
-    top: viewportTop,
-    width: viewportWidth,
-    height: viewportHeight,
-  } = getInputCatcherRect(state, orthoView);
-  const tooltipPosition = calculateMaybePlaneScreenPos(state, position, orthoView);
-
-  if (tooltipPosition == null) {
-    return null;
-  }
-
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
-  const left = clamp(
-    viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
-    tooltipPosition.x + ADDITIONAL_OFFSET,
-    viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
-  );
-  const top = clamp(
-    viewportTop + ADDITIONAL_OFFSET,
-    tooltipPosition.y - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-    viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-  );
+  const left =
+    clamp(
+      ADDITIONAL_OFFSET - tooltipWidth,
+      lastMeasuredViewportPosition.x + ADDITIONAL_OFFSET,
+      viewportWidth - ADDITIONAL_OFFSET,
+    ) + viewportLeft;
+  const top =
+    clamp(
+      ADDITIONAL_OFFSET,
+      lastMeasuredViewportPosition.y - ADDITIONAL_OFFSET,
+      viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    ) + viewportTop;
 
   return (
     <div

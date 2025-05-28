@@ -3,7 +3,7 @@ import type {
   APIAnnotation,
   AdditionalAxis,
   ServerAdditionalAxis,
-  ServerBoundingBox,
+  BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxFromServer,
   VolumeUserState,
@@ -27,7 +27,7 @@ import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/upda
 import type { Tree, TreeGroup } from "../types/tree_types";
 
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
-  boundingBox: ServerBoundingBox,
+  boundingBox: BoundingBoxProto,
 ): BoundingBoxMinMaxType {
   const min = Utils.point3ToVector3(boundingBox.topLeft);
   const max: Vector3 = [
@@ -39,7 +39,7 @@ function convertServerBoundingBoxToBoundingBoxMinMaxType(
 }
 
 export function convertServerBoundingBoxToFrontend(
-  boundingBox: ServerBoundingBox | null | undefined,
+  boundingBox: BoundingBoxProto | null | undefined,
 ): BoundingBoxMinMaxType | null | undefined {
   if (!boundingBox) return boundingBox;
   return convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
@@ -97,7 +97,7 @@ export function convertFrontendBoundingBoxToServer(
   };
 }
 
-export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
+export function convertBoundingBoxProtoToObject(boundingBox: BoundingBoxProto): BoundingBoxObject {
   return {
     width: boundingBox.width,
     height: boundingBox.height,

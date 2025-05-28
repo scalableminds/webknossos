@@ -24,6 +24,7 @@ import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import {
+  addTreesAndGroupsAction,
   deleteTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
@@ -39,7 +40,7 @@ import {
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { Store, api } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
@@ -146,6 +147,17 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         disabled: isEditingDisabled,
         icon: <i className="fas fa-adjust" />,
         label: "Shuffle Tree Color",
+      },
+      {
+        key: "duplicateTree",
+        onClick: () => {
+          const treeMap = new TreeMap([[tree.treeId, tree]]);
+          Store.dispatch(addTreesAndGroupsAction(treeMap, null));
+        },
+        title: "Duplicate Tree",
+        disabled: isEditingDisabled,
+        icon: <i className="fas fa-clone" />,
+        label: "Duplicate Tree",
       },
       {
         key: "deleteTree",

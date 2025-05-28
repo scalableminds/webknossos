@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
@@ -44,23 +44,6 @@ object MultiArrayUtils extends LazyLogging {
       array
     }
   }
-
-  def createEmpty(rank: Int): MultiArray =
-    MultiArray.factory(MADataType.FLOAT, Array.fill(rank)(0))
-
-  def toLongArray(multiArray: MultiArray): Box[Array[Long]] =
-    multiArray.getDataType match {
-      case MADataType.LONG | MADataType.ULONG =>
-        Full(multiArray.getStorage.asInstanceOf[Array[Long]])
-      case MADataType.INT =>
-        Full(multiArray.getStorage.asInstanceOf[Array[Int]].map(_.toLong))
-      case MADataType.UINT =>
-        Full(multiArray.getStorage.asInstanceOf[Array[Int]].map { signed =>
-          if (signed >= 0) signed.toLong else signed.toLong + Int.MaxValue.toLong + Int.MaxValue.toLong + 2L
-        })
-      case _ =>
-        Failure("Cannot convert MultiArray to LongArray: unsupported data type.")
-    }
 
   /**
     * Offset describes the displacement between source and target array.<br/>

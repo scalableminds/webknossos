@@ -136,26 +136,8 @@ class BinaryDataService(val dataBaseDir: Path,
     Full(outputArray)
   }
 
-  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
-    for {
-      clippedData <- convertIfNecessary(
-        !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
-        inputArray,
-        data => clipToLayerBoundingBox(request)(data).toFox,
-        request
-      )
-      mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
-        convertIfNecessary(
-          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-          clippedData,
-          data => agglomerateService.applyAgglomerate(request)(data),
-          request
-        )
-      }.toFox.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
-      mappedData <- mappedDataFox
-      resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
-    } yield resultData
+  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
+    Fox.successful(inputArray)
 
   def handleDataRequests(requests: List[DataServiceDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {

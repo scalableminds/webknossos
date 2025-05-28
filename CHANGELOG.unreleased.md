@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility for super users to retry manually cancelled jobs from the jobs list. [#8629](https://github.com/scalableminds/webknossos/pull/8629)
 - Added checkboxes to the segments tab that allow to show/hide individual segments. The visibility of segments that are not listed in the segments list can be controlled with a new "Hide unlisted segments" toggle in the layer settings. Additionally, you can right-click a segment in a data viewport and select "Only show this segment" (and similar functionality). [#8546](https://github.com/scalableminds/webknossos/pull/8546)
 - Instead of pasting a dataset position from the clipboard to the position input box, you can simply paste it without focussing the position input first. Furthermore, you can also paste a "hash string", such as `#1406,1794,1560,0,0.234,186`, as it can be found in WK URLs. Pasting such a string will also set the encoded zoom, rotation, viewport etc. Note that the `#` has to be included in the pasted text. You can also copy and paste an entire link, but note that the dataset or annotation id in the link will be ignored. [#8652](https://github.com/scalableminds/webknossos/pull/8652)
+- Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
 - Remove `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)

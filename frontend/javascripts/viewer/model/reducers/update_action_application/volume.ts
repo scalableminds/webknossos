@@ -5,7 +5,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/update_actions";
 import type { WebknossosState } from "viewer/store";
-import VolumeTracingReducer from "../volumetracing_reducer";
 import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
@@ -16,6 +15,7 @@ import {
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
   newState: WebknossosState,
+  VolumeTracingReducer: (state: WebknossosState) => WebknossosState,
 ): { value: WebknossosState } {
   for (const ua of actions) {
     switch (ua.name) {

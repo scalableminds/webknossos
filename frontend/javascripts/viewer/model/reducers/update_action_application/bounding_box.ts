@@ -20,6 +20,7 @@ export function applyUpdateUserBoundingBox(
   newState: WebknossosState,
   ua: UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction,
 ) {
+  // todop: this won't work for volume actions
   // todop: dont pass state and instead do the update here?
   const { skeleton } = newState.annotation;
   if (skeleton == null) {

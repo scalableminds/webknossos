@@ -679,7 +679,7 @@ function VolumeTracingReducer(
 
     case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
-      return applyVolumeUpdateActionsFromServer(actions, state).value;
+      return applyVolumeUpdateActionsFromServer(actions, state, VolumeTracingReducer).value;
     }
 
     default:

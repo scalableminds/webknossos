@@ -88,7 +88,7 @@ export type BoundingBoxObject = {
   readonly height: number;
   readonly depth: number;
 };
-export type UserBoundingBoxToServer = {
+export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
   id: number;
   name: string;

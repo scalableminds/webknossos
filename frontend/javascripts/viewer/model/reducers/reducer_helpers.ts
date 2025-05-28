@@ -17,14 +17,14 @@ import type {
   Annotation,
   BoundingBoxObject,
   UserBoundingBox,
-  UserBoundingBoxToServer,
+  UserBoundingBoxForServer,
   UserBoundingBoxWithOptIsVisible,
   WebknossosState,
 } from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import type { Tree, TreeGroup } from "../types/tree_types";
 
-export function convertServerBoundingBoxToBoundingBox(
+function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: ServerBoundingBox,
 ): BoundingBoxMinMaxType {
   return Utils.computeBoundingBoxFromArray(
@@ -40,7 +40,7 @@ export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxMinMaxType | null | undefined {
   if (!boundingBox) return null;
-  return convertServerBoundingBoxToBoundingBox(boundingBox);
+  return convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
 }
 
 export function convertUserBoundingBoxesFromServerToFrontend(
@@ -53,7 +53,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
-    const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
+    const convertedBoundingBox = convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
@@ -66,7 +66,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 
 export function convertUserBoundingBoxFromFrontendToServer(
   boundingBox: UserBoundingBoxWithOptIsVisible,
-): UserBoundingBoxToServer {
+): UserBoundingBoxForServer {
   const { boundingBox: bb, ...rest } = boundingBox;
   return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }

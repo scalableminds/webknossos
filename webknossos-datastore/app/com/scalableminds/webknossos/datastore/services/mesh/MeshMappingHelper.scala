@@ -27,7 +27,7 @@ trait MeshMappingHelper extends FoxImplicits {
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
         // No mapping selected, assume id matches meshfile
@@ -40,15 +40,17 @@ trait MeshMappingHelper extends FoxImplicits {
         // assume agglomerate id, fetch oversegmentation segment ids for it
         for {
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          segmentIdsBox = agglomerateService.segmentIdsForAgglomerateId(
-            AgglomerateFileKey(
-              organizationId,
-              datasetDirectoryName,
-              dataLayerName,
-              mappingName
-            ),
-            agglomerateId
-          )
+          segmentIdsBox <- agglomerateService
+            .segmentIdsForAgglomerateId(
+              AgglomerateFileKey(
+                organizationId,
+                datasetDirectoryName,
+                dataLayerName,
+                mappingName
+              ),
+              agglomerateId
+            )
+            .shiftBox
           segmentIds <- segmentIdsBox match {
             case Full(segmentIds) => Fox.successful(segmentIds)
             case _                => if (omitMissing) Fox.successful(List.empty) else segmentIdsBox.toFox
@@ -67,17 +69,15 @@ trait MeshMappingHelper extends FoxImplicits {
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
             for {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              localSegmentIds <- agglomerateService
-                .segmentIdsForAgglomerateId(
-                  AgglomerateFileKey(
-                    organizationId,
-                    datasetDirectoryName,
-                    dataLayerName,
-                    mappingName
-                  ),
-                  agglomerateId
-                )
-                .toFox
+              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
+                AgglomerateFileKey(
+                  organizationId,
+                  datasetDirectoryName,
+                  dataLayerName,
+                  mappingName
+                ),
+                agglomerateId
+              )
             } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")

@@ -66,7 +66,7 @@ class DSMeshController @Inject()(
                                                                           datasetDirectoryName,
                                                                           dataLayerName,
                                                                           request.body.meshFile.name)
-          segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
+          segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             organizationId,
             datasetDirectoryName,
             dataLayerName,

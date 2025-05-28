@@ -33,7 +33,6 @@ import type {
   TracingType,
 } from "types/api_types";
 import type {
-  BoundingBoxMinMaxType,
   ContourMode,
   ControlMode,
   FillMode,
@@ -61,6 +60,7 @@ import type {
   TreeMap,
 } from "./model/types/tree_types";
 
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 // Value imports
 import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
@@ -82,12 +82,8 @@ import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
-export type BoundingBoxObject = {
-  readonly topLeft: Vector3;
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
-};
+export type { BoundingBoxObject } from "types/bounding_box";
+
 export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
   id: number;

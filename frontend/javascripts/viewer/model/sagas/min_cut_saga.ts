@@ -7,7 +7,8 @@ import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import type { APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxMinMaxType, TypedArray, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceActiveVolumeTracing,

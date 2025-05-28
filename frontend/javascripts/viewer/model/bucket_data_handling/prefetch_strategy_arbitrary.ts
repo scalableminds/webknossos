@@ -1,7 +1,8 @@
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxMinMaxType, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import PolyhedronRasterizer from "viewer/model/bucket_data_handling/polyhedron_rasterizer";
 import { AbstractPrefetchStrategy } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue";

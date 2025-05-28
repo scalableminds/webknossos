@@ -8,13 +8,8 @@ import messages from "messages";
 import Saxophone from "saxophone";
 import type { APIBuildInfo, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import {
-  type BoundingBoxMinMaxType,
-  IdentityTransform,
-  type TreeType,
-  TreeTypeEnum,
-  type Vector3,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";

@@ -42,7 +42,8 @@ import {
   type AdditionalAxis,
   type VoxelSize,
 } from "types/api_types";
-import type { BoundingBoxMinMaxType, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import {
   getByteCountFromLayer,
   getDataLayers,

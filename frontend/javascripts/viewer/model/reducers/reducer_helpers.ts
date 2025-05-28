@@ -8,7 +8,7 @@ import type {
   UserBoundingBoxFromServer,
   VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";

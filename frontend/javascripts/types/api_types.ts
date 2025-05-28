@@ -848,7 +848,7 @@ export type UserBoundingBoxFromServer = {
   color?: ColorObject;
   isVisible?: boolean;
 };
-export type ServerBoundingBoxTypeTuple = {
+export type ServerBoundingBoxMinMaxTypeTuple = {
   topLeft: Vector3;
   width: number;
   height: number;

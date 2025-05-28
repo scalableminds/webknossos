@@ -9,7 +9,7 @@ import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobType } from "types/api_types";
 import {
-  type BoundingBoxType,
+  type BoundingBoxMinMaxType,
   ControlModeEnum,
   type Vector3,
   type Vector6,
@@ -47,7 +47,7 @@ export default function BoundingBoxTab() {
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
-  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxType) =>
+  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxMinMaxType) =>
     dispatch(
       changeUserBoundingBoxAction(id, {
         boundingBox,

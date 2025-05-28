@@ -9,7 +9,7 @@ import Saxophone from "saxophone";
 import type { APIBuildInfo, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import {
-  type BoundingBoxType,
+  type BoundingBoxMinMaxType,
   IdentityTransform,
   type TreeType,
   TreeTypeEnum,
@@ -201,7 +201,7 @@ function serializeMetaInformation(
 }
 
 function serializeTaskBoundingBox(
-  boundingBox: BoundingBoxType | null | undefined,
+  boundingBox: BoundingBoxMinMaxType | null | undefined,
   tagName: string,
 ): string {
   if (boundingBox) {

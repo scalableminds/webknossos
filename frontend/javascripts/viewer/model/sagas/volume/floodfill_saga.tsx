@@ -5,7 +5,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type {
-  BoundingBoxType,
+  BoundingBoxMinMaxType,
   FillMode,
   LabeledVoxelsMap,
   OrthoView,
@@ -132,7 +132,7 @@ function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
   finestSegmentationLayerMag: Vector3,
-): Saga<BoundingBoxType | { failureReason: string }> {
+): Saga<BoundingBoxMinMaxType | { failureReason: string }> {
   const isRestrictedToBoundingBox = yield* select(
     (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
@@ -346,7 +346,7 @@ function* notifyUserAboutResult(
   startTimeOfFloodfill: number,
   progressCallback: ProgressCallback,
   fillMode: FillMode,
-  coveredBoundingBox: BoundingBoxType,
+  coveredBoundingBox: BoundingBoxMinMaxType,
   oldSegmentIdAtSeed: number,
   activeCellId: number,
   seedPosition: Vector3,

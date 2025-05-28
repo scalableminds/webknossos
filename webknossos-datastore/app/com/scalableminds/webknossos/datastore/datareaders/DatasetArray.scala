@@ -282,8 +282,8 @@ class DatasetArray(vaultPath: VaultPath,
   private def partialCopyingIsNotNeededForWkOrder(bufferShape: Array[Int],
                                                   globalOffset: Array[Int],
                                                   chunkIndices: Seq[Array[Int]]): Boolean =
-    chunkIndices match {
-      case chunkIndex :: Nil =>
+    chunkIndices.headOption match {
+      case Some(chunkIndex) =>
         val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&

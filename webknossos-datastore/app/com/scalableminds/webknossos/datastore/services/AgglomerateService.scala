@@ -59,10 +59,10 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
-  private def mapSingleSegment(zarrArray: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
-                                                                         tc: TokenContext): Fox[Long] =
+  private def mapSingleSegment(segmentToAgglomerate: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
+                                                                                    tc: TokenContext): Fox[Long] =
     for {
-      asMultiArray <- zarrArray.readAsMultiArray(shape = Array(1), offset = Array(segmentId))
+      asMultiArray <- segmentToAgglomerate.readAsMultiArray(shape = Array(1), offset = Array(segmentId))
     } yield asMultiArray.getLong(0)
 
   private def openZarrArrayCached(zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext) =
@@ -109,11 +109,11 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
 
     for {
-      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
+      segmentToAgglomerate <- openZarrArrayCached("segment_to_agglomerate")
       beforeBuildMap = Instant.now
       relevantAgglomerateMap: Map[Long, Long] <- Fox
         .serialCombined(distinctSegmentIds) { segmentId =>
-          mapSingleSegment(zarrArray, segmentId).map((segmentId, _))
+          mapSingleSegment(segmentToAgglomerate, segmentId).map((segmentId, _))
         }
         .map(_.toMap)
       _ = Instant.logSince(beforeBuildMap, "build map")
@@ -278,6 +278,51 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
                                                shape = Array(segmentCount.toInt))
     } yield segmentIds.getStorage.asInstanceOf[Array[Long]].toSeq
 
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[Long]] =
+    for {
+      segmentToAgglomerate <- openZarrArrayCached("segment_to_agglomerate")
+      agglomerateIds <- Fox.serialCombined(segmentIds) { segmentId =>
+        mapSingleSegment(segmentToAgglomerate, segmentId)
+      }
+    } yield agglomerateIds
+
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
+                                                                                    tc: TokenContext): Fox[Vec3Int] =
+    for {
+      segmentToAgglomerate <- openZarrArrayCached("segment_to_agglomerate")
+      agglomerateId <- mapSingleSegment(segmentToAgglomerate, segmentId)
+      agglomerateToSegmentsOffsets <- openZarrArrayCached("agglomerate_to_segments_offsets")
+      segmentsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = Array(agglomerateId),
+                                                                                 shape = Array(2))
+      agglomerateToSegments <- openZarrArrayCached("agglomerate_to_segments")
+      segmentIndex <- binarySearchForSegment(segmentsRange.getLong(0),
+                                             segmentsRange.getLong(1),
+                                             segmentId,
+                                             agglomerateToSegments)
+      agglomerateToPositions <- openZarrArrayCached("agglomerate_to_positions")
+      position <- agglomerateToPositions.readAsMultiArray(offset = Array(segmentIndex, 0), shape = Array(3, 1))
+    } yield Vec3Int(position.getInt(0), position.getInt(1), position.getInt(2))
+
+  private def binarySearchForSegment(
+      rangeStart: Long,
+      rangeEnd: Long,
+      segmentId: Long,
+      agglomerateToSegments: DatasetArray)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    if (rangeStart > rangeEnd) Fox.failure("Could not find segmentId in agglomerate file")
+    else {
+      val middle = rangeStart + (rangeEnd - rangeStart) / 2
+      for {
+        segmentIdAtMiddleMA <- agglomerateToSegments.readAsMultiArray(offset = Array(middle), shape = Array(1))
+        segmentIdAtMiddle = segmentIdAtMiddleMA.getLong(0)
+        segmentIndex <- if (segmentIdAtMiddle == segmentId)
+          Fox.successful(middle)
+        else if (segmentIdAtMiddle < segmentId) {
+          binarySearchForSegment(middle + 1L, rangeEnd, segmentId, agglomerateToSegments)
+        } else binarySearchForSegment(rangeStart, middle - 1L, segmentId, agglomerateToSegments)
+      } yield segmentIndex
+    }
 }
 
 class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
@@ -546,34 +591,41 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
       }.toFox
     }
 
-  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] = {
-    val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
-
-    tryo {
-      val agglomerateIds = segmentIds.map { segmentId: Long =>
-        cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
-                                                           cachedAgglomerateFile.reader,
-                                                           cachedAgglomerateFile.dataset)(readHDF)
-      }
-      cachedAgglomerateFile.finishAccess()
-      agglomerateIds
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[Long]] =
+    if (useZarr) {
+      zarrAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds)
+    } else {
+      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
+      tryo {
+        val agglomerateIds = segmentIds.map { segmentId: Long =>
+          cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
+                                                             cachedAgglomerateFile.reader,
+                                                             cachedAgglomerateFile.dataset)(readHDF)
+        }
+        cachedAgglomerateFile.finishAccess()
+        agglomerateIds
+      }.toFox
     }
 
-  }
-
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
-    val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
-    val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    for {
-      agglomerateIdArr: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
-      agglomerateId = agglomerateIdArr(0)
-      segmentsRange: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
-      segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
-      position <- tryo(reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
-    } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
-  }
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
+                                                                                    tc: TokenContext): Fox[Vec3Int] =
+    if (useZarr) zarrAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId)
+    else {
+      val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+      val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      (for {
+        agglomerateIdArr: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
+        agglomerateId = agglomerateIdArr(0)
+        segmentsRange: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
+        segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
+        position <- tryo(
+          reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
+      } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)).toFox
+    }
 
   @tailrec
   private def binarySearchForSegment(rangeStart: Long,

@@ -315,10 +315,9 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        position <- agglomerateService
-          .positionForSegmentId(AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-                                segmentId)
-          .toFox ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        position <- agglomerateService.positionForSegmentId(
+          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
     }
   }
@@ -355,17 +354,15 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateIds: Seq[Long] <- agglomerateService
-          .agglomerateIdsForSegmentIds(
-            AgglomerateFileKey(
-              organizationId,
-              datasetDirectoryName,
-              dataLayerName,
-              mappingName
-            ),
-            request.body.items
-          )
-          .toFox
+        agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
+          AgglomerateFileKey(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName,
+            mappingName
+          ),
+          request.body.items
+        )
       } yield Ok(ListOfLong(agglomerateIds).toByteArray)
     }
   }

@@ -839,16 +839,18 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "deleteEdge":
         case "deleteNode":
         case "deleteTree":
-        case "mergeTree": // todop: is this really skeleton?
-        case "updateSkeletonTracing":
         case "updateTree":
         case "updateTreeEdgesVisibility":
         case "updateTreeGroups":
         case "moveTreeComponent":
         case "updateNode":
-        case "updateUserBoundingBoxesInSkeletonTracing": // Wait for #8492 first.
 
-        case "updateVolumeTracing": {
+        case "mergeTree": // todop: this action is never used? legacy
+        // Legacy! The following actions are legacy actions and don't
+        // need to be supported.
+        case "updateSkeletonTracing":
+        case "updateVolumeTracing":
+        case "updateUserBoundingBoxesInSkeletonTracing": {
           console.log("cannot apply action", action.name);
           yield* call(finalize);
           return false;

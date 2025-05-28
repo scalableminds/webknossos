@@ -7,7 +7,14 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
-import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
+import type {
+  MeshInformation,
+  SkeletonTracing,
+  UserBoundingBox,
+  UserBoundingBoxWithoutIdMaybe,
+  VolumeTracing,
+  WebknossosState,
+} from "viewer/store";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
@@ -55,6 +62,41 @@ const updateUserBoundingBoxes = (
     },
   });
 };
+
+export function handleUserBoundingBoxUpdateInTracing(
+  state: WebknossosState,
+  tracing: SkeletonTracing | VolumeTracing,
+  updatedUserBoundingBoxes: UserBoundingBox[],
+) {
+  if (tracing.type === "skeleton") {
+    return update(state, {
+      annotation: {
+        skeleton: {
+          userBoundingBoxes: {
+            $set: updatedUserBoundingBoxes,
+          },
+        },
+      },
+    });
+  }
+
+  const newVolumes = state.annotation.volumes.map((volumeTracing) =>
+    tracing.tracingId === volumeTracing.tracingId
+      ? {
+          ...volumeTracing,
+          updatedUserBoundingBoxes,
+        }
+      : volumeTracing,
+  );
+
+  return update(state, {
+    annotation: {
+      volumes: {
+        $set: newVolumes,
+      },
+    },
+  });
+}
 
 const maybeAddAdditionalCoordinatesToMeshState = (
   state: WebknossosState,
@@ -151,8 +193,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
         bbox.id === action.id
           ? {
-              // @ts-expect-error ts-migrate(2783) FIXME: 'id' is specified more than once, so this usage wi... Remove this comment to see the full error message
-              id: bbox.id,
               ...bbox,
               ...action.newProps,
             }

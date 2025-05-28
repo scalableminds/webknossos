@@ -91,8 +91,8 @@ export type BoundingBoxObject = {
 export type UserBoundingBoxToServer = {
   boundingBox: BoundingBoxObject;
   id: number;
-  name?: string;
-  color?: Vector3;
+  name: string;
+  color: Vector3;
   isVisible?: boolean;
 };
 export type UserBoundingBoxWithoutIdMaybe = {

@@ -40,8 +40,8 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
       bucket = readInstruction.bucket
       shape = Vec3Int.full(bucket.bucketLength)
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(shape,
-                                                                    offset,
+      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(offset,
+                                                                    shape,
                                                                     bucket.additionalCoordinates,
                                                                     dataLayer.elementClass == ElementClass.uint24)
     } yield bucketData

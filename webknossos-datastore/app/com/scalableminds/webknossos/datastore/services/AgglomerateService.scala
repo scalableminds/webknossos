@@ -62,7 +62,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
   private def mapSingleSegment(segmentToAgglomerate: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
                                                                                     tc: TokenContext): Fox[Long] =
     for {
-      asMultiArray <- segmentToAgglomerate.readAsMultiArray(shape = Array(1), offset = Array(segmentId))
+      asMultiArray <- segmentToAgglomerate.readAsMultiArray(offset = segmentId, shape = 1)
     } yield asMultiArray.getLong(0)
 
   private def openZarrArrayCached(agglomerateFileKey: AgglomerateFileKey,
@@ -147,10 +147,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments_offsets")
       agglomerateToEdgesOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_edges_offsets")
 
-      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = Array(agglomerateId),
-                                                                                  shape = Array(2))
-      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = Array(agglomerateId),
-                                                                           shape = Array(2))
+      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
+      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       nodeCount = positionsRange.getLong(1) - positionsRange.getLong(0)
       edgeCount = edgesRange.getLong(1) - edgesRange.getLong(0)
       edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
@@ -223,10 +221,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments_offsets")
       agglomerateToEdgesOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_edges_offsets")
 
-      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(shape = Array(2),
-                                                                                  offset = Array(agglomerateId))
-      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(shape = Array(2),
-                                                                           offset = Array(agglomerateId))
+      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
+      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       nodeCount = positionsRange.getLong(1) - positionsRange.getLong(0)
       edgeCount = edgesRange.getLong(1) - edgesRange.getLong(0)
       edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
@@ -236,14 +232,14 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       positions: MultiArray <- agglomerateToPositions.readAsMultiArray(offset = Array(positionsRange.getLong(0), 0),
                                                                        shape = Array(nodeCount.toInt, 3))
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments")
-      segmentIds: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = Array(positionsRange.getInt(0)),
-                                                                       shape = Array(nodeCount.toInt))
+      segmentIds: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = positionsRange.getInt(0),
+                                                                       shape = nodeCount.toInt)
       agglomerateToEdges <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_edges")
       edges: MultiArray <- agglomerateToEdges.readAsMultiArray(offset = Array(edgesRange.getLong(0), 0),
                                                                shape = Array(edgeCount.toInt, 2))
       agglomerateToAffinities <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_affinities")
-      affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = Array(edgesRange.getLong(0)),
-                                                                         shape = Array(edgeCount.toInt))
+      affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesRange.getLong(0),
+                                                                         shape = edgeCount.toInt)
 
       agglomerateGraph = AgglomerateGraph(
         // unsafeWrapArray is fine, because the underlying arrays are never mutated
@@ -270,13 +266,12 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments_offsets")
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments")
-      segmentRange <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = Array(agglomerateId), shape = Array(2))
+      segmentRange <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       segmentCount = segmentRange.getLong(1) - segmentRange.getLong(0)
       segmentIds <- if (segmentCount == 0)
         Fox.successful(MultiArray.factory(DataType.LONG, Array(0, 0)))
       else
-        agglomerateToSegments.readAsMultiArray(offset = Array(segmentRange.getLong(0)),
-                                               shape = Array(segmentCount.toInt))
+        agglomerateToSegments.readAsMultiArray(offset = segmentRange.getLong(0), shape = segmentCount.toInt)
     } yield segmentIds.getStorage.asInstanceOf[Array[Long]].toSeq
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
@@ -295,8 +290,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, "segment_to_agglomerate")
       agglomerateId <- mapSingleSegment(segmentToAgglomerate, segmentId)
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments_offsets")
-      segmentsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = Array(agglomerateId),
-                                                                                 shape = Array(2))
+      segmentsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, "agglomerate_to_segments")
       segmentIndex <- binarySearchForSegment(segmentsRange.getLong(0),
                                              segmentsRange.getLong(1),
@@ -315,7 +309,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     else {
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
       for {
-        segmentIdAtMiddleMA <- agglomerateToSegments.readAsMultiArray(offset = Array(middle), shape = Array(1))
+        segmentIdAtMiddleMA <- agglomerateToSegments.readAsMultiArray(offset = middle, shape = 1)
         segmentIdAtMiddle = segmentIdAtMiddleMA.getLong(0)
         segmentIndex <- if (segmentIdAtMiddle == segmentId)
           Fox.successful(middle)

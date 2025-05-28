@@ -3,13 +3,8 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{
-  AgglomerateService,
-  ApplicationHealthService,
-  ZarrAgglomerateService
-}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.services.{ApplicationHealthService, ZarrAgglomerateService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import net.liftweb.common.Box.tryo
 

@@ -45,9 +45,8 @@ object MultiArrayUtils extends LazyLogging {
     }
   }
 
-  def createEmpty(rank: Int): MultiArray = {
+  def createEmpty(rank: Int): MultiArray =
     MultiArray.factory(MADataType.FLOAT, Array.fill(rank)(0))
-  }
 
   /**
     * Offset describes the displacement between source and target array.<br/>

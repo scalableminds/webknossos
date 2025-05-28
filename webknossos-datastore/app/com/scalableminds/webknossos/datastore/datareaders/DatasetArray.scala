@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -69,32 +68,32 @@ class DatasetArray(vaultPath: VaultPath,
     }
 
   def readBytesWithAdditionalCoordinates(
-      shapeXYZ: Vec3Int,
       offsetXYZ: Vec3Int,
+      shapeXYZ: Vec3Int,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (shapeArray, offsetArray) <- tryo(constructShapeAndOffsetArrays(
-        shapeXYZ,
+      (offsetArray, shapeArray) <- tryo(constructShapeAndOffsetArrays(
         offsetXYZ,
+        shapeXYZ,
         additionalCoordinatesOpt,
         shouldReadUint24)).toFox ?~> "failed to construct shape and offset array for requested coordinates"
-      bytes <- readBytes(shapeArray, offsetArray)
+      bytes <- readBytes(offsetArray, shapeArray)
     } yield bytes
 
-  private def constructShapeAndOffsetArrays(shapeXYZ: Vec3Int,
-                                            offsetXYZ: Vec3Int,
+  private def constructShapeAndOffsetArrays(offsetXYZ: Vec3Int,
+                                            shapeXYZ: Vec3Int,
                                             additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
                                             shouldReadUint24: Boolean): (Array[Int], Array[Int]) = {
-    val shapeArray: Array[Int] = Array.fill(rank)(1)
-    shapeArray(rank - 3) = shapeXYZ.x
-    shapeArray(rank - 2) = shapeXYZ.y
-    shapeArray(rank - 1) = shapeXYZ.z
-
     val offsetArray: Array[Int] = Array.fill(rank)(0)
     offsetArray(rank - 3) = offsetXYZ.x
     offsetArray(rank - 2) = offsetXYZ.y
     offsetArray(rank - 1) = offsetXYZ.z
+
+    val shapeArray: Array[Int] = Array.fill(rank)(1)
+    shapeArray(rank - 3) = shapeXYZ.x
+    shapeArray(rank - 2) = shapeXYZ.y
+    shapeArray(rank - 1) = shapeXYZ.z
 
     axisOrder.c.foreach { channelAxisInner =>
       val channelAxisOuter = fullAxisOrder.arrayToWkPermutation(channelAxisInner)
@@ -115,14 +114,14 @@ class DatasetArray(vaultPath: VaultPath,
         // shapeArray at positions of additional coordinates is always 1
       }
     }
-    (shapeArray, offsetArray)
+    (offsetArray, shapeArray)
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+  private def readBytes(offset: Array[Int], shape: Array[Int])(implicit ec: ExecutionContext,
                                                                tc: TokenContext): Fox[Array[Byte]] =
     for {
-      typedMultiArray <- readAsFortranOrder(shape, offset)
+      typedMultiArray <- readAsFortranOrder(offset, shape)
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
 
@@ -153,7 +152,7 @@ class DatasetArray(vaultPath: VaultPath,
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(implicit ec: ExecutionContext,
                                                                         tc: TokenContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(
@@ -189,7 +188,10 @@ class DatasetArray(vaultPath: VaultPath,
     }
   }
 
-  def readAsMultiArray(shape: Array[Int], offset: Array[Long])(implicit ec: ExecutionContext,
+  def readAsMultiArray(offset: Long, shape: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
+    readAsMultiArray(Array(offset), Array(shape))
+
+  def readAsMultiArray(offset: Array[Long], shape: Array[Int])(implicit ec: ExecutionContext,
                                                                tc: TokenContext): Fox[MultiArray] =
     if (shape.product == 0) {
       Fox.successful(MultiArrayUtils.createEmpty(rank))

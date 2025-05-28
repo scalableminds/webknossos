@@ -707,6 +707,12 @@ function VolumeTracingReducer(
               removeSegmentAction(ua.value.id, ua.value.actionTracingId),
             );
           }
+          case "updateUserBoundingBoxInVolumeTracing":
+          case "addUserBoundingBoxInVolumeTracing":
+          case "deleteUserBoundingBoxInVolumeTracing": {
+            // todop
+            return state;
+          }
           default: {
             ua satisfies never;
           }

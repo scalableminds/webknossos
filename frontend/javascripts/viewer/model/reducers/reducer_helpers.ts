@@ -9,6 +9,7 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
@@ -22,25 +23,41 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/update_actions";
 import type { Tree, TreeGroup } from "../types/tree_types";
 
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: ServerBoundingBox,
 ): BoundingBoxMinMaxType {
-  return Utils.computeBoundingBoxFromArray(
-    Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
-      boundingBox.width,
-      boundingBox.height,
-      boundingBox.depth,
-    ]),
-  );
+  const min = Utils.point3ToVector3(boundingBox.topLeft);
+  const max: Vector3 = [
+    min[0] + boundingBox.width,
+    min[1] + boundingBox.height,
+    min[2] + boundingBox.depth,
+  ];
+  return { min, max };
 }
 
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxMinMaxType | null | undefined {
-  if (!boundingBox) return null;
+  if (!boundingBox) return boundingBox;
   return convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
+}
+
+export function convertUserBoundingBoxFromUpdateActionToFrontend(
+  bboxValue: UpdateUserBoundingBoxInSkeletonTracingAction["value"],
+): Partial<UserBoundingBox> {
+  const { boundingBox, actionTracingId: _actionTracingId, ...valueWithoutBoundingBox } = bboxValue;
+  const maybeBoundingBoxValue =
+    boundingBox != null
+      ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
+      : {};
+
+  return {
+    ...valueWithoutBoundingBox,
+    ...maybeBoundingBoxValue,
+  };
 }
 
 export function convertUserBoundingBoxesFromServerToFrontend(

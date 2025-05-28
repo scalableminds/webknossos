@@ -22,14 +22,12 @@ import type {
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "viewer/model/actions/settings_actions";
-import {
-  type ClickSegmentAction,
-  type RemoveSegmentAction,
-  type SetSegmentsAction,
-  type UpdateSegmentAction,
-  type VolumeTracingAction,
-  removeSegmentAction,
-  updateSegmentAction,
+import type {
+  ClickSegmentAction,
+  RemoveSegmentAction,
+  SetSegmentsAction,
+  UpdateSegmentAction,
+  VolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
@@ -68,6 +66,7 @@ import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_ac
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
+import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 
 type SegmentUpdateInfo =
   | {
@@ -680,45 +679,7 @@ function VolumeTracingReducer(
 
     case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
-      let newState = state;
-      for (const ua of actions) {
-        switch (ua.name) {
-          case "updateLargestSegmentId": {
-            const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
-            newState = setLargestSegmentIdReducer(
-              newState,
-              volumeTracing,
-              // todop: can this really be null? if so, what should we do?
-              ua.value.largestSegmentId ?? 0,
-            );
-            break;
-          }
-          case "createSegment":
-          case "updateSegment": {
-            const { actionTracingId, ...segment } = ua.value;
-            return VolumeTracingReducer(
-              state,
-              updateSegmentAction(segment.id, segment, actionTracingId),
-            );
-          }
-          case "deleteSegment": {
-            return VolumeTracingReducer(
-              state,
-              removeSegmentAction(ua.value.id, ua.value.actionTracingId),
-            );
-          }
-          case "updateUserBoundingBoxInVolumeTracing":
-          case "addUserBoundingBoxInVolumeTracing":
-          case "deleteUserBoundingBoxInVolumeTracing": {
-            // todop
-            return state;
-          }
-          default: {
-            ua satisfies never;
-          }
-        }
-      }
-      break;
+      return applyVolumeUpdateActionsFromServer(actions, state).value;
     }
 
     default:

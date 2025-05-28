@@ -13,11 +13,11 @@ import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/mesh_saga";
 import Store from "viewer/store";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";
+import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on

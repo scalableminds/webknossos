@@ -344,7 +344,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
-    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh_saga.
+    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh sagas.
     case "ADD_AD_HOC_MESH": {
       const {
         layerName,

@@ -22,6 +22,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   var request: WSRequest = wsClient.url(url)
   private var verbose: Boolean = true
+  private var logOnFailure: Boolean = true
   private var slowRequestLoggingThreshold = 2 minutes
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
@@ -62,6 +63,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   def silent: RPCRequest = {
     verbose = false
+    this
+  }
+
+  def silentEvenOnFailure: RPCRequest = {
+    verbose = false
+    logOnFailure = false
     this
   }
 
@@ -203,7 +210,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     }
     request
       .execute()
-      .map { result =>
+      .map { result: WSResponse =>
         val duration = Instant.since(before)
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
@@ -217,17 +224,17 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
               s" Status: ${result.status}.$durationLabel" +
               s" RequestBody: '$requestBodyPreview'" +
               s" ResponseBody: '$responseBodyPreview'"
-          logger.error(verboseErrorMsg)
+          if (logOnFailure) logger.error(verboseErrorMsg)
           val compactErrorMsg =
             s"Failed $debugInfo. Response: ${result.status} '$responseBodyPreview'"
-          Failure(compactErrorMsg)
+          Failure(compactErrorMsg) ~> result.status
         }
       }
       .recover {
         case e =>
           val errorMsg = s"Error sending $debugInfo: " +
             s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          logger.error(errorMsg)
+          if (logOnFailure) logger.error(errorMsg)
           Failure(errorMsg)
       }
   }

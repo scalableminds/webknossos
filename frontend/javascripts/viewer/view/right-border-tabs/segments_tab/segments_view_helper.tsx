@@ -24,6 +24,9 @@ export type SegmentHierarchyGroup = BasicDataNode & {
   key: string;
   isExpanded?: boolean;
   children: Array<SegmentHierarchyNode>;
+  // This type does not have an isChecked property, because that will
+  // be determined automatically by antd by looking at isChecked of
+  // the children.
 };
 
 export type SegmentHierarchyLeaf = BasicDataNode &
@@ -31,6 +34,8 @@ export type SegmentHierarchyLeaf = BasicDataNode &
     type: "segment";
     key: string;
     title: string;
+    children?: undefined;
+    isChecked: boolean;
   };
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
@@ -108,7 +113,7 @@ export function withMappingActivationConfirmation(
   const recommendationStr =
     editableMapping == null
       ? ""
-      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mapping instead.";
+      : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mesh file instead.";
 
   const confirmMappingActivation: MenuClickEventHandler = (menuClickEvent) => {
     confirm({

@@ -193,6 +193,10 @@ function ModesView() {
   const is2d = useWkSelector((state) => is2dDataset(state.dataset));
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
+  const isOrthoMode = useWkSelector(
+    (state) => state.temporaryConfiguration.viewMode === "orthogonal",
+  );
 
   const isArbitrarySupported = hasSkeleton || isViewMode;
 
@@ -201,7 +205,7 @@ function ModesView() {
     <div>
       <Space.Compact>
         {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-        {isViewMode ? null : <ToolkitView />}
+        {isViewMode || isReadOnly || !isOrthoMode ? null : <ToolkitView />}
       </Space.Compact>
     </div>
   );

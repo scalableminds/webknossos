@@ -13,17 +13,19 @@ import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
+import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
+import type { Writeable } from "types/globals";
 import type {
   BoundingBoxType,
   BucketAddress,
   ControlMode,
+  LabeledVoxelsMap,
   OrthoView,
   TypedArray,
   Vector3,
@@ -72,6 +74,7 @@ import {
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
+  enforceActiveVolumeTracing,
   getActiveCellId,
   getActiveSegmentationTracing,
   getNameOfRequestedOrVisibleSegmentationLayer,
@@ -134,6 +137,7 @@ import {
   type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
+  finishAnnotationStrokeAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
@@ -142,6 +146,7 @@ import {
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataLayer from "viewer/model/data_layer";
+import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -151,23 +156,23 @@ import {
   globalPositionToBucketPosition,
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
+  zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
+import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
+import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
   MappingType,
-  MutableNode,
-  Node,
   Segment,
   SegmentGroup,
   SkeletonTracing,
   StoreAnnotation,
-  TreeGroupTypeFlat,
-  TreeMap,
   UserConfiguration,
   VolumeTracing,
   WebknossosState,
@@ -289,15 +294,15 @@ class TracingApi {
    */
   getAllNodes(): Array<Node> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return _.flatMap(skeletonTracing.trees, (tree) => Array.from(tree.nodes.values()));
+    return Array.from(skeletonTracing.trees.values().flatMap((tree) => tree.nodes.values()));
   }
 
   /**
    * Returns all trees belonging to a tracing.
    */
-  getAllTrees(): TreeMap {
+  getAllTrees(): Record<number, Tree> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return skeletonTracing.trees;
+    return skeletonTracing.trees.toObject();
   }
 
   /**
@@ -396,7 +401,7 @@ class TracingApi {
     if (_.isNumber(nodeId)) {
       const tree =
         treeId != null
-          ? skeletonTracing.trees[treeId]
+          ? skeletonTracing.trees.getNullable(treeId)
           : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
@@ -412,7 +417,8 @@ class TracingApi {
    * @example
    * const comment = api.tracing.getCommentForNode(23);
    *
-   * @example // Provide a tree for lookup speed boost
+   * @example
+   * // Provide a tree for lookup speed boost
    * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
    */
   getCommentForNode(nodeId: number, treeId?: number): string | null | undefined {
@@ -422,14 +428,14 @@ class TracingApi {
     let tree = null;
 
     if (treeId != null) {
-      tree = skeletonTracing.trees[treeId];
+      tree = skeletonTracing.trees.getNullable(treeId);
       assertExists(tree, `Couldn't find tree ${treeId}.`);
       assertExists(
         tree.nodes.getOrThrow(nodeId),
         `Couldn't find node ${nodeId} in tree ${treeId}.`,
       );
     } else {
-      tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+      tree = skeletonTracing.trees.values().find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
@@ -545,7 +551,7 @@ class TracingApi {
    */
   getTreeGroups(): Array<TreeGroupTypeFlat> {
     const { annotation } = Store.getState();
-    return getFlatTreeGroups(assertSkeleton(annotation));
+    return Array.from(getFlatTreeGroups(assertSkeleton(annotation)));
   }
 
   /**
@@ -932,7 +938,10 @@ class TracingApi {
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
-      segmentIdsToDelete = Array.from(segments.values()).map((t) => t.id);
+      segmentIdsToDelete = segments
+        .values()
+        .map((t) => t.id)
+        .toArray();
       newSegmentGroups = [];
     }
 
@@ -1230,7 +1239,7 @@ class TracingApi {
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
     const skeletonTracing = assertSkeleton(state.annotation);
-    const tree = skeletonTracing.trees[treeId];
+    const tree = skeletonTracing.trees.getNullable(treeId);
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
@@ -1260,11 +1269,11 @@ class TracingApi {
     let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
-    _.values(skeletonTracing.trees).forEach((currentTree) => {
+    for (const currentTree of skeletonTracing.trees.values()) {
       const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
       totalLengthInUnit += lengthInUnit;
       totalLengthInVx += lengthInVx;
-    });
+    }
 
     return [totalLengthInUnit, totalLengthInVx];
   }
@@ -1814,14 +1823,17 @@ class DataApi {
    * If the zoom level is provided and points to a not existent mag,
    * 0 will be returned.
    *
-   * @example // Return the greyscale value for a bucket
+   * @example
+   * // Return the greyscale value for a bucket
    * const position = [123, 123, 123];
    * api.data.getDataValue("binary", position).then((greyscaleColor) => ...);
    *
-   * @example // Using the await keyword instead of the promise syntax
+   * @example
+   * // Using the await keyword instead of the promise syntax
    * const greyscaleColor = await api.data.getDataValue("binary", position);
    *
-   * @example // Get the segmentation id for the first volume tracing layer
+   * @example
+   * // Get the segmentation id for the first volume tracing layer
    * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
    */
   async getDataValue(
@@ -1995,7 +2007,7 @@ class DataApi {
       bucketPositionToGlobalAddress(bucketAddress, new MagInfo(magnifications));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
-      const copy = bucket.slice() as BucketAddress;
+      const copy = bucket.slice() as Writeable<BucketAddress>;
       copy[dim]++;
       return copy;
     };
@@ -2120,7 +2132,8 @@ class DataApi {
    * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
-   * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
+   * @example
+   * // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
@@ -2156,32 +2169,115 @@ class DataApi {
   }
 
   /**
-   * Label voxels with the supplied value. Note that this method does not mutate
-   * the data immediately, but instead returns a promise (since the data might
-   * have to be downloaded first).
+   * Label voxels with the supplied value. This method behaves as if the user
+   * had brushed the provided voxels all at once. If the volume data wasn't
+   * downloaded completely yet, WEBKNOSSOS will merge the data as soon as it
+   * was downloaded.
    *
    * _Volume tracing only!_
    *
-   * @example // Set the segmentation id for some voxels to 1337
-   * await api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
+   * @example
+   * // Set the segmentation id for some voxels to 1337
+   * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  async labelVoxels(
-    voxels: Array<Vector3>,
-    label: number,
-    additionalCoordinates: AdditionalCoordinate[] | null = null,
-  ): Promise<void> {
-    assertVolume(Store.getState());
-    const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
-    await Promise.all(
-      voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
-          voxel,
+  labelVoxels(
+    globalPositionsMag1: Vector3[],
+    segmentId: number,
+    optAdditionalCoordinates?: AdditionalCoordinate[] | null,
+  ) {
+    const state = Store.getState();
+    const allowUpdate = state.annotation.restrictions.allowUpdate;
+    const additionalCoordinates =
+      optAdditionalCoordinates === undefined
+        ? state.flycam.additionalCoordinates
+        : optAdditionalCoordinates;
+    if (!allowUpdate || globalPositionsMag1.length === 0) return;
+
+    const volumeTracing = enforceActiveVolumeTracing(state);
+    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+    const { cube } = segmentationLayer;
+    const magInfo = getMagInfo(segmentationLayer.mags);
+    const labeledZoomStep = magInfo.getClosestExistingIndex(0);
+    const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
+    const dimensionIndices = Dimensions.getIndices(OrthoViews.PLANE_XY);
+    const thirdDim = dimensionIndices[2];
+
+    const globalPositions = globalPositionsMag1.map(
+      (pos): Vector3 => [
+        Math.floor(pos[0] / labeledMag[0]),
+        Math.floor(pos[1] / labeledMag[1]),
+        Math.floor(pos[2] / labeledMag[2]),
+      ],
+    );
+    const groupedByW = _.groupBy(globalPositions, (pos) => pos[thirdDim]);
+
+    for (const group of Object.values(groupedByW)) {
+      const w = group[0][thirdDim];
+      const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
+
+      for (const pos of group) {
+        const bucketZoomedAddress = zoomedPositionToZoomedAddress(
+          pos,
+          labeledZoomStep,
           additionalCoordinates,
-          label,
-        ),
+        );
+
+        let labelMap = currentLabeledVoxelMap.get(bucketZoomedAddress);
+        if (!labelMap) {
+          labelMap = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+          currentLabeledVoxelMap.set(bucketZoomedAddress, labelMap);
+        }
+
+        const a = pos[dimensionIndices[0]];
+        const b = pos[dimensionIndices[1]];
+        const localA = mod(a, Constants.BUCKET_WIDTH);
+        const localB = mod(b, Constants.BUCKET_WIDTH);
+        labelMap[localA * Constants.BUCKET_WIDTH + localB] = 1;
+      }
+
+      const numberOfSlices = 1;
+      applyVoxelMap(
+        currentLabeledVoxelMap,
+        cube,
+        segmentId,
+        (x, y, out) => {
+          out[0] = x;
+          out[1] = y;
+          out[2] = w;
+        },
+        numberOfSlices,
+        thirdDim,
+        true,
+        0,
+      );
+
+      const thirdDimensionOfSlice = w * labeledMag[thirdDim];
+
+      applyLabeledVoxelMapToAllMissingMags(
+        currentLabeledVoxelMap,
+        labeledZoomStep,
+        dimensionIndices,
+        magInfo,
+        cube,
+        segmentId,
+        thirdDimensionOfSlice,
+        true,
+        0,
+      );
+    }
+
+    Store.dispatch(
+      updateSegmentAction(
+        segmentId,
+        {
+          somePosition: globalPositionsMag1[0],
+          someAdditionalCoordinates: additionalCoordinates || undefined,
+        },
+        volumeTracing.tracingId,
       ),
     );
-    segmentationLayer.cube.pushQueue.push();
+
+    Store.dispatch(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
 
   /**
@@ -2742,7 +2838,8 @@ class UtilsApi {
   /**
    * Wait for some milliseconds before continuing the control flow.
    *
-   * @example // Wait for 5 seconds
+   * @example
+   * // Wait for 5 seconds
    * await api.utils.sleep(5000);
    */
   sleep(milliseconds: number): Promise<void> {
@@ -2757,7 +2854,8 @@ class UtilsApi {
    * @param {string} type - Can be one of the following: "info", "warning", "success" or "error"
    * @param {string} message - The message string you want to show
    * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
-   * @example // Show a toast for 5 seconds
+   * @example
+   * // Show a toast for 5 seconds
    * const removeToast = api.utils.showToast("info", "You just got toasted", false, 5000);
    * // ... optionally:
    * // removeToast();

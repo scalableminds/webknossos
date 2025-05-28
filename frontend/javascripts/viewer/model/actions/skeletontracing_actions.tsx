@@ -12,7 +12,8 @@ import {
   getTreeAndNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type { MutableTreeMap, SkeletonTracing, TreeGroup, WebknossosState } from "viewer/store";
+import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
 
@@ -31,6 +32,7 @@ type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
 type SetExpandedTreeGroupsByKeysAction = ReturnType<typeof setExpandedTreeGroupsByKeysAction>;
 type SetExpandedTreeGroupsByIdsAction = ReturnType<typeof setExpandedTreeGroupsByIdsAction>;
+type ExpandParentGroupsOfTreeAction = ReturnType<typeof expandParentGroupsOfTreeAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -119,6 +121,7 @@ export type SkeletonTracingAction =
   | SetTreeVisibilityAction
   | SetExpandedTreeGroupsByKeysAction
   | SetExpandedTreeGroupsByIdsAction
+  | ExpandParentGroupsOfTreeAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -383,6 +386,12 @@ export const setExpandedTreeGroupsByIdsAction = (expandedGroups: Set<number>) =>
   ({
     type: "SET_EXPANDED_TREE_GROUPS_BY_IDS",
     expandedGroups,
+  }) as const;
+
+export const expandParentGroupsOfTreeAction = (tree: Tree) =>
+  ({
+    type: "EXPAND_PARENT_GROUPS_OF_TREE",
+    tree,
   }) as const;
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>

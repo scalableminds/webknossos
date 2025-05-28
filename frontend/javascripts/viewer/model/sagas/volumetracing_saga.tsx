@@ -12,6 +12,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { AnnotationLayerEnum } from "types/api_types";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -72,15 +73,16 @@ import {
   removeFallbackLayer,
   updateMappingName,
   updateSegmentGroups,
+  updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxesInVolumeTracing,
-  updateVolumeTracing,
+  updateVolumeTracingAction,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
+import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -448,7 +450,10 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    if (segment !== prevSegment) {
+    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
+    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
+
+    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
@@ -461,6 +466,10 @@ function* uncachedDiffSegmentLists(
         segment.creationTime,
       );
     }
+
+    if (isVisible !== prevIsVisible) {
+      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
+    }
   }
 }
 export function* diffVolumeTracing(
@@ -470,7 +479,7 @@ export function* diffVolumeTracing(
   flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
-    yield updateVolumeTracing(
+    yield updateVolumeTracingAction(
       volumeTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
@@ -479,12 +488,12 @@ export function* diffVolumeTracing(
     );
   }
 
-  if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInVolumeTracing(
-      volumeTracing.userBoundingBoxes,
-      volumeTracing.tracingId,
-    );
-  }
+  yield* diffBoundingBoxes(
+    prevVolumeTracing.userBoundingBoxes,
+    volumeTracing.userBoundingBoxes,
+    volumeTracing.tracingId,
+    AnnotationLayerEnum.Volume,
+  );
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {

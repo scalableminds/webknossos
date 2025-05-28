@@ -46,7 +46,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where merging annotations with large tree IDs could lead to an error. [#8643](https://github.com/scalableminds/webknossos/pull/8643)
 - Fixed that the segment stats were sometimes not displayed in the context menu. [#8645](https://github.com/scalableminds/webknossos/pull/8645)
 - Fixed a bug in zarr streaming where directly after the datastore startup, chunk responses would have status 404 (leading zarr clients to fill with fill_value). Now it will yield status 503, so that clients can retry or escalate this as an error. [#8644](https://github.com/scalableminds/webknossos/pull/8644)
+- Improved efficiency of saving bounding box related changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)
 - Fixed regression which caused the import of trees (also of agglomerate skeletons) to crash if the annotation was not empty. [#8656](https://github.com/scalableminds/webknossos/pull/8656)
+- Fixed that one could activate unavailable tools or toolkits in read-only mode. [#8658](https://github.com/scalableminds/webknossos/pull/8658)
 
 ### Removed
 - The old "Selective Segment Visibility" feature that allowed to only see the active and the hovered segment was removed. From now on the visibility of segments can be controlled with checkboxes in the segment list and with the "Hide unlisted segments" toggle in the layer settings. [#8546](https://github.com/scalableminds/webknossos/pull/8546)

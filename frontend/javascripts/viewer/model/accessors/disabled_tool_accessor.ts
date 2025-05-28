@@ -22,7 +22,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
 
-type DisabledInfo = {
+export type DisabledInfo = {
   isDisabled: boolean;
   explanation: string;
 };

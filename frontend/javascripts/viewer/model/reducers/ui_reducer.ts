@@ -8,7 +8,6 @@ import {
 } from "viewer/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { WebknossosState } from "viewer/store";
-import { Toolkits } from "../accessors/tool_accessor";
 
 function UiReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
@@ -68,14 +67,7 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_TOOL": {
-      if (!state.annotation.restrictions.allowUpdate) {
-        if (Toolkits.READ_ONLY_TOOLS.includes(action.tool)) {
-          return setToolReducer(state, action.tool);
-        }
-        return state;
-      }
-
-      return setToolReducer(state, action.tool);
+      return setToolReducer(hideBrushReducer(state), action.tool);
     }
 
     case "CYCLE_TOOL": {

@@ -16,15 +16,11 @@ import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action-bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
-import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
+import DatasetRotationPopoverButtonView, { warningColors } from "./dataset_rotation_popover_view";
 
 const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
   marginRight: 0,
-};
-const warningColors: React.CSSProperties = {
-  color: "rgb(255, 155, 85)",
-  borderColor: "rgb(241, 122, 39)",
 };
 const iconErrorStyle: React.CSSProperties = { ...warningColors };
 const positionInputDefaultStyle: React.CSSProperties = {
@@ -125,7 +121,7 @@ const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
           style={positionInputStyle}
           allowDecimals
         />
-        <DatasetRotationPopoverButtonView />
+        <DatasetRotationPopoverButtonView style={iconColoringStyle} />
         <ShareButton dataset={dataset} style={iconColoringStyle} />
       </Space.Compact>
     </div>

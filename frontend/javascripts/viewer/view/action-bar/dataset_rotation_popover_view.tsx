@@ -8,6 +8,12 @@ import type { Vector3 } from "viewer/constants";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import Store from "viewer/store";
 import { NumberSliderSetting } from "../components/setting_input_views";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
+
+export const warningColors: React.CSSProperties = {
+  color: "rgb(255, 155, 85)",
+  borderColor: "rgb(241, 122, 39)",
+};
 
 const PopoverContent: React.FC<EmptyObject> = () => {
   const rotation = useWkSelector((state) => state.flycam.rotation);
@@ -76,10 +82,12 @@ const PopoverContent: React.FC<EmptyObject> = () => {
   );
 };
 
-const DatasetRotationPopoverButtonView: React.FC<EmptyObject> = () => {
+const DatasetRotationPopoverButtonView: React.FC<{ style: React.CSSProperties }> = ({ style }) => {
+  const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
+  const maybeWarningStyle = isFlycamRotated ? { ...style, ...warningColors, zIndex: 1 } : style;
   return (
     <Popover title="Rotation" content={<PopoverContent />}>
-      <Button icon={<SyncOutlined />} />
+      <Button icon={<SyncOutlined />} style={maybeWarningStyle} />
     </Popover>
   );
 };

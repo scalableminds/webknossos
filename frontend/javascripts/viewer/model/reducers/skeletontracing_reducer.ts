@@ -46,7 +46,7 @@ import {
   toggleTreeGroupReducer,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
   GroupTypeEnum,
   additionallyExpandGroup,
@@ -54,8 +54,7 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
-import type { ApplicableSkeletonUpdateAction } from "../sagas/update_actions";
-import { handleUserBoundingBoxUpdateInTracing } from "./annotation_reducer";
+import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   if (action.type === "INITIALIZE_SKELETONTRACING") {
@@ -1271,186 +1270,6 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     default:
       return state;
   }
-}
-
-function applySkeletonUpdateActionsFromServer(
-  actions: ApplicableSkeletonUpdateAction[],
-  newState: WebknossosState,
-) {
-  for (const ua of actions) {
-    switch (ua.name) {
-      // case "createTree": {
-      //   const { id, color, name, comments, timestamp, branchPoints, isVisible, groupId } =
-      //     ua.value;
-      //   newState = update(newState, {
-      //     tracing: {
-      //       skeleton: {
-      //         trees: {
-      //           [id]: {
-      //             $set: {
-      //               name,
-      //               treeId: id,
-      //               nodes: new DiffableMap(),
-      //               timestamp,
-      //               color,
-      //               branchPoints,
-      //               edges: new EdgeCollection(),
-      //               comments,
-      //               isVisible,
-      //               groupId,
-      //             },
-      //           },
-      //         },
-      //       },
-      //     },
-      //   });
-      //   break;
-      // }
-      case "createNode": {
-        if (newState.annotation.skeleton == null) {
-          continue;
-        }
-
-        const { treeId, ...serverNode } = ua.value;
-        // eslint-disable-next-line no-loop-func
-        const { position: untransformedPosition, resolution: mag, ...node } = serverNode;
-        const clientNode = { untransformedPosition, mag, ...node };
-
-        const tree = getTree(newState.annotation.skeleton, treeId);
-        if (tree == null) {
-          // todop: escalate error?
-          continue;
-        }
-        const diffableNodeMap = tree.nodes;
-        const newDiffableMap = diffableNodeMap.set(node.id, clientNode);
-        const newTree = update(tree, {
-          nodes: { $set: newDiffableMap },
-        });
-        newState = update(newState, {
-          annotation: {
-            skeleton: {
-              trees: {
-                [tree.treeId]: { $set: newTree },
-              },
-              cachedMaxNodeId: { $set: node.id },
-            },
-          },
-        });
-        break;
-      }
-      case "createEdge": {
-        const { treeId, source, target } = ua.value;
-        // eslint-disable-next-line no-loop-func
-        if (newState.annotation.skeleton == null) {
-          continue;
-        }
-
-        const tree = getTree(newState.annotation.skeleton, treeId);
-        if (tree == null) {
-          // todop: escalate error?
-          continue;
-        }
-        const newEdge = {
-          source,
-          target,
-        };
-        const edges = tree.edges.addEdge(newEdge);
-        const newTree = update(tree, { edges: { $set: edges } });
-        newState = update(newState, {
-          annotation: {
-            skeleton: {
-              trees: {
-                [tree.treeId]: { $set: newTree },
-              },
-            },
-          },
-        });
-        break;
-      }
-      case "updateUserBoundingBoxInSkeletonTracing": {
-        // todop: dont pass state and instead do the update here?
-        const { skeleton } = newState.annotation;
-        if (skeleton == null) {
-          throw new Error("No skeleton found to apply update to.");
-        }
-
-        const { boundingBox, ...valueWithoutBoundingBox } = ua.value;
-        const maybeBoundingBoxValue =
-          boundingBox != null
-            ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
-            : {};
-
-        const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.map((bbox) =>
-          bbox.id === ua.value.boundingBoxId
-            ? {
-                ...bbox,
-                ...valueWithoutBoundingBox,
-                ...maybeBoundingBoxValue,
-              }
-            : bbox,
-        );
-
-        newState = handleUserBoundingBoxUpdateInTracing(
-          newState,
-          skeleton,
-          updatedUserBoundingBoxes,
-        );
-        break;
-      }
-      case "addUserBoundingBoxInSkeletonTracing": {
-        // todop: dont pass state and instead do the update here?
-        const { skeleton } = newState.annotation;
-        if (skeleton == null) {
-          throw new Error("No skeleton found to apply update to.");
-        }
-
-        const { boundingBox, ...valueWithoutBoundingBox } = ua.value.boundingBox;
-        const maybeBoundingBoxValue = {
-          boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox),
-        };
-        const newUserBBox: UserBoundingBox = {
-          // The visibility is stored per user. Therefore, we default to true here.
-          isVisible: true,
-          ...valueWithoutBoundingBox,
-          ...maybeBoundingBoxValue,
-        };
-        const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.concat([newUserBBox]);
-
-        newState = handleUserBoundingBoxUpdateInTracing(
-          newState,
-          skeleton,
-          updatedUserBoundingBoxes,
-        );
-        break;
-      }
-      case "deleteUserBoundingBoxInSkeletonTracing": {
-        const { skeleton } = newState.annotation;
-        if (skeleton == null) {
-          throw new Error("No skeleton found to apply update to.");
-        }
-
-        const updatedUserBoundingBoxes = skeleton.userBoundingBoxes.filter(
-          (bbox) => bbox.id !== ua.value.boundingBoxId,
-        );
-
-        newState = handleUserBoundingBoxUpdateInTracing(
-          newState,
-          skeleton,
-          updatedUserBoundingBoxes,
-        );
-
-        break;
-      }
-      default: {
-        ua satisfies never;
-      }
-    }
-  }
-
-  // The state is wrapped in this container object to prevent the above switch-cases from
-  // accidentally returning newState (this is the usual way in reducers but would ignore
-  // remaining update actions).
-  return { value: newState };
 }
 
 export function sanitizeMetadata(metadata: MetadataEntryProto[]) {

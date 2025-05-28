@@ -424,10 +424,6 @@ export function stringToNumberArray(s: string): Array<number> {
   return result;
 }
 
-export function concatVector3(a: Vector3, b: Vector3): Vector6 {
-  return [a[0], a[1], a[2], b[0], b[1], b[2]];
-}
-
 export function numberArrayToVector3(array: Array<number>): Vector3 {
   const output: Vector3 = [0, 0, 0];
 

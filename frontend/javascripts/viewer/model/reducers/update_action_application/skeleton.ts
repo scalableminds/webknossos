@@ -39,7 +39,23 @@ export function applySkeletonUpdateActionsFromServer(
         break;
       }
       case "updateTree": {
-        // todop
+        const { id: treeId, actionTracingId: _actionTracingId, ...treeRest } = ua.value;
+        const skeleton = enforceSkeletonTracing(newState.annotation);
+        const tree = getTree(skeleton, treeId);
+        if (tree == null) {
+          throw new Error("Could not create node because tree was not found.");
+        }
+        const newTree = { ...tree, ...treeRest };
+        const newTrees = skeleton.trees.set(newTree.treeId, newTree);
+        newState = update(newState, {
+          annotation: {
+            skeleton: {
+              trees: {
+                $set: newTrees,
+              },
+            },
+          },
+        });
         break;
       }
       case "createNode": {

@@ -839,7 +839,7 @@ export type ServerBranchPoint = {
   createdTimestamp: number;
   nodeId: number;
 };
-export type UserBoundingBoxFromServer = {
+export type UserBoundingBoxProto = {
   boundingBox: BoundingBoxProto;
   id: number;
   name?: string;
@@ -894,7 +894,7 @@ type ServerSegment = {
 };
 export type ServerTracingBase = {
   id: string;
-  userBoundingBoxes: Array<UserBoundingBoxFromServer>;
+  userBoundingBoxes: Array<UserBoundingBoxProto>;
   userBoundingBox?: BoundingBoxProto;
   createdTimestamp: number;
   error?: string;

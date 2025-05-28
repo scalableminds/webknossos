@@ -5,7 +5,7 @@ import type {
   ServerAdditionalAxis,
   BoundingBoxProto,
   SkeletonUserState,
-  UserBoundingBoxFromServer,
+  UserBoundingBoxProto,
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -61,7 +61,7 @@ export function convertUserBoundingBoxFromUpdateActionToFrontend(
 }
 
 export function convertUserBoundingBoxesFromServerToFrontend(
-  boundingBoxes: Array<UserBoundingBoxFromServer>,
+  boundingBoxes: Array<UserBoundingBoxProto>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
   const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};

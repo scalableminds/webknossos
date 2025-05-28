@@ -4,14 +4,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { call, put, takeEvery } from "typed-redux-saga";
-import type {
-  BoundingBoxMinMaxType,
-  FillMode,
-  LabeledVoxelsMap,
-  OrthoView,
-  Vector2,
-  Vector3,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";

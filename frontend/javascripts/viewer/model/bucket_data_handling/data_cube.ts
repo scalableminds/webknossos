@@ -14,13 +14,8 @@ import { type Emitter, createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type {
-  BoundingBoxMinMaxType,
-  BucketAddress,
-  LabelMasksByBucketAndW,
-  Vector3,
-  Vector4,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";

@@ -1,6 +1,8 @@
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
+import type { ServerBoundingBox } from "types/bounding_box";
 import type {
+  AdditionalCoordinate,
   ColorObject,
   LOG_LEVELS,
   NestedMatrix4,
@@ -25,7 +27,9 @@ import type {
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
 
-export type AdditionalCoordinate = { name: string; value: number };
+// Re-export
+export type { ServerBoundingBox } from "types/bounding_box";
+export type { AdditionalCoordinate } from "viewer/constants";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -834,12 +838,6 @@ export type ServerNode = {
 export type ServerBranchPoint = {
   createdTimestamp: number;
   nodeId: number;
-};
-export type ServerBoundingBox = {
-  topLeft: Point3;
-  width: number;
-  height: number;
-  depth: number;
 };
 export type UserBoundingBoxFromServer = {
   boundingBox: ServerBoundingBox;

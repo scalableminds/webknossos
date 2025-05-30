@@ -557,6 +557,7 @@ export function addTreesAndGroups(
   skeletonTracing: SkeletonTracing,
   trees: MutableTreeMap,
   treeGroups: MutableTreeGroup[],
+  assignNewGroupId: boolean = true,
 ): [MutableTreeMap, TreeGroup[], number] | null {
   const hasInvalidTreeIds = trees
     .keys()
@@ -627,8 +628,10 @@ export function addTreesAndGroups(
       nodeId: idMap[bp.nodeId],
     }));
 
-    // Assign the new group id to the tree if the tree belongs to a group
-    tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
+    // Assign the new group id to the tree if the tree belongs to a group that was newly added
+    // or keep the old group id if the tree should be assigned to an existing group.
+    tree.groupId =
+      tree.groupId != null && assignNewGroupId ? groupIdMap[tree.groupId] : tree.groupId;
     tree.treeId = newTreeId;
 
     newTrees.mutableSet(newTreeId, tree);

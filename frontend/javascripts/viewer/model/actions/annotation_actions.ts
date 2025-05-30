@@ -334,7 +334,7 @@ export const addAdHocMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
-  opacity: number = Constants.DEFAULT_MESH_OPACITY,
+  opacity: number | undefined,
 ) =>
   ({
     type: "ADD_AD_HOC_MESH",
@@ -344,7 +344,7 @@ export const addAdHocMeshAction = (
     seedAdditionalCoordinates,
     mappingName,
     mappingType,
-    opacity,
+    opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
   }) as const;
 
 export const addPrecomputedMeshAction = (
@@ -354,7 +354,7 @@ export const addPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   mappingName: string | null | undefined,
-  opacity: number,
+  opacity: number | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -364,7 +364,7 @@ export const addPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     mappingName,
-    opacity,
+    opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
   }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>

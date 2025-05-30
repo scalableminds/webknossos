@@ -11,7 +11,7 @@ import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
-import Constants, { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
+import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -181,7 +181,7 @@ function* loadCoarseMesh(
         position,
         additionalCoordinates,
         currentMeshFile.name,
-        Constants.DEFAULT_MESH_OPACITY,
+        undefined,
         undefined,
       ),
     );

@@ -34,7 +34,6 @@ import type {
 } from "types/api_types";
 import type { Mutable } from "types/globals";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
-import Constants from "viewer/constants";
 import type {
   DirectLayerSpecificProps,
   PartialUrlManagerState,
@@ -891,7 +890,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedPosition,
               seedAdditionalCoordinates,
               meshFileName,
-              Constants.DEFAULT_MESH_OPACITY,
+              undefined,
               effectiveLayerName,
             ),
           );

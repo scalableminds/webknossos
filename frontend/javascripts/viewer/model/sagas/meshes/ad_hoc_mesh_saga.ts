@@ -13,7 +13,7 @@ import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-sag
 import type { AdditionalCoordinate } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import Constants, { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum } from "viewer/constants";
 import { sortByDistanceTo } from "viewer/controller/mesh_helpers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
@@ -308,7 +308,7 @@ function* loadFullAdHocMesh(
       additionalCoordinates,
       mappingName,
       mappingType,
-      opacity || Constants.DEFAULT_MESH_OPACITY,
+      opacity,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -483,8 +483,6 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
-      const opacity = meshExtraInfo.opacity || Constants.DEFAULT_MESH_OPACITY;
-
       // We await addMeshFromVerticesAsync here, because the mesh saga will remove
       // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
       // done by looking at the scene, we await the population of the scene.
@@ -496,7 +494,7 @@ function* maybeLoadMeshChunk(
         vertices,
         segmentId,
         layer.name,
-        opacity,
+        meshExtraInfo.opacity,
         additionalCoordinates,
       );
       return neighbors.map((neighbor) =>
@@ -522,6 +520,7 @@ function* markEditedCellAsDirty(): Saga<void> {
   }
 }
 
+// This function is only called when the front-end api.data.refreshMeshes is used.
 function* refreshMeshes(): Saga<void> {
   yield* put(saveNowAction());
   // We reload all cells that got modified till the start of reloading.
@@ -556,7 +555,7 @@ function* refreshMeshes(): Saga<void> {
       threeDMap,
       segmentationLayer.name,
       additionalCoordinates,
-      meshInfo?.opacity || Constants.DEFAULT_MESH_OPACITY,
+      meshInfo?.opacity,
     );
   }
 }
@@ -611,7 +610,7 @@ function* refreshMeshWithMap(
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
-  opacity: number = Constants.DEFAULT_MESH_OPACITY,
+  opacity: number | undefined,
 ): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),

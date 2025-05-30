@@ -36,7 +36,7 @@ import type {
   VoxelSize,
 } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import Constants, {
+import {
   AltOrOptionKey,
   CtrlOrCmdKey,
   LongUnitToShortUnitMap,
@@ -962,7 +962,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         globalPosition,
         additionalCoordinates,
         currentMeshFile.name,
-        Constants.DEFAULT_MESH_OPACITY,
+        undefined,
         undefined,
       ),
     );

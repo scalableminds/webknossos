@@ -51,7 +51,7 @@ import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import Constants, { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
+import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
@@ -247,7 +247,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
-        Constants.DEFAULT_MESH_OPACITY,
+        undefined,
       ),
     );
   },

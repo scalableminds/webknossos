@@ -14,7 +14,6 @@ import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-sag
 import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
-import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -131,7 +130,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
-      opacity || Constants.DEFAULT_MESH_OPACITY,
+      opacity,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -150,7 +149,7 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
-  opacity: number,
+  opacity: number | undefined,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const mappingName = yield* call(getMappingName, segmentationLayer);
@@ -339,7 +338,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   getGlobalScale: (lod: number) => Vector3 | null,
   chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
-  opacity: number,
+  opacity: number | undefined,
 ) {
   const { segmentMeshController } = getSceneController();
   const loader = getDracoLoader();

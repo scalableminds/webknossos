@@ -3,7 +3,6 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { AdditionalCoordinate } from "types/api_types";
-import Constants from "viewer/constants";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -408,7 +407,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
-        opacity: opacity || Constants.DEFAULT_MESH_OPACITY,
+        opacity,
         meshFileName,
         mappingName,
       };

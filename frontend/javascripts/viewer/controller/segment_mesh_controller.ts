@@ -17,6 +17,7 @@ import Store from "viewer/store";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";
+import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
@@ -110,7 +111,7 @@ export default class SegmentMeshController {
     vertices: Float32Array,
     segmentId: number,
     layerName: string,
-    opacity: number,
+    opacity: number | undefined,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
   ): Promise<void> {
     // Currently, this function is only used by ad hoc meshing.
@@ -139,7 +140,7 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     geometry: BufferGeometryWithInfo,
-    opacity: number,
+    opacity: number | undefined,
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
@@ -172,7 +173,7 @@ export default class SegmentMeshController {
     tweenAnimation
       .to(
         {
-          opacity,
+          opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
         },
         100,
       )
@@ -192,7 +193,7 @@ export default class SegmentMeshController {
     lod: number,
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-    opacity: number,
+    opacity: number | undefined,
     isMerged: boolean,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);

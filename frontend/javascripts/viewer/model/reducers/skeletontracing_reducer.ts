@@ -54,6 +54,7 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
+import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   if (action.type === "INITIALIZE_SKELETONTRACING") {
@@ -629,6 +630,11 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
+    case "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER": {
+      const { actions } = action;
+      return applySkeletonUpdateActionsFromServer(actions, state).value;
+    }
+
     default: // pass
   }
 
@@ -645,6 +651,8 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         // Don't create nodes if the skeleton layer is rendered with transforms.
         return state;
       }
+
+      // use this code as template
       const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
         action;
       const tree = getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT);

@@ -3,13 +3,14 @@ import _ from "lodash";
 import type {
   APIAnnotation,
   AdditionalAxis,
-  ServerAdditionalAxis,
-  ServerBoundingBox,
+  AdditionalAxisProto,
+  BoundingBoxProto,
   SkeletonUserState,
-  UserBoundingBoxFromServer,
+  UserBoundingBoxProto,
   VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxType } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
@@ -17,34 +18,50 @@ import type {
   Annotation,
   BoundingBoxObject,
   UserBoundingBox,
-  UserBoundingBoxToServer,
+  UserBoundingBoxForServer,
   UserBoundingBoxWithOptIsVisible,
   WebknossosState,
 } from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/update_actions";
 import type { Tree, TreeGroup } from "../types/tree_types";
 
-export function convertServerBoundingBoxToBoundingBox(
-  boundingBox: ServerBoundingBox,
-): BoundingBoxType {
-  return Utils.computeBoundingBoxFromArray(
-    Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
-      boundingBox.width,
-      boundingBox.height,
-      boundingBox.depth,
-    ]),
-  );
+function convertServerBoundingBoxToBoundingBoxMinMaxType(
+  boundingBox: BoundingBoxProto,
+): BoundingBoxMinMaxType {
+  const min = Utils.point3ToVector3(boundingBox.topLeft);
+  const max: Vector3 = [
+    min[0] + boundingBox.width,
+    min[1] + boundingBox.height,
+    min[2] + boundingBox.depth,
+  ];
+  return { min, max };
 }
 
 export function convertServerBoundingBoxToFrontend(
-  boundingBox: ServerBoundingBox | null | undefined,
-): BoundingBoxType | null | undefined {
-  if (!boundingBox) return null;
-  return convertServerBoundingBoxToBoundingBox(boundingBox);
+  boundingBox: BoundingBoxProto | null | undefined,
+): BoundingBoxMinMaxType | null | undefined {
+  if (!boundingBox) return boundingBox;
+  return convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
+}
+
+export function convertUserBoundingBoxFromUpdateActionToFrontend(
+  bboxValue: UpdateUserBoundingBoxInSkeletonTracingAction["value"],
+): Partial<UserBoundingBox> {
+  const { boundingBox, actionTracingId: _actionTracingId, ...valueWithoutBoundingBox } = bboxValue;
+  const maybeBoundingBoxValue =
+    boundingBox != null
+      ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
+      : {};
+
+  return {
+    ...valueWithoutBoundingBox,
+    ...maybeBoundingBoxValue,
+  };
 }
 
 export function convertUserBoundingBoxesFromServerToFrontend(
-  boundingBoxes: Array<UserBoundingBoxFromServer>,
+  boundingBoxes: Array<UserBoundingBoxProto>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
   const idToVisible = userState
@@ -53,7 +70,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
-    const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
+    const convertedBoundingBox = convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
@@ -66,13 +83,13 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 
 export function convertUserBoundingBoxFromFrontendToServer(
   boundingBox: UserBoundingBoxWithOptIsVisible,
-): UserBoundingBoxToServer {
+): UserBoundingBoxForServer {
   const { boundingBox: bb, ...rest } = boundingBox;
   return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }
 
 export function convertFrontendBoundingBoxToServer(
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBoxMinMaxType,
 ): BoundingBoxObject {
   return {
     topLeft: boundingBox.min,
@@ -82,7 +99,7 @@ export function convertFrontendBoundingBoxToServer(
   };
 }
 
-export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
+export function convertBoundingBoxProtoToObject(boundingBox: BoundingBoxProto): BoundingBoxObject {
   return {
     width: boundingBox.width,
     height: boundingBox.height,
@@ -140,7 +157,7 @@ export function convertServerAnnotationToFrontendAnnotation(
 }
 
 export function convertServerAdditionalAxesToFrontEnd(
-  additionalAxes: ServerAdditionalAxis[],
+  additionalAxes: AdditionalAxisProto[],
 ): AdditionalAxis[] {
   return additionalAxes.map((coords) => ({
     ...coords,

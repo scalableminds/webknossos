@@ -715,6 +715,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "updateTree":
         case "createNode":
         case "createEdge":
+        case "updateNode":
         // Skeleton User Bounding Boxes
         case "addUserBoundingBoxInSkeletonTracing":
         case "updateUserBoundingBoxInSkeletonTracing":
@@ -837,13 +838,12 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Skeleton
+        case "updateTreeEdgesVisibility":
+        case "updateTreeGroups":
         case "deleteEdge":
         case "deleteNode":
         case "deleteTree":
-        case "updateTreeEdgesVisibility":
-        case "updateTreeGroups":
         case "moveTreeComponent":
-        case "updateNode":
 
         case "mergeTree": // todop: this action is never used? legacy
         // Legacy! The following actions are legacy actions and don't

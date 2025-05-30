@@ -182,6 +182,7 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
+        undefined,
       ),
     );
   } else {

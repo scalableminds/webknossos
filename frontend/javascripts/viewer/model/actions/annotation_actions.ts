@@ -12,6 +12,7 @@ import type {
 } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import Constants from "viewer/constants";
 import type {
   Annotation,
   MappingType,
@@ -333,6 +334,7 @@ export const addAdHocMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
   mappingType: MappingType | null | undefined,
+  opacity: number | undefined,
 ) =>
   ({
     type: "ADD_AD_HOC_MESH",
@@ -342,6 +344,7 @@ export const addAdHocMeshAction = (
     seedAdditionalCoordinates,
     mappingName,
     mappingType,
+    opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
   }) as const;
 
 export const addPrecomputedMeshAction = (
@@ -351,6 +354,7 @@ export const addPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   mappingName: string | null | undefined,
+  opacity: number | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -360,6 +364,7 @@ export const addPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     mappingName,
+    opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
   }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>

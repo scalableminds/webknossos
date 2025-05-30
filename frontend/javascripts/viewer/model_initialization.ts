@@ -890,6 +890,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedPosition,
               seedAdditionalCoordinates,
               meshFileName,
+              undefined,
               effectiveLayerName,
             ),
           );

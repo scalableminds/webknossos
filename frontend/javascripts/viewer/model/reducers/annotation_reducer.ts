@@ -3,7 +3,6 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { AdditionalCoordinate } from "types/api_types";
-import Constants from "viewer/constants";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -344,7 +343,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
-    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh_saga.
+    // Mesh information is stored in three places: the state in the store, segment_view_controller and within the mesh sagas.
     case "ADD_AD_HOC_MESH": {
       const {
         layerName,
@@ -353,6 +352,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         seedAdditionalCoordinates,
         mappingName,
         mappingType,
+        opacity,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -361,7 +361,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
-        opacity: Constants.DEFAULT_MESH_OPACITY,
+        opacity,
         mappingName,
         mappingType,
       };
@@ -398,6 +398,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         seedAdditionalCoordinates,
         meshFileName,
         mappingName,
+        opacity,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -406,7 +407,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
-        opacity: Constants.DEFAULT_MESH_OPACITY,
+        opacity,
         meshFileName,
         mappingName,
       };

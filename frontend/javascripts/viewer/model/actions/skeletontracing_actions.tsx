@@ -327,12 +327,18 @@ export const addTreesAndGroupsAction = (
   trees: MutableTreeMap,
   treeGroups: Array<TreeGroup> | null | undefined,
   treeIdsCallback: ((ids: number[]) => void) | undefined = undefined,
+  assignTreeToNewGroupId: boolean = true,
 ) =>
+  // If assignTreeToNewGroupId is false, the given group id of a tree will be kept. This is useful
+  // when trees are duplicated, as the copied tree should be in the same group as the original tree.
+  // If assignTreeToNewGroupId is true, the tree will be assigned to a new group id, as the original
+  // group id might already be used by another group.
   ({
     type: "ADD_TREES_AND_GROUPS",
     trees,
     treeGroups: treeGroups || [],
     treeIdsCallback,
+    assignNewGroupId: assignTreeToNewGroupId,
   }) as const;
 
 export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>

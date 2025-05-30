@@ -1,5 +1,4 @@
 import * as Utils from "libs/utils";
-import _ from "lodash";
 import type {
   APIAnnotation,
   AdditionalAxis,
@@ -16,6 +15,7 @@ import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
+  SegmentGroup,
   UserBoundingBox,
   UserBoundingBoxToServer,
   UserBoundingBoxWithOptIsVisible,
@@ -220,10 +220,10 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   });
 }
 
-export function applyUserStateToGroups(
-  groups: TreeGroup[],
+export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
+  groups: Group[],
   userState: SkeletonUserState | VolumeUserState | undefined,
-): TreeGroup[] {
+): Group[] {
   if (userState == null) {
     return groups;
   }
@@ -235,13 +235,11 @@ export function applyUserStateToGroups(
       ? userState.segmentGroupExpandedStates
       : userState.treeGroupExpandedStates;
 
-  const segmentGroupToExpanded: Record<number, boolean> = Object.fromEntries(
-    _.zip(groupIds, expandedStates),
-  );
-  return Utils.mapGroupsDeep(groups, (group, children): TreeGroup => {
+  const groupIdToExpanded: Record<number, boolean> = Utils.safeZipObject(groupIds, expandedStates);
+  return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
     return {
       ...group,
-      isExpanded: segmentGroupToExpanded[group.groupId] ?? group.isExpanded,
+      isExpanded: groupIdToExpanded[group.groupId] ?? group.isExpanded,
       children,
     };
   });
@@ -257,9 +255,7 @@ export function getApplyUserStateToTreeFn(
   const treeIds = userState.treeIds;
   const visibilities = userState.treeVisibilities;
 
-  const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(
-    _.zip(treeIds, visibilities),
-  );
+  const treeIdToExpanded: Record<number, boolean> = Utils.safeZipObject(treeIds, visibilities);
   return (tree) => {
     return {
       ...tree,

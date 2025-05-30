@@ -111,7 +111,6 @@ describe("Saga Integration Tests", () => {
     Store.dispatch(deleteNodeAction(middleNodeId));
     const skeletonSaveQueue = Store.getState().save.queue;
 
-    // There should only be one chunk
     expect(skeletonSaveQueue.length).toBe(2);
     expect(skeletonSaveQueue[1].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
     expect(skeletonSaveQueue[1].actions[1].name).toBe("moveTreeComponent");

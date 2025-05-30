@@ -1,5 +1,4 @@
 import * as Utils from "libs/utils";
-import { diffSets } from "libs/utils";
 import _ from "lodash";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
@@ -54,11 +53,12 @@ export function diffGroups(prevGroups: TreeGroup[], groups: TreeGroup[]) {
   const prevExpandedState = gatherIdToExpandedState(prevGroups);
   const expandedState = gatherIdToExpandedState(groups);
 
-  const expandedDiff = diffSets(prevExpandedState.expanded, expandedState.expanded);
-  const notExpandedDiff = diffSets(prevExpandedState.notExpanded, expandedState.notExpanded);
-
-  const newlyExpandedIds = Array.from(expandedDiff.bWithoutA);
-  const newlyNotExpandedIds = Array.from(notExpandedDiff.bWithoutA);
+  const newlyExpandedIds = Array.from(
+    expandedState.expanded.difference(prevExpandedState.expanded),
+  );
+  const newlyNotExpandedIds = Array.from(
+    expandedState.notExpanded.difference(prevExpandedState.notExpanded),
+  );
 
   return { didContentChange, newlyExpandedIds, newlyNotExpandedIds };
 }
@@ -168,11 +168,10 @@ function* diffBoundingBoxVisibilities(
   const prevVisibleState = gatherSetsForVisibility(prevBoundingBoxes);
   const visibleState = gatherSetsForVisibility(currentBoundingBoxes);
 
-  const visibleDiff = diffSets(prevVisibleState.visible, visibleState.visible);
-  const invisibleDiff = diffSets(prevVisibleState.invisible, visibleState.invisible);
-
-  const newlyVisibleIds = Array.from(visibleDiff.bWithoutA);
-  const newlyInvisibleIds = Array.from(invisibleDiff.bWithoutA);
+  const newlyVisibleIds = Array.from(visibleState.visible.difference(prevVisibleState.visible));
+  const newlyInvisibleIds = Array.from(
+    visibleState.invisible.difference(prevVisibleState.invisible),
+  );
 
   for (const id of newlyVisibleIds) {
     yield updateBBoxVisibility(id, true, tracingId);

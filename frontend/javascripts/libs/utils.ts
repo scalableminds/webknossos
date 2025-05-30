@@ -13,7 +13,8 @@ import type {
   Vector4,
   Vector6,
 } from "viewer/constants";
-import type { BoundingBoxObject, NumberLike } from "viewer/store";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -1330,12 +1331,12 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .join(" ");
 }
 
-export function mapGroupsDeep<T extends { children: T[] }, R>(
-  groups: T[],
-  mapFn: (group: T, mappedChildren: R[]) => R,
+export function mapGroupsDeep<Group extends TreeGroup | SegmentGroup, R>(
+  groups: Group[],
+  mapFn: (group: Group, mappedChildren: R[]) => R,
 ): R[] {
-  return groups.map((group) => {
-    const mappedChildren = mapGroupsDeep(group.children, mapFn);
+  return groups.map((group: Group) => {
+    const mappedChildren = mapGroupsDeep(group.children as Group[], mapFn);
     return mapFn(group, mappedChildren);
   });
 }

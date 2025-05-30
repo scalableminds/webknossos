@@ -5,13 +5,15 @@ import type {
 } from "viewer/model/sagas/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
 
-function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQueueEntry>) {
+function removeAllButLastUpdateActiveItemAndCameraAction(
+  updateActionsBatches: Array<SaveQueueEntry>,
+) {
   // This part of the code removes all entries from the save queue that consist only of
-  // one update{Skeleton,Volume}Tracing update action, except for the last one
-  const updateSkeletonTracingOnlyBatches = updateActionsBatches.filter(
+  // one update{ActiveNode,ActiveSegmentId,Camera} update action, except for the last one
+  const updateActiveNodeOnlyBatches = updateActionsBatches.filter(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateActiveNode",
   );
-  const updateVolumeTracingOnlyBatches = updateActionsBatches.filter(
+  const updateActiveSegmentIdOnlyBatches = updateActionsBatches.filter(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateActiveSegmentId",
   );
 
@@ -21,8 +23,8 @@ function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQue
 
   return _.without(
     updateActionsBatches,
-    ...updateSkeletonTracingOnlyBatches.slice(0, -1),
-    ...updateVolumeTracingOnlyBatches.slice(0, -1),
+    ...updateActiveNodeOnlyBatches.slice(0, -1),
+    ...updateActiveSegmentIdOnlyBatches.slice(0, -1),
     ...updateCameraOnlyBatches.slice(0, -1),
   );
 }
@@ -142,7 +144,7 @@ function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQu
 }
 
 const compactAll = _.flow([
-  removeAllButLastUpdateTracingAction,
+  removeAllButLastUpdateActiveItemAndCameraAction,
   removeAllButLastUpdateTdCameraAction,
   removeSubsequentUpdateNodeActions,
   removeSubsequentUpdateTreeActions,

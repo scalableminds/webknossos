@@ -151,7 +151,8 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "duplicateTree",
         onClick: () => {
-          const treeMap = new TreeMap([[tree.treeId, _.cloneDeep(tree)]]);
+          const copyOfTree = { ..._.cloneDeep(tree), name: `${tree.name} (copy)` };
+          const treeMap = new TreeMap([[tree.treeId, copyOfTree]]);
           Store.dispatch(addTreesAndGroupsAction(treeMap, null));
           hideContextMenu();
         },

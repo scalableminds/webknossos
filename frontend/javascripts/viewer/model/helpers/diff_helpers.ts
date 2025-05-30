@@ -83,7 +83,7 @@ function gatherSetsForVisibility(boxes: UserBoundingBox[]) {
   return { visible, invisible };
 }
 
-function* diffBoundingBoxesContents(
+function* diffBoundingBoxContents(
   prevBoundingBoxes: UserBoundingBox[],
   currentBoundingBoxes: UserBoundingBox[],
   tracingId: string,
@@ -190,7 +190,7 @@ export function* diffBoundingBoxes(
 ) {
   if (prevBoundingBoxes === currentBoundingBoxes) return;
 
-  yield* diffBoundingBoxesContents(prevBoundingBoxes, currentBoundingBoxes, tracingId, tracingType);
+  yield* diffBoundingBoxContents(prevBoundingBoxes, currentBoundingBoxes, tracingId, tracingType);
   yield* diffBoundingBoxVisibilities(
     prevBoundingBoxes,
     currentBoundingBoxes,

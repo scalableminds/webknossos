@@ -83,9 +83,7 @@ export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
 >;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
-export type UpdateTreeGroupsExpandedStateSkeletonAction = ReturnType<
-  typeof updateTreeGroupsExpandedState
->;
+export type UpdateTreeGroupsExpandedStateAction = ReturnType<typeof updateTreeGroupsExpandedState>;
 
 export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 // This action is not dispatched by our code, anymore,
@@ -148,7 +146,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
-  | UpdateTreeGroupsExpandedStateSkeletonAction
+  | UpdateTreeGroupsExpandedStateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateCameraAnnotationAction
   | UpdateTdCameraUpdateAction

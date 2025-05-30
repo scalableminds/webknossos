@@ -64,6 +64,7 @@ import type {
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
+  UpdateTreeGroupsExpandedStateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
@@ -434,7 +435,7 @@ const descriptionFns: Record<
   },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {
     return {
-      description: "Updated the camera position",
+      description: "Adjusted the camera",
       icon: <VideoCameraOutlined />,
     };
   },
@@ -455,10 +456,10 @@ const descriptionFns: Record<
     };
   },
   updateTreeGroupsExpandedState: (
-    action: AsServerAction<UpdateSegmentGroupsExpandedStateUpdateAction>,
+    action: AsServerAction<UpdateTreeGroupsExpandedStateAction>,
   ): Description => {
     return {
-      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups..`,
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups.`,
       icon: <FolderOpenOutlined />,
     };
   },
@@ -627,8 +628,8 @@ export default function VersionEntry({
       <List.Item.Meta
         title={
           <React.Fragment>
-            {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message */}
-            Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
+            Version {version} (
+            {lastTimestamp != null && <FormattedDate timestamp={lastTimestamp} format="HH:mm" />})
           </React.Fragment>
         }
         /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message */

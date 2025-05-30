@@ -699,12 +699,11 @@ function determineDefaultState(
   }
 
   let zoomStep = datasetConfiguration.zoom;
-  if (userState != null) {
-    zoomStep = userState.zoomLevel;
-  }
 
   if (urlStateZoomStep != null) {
     zoomStep = urlStateZoomStep;
+  } else if (userState != null) {
+    zoomStep = userState.zoomLevel;
   } else if (someTracing != null) {
     zoomStep = someTracing.zoomLevel;
   }

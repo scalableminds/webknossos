@@ -8,9 +8,6 @@ trait SkeletonUpdateActionHelper extends ProtoGeometryImplicits {
   protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] =
     tracing.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
 
-  protected def mapAllTrees(tracing: SkeletonTracing, transformTree: Tree => Tree): Seq[Tree] =
-    tracing.trees.map(transformTree)
-
   protected def treeById(tracing: SkeletonTracing, treeId: Int): Tree =
     tracing.trees
       .find(_.treeId == treeId)

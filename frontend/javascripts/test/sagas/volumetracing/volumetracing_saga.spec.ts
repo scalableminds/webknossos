@@ -50,9 +50,13 @@ const serverVolumeTracing: ServerVolumeTracing = {
     height: 10,
     depth: 10,
   },
-  zoomLevel: 0,
   segments: [],
   segmentGroups: [],
+  additionalAxes: [],
+  userBoundingBoxes: [],
+  largestSegmentId: 0,
+  userStates: [],
+  zoomLevel: 0,
   editPosition: {
     x: 0,
     y: 0,
@@ -64,12 +68,9 @@ const serverVolumeTracing: ServerVolumeTracing = {
     y: 0,
     z: 0,
   },
-  additionalAxes: [],
-  userBoundingBoxes: [],
-  largestSegmentId: 0,
 };
 
-const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 const volumeTracingLayer: APISegmentationLayer = {
   name: volumeTracing.tracingId,
   category: "segmentation",
@@ -131,15 +132,11 @@ describe("VolumeTracingSaga", () => {
 
     saga.next();
     saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
-    saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
     // only updateTracing
-    const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
+    const items = execCall(expect, saga.next(initialState.annotation.volumes[0]));
     expect(withoutUpdateTracing(items).length).toBe(0);
   });
 
@@ -151,15 +148,11 @@ describe("VolumeTracingSaga", () => {
 
     saga.next();
     saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
-    saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(newState.annotation.volumes[0]);
-    saga.next(newState.flycam);
 
-    const items = execCall(expect, saga.next(newState.viewModeData.plane.tdCamera));
+    const items = execCall(expect, saga.next(newState.annotation.volumes[0]));
 
     expect(withoutUpdateTracing(items).length).toBe(0);
     expect(items[0].value.activeSegmentId).toBe(ACTIVE_CELL_ID);

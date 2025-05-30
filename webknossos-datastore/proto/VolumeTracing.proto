@@ -17,6 +17,18 @@ message Segment {
   optional bool isVisible = 12;
 }
 
+
+message VolumeUserStateProto {
+  required string userId = 1;
+  optional int64 activeSegmentId = 2;
+  repeated int32 segmentGroupIds = 3;
+  repeated bool segmentGroupExpandedStates = 4;
+  repeated int32 boundingBoxIds = 5;
+  repeated bool boundingBoxVisibilities = 6;
+  repeated int64 segmentIds = 7;
+  repeated bool segmentVisibilities = 8;
+}
+
 message VolumeTracing {
   // Do not use with floating point element classes
   enum ElementClassProto {
@@ -57,6 +69,7 @@ message VolumeTracing {
   optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
   optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
   optional bool hideUnregisteredSegments = 25; // If true, segments that are not registered will be hidden.
+  repeated VolumeUserStateProto userStates = 26;
 }
 
 message SegmentGroup {

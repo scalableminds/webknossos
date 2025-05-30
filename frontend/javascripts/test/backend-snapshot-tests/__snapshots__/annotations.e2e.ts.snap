@@ -844,6 +844,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
   ],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -853,15 +854,15 @@ exports[`Annotation API (E2E) > Send update actions and compare resulting tracin
   "additionalAxes": [],
   "createdTimestamp": "createdTimestamp",
   "editPosition": {
-    "x": 2,
-    "y": 3,
-    "z": 4,
+    "x": 256,
+    "y": 256,
+    "z": 128,
   },
   "editPositionAdditionalCoordinates": [],
   "editRotation": {
-    "x": 1,
-    "y": 2,
-    "z": 3,
+    "x": 0,
+    "y": 0,
+    "z": 0,
   },
   "id": "id",
   "storedWithExternalTreeBodies": true,
@@ -869,7 +870,34 @@ exports[`Annotation API (E2E) > Send update actions and compare resulting tracin
   "trees": [],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [
+    {
+      "boundingBoxIds": [],
+      "boundingBoxVisibilities": [],
+      "treeGroupExpandedStates": [],
+      "treeGroupIds": [],
+      "treeIds": [],
+      "treeVisibilities": [],
+      "userId": "dummy-user-id",
+    },
+  ],
   "zoomLevel": 2,
+}
+`;
+
+exports[`Annotation API (E2E) > Send update actions and compare resulting tracing 2`] = `
+{
+  "annotationLayers": [
+    {
+      "name": "Skeleton",
+      "tracingId": "tracingId",
+      "typ": "Skeleton",
+    },
+  ],
+  "description": "",
+  "earliestAccessibleVersion": 0,
+  "userStates": [],
+  "version": 1,
 }
 `;
 
@@ -1718,6 +1746,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
   ],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -2944,6 +2973,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() 1`] = `
   "trees": [],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -2970,6 +3000,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for hybrid 1`] = `
     "trees": [],
     "typ": "Skeleton",
     "userBoundingBoxes": [],
+    "userStates": [],
     "zoomLevel": 2,
   },
   "volume": {
@@ -3031,6 +3062,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for hybrid 1`] = `
     "segments": [],
     "typ": "Volume",
     "userBoundingBoxes": [],
+    "userStates": [],
     "volumeBucketDataHasChanged": false,
     "zoomLevel": 1,
   },
@@ -3097,6 +3129,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for volume 1`] = `
   "segments": [],
   "typ": "Volume",
   "userBoundingBoxes": [],
+  "userStates": [],
   "volumeBucketDataHasChanged": false,
   "zoomLevel": 1,
 }

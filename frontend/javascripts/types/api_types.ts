@@ -603,11 +603,20 @@ type APITracingStoreAnnotationLayer = {
   readonly typ: AnnotationLayerType;
 };
 
+export type APIAnnotationUserState = {
+  userId: string;
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
+};
+
 export type APITracingStoreAnnotation = {
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
+  readonly userStates: APIAnnotationUserState[];
 };
 
 export type APITimeTrackingPerUser = {
@@ -890,34 +899,73 @@ export type ServerTracingBase = {
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
-  editPosition: Point3;
-  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
-  editRotation: Point3;
   error?: string;
-  zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove
   // the property.
   version?: number;
+  // The following properties should only be used if the
+  // annotation.userStates array does not contain any information.
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
 };
+
+export type SkeletonUserState = {
+  userId: string;
+  activeNodeId: number | null;
+  // ids and visibilities form the entries for a
+  // id->isVisible map
+  boundingBoxIds: number[];
+  boundingBoxVisibilities: boolean[];
+  // ids and states form the entries for a
+  // id->isExpanded map
+  treeGroupIds: number[];
+  treeGroupExpandedStates: boolean[];
+  // ids and visibilities form the entries for a
+  // id->isVisible map
+  treeIds: number[];
+  treeVisibilities: boolean[];
+};
+
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Skeleton";
-  activeNodeId?: number;
+  activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
+  userStates: SkeletonUserState[];
 };
+
+export type VolumeUserState = {
+  userId: string;
+  activeSegmentId?: number;
+  // ids and visibilities form the entries for a
+  // bbox id -> isVisible map
+  boundingBoxIds: number[];
+  boundingBoxVisibilities: boolean[];
+  // These two properties are the dictionary entries
+  // for an segment group id -> expanded mapping.
+  segmentGroupIds: number[];
+  segmentGroupExpandedStates: boolean[];
+  // These two properties are the dictionary entries
+  // for an segment id -> isVisible mapping.
+  segmentIds: number[];
+  segmentVisibilities: boolean[];
+};
+
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number;
+  activeSegmentId?: number; // only use as a fallback if userStates is empty
   boundingBox: ServerBoundingBox;
   elementClass: ElementClass;
   fallbackLayer?: string;
@@ -937,6 +985,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // once a bucket was mutated. There is no need to send an explicit UpdateAction
   // for that.
   volumeBucketDataHasChanged?: boolean;
+  userStates: VolumeUserState[];
   hideUnregisteredSegments?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

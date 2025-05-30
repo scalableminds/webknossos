@@ -68,11 +68,14 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParametersList: List[TaskParameters],
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
-    Fox.serialCombined(taskParametersList)(params =>
-      Fox
-        .runOptional(params.baseAnnotation)(createTracingsFromBaseAnnotation(_, params, taskType, dataset, dataSource))
-        .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
+    Fox.serialCombined(taskParametersList)(
+      params =>
+        Fox
+          .runOptional(params.baseAnnotation)(
+            createTracingsFromBaseAnnotation(_, params, taskType, dataset, dataSource, requestingUserId))
+          .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
 
   // Used in create (without files) in case of base annotation
   private def createTracingsFromBaseAnnotation(
@@ -80,20 +83,24 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParameters: TaskParameters,
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ <- Fox.runOptional(taskParameters.newSkeletonTracingId)(_ =>
-        duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient))
+        duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient, requestingUserId))
       _ <- Fox.runOptional(taskParameters.newVolumeTracingId)(
         _ =>
-          duplicateOrCreateVolumeBase(annotation,
-                                      taskParameters,
-                                      tracingStoreClient,
-                                      taskType.settings.magRestrictions,
-                                      dataSource))
+          duplicateOrCreateVolumeBase(
+            annotation,
+            taskParameters,
+            tracingStoreClient,
+            taskType.settings.magRestrictions,
+            dataSource,
+            requestingUserId
+        ))
     } yield
       BaseAnnotation(baseAnnotationIdValidated.id,
                      taskParameters.newSkeletonTracingId,
@@ -124,7 +131,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   // Used in create (without files) in case of base annotation
   private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
                                             params: TaskParameters,
-                                            tracingStoreClient: WKRemoteTracingStoreClient): Fox[Unit] =
+                                            tracingStoreClient: WKRemoteTracingStoreClient,
+                                            requestingUserId: ObjectId): Fox[Unit] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newAnnotationId <- params.newAnnotationId.toFox
@@ -137,7 +145,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
             newSkeletonId,
             editPosition = Some(params.editPosition),
             editRotation = Some(params.editRotation),
-            boundingBox = params.boundingBox
+            boundingBox = params.boundingBox,
+            ownerId = baseAnnotation._user,
+            requestingUserId = requestingUserId
           )
         case None =>
           val skeleton = annotationService.createSkeletonTracingBase(
@@ -155,7 +165,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
       magRestrictions: MagRestrictions,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- params.newVolumeTracingId.toFox
@@ -166,6 +177,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
             id,
             newAnnotationId,
             newVolumeTracingId,
+            ownerId = baseAnnotation._user,
+            requestingUserId = requestingUserId,
             editPosition = Some(params.editPosition),
             editRotation = Some(params.editRotation),
             magRestrictions = magRestrictions,

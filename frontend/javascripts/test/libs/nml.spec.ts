@@ -769,7 +769,7 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.size()).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.getOrThrow(12).id).toBe(12);
 
-    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
+    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.toArray(), "source");
 
     // And node ids in edges, branchpoints and comments should have been replaced
     expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(3).edges)).toEqual([

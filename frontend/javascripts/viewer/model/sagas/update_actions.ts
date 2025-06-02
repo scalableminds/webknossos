@@ -108,8 +108,13 @@ export type UpdateAction =
 
 export type ApplicableSkeletonUpdateAction =
   | UpdateTreeUpdateAction
+  | UpdateNodeUpdateAction
   | CreateNodeUpdateAction
   | CreateEdgeUpdateAction
+  | DeleteTreeUpdateAction
+  | DeleteEdgeUpdateAction
+  | DeleteNodeUpdateAction
+  | MoveTreeComponentUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction;
@@ -348,36 +353,40 @@ export type CreateActionNode = Omit<Node, "untransformedPosition" | "mag"> & {
   position: Node["untransformedPosition"];
   treeId: number;
   resolution: number;
+  actionTracingId: string;
 };
 
 export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   position: Node["untransformedPosition"];
   treeId: number;
+  actionTracingId: string;
 };
 
 export function createNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, mag, ...restNode } = node;
+  const value: CreateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+    resolution: mag,
+  };
   return {
     name: "createNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-      resolution: mag,
-    } as CreateActionNode,
+    value,
   } as const;
 }
 export function updateNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, ...restNode } = node;
+  const value: UpdateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+  };
   return {
     name: "updateNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-    } as UpdateActionNode,
+    value,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number, actionTracingId: string) {

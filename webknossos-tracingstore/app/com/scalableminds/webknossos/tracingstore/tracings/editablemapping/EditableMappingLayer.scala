@@ -16,7 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
   ElementClass,
-  SegmentationLayer
+  SegmentationLayer,
+  DatasetLayerAttachments
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -103,6 +104,8 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  override def attachments: Option[DatasetLayerAttachments] = None
 
   def version: Long = tracing.version
 

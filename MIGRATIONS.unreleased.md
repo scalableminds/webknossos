@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)

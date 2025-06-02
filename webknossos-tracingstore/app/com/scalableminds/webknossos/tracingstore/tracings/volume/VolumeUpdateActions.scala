@@ -3,9 +3,9 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TristateOptionJsonHelper
+import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.idToBool.{Id32ToBool, Id64ToBool}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
@@ -274,15 +274,15 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
                                 existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto = {
     val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable = id32BoolsToMutableMap(existingUserState.boundingBoxVisibilities)
+      val visibilityMapMutable = id32WithBoolsToMutableMap(existingUserState.boundingBoxVisibilities)
       bboxIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
       existingUserState.copy(
-        boundingBoxVisibilities = mutableMapToId32Bools(visibilityMapMutable)
+        boundingBoxVisibilities = mutableMapToId32WithBools(visibilityMapMutable)
       )
     }.getOrElse(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(bboxId => Id32ToBool(bboxId, isVisible))))
+        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(bboxId => Id32WithBool(bboxId, isVisible))))
   }
 
   override def isViewOnlyChange: Boolean = true
@@ -510,15 +510,15 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
                                 actionUserId: String,
                                 existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val expandedStateMapMutable = id32BoolsToMutableMap(existingUserState.segmentGroupExpandedStates)
+      val expandedStateMapMutable = id32WithBoolsToMutableMap(existingUserState.segmentGroupExpandedStates)
       groupIds.foreach(expandedStateMapMutable(_) = areExpanded)
       existingUserState.copy(
-        segmentGroupExpandedStates = mutableMapToId32Bools(expandedStateMapMutable)
+        segmentGroupExpandedStates = mutableMapToId32WithBools(expandedStateMapMutable)
       )
     }.getOrElse(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(segmentGroupExpandedStates = groupIds.map(groupId => Id32ToBool(groupId, areExpanded)))
+        .copy(segmentGroupExpandedStates = groupIds.map(groupId => Id32WithBool(groupId, areExpanded)))
     )
 }
 
@@ -535,16 +535,16 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
                        actionUserId: String,
                        existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMap = id64BoolsToMutableMap(existingUserState.segmentVisibilities)
+      val visibilityMap = id64WithBoolsToMutableMap(existingUserState.segmentVisibilities)
       visibilityMap(id) = isVisible
       existingUserState.copy(
-        segmentVisibilities = mutableMapToId64Bools(visibilityMap)
+        segmentVisibilities = mutableMapToId64WithBools(visibilityMap)
       )
     }.getOrElse(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          segmentVisibilities = Seq(Id64ToBool(id, isVisible)),
+          segmentVisibilities = Seq(Id64WithBool(id, isVisible)),
         )
     )
 
@@ -580,15 +580,15 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long], // No
         } yield segmentIds).getOrElse(Seq.empty)
     }
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable = id64BoolsToMutableMap(existingUserState.segmentVisibilities)
+      val visibilityMapMutable = id64WithBoolsToMutableMap(existingUserState.segmentVisibilities)
       segmentIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
       existingUserState.copy(
-        segmentVisibilities = mutableMapToId64Bools(visibilityMapMutable)
+        segmentVisibilities = mutableMapToId64WithBools(visibilityMapMutable)
       )
     }.getOrElse(
       VolumeTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(segmentVisibilities = segmentIdsToUpdate.map(segmentId => Id64ToBool(segmentId, isVisible)))
+        .copy(segmentVisibilities = segmentIdsToUpdate.map(segmentId => Id64WithBool(segmentId, isVisible)))
     )
   }
 

@@ -2,6 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -11,7 +12,6 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
-import com.scalableminds.webknossos.datastore.idToBool.Id32ToBool
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -29,7 +29,7 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
-    userStateBoundingBoxVisibilities: Map[String, Seq[Id32ToBool]] // UserId → Seq(bboxId, bboxIsVisible)
+    userStateBoundingBoxVisibilities: Map[String, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
 trait AnnotationLayerPrecedence extends FoxImplicits {
@@ -90,7 +90,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
       !userStates.exists(_.userId == tuple._1))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, boundingBoxVisibilities: Seq[Id32ToBool]) =>
+      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         SkeletonTracingDefaults
           .emptyUserState(userId)
           .copy(
@@ -115,7 +115,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
       !userStates.exists(_.userId == tuple._1))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, boundingBoxVisibilities: Seq[Id32ToBool]) =>
+      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         VolumeTracingDefaults
           .emptyUserState(userId)
           .copy(

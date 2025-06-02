@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TristateOptionJsonHelper
+import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   Edge,
   Node,
@@ -12,7 +13,6 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   Tree
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.idToBool.Id32ToBool
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
@@ -448,16 +448,16 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
                        actionUserId: String,
                        existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val expandedStateMapMutable = id32BoolsToMutableMap(existingUserState.treeGroupExpandedStates)
+      val expandedStateMapMutable = id32WithBoolsToMutableMap(existingUserState.treeGroupExpandedStates)
       groupIds.foreach(expandedStateMapMutable(_) = areExpanded)
       existingUserState.copy(
-        treeGroupExpandedStates = mutableMapToId32Bools(expandedStateMapMutable)
+        treeGroupExpandedStates = mutableMapToId32WithBools(expandedStateMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          treeGroupExpandedStates = groupIds.map(groupId => Id32ToBool(groupId, areExpanded))
+          treeGroupExpandedStates = groupIds.map(groupId => Id32WithBool(groupId, areExpanded))
         )
     )
 }
@@ -529,16 +529,16 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
                                 actionUserId: String,
                                 existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMap = id32BoolsToMutableMap(existingUserState.treeVisibilities)
+      val visibilityMap = id32WithBoolsToMutableMap(existingUserState.treeVisibilities)
       visibilityMap(treeId) = isVisible
       existingUserState.copy(
-        treeVisibilities = mutableMapToId32Bools(visibilityMap)
+        treeVisibilities = mutableMapToId32WithBools(visibilityMap)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          treeVisibilities = Seq(Id32ToBool(treeId, isVisible))
+          treeVisibilities = Seq(Id32WithBool(treeId, isVisible))
         )
     )
 
@@ -577,15 +577,15 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int], // 
         } yield treeIds).getOrElse(Seq.empty)
     }
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable = id32BoolsToMutableMap(existingUserState.treeVisibilities)
+      val visibilityMapMutable = id32WithBoolsToMutableMap(existingUserState.treeVisibilities)
       treeIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
       existingUserState.copy(
-        treeVisibilities = mutableMapToId32Bools(visibilityMapMutable)
+        treeVisibilities = mutableMapToId32WithBools(visibilityMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(treeVisibilities = treeIdsToUpdate.map(treeId => Id32ToBool(treeId, isVisible)))
+        .copy(treeVisibilities = treeIdsToUpdate.map(treeId => Id32WithBool(treeId, isVisible)))
     )
   }
 
@@ -730,15 +730,15 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
                                 existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
     val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable = id32BoolsToMutableMap(existingUserState.boundingBoxVisibilities)
+      val visibilityMapMutable = id32WithBoolsToMutableMap(existingUserState.boundingBoxVisibilities)
       bboxIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
       existingUserState.copy(
-        boundingBoxVisibilities = mutableMapToId32Bools(visibilityMapMutable)
+        boundingBoxVisibilities = mutableMapToId32WithBools(visibilityMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(id => Id32ToBool(id, isVisible))))
+        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(id => Id32WithBool(id, isVisible))))
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction =

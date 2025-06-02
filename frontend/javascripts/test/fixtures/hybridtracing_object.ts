@@ -30,7 +30,7 @@ const colorLayer: APIColorLayer = {
   additionalAxes: [],
 };
 
-const initalTreeOne: Tree = {
+export const initialTreeOne: Tree = {
   treeId: 1,
   name: "TestTree",
   nodes: new DiffableMap(),
@@ -67,7 +67,7 @@ export const initialSkeletonTracing: SkeletonTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   trees: new TreeMap([
-    [1, initalTreeOne],
+    [1, initialTreeOne],
     [2, initialTreeTwo],
   ]),
   treeGroups: [],

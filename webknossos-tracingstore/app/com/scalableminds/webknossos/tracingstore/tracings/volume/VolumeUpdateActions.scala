@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -117,6 +119,79 @@ case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBounding
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
+}
+
+case class AddUserBoundingBoxVolumeAction(boundingBox: NamedBoundingBox,
+                                          actionTracingId: String,
+                                          actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[String] = None,
+                                          info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withUserBoundingBoxes(tracing.userBoundingBoxes :+ boundingBox.toProto)
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class DeleteUserBoundingBoxVolumeAction(boundingBoxId: Int,
+                                             actionTracingId: String,
+                                             actionTimestamp: Option[Long] = None,
+                                             actionAuthorId: Option[String] = None,
+                                             info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withUserBoundingBoxes(tracing.userBoundingBoxes.filter(_.id != boundingBoxId))
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
+                                             name: Option[Option[String]],
+                                             color: Option[Option[Color]],
+                                             boundingBox: Option[Option[BoundingBox]],
+                                             actionTracingId: String,
+                                             actionTimestamp: Option[Long] = None,
+                                             actionAuthorId: Option[String] = None,
+                                             info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with ProtoGeometryImplicits {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    def updateUserBoundingBoxes() =
+      tracing.userBoundingBoxes.map { currentBoundingBox =>
+        if (boundingBoxId == currentBoundingBox.id) {
+          currentBoundingBox.copy(
+            name = name.getOrElse(currentBoundingBox.name),
+            color = if (color.isDefined) color.flatMap(colorOptToProto) else currentBoundingBox.color,
+            boundingBox =
+              if (boundingBox.isDefined)
+                boundingBox.flatMap(boundingBoxOptToProto).getOrElse(currentBoundingBox.boundingBox)
+              else currentBoundingBox.boundingBox
+          )
+        } else
+          currentBoundingBox
+      }
+    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
 }
 
 case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int],
@@ -459,6 +534,18 @@ object UpdateTracingVolumeAction {
 object UpdateUserBoundingBoxesVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =
     Json.format[UpdateUserBoundingBoxesVolumeAction]
+}
+object AddUserBoundingBoxVolumeAction {
+  implicit val jsonFormat: OFormat[AddUserBoundingBoxVolumeAction] =
+    Json.format[AddUserBoundingBoxVolumeAction]
+}
+object DeleteUserBoundingBoxVolumeAction {
+  implicit val jsonFormat: OFormat[DeleteUserBoundingBoxVolumeAction] =
+    Json.format[DeleteUserBoundingBoxVolumeAction]
+}
+object UpdateUserBoundingBoxVolumeAction extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
+    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
 }
 object UpdateUserBoundingBoxVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =

@@ -2,7 +2,7 @@ import sbt._
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.13.16"
-ThisBuild / scapegoatVersion := "3.1.8"
+ThisBuild / scapegoatVersion := "3.1.9"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",

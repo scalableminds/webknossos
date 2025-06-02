@@ -2,14 +2,21 @@ import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { all, call, debounce, retry, takeEvery } from "typed-redux-saga";
-import type { UpdateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
+import { ControlModeEnum } from "viewer/constants";
+import {
+  type SetViewModeAction,
+  type UpdateUserSettingAction,
+  updateUserSettingAction,
+} from "viewer/model/actions/settings_actions";
 import { type Saga, select, take } from "viewer/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "viewer/model/sagas/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
+import { Toolkit } from "../accessors/tool_accessor";
+import { ensureWkReady } from "./ready_sagas";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -108,6 +115,27 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
   }
 }
 
+function* ensureValidToolkit(): Saga<void> {
+  /*
+   * Default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
+   */
+  yield* call(ensureWkReady);
+  const isViewMode = yield* select(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
+  const isReadOnly = yield* select((state) => !state.annotation.restrictions.allowUpdate);
+
+  if (isViewMode || isReadOnly) {
+    yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
+  }
+
+  yield* takeEvery("SET_VIEW_MODE", function* (action: SetViewModeAction) {
+    if (action.viewMode !== "orthogonal") {
+      yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
+    }
+  });
+}
+
 export default function* watchPushSettingsAsync(): Saga<void> {
   const action = yield* take("INITIALIZE_SETTINGS");
   if (action.type !== "INITIALIZE_SETTINGS") {
@@ -123,5 +151,6 @@ export default function* watchPushSettingsAsync(): Saga<void> {
     ),
     debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
+    call(ensureValidToolkit),
   ]);
 }

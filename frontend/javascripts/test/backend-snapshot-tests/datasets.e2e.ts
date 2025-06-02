@@ -149,7 +149,9 @@ describe("Dataset API (E2E)", () => {
       path.split("Organization_X")[1] ? "Organization_X" + path.split("Organization_X")[1] : path;
     pathsJson.forEach((pathInfo) =>
       pathInfo.magLinkInfos.forEach((magLink) => {
+        // @ts-ignore
         magLink.mag.path = makeRelative(magLink.mag.path);
+        // @ts-ignore
         magLink.mag.realPath = makeRelative(magLink.mag.realPath);
       }),
     );

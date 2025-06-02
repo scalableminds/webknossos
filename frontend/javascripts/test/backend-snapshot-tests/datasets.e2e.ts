@@ -150,9 +150,9 @@ describe("Dataset API (E2E)", () => {
 
     interface MagLink {
       mag: {
-        path: string,
+        path: string;
         realPath: string;
-      }
+      };
     }
 
     interface PathInfo {

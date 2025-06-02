@@ -333,14 +333,15 @@ trait DataLayer extends DataLayerLike {
       existingAttachmentsOpt match {
         case None => Some(newAttachments)
         case Some(existingFiles) =>
-          val segmentIndex = newAttachments.segmentIndex.orElse(existingFiles.segmentIndex)
-          val connectome = (newAttachments.connectomes ++ existingFiles.connectomes).distinctBy(_.path)
+          val segmentIndex = existingFiles.segmentIndex.orElse(newAttachments.segmentIndex)
+          val connectome =
+            if (existingFiles.connectomes.isEmpty) newAttachments.connectomes else existingFiles.connectomes
           val agglomerateFiles =
-            (newAttachments.agglomerates ++ existingFiles.agglomerates).distinctBy(_.path)
+            if (existingFiles.agglomerates.isEmpty) newAttachments.agglomerates else existingFiles.agglomerates
           val meshFiles =
-            (newAttachments.meshes ++ existingFiles.meshes).distinctBy(_.path)
+            if (existingFiles.meshes.isEmpty) newAttachments.meshes else existingFiles.meshes
           val cumsumFile =
-            newAttachments.cumsum.orElse(existingFiles.cumsum)
+            existingFiles.cumsum.orElse(newAttachments.cumsum)
 
           Some(
             DatasetLayerAttachments(

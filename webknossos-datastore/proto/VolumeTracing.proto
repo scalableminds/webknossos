@@ -4,6 +4,7 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 import "MetadataEntry.proto";
+import "idToBool.proto";
 
 message Segment {
 	required int64 segmentId = 1;
@@ -17,16 +18,12 @@ message Segment {
   optional bool isVisible = 12;
 }
 
-
 message VolumeUserStateProto {
   required string userId = 1;
   optional int64 activeSegmentId = 2;
-  repeated int32 segmentGroupIds = 3;
-  repeated bool segmentGroupExpandedStates = 4;
-  repeated int32 boundingBoxIds = 5;
-  repeated bool boundingBoxVisibilities = 6;
-  repeated int64 segmentIds = 7;
-  repeated bool segmentVisibilities = 8;
+  repeated Id32ToBool segmentGroupExpandedStates = 3;
+  repeated Id32ToBool boundingBoxVisibilities = 4;
+  repeated Id64ToBool segmentVisibilities = 5;
 }
 
 message VolumeTracing {

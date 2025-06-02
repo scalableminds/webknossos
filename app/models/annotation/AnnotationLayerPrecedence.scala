@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
+import com.scalableminds.webknossos.datastore.idToBool.Id32ToBool
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -28,7 +29,7 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
-    userStateBoundingBoxVisibilities: Map[String, (Seq[Int], Seq[Boolean])] // UserId → (bboxIds, bboxVisibleStates)
+    userStateBoundingBoxVisibilities: Map[String, Seq[Id32ToBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
 trait AnnotationLayerPrecedence extends FoxImplicits {
@@ -81,19 +82,18 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       val userId = userState.userId
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
         case None => userState
-        case Some((precedenceBboxIds, precedenceBboxVisibilities)) =>
-          userState.copy(boundingBoxIds = precedenceBboxIds, boundingBoxVisibilities = precedenceBboxVisibilities)
+        case Some(precedenceBboxVisibilities) =>
+          userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
       }
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
       !userStates.exists(_.userId == tuple._1))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, (boundingBoxIds: Seq[Int], boundingBoxVisibilities: Seq[Boolean])) =>
+      case (userId: String, boundingBoxVisibilities: Seq[Id32ToBool]) =>
         SkeletonTracingDefaults
           .emptyUserState(userId)
           .copy(
-            boundingBoxIds = boundingBoxIds,
             boundingBoxVisibilities = boundingBoxVisibilities
           )
     }
@@ -107,19 +107,18 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       val userId = userState.userId
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
         case None => userState
-        case Some((precedenceBboxIds, precedenceBboxVisibilities)) =>
-          userState.copy(boundingBoxIds = precedenceBboxIds, boundingBoxVisibilities = precedenceBboxVisibilities)
+        case Some(precedenceBboxVisibilities) =>
+          userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
       }
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
       !userStates.exists(_.userId == tuple._1))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, (boundingBoxIds: Seq[Int], boundingBoxVisibilities: Seq[Boolean])) =>
+      case (userId: String, boundingBoxVisibilities: Seq[Id32ToBool]) =>
         VolumeTracingDefaults
           .emptyUserState(userId)
           .copy(
-            boundingBoxIds = boundingBoxIds,
             boundingBoxVisibilities = boundingBoxVisibilities
           )
     }
@@ -195,9 +194,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           s.userBoundingBoxes ++ s.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           s.editPositionAdditionalCoordinates,
-          s.userStates
-            .map(userState => (userState.userId, (userState.boundingBoxIds, userState.boundingBoxVisibilities)))
-            .toMap
+          s.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
         )
       case Right(v) =>
         RedundantTracingProperties(
@@ -207,9 +204,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           v.userBoundingBoxes ++ v.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           v.editPositionAdditionalCoordinates,
-          v.userStates
-            .map(userState => (userState.userId, (userState.boundingBoxIds, userState.boundingBoxVisibilities)))
-            .toMap
+          v.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
         )
     }
 }

@@ -18,8 +18,6 @@ import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, 
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
-import scala.collection.mutable
-
 trait SkeletonUpdateAction extends LayerUpdateAction {
   def applyOn(tracing: SkeletonTracing): SkeletonTracing
 
@@ -541,20 +539,16 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
                                 actionUserId: String,
                                 existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMap: mutable.Map[Int, Boolean] =
-        existingUserState.treeIds.zip(existingUserState.treeVisibilities).to(collection.mutable.Map)
+      val visibilityMap = idBoolsToMutableMap(existingUserState.treeVisibilities)
       visibilityMap(treeId) = isVisible
-      val (treeIds, visibilities) = visibilityMap.unzip
       existingUserState.copy(
-        treeIds = treeIds.toSeq,
-        treeVisibilities = visibilities.toSeq
+        treeVisibilities = mutableMapToIdBools(visibilityMap)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          treeIds = Seq(treeId),
-          treeVisibilities = Seq(isVisible)
+          treeVisibilities = Seq(Id32ToBool(treeId, isVisible))
         )
     )
 
@@ -593,18 +587,15 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int], // 
         } yield treeIds).getOrElse(Seq.empty)
     }
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable: mutable.Map[Int, Boolean] =
-        existingUserState.treeIds.zip(existingUserState.treeVisibilities).to(collection.mutable.Map)
+      val visibilityMapMutable = idBoolsToMutableMap(existingUserState.treeVisibilities)
       treeIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
-      val (treeIds, treeVisibilities) = visibilityMapMutable.unzip
       existingUserState.copy(
-        treeIds = treeIds.toSeq,
-        treeVisibilities = treeVisibilities.toSeq
+        treeVisibilities = mutableMapToIdBools(visibilityMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(treeIds = treeIdsToUpdate, treeVisibilities = Seq.fill[Boolean](treeIdsToUpdate.length)(isVisible))
+        .copy(treeVisibilities = treeIdsToUpdate.map(treeId => Id32ToBool(treeId, isVisible)))
     )
   }
 
@@ -749,19 +740,15 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
                                 existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
     val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
     existingUserStateOpt.map { existingUserState =>
-      val visibilityMapMutable: mutable.Map[Int, Boolean] =
-        existingUserState.boundingBoxIds.zip(existingUserState.boundingBoxVisibilities).to(collection.mutable.Map)
+      val visibilityMapMutable = idBoolsToMutableMap(existingUserState.boundingBoxVisibilities)
       bboxIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
-      val (bboxIds, bboxVisibilities) = visibilityMapMutable.unzip
       existingUserState.copy(
-        boundingBoxIds = bboxIds.toSeq,
-        boundingBoxVisibilities = bboxVisibilities.toSeq
+        boundingBoxVisibilities = mutableMapToIdBools(visibilityMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
-        .copy(boundingBoxIds = bboxIdsToUpdate,
-              boundingBoxVisibilities = Seq.fill[Boolean](bboxIdsToUpdate.length)(isVisible)))
+        .copy(boundingBoxVisibilities = bboxIdsToUpdate.map(id => Id32ToBool(id, isVisible))))
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction =

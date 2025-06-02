@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalG
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.TreeIdMap
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 
-trait AnnotationUserStateUtils extends BoundingBoxMerger {
+trait AnnotationUserStateUtils extends BoundingBoxMerger with IdToBoolUtils {
 
   protected def renderUserState(annotationProto: AnnotationProto,
                                 annotationLayers: List[FetchedAnnotationLayer],
@@ -29,30 +29,6 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
     annotationProto.userStates
       .find(_.userId == requestingUserIdOpt.getOrElse(ownerId))
       .orElse(annotationProto.userStates.find(_.userId == ownerId))
-
-  private def id32BoolsToMap(idBoolsOpt: Option[Seq[Id32ToBool]]): Map[Int, Boolean] =
-    idBoolsOpt.map { idBools =>
-      idBools.map { idBool =>
-        (idBool.id, idBool.value)
-      }.toMap
-    }.getOrElse(Map.empty[Int, Boolean])
-
-  private def id64BoolsToMap(idBoolsOpt: Option[Seq[Id64ToBool]]): Map[Long, Boolean] =
-    idBoolsOpt.map { idBools =>
-      idBools.map { idBool =>
-        (idBool.id, idBool.value)
-      }.toMap
-    }.getOrElse(Map.empty[Long, Boolean])
-
-  private def mapToId32Bools(idBoolMap: Map[Int, Boolean]): Seq[Id32ToBool] =
-    idBoolMap.toSeq.map {
-      case (id, value) => Id32ToBool(id, value)
-    }
-
-  private def mapToId64Bools(idBoolMap: Map[Long, Boolean]): Seq[Id64ToBool] =
-    idBoolMap.toSeq.map {
-      case (id, value) => Id64ToBool(id, value)
-    }
 
   private def renderUserStateForTracing(tracing: Either[SkeletonTracing, VolumeTracing],
                                         annotationUserState: Option[AnnotationUserStateProto],

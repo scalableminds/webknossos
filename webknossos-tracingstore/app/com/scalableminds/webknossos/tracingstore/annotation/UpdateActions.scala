@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.webknossos.tracingstore.tracings.IdToBoolUtils
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
   SplitAgglomerateUpdateAction
@@ -22,7 +23,7 @@ trait UpdateAction {
 
 trait ApplyImmediatelyUpdateAction extends UpdateAction
 
-trait UserStateUpdateAction extends UpdateAction
+trait UserStateUpdateAction extends UpdateAction with IdToBoolUtils
 
 trait LayerUpdateAction extends UpdateAction {
   def actionTracingId: String

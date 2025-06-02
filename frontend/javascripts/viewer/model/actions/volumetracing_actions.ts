@@ -18,6 +18,9 @@ export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
 export type SetActiveCellAction = ReturnType<typeof setActiveCellAction>;
+export type SetHideUnregisteredSegmentsAction = ReturnType<
+  typeof setHideUnregisteredSegmentsAction
+>;
 // A simple "click segment" is dispatched when clicking
 // with the MOVE tool. Currently, this has the side-effect
 // of adding the clicked segment to the segment list (if one
@@ -43,6 +46,8 @@ export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
+export type ToggleSegmentGroupAction = ReturnType<typeof toggleSegmentGroupAction>;
+export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
@@ -76,6 +81,7 @@ export type VolumeTracingAction =
   | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
+  | SetHideUnregisteredSegmentsAction
   | ClickSegmentAction
   | RegisterLabelPointAction
   | ResetContourAction
@@ -90,6 +96,8 @@ export type VolumeTracingAction =
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
   | SetExpandedSegmentGroupsAction
+  | ToggleSegmentGroupAction
+  | ToggleAllSegmentsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -122,6 +130,9 @@ export const VolumeTracingSaveRelevantActions = [
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
+  "TOGGLE_SEGMENT_GROUP",
+  "TOGGLE_ALL_SEGMENTS",
+  "SET_HIDE_UNREGISTERED_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -199,6 +210,13 @@ export const setActiveCellAction = (
     somePosition,
     someAdditionalCoordinates,
     activeUnmappedSegmentId,
+  }) as const;
+
+export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: string) =>
+  ({
+    type: "SET_HIDE_UNREGISTERED_SEGMENTS",
+    value,
+    layerName,
   }) as const;
 
 export const clickSegmentAction = (
@@ -302,6 +320,20 @@ export const setExpandedSegmentGroupsAction = (
     type: "SET_EXPANDED_SEGMENT_GROUPS",
     expandedSegmentGroups,
     layerName,
+  }) as const;
+
+export const toggleSegmentGroupAction = (groupId: number, layerName: string) =>
+  ({
+    type: "TOGGLE_SEGMENT_GROUP",
+    groupId,
+    layerName,
+  }) as const;
+
+export const toggleAllSegmentsAction = (layerName: string, isVisible?: boolean) =>
+  ({
+    type: "TOGGLE_ALL_SEGMENTS",
+    layerName,
+    isVisible,
   }) as const;
 
 export const interpolateSegmentationLayerAction = () =>

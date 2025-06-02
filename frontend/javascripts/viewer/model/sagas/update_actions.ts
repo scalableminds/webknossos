@@ -1,20 +1,17 @@
+import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
-import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type {
-  Node,
-  NumberLike,
-  SegmentGroup,
-  Tree,
-  TreeGroup,
-  UserBoundingBox,
-  VolumeTracing,
-} from "viewer/store";
+import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
+import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type { NumberLike, SegmentGroup, UserBoundingBox, VolumeTracing } from "viewer/store";
 
 export type NodeWithTreeId = {
   treeId: number;
 } & Node;
+
+// This type is meant to contain only the properties that have changed
+type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
@@ -29,16 +26,46 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
-type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
+type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracingAction>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type UpdateSegmentVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentVisibilityVolumeAction
+>;
+export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentGroupVisibilityVolumeAction
+>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInSkeletonTracing
+export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInSkeletonTracing
 >;
-type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInVolumeTracing
+export type LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInVolumeTracing
+>;
+export type AddUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof addUserBoundingBoxInSkeletonTracing
+>;
+export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof addUserBoundingBoxInVolumeTracing
+>;
+export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInSkeletonTracing
+>;
+export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInVolumeTracing
+>;
+export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInSkeletonTracing
+>;
+export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInVolumeTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -79,10 +106,19 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
-  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -90,6 +126,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
+  | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
@@ -353,7 +390,7 @@ export function moveTreeComponent(
     },
   } as const;
 }
-export function updateVolumeTracing(
+export function updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
@@ -369,11 +406,12 @@ export function updateVolumeTracing(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
+      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
 }
-export function updateUserBoundingBoxesInSkeletonTracing(
+export function LEGACY_updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
 ) {
@@ -381,11 +419,13 @@ export function updateUserBoundingBoxesInSkeletonTracing(
     name: "updateUserBoundingBoxesInSkeletonTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
     },
   } as const;
 }
-export function updateUserBoundingBoxesInVolumeTracing(
+export function LEGACY_updateUserBoundingBoxesInVolumeTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
 ) {
@@ -393,10 +433,140 @@ export function updateUserBoundingBoxesInVolumeTracing(
     name: "updateUserBoundingBoxesInVolumeTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
     },
   } as const;
 }
+export function addUserBoundingBoxInSkeletonTracing(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxInSkeletonTracing",
+    value: {
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function addUserBoundingBoxInVolumeTracing(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxInVolumeTracing",
+    value: {
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInSkeletonTracing(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInVolumeTracing(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInVolumeTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+function _updateUserBoundingBoxHelper(
+  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  const { boundingBox, ...rest } = updatedProps;
+  const updatedPropsForServer =
+    boundingBox != null
+      ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
+      : updatedProps;
+  return {
+    name: actionName,
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      ...updatedPropsForServer,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInVolumeTracing(
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  return _updateUserBoundingBoxHelper(
+    "updateUserBoundingBoxInVolumeTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxInSkeletonTracing(
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  return _updateUserBoundingBoxHelper(
+    "updateUserBoundingBoxInSkeletonTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxVisibilityInSkeletonTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+export function updateUserBoundingBoxVisibilityInVolumeTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInVolumeTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
@@ -448,6 +618,22 @@ export function updateSegmentVolumeAction(
     },
   } as const;
 }
+
+export function updateSegmentVisibilityVolumeAction(
+  id: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentVisibility",
+    value: {
+      id,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
@@ -487,6 +673,21 @@ export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTr
     value: {
       actionTracingId,
       segmentGroups,
+    },
+  } as const;
+}
+
+export function updateSegmentGroupVisibilityVolumeAction(
+  groupId: number | null,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupVisibility",
+    value: {
+      actionTracingId,
+      groupId,
+      isVisible,
     },
   } as const;
 }

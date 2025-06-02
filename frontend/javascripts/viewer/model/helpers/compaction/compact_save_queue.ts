@@ -1,4 +1,8 @@
 import _ from "lodash";
+import type {
+  UpdateUserBoundingBoxInSkeletonTracingAction,
+  UpdateUserBoundingBoxInVolumeTracingAction,
+} from "viewer/model/sagas/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
 
 function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -70,6 +74,45 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
+export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
+  // Actions are obsolete, if they are for the same bounding box and for the same prop.
+  // E.g. when rezising a bounding box, multiple updateActions are sent during the resize, while only the last one is needed.
+  const previousActionsById: Record<
+    string,
+    UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction
+  > = {};
+  const relevantActions = [];
+  for (let i = updateActionsBatches.length - 1; i >= 0; i--) {
+    const currentActions = updateActionsBatches[i].actions;
+    if (
+      currentActions.length === 1 &&
+      ["updateUserBoundingBoxInSkeletonTracing", "updateUserBoundingBoxInVolumeTracing"].includes(
+        currentActions[0].name,
+      )
+    ) {
+      const currentAction = currentActions[0] as
+        | UpdateUserBoundingBoxInSkeletonTracingAction
+        | UpdateUserBoundingBoxInVolumeTracingAction;
+      const previousAction = previousActionsById[currentAction.value.actionTracingId];
+      if (
+        previousAction == null ||
+        previousAction.name !== currentAction.name ||
+        previousAction.value.boundingBoxId !== currentAction.value.boundingBoxId ||
+        !_.isEqual(
+          new Set(Object.keys(previousAction.value)),
+          new Set(Object.keys(currentAction.value)),
+        )
+      ) {
+        relevantActions.unshift(updateActionsBatches[i]);
+      }
+      previousActionsById[currentAction.value.actionTracingId] = currentAction;
+    } else {
+      relevantActions.unshift(updateActionsBatches[i]);
+    }
+  }
+  return relevantActions;
+}
+
 function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {
   const obsoleteUpdateActions = [];
 
@@ -92,6 +135,15 @@ function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQu
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
+const compactAll = _.flow([
+  removeAllButLastUpdateTracingAction,
+  removeAllButLastUpdateTdCameraAction,
+  removeSubsequentUpdateNodeActions,
+  removeSubsequentUpdateTreeActions,
+  removeSubsequentUpdateSegmentActions,
+  removeSubsequentUpdateBBoxActions,
+]);
+
 export default function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntry>,
 ): Array<SaveQueueEntry> {
@@ -100,11 +152,5 @@ export default function compactSaveQueue(
     (updateActionsBatch) => updateActionsBatch.actions.length > 0,
   );
 
-  return removeSubsequentUpdateSegmentActions(
-    removeSubsequentUpdateTreeActions(
-      removeSubsequentUpdateNodeActions(
-        removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
-      ),
-    ),
-  );
+  return compactAll(result);
 }

@@ -1,20 +1,27 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import ChainReducer from "test/helpers/chainReducer";
+import { chainReduce } from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import { describe, it, expect } from "vitest";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { WebknossosState, Node, Tree, MutableNode } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import type { Action } from "viewer/model/actions/actions";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
+  initialTreeOne,
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
+import { max } from "viewer/model/helpers/iterator_utils";
+import {
+  type Node,
+  TreeMap,
+  type MutableNode,
+  type Tree,
+  MutableTreeMap,
+} from "viewer/model/types/tree_types";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -42,28 +49,35 @@ const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
 
+const applyActions = chainReduce(SkeletonTracingReducer);
+
 describe("SkeletonTracing", () => {
   it("should add a new node", () => {
     const action = SkeletonTracingActions.createNodeAction(position, null, rotation, viewport, mag);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
-    expect(newSkeletonTracing.trees[1].branchPoints).toBe(
-      initialSkeletonTracing.trees[1].branchPoints,
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints).toBe(
+      initialSkeletonTracing.trees.getOrThrow(1).branchPoints,
     );
-    expect(newSkeletonTracing.trees[1].treeId).toBe(initialSkeletonTracing.trees[1].treeId);
-    expect(newSkeletonTracing.trees[1].name).toBe(initialSkeletonTracing.trees[1].name);
+    expect(newSkeletonTracing.trees.getOrThrow(1).treeId).toBe(
+      initialSkeletonTracing.trees.getOrThrow(1).treeId,
+    );
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe(
+      initialSkeletonTracing.trees.getOrThrow(1).name,
+    );
 
     // This should be changed
-    const maxNodeId = _.max(Array.from(newSkeletonTracing.trees[1].nodes.keys()));
+    const maxNodeId = max(newSkeletonTracing.trees.getOrThrow(1).nodes.keys());
 
     expect(maxNodeId).toBe(1);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
-    expect(newSkeletonTracing.trees[1].edges.size()).toEqual(0);
-    expect(newSkeletonTracing.trees[1].nodes.getOrThrow(1)).toEqual(
+    expect(newSkeletonTracing.trees.getOrThrow(1).edges.size()).toEqual(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.getOrThrow(1)).toEqual(
       expect.objectContaining({
         untransformedPosition: position,
         rotation,
@@ -90,15 +104,15 @@ describe("SkeletonTracing", () => {
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    const maxNodeId = _.max(
-      _.flatMap(newSkeletonTracing.trees, (tree) => tree.nodes.map((node: Node) => node.id)),
+    const maxNodeId = max(
+      newSkeletonTracing.trees.values().flatMap((tree) => tree.nodes.map((node: Node) => node.id)),
     );
 
     expect(maxNodeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(3);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toEqual(3);
-    expect(newSkeletonTracing.trees[1].edges.size()).toEqual(2);
-    expect(newSkeletonTracing.trees[1].edges.asArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toEqual(3);
+    expect(newSkeletonTracing.trees.getOrThrow(1).edges.size()).toEqual(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).edges.asArray()).toEqual([
       {
         source: 1,
         target: 2,
@@ -127,18 +141,18 @@ describe("SkeletonTracing", () => {
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    const maxNodeId = _.max(
-      _.flatMap(newSkeletonTracing.trees, (tree) => tree.nodes.map((node) => node.id)),
+    const maxNodeId = max(
+      newSkeletonTracing.trees.values().flatMap((tree) => tree.nodes.map((node) => node.id)),
     );
 
     expect(maxNodeId).toBe(3);
     expect(newSkeletonTracing.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(3);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toEqual(1);
-    expect(newSkeletonTracing.trees[2].nodes.size()).toEqual(0);
-    expect(newSkeletonTracing.trees[3].nodes.size()).toEqual(2);
-    expect(newSkeletonTracing.trees[2].edges.size()).toEqual(0);
-    expect(newSkeletonTracing.trees[3].edges.asArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toEqual(1);
+    expect(newSkeletonTracing.trees.getOrThrow(2).nodes.size()).toEqual(0);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toEqual(2);
+    expect(newSkeletonTracing.trees.getOrThrow(2).edges.size()).toEqual(0);
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,
@@ -151,17 +165,16 @@ describe("SkeletonTracing", () => {
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
     const newStateA = SkeletonTracingReducer(initialState, createTreeAction);
     const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+
     expect(newStateA).toEqual(newStateB);
   });
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
     const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
-    const newState = ChainReducer<WebknossosState, Action>(initialStateWithActiveTreeId2)
-      .apply(SkeletonTracingReducer, createTreeAction())
-      .apply(SkeletonTracingReducer, (currentState: WebknossosState) =>
-        deleteNodeAsUserAction(currentState),
-      )
-      .unpack();
+    const newState = applyActions(initialStateWithActiveTreeId2, [
+      createTreeAction(),
+      (currentState: WebknossosState) => deleteNodeAsUserAction(currentState),
+    ]);
 
     expect(newState).toEqual(initialStateWithActiveTreeId2);
   });
@@ -184,7 +197,9 @@ describe("SkeletonTracing", () => {
     expect(newStateB).not.toBe(newState);
     expect(newStateB).not.toBe(newStateA);
     expect(newStateA).not.toBe(newState);
-    expect(newStateB).toEqual(newState);
+    expect(enforceSkeletonTracing(newStateB.annotation).trees).toEqual(
+      enforceSkeletonTracing(newState.annotation).trees,
+    );
   });
 
   it("should delete respective comments and branchpoints when deleting a node from a tree", () => {
@@ -206,7 +221,7 @@ describe("SkeletonTracing", () => {
     const newStateC = SkeletonTracingReducer(newStateB, deleteNodeAction);
 
     // Workaround, because the diffable map creates a new chunk but doesn't delete it again
-    const nodes = enforceSkeletonTracing(newStateC.annotation).trees[1].nodes;
+    const nodes = enforceSkeletonTracing(newStateC.annotation).trees.getOrThrow(1).nodes;
     expect(nodes.chunks.length).toBe(1);
     expect(nodes.chunks[0].size).toBe(0);
     nodes.chunks = [];
@@ -230,16 +245,16 @@ describe("SkeletonTracing", () => {
     );
 
     const emptySkeletonTracing = enforceSkeletonTracing(emptyTreeState.annotation);
-    const newState = ChainReducer<WebknossosState, Action>(emptyTreeState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
-      .unpack();
+    const newState = applyActions(emptyTreeState, [
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+      deleteNodeAction,
+    ]);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.map(emptySkeletonTracing.trees, (tree) => tree.nodes.size())).toEqual(
-      _.map(newSkeletonTracing.trees, (tree) => tree.nodes.size()),
+    expect(emptySkeletonTracing.trees.values().map((tree) => tree.nodes.size())).toEqual(
+      newSkeletonTracing.trees.values().map((tree) => tree.nodes.size()),
     );
   });
 
@@ -261,102 +276,111 @@ describe("SkeletonTracing", () => {
       annotation: {
         skeleton: {
           trees: {
-            $set: {
-              [0]: {
-                treeId: 0,
-                name: "TestTree-0",
-                nodes: new DiffableMap([
-                  [0, createDummyNode(0)],
-                  [1, createDummyNode(1)],
-                  [2, createDummyNode(2)],
-                  [7, createDummyNode(7)],
-                ]),
-                timestamp: Date.now(),
-                branchPoints: [
-                  {
-                    nodeId: 1,
-                    timestamp: 0,
-                  },
-                  {
-                    nodeId: 7,
-                    timestamp: 0,
-                  },
-                ],
-                edges: EdgeCollection.loadFromArray([
-                  {
-                    source: 0,
-                    target: 1,
-                  },
-                  {
-                    source: 2,
-                    target: 1,
-                  },
-                  {
-                    source: 1,
-                    target: 7,
-                  },
-                ]),
-                comments: [
-                  {
-                    content: "comment",
-                    nodeId: 0,
-                  },
-                ],
-                color: [23, 23, 23],
-                groupId: MISSING_GROUP_ID,
-                isVisible: true,
-                type: TreeTypeEnum.DEFAULT,
-                edgesAreVisible: true,
-                metadata: [],
-              },
-              [1]: {
-                treeId: 1,
-                name: "TestTree-1",
-                nodes: new DiffableMap([
-                  [4, createDummyNode(4)],
-                  [5, createDummyNode(5)],
-                  [6, createDummyNode(6)],
-                ]),
-                timestamp: Date.now(),
-                branchPoints: [],
-                edges: EdgeCollection.loadFromArray([
-                  {
-                    source: 4,
-                    target: 5,
-                  },
-                  {
-                    source: 5,
-                    target: 6,
-                  },
-                ]),
-                comments: [],
-                color: [30, 30, 30],
-                groupId: MISSING_GROUP_ID,
-                isVisible: true,
-                type: TreeTypeEnum.DEFAULT,
-                edgesAreVisible: true,
-                metadata: [],
-              },
-            },
+            $set: new TreeMap([
+              [
+                0,
+                {
+                  treeId: 0,
+                  name: "TestTree-0",
+                  nodes: new DiffableMap([
+                    [0, createDummyNode(0)],
+                    [1, createDummyNode(1)],
+                    [2, createDummyNode(2)],
+                    [7, createDummyNode(7)],
+                  ]),
+                  timestamp: Date.now(),
+                  branchPoints: [
+                    {
+                      nodeId: 1,
+                      timestamp: 0,
+                    },
+                    {
+                      nodeId: 7,
+                      timestamp: 0,
+                    },
+                  ],
+                  edges: EdgeCollection.loadFromArray([
+                    {
+                      source: 0,
+                      target: 1,
+                    },
+                    {
+                      source: 2,
+                      target: 1,
+                    },
+                    {
+                      source: 1,
+                      target: 7,
+                    },
+                  ]),
+                  comments: [
+                    {
+                      content: "comment",
+                      nodeId: 0,
+                    },
+                  ],
+                  color: [23, 23, 23],
+                  groupId: MISSING_GROUP_ID,
+                  isVisible: true,
+                  type: TreeTypeEnum.DEFAULT,
+                  edgesAreVisible: true,
+                  metadata: [],
+                },
+              ],
+              [
+                1,
+                {
+                  treeId: 1,
+                  name: "TestTree-1",
+                  nodes: new DiffableMap([
+                    [4, createDummyNode(4)],
+                    [5, createDummyNode(5)],
+                    [6, createDummyNode(6)],
+                  ]),
+                  timestamp: Date.now(),
+                  branchPoints: [],
+                  edges: EdgeCollection.loadFromArray([
+                    {
+                      source: 4,
+                      target: 5,
+                    },
+                    {
+                      source: 5,
+                      target: 6,
+                    },
+                  ]),
+                  comments: [],
+                  color: [30, 30, 30],
+                  groupId: MISSING_GROUP_ID,
+                  isVisible: true,
+                  type: TreeTypeEnum.DEFAULT,
+                  edgesAreVisible: true,
+                  metadata: [],
+                },
+              ],
+            ]),
           },
         },
       },
     });
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+
     // Delete the second node
     const state0 = SkeletonTracingReducer(state, setActiveNodeAction);
     const state1 = SkeletonTracingReducer(state0, deleteNodeAction);
     const newTrees = enforceSkeletonTracing(state1.annotation).trees;
-    expect(Object.keys(newTrees).length).toBe(4);
-    expect(newTrees[0].nodes.getOrThrow(0).id).toBe(0);
-    expect(newTrees[0].comments.length).toBe(1);
-    expect(newTrees[0].comments[0].nodeId).toBe(0);
-    expect(newTrees[2].nodes.getOrThrow(2).id).toBe(2);
-    expect(newTrees[1].nodes.getOrThrow(4).id).toBe(4);
-    expect(newTrees[3].nodes.getOrThrow(7).id).toBe(7);
-    expect(newTrees[3].branchPoints[0].nodeId).toBe(7);
+
+    expect(newTrees.size()).toBe(4);
+    expect(newTrees.getOrThrow(0).nodes.getOrThrow(0).id).toBe(0);
+    expect(newTrees.getOrThrow(0).comments.length).toBe(1);
+    expect(newTrees.getOrThrow(0).comments[0].nodeId).toBe(0);
+    expect(newTrees.getOrThrow(2).nodes.getOrThrow(2).id).toBe(2);
+    expect(newTrees.getOrThrow(1).nodes.getOrThrow(4).id).toBe(4);
+    expect(newTrees.getOrThrow(3).nodes.getOrThrow(7).id).toBe(7);
+    expect(newTrees.getOrThrow(3).branchPoints[0].nodeId).toBe(7);
   });
+
   it("should not delete an edge if the two nodes are not neighbors", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -367,20 +391,24 @@ describe("SkeletonTracing", () => {
     );
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 3);
     // Create a couple of nodes
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
+
     const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
     expect(newState).toEqual(newStateA);
   });
+
   it("should not delete an edge if the both nodes are identical", () => {
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 0);
     const newStateA = SkeletonTracingReducer(initialState, deleteEdgeAction);
+
     expect(initialState).toEqual(newStateA);
   });
+
   it("should not delete any edge if the two nodes are in different trees", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -391,16 +419,19 @@ describe("SkeletonTracing", () => {
     );
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 2);
+
     // Create a couple of nodes
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
+
     const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
     expect(newState).toEqual(newStateA);
   });
+
   it("should delete an edge and split the tree", () => {
     const createDummyNode = (id: number): Node => ({
       bitDepth: 8,
@@ -419,105 +450,114 @@ describe("SkeletonTracing", () => {
       annotation: {
         skeleton: {
           trees: {
-            $set: {
-              [0]: {
-                treeId: 0,
-                name: "TestTree-0",
-                nodes: new DiffableMap([
-                  [0, createDummyNode(0)],
-                  [1, createDummyNode(1)],
-                  [2, createDummyNode(2)],
-                  [7, createDummyNode(7)],
-                ]),
-                timestamp: Date.now(),
-                branchPoints: [
-                  {
-                    nodeId: 1,
-                    timestamp: 0,
-                  },
-                  {
-                    nodeId: 7,
-                    timestamp: 0,
-                  },
-                ],
-                edges: EdgeCollection.loadFromArray([
-                  {
-                    source: 0,
-                    target: 1,
-                  },
-                  {
-                    source: 2,
-                    target: 1,
-                  },
-                  {
-                    source: 2,
-                    target: 7,
-                  },
-                ]),
-                comments: [
-                  {
-                    content: "comment",
-                    nodeId: 7,
-                  },
-                ],
-                color: [23, 23, 23],
-                groupId: MISSING_GROUP_ID,
-                isVisible: true,
-                type: TreeTypeEnum.DEFAULT,
-                edgesAreVisible: true,
-                metadata: [],
-              },
-              [1]: {
-                treeId: 1,
-                name: "TestTree-1",
-                nodes: new DiffableMap([
-                  [4, createDummyNode(4)],
-                  [5, createDummyNode(5)],
-                  [6, createDummyNode(6)],
-                ]),
-                timestamp: Date.now(),
-                branchPoints: [],
-                edges: EdgeCollection.loadFromArray([
-                  {
-                    source: 4,
-                    target: 5,
-                  },
-                  {
-                    source: 5,
-                    target: 6,
-                  },
-                ]),
-                comments: [],
-                color: [30, 30, 30],
-                groupId: MISSING_GROUP_ID,
-                isVisible: true,
-                type: TreeTypeEnum.DEFAULT,
-                edgesAreVisible: true,
-                metadata: [],
-              },
-            },
+            $set: new TreeMap([
+              [
+                0,
+                {
+                  treeId: 0,
+                  name: "TestTree-0",
+                  nodes: new DiffableMap([
+                    [0, createDummyNode(0)],
+                    [1, createDummyNode(1)],
+                    [2, createDummyNode(2)],
+                    [7, createDummyNode(7)],
+                  ]),
+                  timestamp: Date.now(),
+                  branchPoints: [
+                    {
+                      nodeId: 1,
+                      timestamp: 0,
+                    },
+                    {
+                      nodeId: 7,
+                      timestamp: 0,
+                    },
+                  ],
+                  edges: EdgeCollection.loadFromArray([
+                    {
+                      source: 0,
+                      target: 1,
+                    },
+                    {
+                      source: 2,
+                      target: 1,
+                    },
+                    {
+                      source: 2,
+                      target: 7,
+                    },
+                  ]),
+                  comments: [
+                    {
+                      content: "comment",
+                      nodeId: 7,
+                    },
+                  ],
+                  color: [23, 23, 23],
+                  groupId: MISSING_GROUP_ID,
+                  isVisible: true,
+                  type: TreeTypeEnum.DEFAULT,
+                  edgesAreVisible: true,
+                  metadata: [],
+                },
+              ],
+              [
+                1,
+                {
+                  treeId: 1,
+                  name: "TestTree-1",
+                  nodes: new DiffableMap([
+                    [4, createDummyNode(4)],
+                    [5, createDummyNode(5)],
+                    [6, createDummyNode(6)],
+                  ]),
+                  timestamp: Date.now(),
+                  branchPoints: [],
+                  edges: EdgeCollection.loadFromArray([
+                    {
+                      source: 4,
+                      target: 5,
+                    },
+                    {
+                      source: 5,
+                      target: 6,
+                    },
+                  ]),
+                  comments: [],
+                  color: [30, 30, 30],
+                  groupId: MISSING_GROUP_ID,
+                  isVisible: true,
+                  type: TreeTypeEnum.DEFAULT,
+                  edgesAreVisible: true,
+                  metadata: [],
+                },
+              ],
+            ]),
           },
         },
       },
     });
+
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(1, 2);
     const state0 = SkeletonTracingReducer(state, setActiveNodeAction);
     const state1 = SkeletonTracingReducer(state0, deleteEdgeAction);
+
     const newTrees = enforceSkeletonTracing(state1.annotation).trees;
-    expect(Object.keys(newTrees).length).toBe(3);
-    expect(newTrees[0].nodes.getOrThrow(0).id).toBe(0);
-    expect(newTrees[0].nodes.size()).toBe(2);
-    expect(newTrees[0].branchPoints[0].nodeId).toBe(1);
-    expect(newTrees[1].nodes.getOrThrow(4).id).toBe(4);
-    expect(newTrees[1].nodes.size()).toBe(3);
-    expect(newTrees[2].comments.length).toBe(1);
-    expect(newTrees[2].comments[0].nodeId).toBe(7);
-    expect(newTrees[2].nodes.getOrThrow(2).id).toBe(2);
-    expect(newTrees[2].nodes.getOrThrow(7).id).toBe(7);
-    expect(newTrees[2].nodes.size()).toBe(2);
-    expect(newTrees[2].branchPoints[0].nodeId).toBe(7);
+    expect(newTrees.size()).toBe(3);
+    expect(newTrees.getOrThrow(0).nodes.getOrThrow(0).id).toBe(0);
+    expect(newTrees.getOrThrow(0).nodes.size()).toBe(2);
+    expect(newTrees.getOrThrow(0).branchPoints[0].nodeId).toBe(1);
+    expect(newTrees.getOrThrow(1).nodes.getOrThrow(4).id).toBe(4);
+    expect(newTrees.getOrThrow(1).nodes.size()).toBe(3);
+    expect(newTrees.getOrThrow(2).comments.length).toBe(1);
+    expect(newTrees.getOrThrow(2).comments[0].nodeId).toBe(7);
+    expect(newTrees.getOrThrow(2).nodes.getOrThrow(2).id).toBe(2);
+    expect(newTrees.getOrThrow(2).nodes.getOrThrow(7).id).toBe(7);
+    expect(newTrees.getOrThrow(2).nodes.size()).toBe(2);
+    expect(newTrees.getOrThrow(2).branchPoints[0].nodeId).toBe(7);
   });
+
   it("should set a new active node", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -527,15 +567,18 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
+
     // Create two nodes, then set first one active
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, setActiveNodeAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should set a new active node in a different tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -546,6 +589,7 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
+
     // Create one node in the first tree, then set create second tree with two nodes
     // Then set first node of second tree active
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -554,10 +598,12 @@ describe("SkeletonTracing", () => {
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, setActiveNodeAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should set a new node radius", () => {
     const newRadius = 10;
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -568,13 +614,16 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(newRadius);
+
     // Create a node and change its radius
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].nodes.getOrThrow(1).radius).toEqual(newRadius);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.getOrThrow(1).radius).toEqual(newRadius);
   });
+
   it("should create a branchpoint", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -584,25 +633,30 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
     // create a single node and then set it as branchpoint
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].branchPoints[0]).toEqual(
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0]).toEqual(
       expect.objectContaining({
         nodeId: 1,
       }),
     );
   });
+
   it("shouldn't create a branchpoint in an empty tree", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
     // create a branchpoint in a tree without any nodes
     const newState = SkeletonTracingReducer(initialState, createBranchPointAction);
     expect(newState).toBe(initialState);
     expect(newState).toBe(initialState);
   });
+
   it("shouldn't create a branchpoint without the correct permissions", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -621,9 +675,11 @@ describe("SkeletonTracing", () => {
     let newState = SkeletonTracingReducer(startState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
   });
+
   it("shouldn't create more branchpoints than nodes", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -633,20 +689,23 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
     // create one node and set it as branchpoint three times
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].branchPoints[0]).toEqual(
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0]).toEqual(
       expect.objectContaining({
         nodeId: 1,
       }),
     );
   });
+
   it("should delete a branchpoint", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -657,18 +716,21 @@ describe("SkeletonTracing", () => {
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
     // create one node and set it as branchpoint, create a second node and jump back to branchpoint
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should delete specific selected branchpoint", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -678,21 +740,25 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
     // create one node and set it as branchpoint, create a second node and jump back to branchpoint
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
+
     const deleteBranchpointByIdAction = SkeletonTracingActions.deleteBranchpointByIdAction(1, 1);
     newState = SkeletonTracingReducer(newState, deleteBranchpointByIdAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].branchPoints[0].nodeId).toBe(2);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0].nodeId).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(2);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should delete several branchpoints", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -703,6 +769,7 @@ describe("SkeletonTracing", () => {
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
     // create two nodes and set them both as branchpoint
     // then delete them both and jump back to first node
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -711,13 +778,15 @@ describe("SkeletonTracing", () => {
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("shouldn't delete more branchpoints than available", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -728,6 +797,7 @@ describe("SkeletonTracing", () => {
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
     // create two nodes and set them both as branchpoint
     // then delete them both and jump back to first node
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -735,13 +805,15 @@ describe("SkeletonTracing", () => {
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(1);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should delete a branchpoint from a different tree", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -753,6 +825,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
     // create a new tree, add a node, set it as branchpoint twice then delete the branchpoint
     let newState = SkeletonTracingReducer(initialState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -760,10 +833,12 @@ describe("SkeletonTracing", () => {
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[2].branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(2).branchPoints.length).toBe(0);
   });
+
   it("should delete a branchpoint from another tree than the active one", () => {
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
@@ -775,107 +850,121 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
     // create a new tree, add a node, set it as branchpoint
     let newState = SkeletonTracingReducer(initialState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createBranchPointAction);
+
     // create another tree, delete the original branchpoint
     newState = SkeletonTracingReducer(newState, createTreeAction);
     newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[2].branchPoints.length).toBe(0);
-    expect(newSkeletonTracing.trees[3].branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(2).branchPoints.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(3).branchPoints.length).toBe(0);
     // as the branchpoint was in the third tree, the third tree should be active again
     expect(newSkeletonTracing.activeTreeId).toBe(3);
   });
+
   it("should add a new tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const newState = SkeletonTracingReducer(initialState, createTreeAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(3);
-    expect(newSkeletonTracing.trees[1].treeId).toBe(1);
+    expect(newSkeletonTracing.trees.size()).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(1).treeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
-    expect(newSkeletonTracing.trees[3]).toEqual(
-      expect.objectContaining({
-        comments: [],
-        branchPoints: [],
-        nodes: new DiffableMap(),
-        treeId: 3,
-        color: [0.8509803921568627, 0.5215686274509804, 0.07058823529411765],
-      }),
-    );
+    expect(newSkeletonTracing.trees.getOrThrow(3)).toMatchObject({
+      comments: [],
+      branchPoints: [],
+      nodes: new DiffableMap(),
+      treeId: 3,
+      color: [0.8509803921568627, 0.5215686274509804, 0.07058823529411765],
+    });
   });
+
   it("should add a several new trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     // create three trees
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      createTreeAction,
+    ]);
+
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(5);
-    expect(_.max(_.map(newSkeletonTracing.trees, "treeId"))).toBe(5);
+    expect(newSkeletonTracing.trees.size()).toBe(5);
+    expect(max(newSkeletonTracing.trees.values().map((tree) => tree.treeId))).toBe(5);
     expect(newSkeletonTracing.activeTreeId).toBe(5);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
   });
+
   it("should delete a new tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
+
     // create a tree and delete it again
-    const newState = ChainReducer<WebknossosState, Action>(initialStateWithActiveTreeId2)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialStateWithActiveTreeId2, [
+      createTreeAction,
+      deleteTreeAction,
+    ]);
+
     expect(newState).not.toBe(initialStateWithActiveTreeId2);
     expect(newState).toEqual(initialStateWithActiveTreeId2);
   });
+
   it("should delete several trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
+
     // create trees and delete them
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      deleteTreeAction,
+      deleteTreeAction,
+      deleteTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(0);
+    expect(newSkeletonTracing.trees.size()).toBe(0);
     expect(newSkeletonTracing.trees).not.toBe(initialSkeletonTracing.trees);
   });
+
   it("should delete several trees at once", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3, 4]);
     // create trees and delete them
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(0);
+    expect(newSkeletonTracing.trees.size()).toBe(0);
     expect(newSkeletonTracing.trees).not.toBe(initialSkeletonTracing.trees);
   });
+
   it("should set a new active tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, setActiveTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [createTreeAction, setActiveTreeAction]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(2);
     expect(newSkeletonTracing.activeNodeId).toBe(null);
   });
+
   it("should set a different active tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -886,24 +975,29 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(3);
+
     // create a second tree with two nodes and set it active
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, setActiveTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createTreeAction,
+      setActiveTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(2);
   });
+
   it("shouldn't set a new active tree for unknown tree ids", () => {
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(10);
     const newState = SkeletonTracingReducer(initialState, setActiveTreeAction);
+
     expect(newState).toBe(initialState);
   });
+
   it("should merge two trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -914,20 +1008,22 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
+
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, mergeTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      mergeTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(2);
-    expect(newSkeletonTracing.trees[3].nodes.size()).toBe(4);
-    expect(newSkeletonTracing.trees[3].edges.asArray()).toEqual([
+    expect(newSkeletonTracing.trees.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,
@@ -953,14 +1049,16 @@ describe("SkeletonTracing", () => {
     );
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .unpack();
+    const testState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
+
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     expect(newState).toBe(testState);
   });
+
   it("should merge two trees with comments and branchPoints", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -973,23 +1071,25 @@ describe("SkeletonTracing", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createBranchPointAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, mergeTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createBranchPointAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      mergeTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(2);
-    expect(newSkeletonTracing.trees[3].nodes.size()).toBe(4);
-    expect(newSkeletonTracing.trees[3].edges.asArray()).toEqual([
+    expect(newSkeletonTracing.trees.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,
@@ -1003,9 +1103,10 @@ describe("SkeletonTracing", () => {
         target: 1,
       },
     ]);
-    expect(newSkeletonTracing.trees[3].comments.length).toBe(2);
-    expect(newSkeletonTracing.trees[3].branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments.length).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(3).branchPoints.length).toBe(1);
   });
+
   it("shouldn't merge two trees of different type", () => {
     const nodes: MutableNode[] = [
       {
@@ -1045,6 +1146,7 @@ describe("SkeletonTracing", () => {
         bitDepth: 8,
       },
     ];
+
     const newAgglomerateTree: Tree = {
       treeId: 1,
       name: "Tree001",
@@ -1071,17 +1173,18 @@ describe("SkeletonTracing", () => {
       edgesAreVisible: true,
       metadata: [],
     };
+
+    const skeletonTracing = enforceSkeletonTracing(initialState.annotation);
     const initialStateWithAgglomerateNodes = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            3: {
-              $set: newAgglomerateTree,
-            },
+            $set: skeletonTracing.trees.set(3, newAgglomerateTree),
           },
         },
       },
     });
+
     const createNodeAction = SkeletonTracingActions.createNodeAction(
       position,
       null,
@@ -1089,102 +1192,121 @@ describe("SkeletonTracing", () => {
       viewport,
       mag,
     );
+
     // Create a new agglomerate tree with 3 nodes; then add two nodes to the first tree of type default.
-    const newState = ChainReducer<WebknossosState, Action>(initialStateWithAgglomerateNodes)
+    const newState = applyActions(initialStateWithAgglomerateNodes, [
       // Add two more nodes to tree with id 1.
-      .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
-      .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
-      .unpack();
+      createNodeAction, // For tree 1,
+      createNodeAction, // For tree 1,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(_.size(newSkeletonTracing.trees)).toBe(3);
-    expect(newSkeletonTracing.trees[1].nodes.size()).toBe(2);
-    expect(newSkeletonTracing.trees[3].nodes.size()).toBe(3);
+    expect(newSkeletonTracing.trees.size()).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(3);
+
     // Trying to merge those trees should fail as they have a different type.
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 2);
     const stateAfterMerge = SkeletonTracingReducer(newState, mergeTreesAction);
     expect(stateAfterMerge).toBe(newState);
   });
+
   it("should rename the active tree", () => {
     const newName = "SuperTestName";
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName);
     const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].name).toBe(newName);
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe(newName);
   });
+
   it("should rename the active tree to a default name", () => {
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction();
     const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].name).toBe("Tree001");
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree001");
   });
+
   it("should increase the activeTreeId", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(1);
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+
     // create a second tree, set first tree active then increase activeTreeId
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, setActiveTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      setActiveTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(2);
   });
+
   it("should decrease the activeTreeId", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+
     // create a second tree then decrease activeTreeId
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
+
   it("should wrap around when decreasing the activeTreeId below 1", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(3);
   });
+
   it("should be able to select next tree when tree ids are not consecutive", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(3);
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .apply(SkeletonTracingReducer, selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(4);
   });
+
   it("should shuffle the color of a specified tree", () => {
     const shuffleTreeColorAction = SkeletonTracingActions.shuffleTreeColorAction(1);
     const newState = SkeletonTracingReducer(initialState, shuffleTreeColorAction);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].color).not.toEqual([23, 23, 23]);
+    expect(newSkeletonTracing.trees.getOrThrow(1).color).not.toEqual([23, 23, 23]);
   });
+
   it("should create a comment for the active node", () => {
     const commentText = "Wow such test comment";
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -1195,25 +1317,27 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+
     // create a single node with a comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [createNodeAction, createCommentAction]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[0].content).toBe(commentText);
-    expect(newSkeletonTracing.trees[1].comments[0].nodeId).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].content).toBe(commentText);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].nodeId).toBe(1);
   });
+
   it("shouldn't create a comments if there is no active node", () => {
     const commentText = "Wow such test comment";
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const newState = SkeletonTracingReducer(initialState, createCommentAction);
     expect(newState).toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(0);
   });
+
   it("shouldn't create more than one comment for the active node", () => {
     const commentText = "Wow such test comment";
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -1224,17 +1348,20 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+
     // create a node and add the same comment three times
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createCommentAction,
+      createCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(1);
   });
+
   it("should create comments for several nodes", () => {
     const commentText1 = "Wow such test comment";
     const commentText2 = "Amaze test comment";
@@ -1245,21 +1372,24 @@ describe("SkeletonTracing", () => {
       viewport,
       mag,
     );
+
     // create two nodes with a different comment each
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, SkeletonTracingActions.createCommentAction(commentText1))
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, SkeletonTracingActions.createCommentAction(commentText2))
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      SkeletonTracingActions.createCommentAction(commentText1),
+      createNodeAction,
+      SkeletonTracingActions.createCommentAction(commentText2),
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(2);
-    expect(newSkeletonTracing.trees[1].comments[0].content).toBe(commentText1);
-    expect(newSkeletonTracing.trees[1].comments[0].nodeId).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[1].content).toBe(commentText2);
-    expect(newSkeletonTracing.trees[1].comments[1].nodeId).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].content).toBe(commentText1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].nodeId).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[1].content).toBe(commentText2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[1].nodeId).toBe(2);
   });
+
   it("should create comments for a different tree", () => {
     const commentText = "Wow such test comment";
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -1271,17 +1401,19 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createNodeAction,
+      createCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(0);
-    expect(newSkeletonTracing.trees[2].comments.length).toBe(0);
-    expect(newSkeletonTracing.trees[3].comments.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(2).comments.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments.length).toBe(1);
   });
+
   it("should delete a comment for a node", () => {
     const commentText = "Wow such test comment";
     const createNodeAction = SkeletonTracingActions.createNodeAction(
@@ -1293,15 +1425,17 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+
     // create a node with a comment, then delete it
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(0);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(0);
   });
 
   it("should only delete the comment for the active node", () => {
@@ -1315,19 +1449,21 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+
     // create two nodes with a comment each and delete the comment for the last node
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[0].nodeId).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[0].content).toBe(commentText);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].nodeId).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].content).toBe(commentText);
   });
 
   it("should add a node in a specified tree", () => {
@@ -1342,15 +1478,15 @@ describe("SkeletonTracing", () => {
     );
 
     // create a few trees and add a node to a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      createNodeAction,
+    ]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
-    expect(newSkeletonTracing.trees[3].nodes.getOrThrow(1)).toBeTruthy();
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.getOrThrow(1)).toBeTruthy();
     expect(newSkeletonTracing.activeTreeId).toBe(3);
     expect(newSkeletonTracing.activeNodeId).toBe(1);
   });
@@ -1364,18 +1500,21 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2, 1);
+
     // create three nodes and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].nodes.has(2)).toBeFalsy();
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.has(2)).toBeFalsy();
+
     // tree is split
-    expect(newSkeletonTracing.trees[2]).toBeTruthy();
+    expect(newSkeletonTracing.trees.getOrThrow(2)).toBeTruthy();
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
@@ -1391,18 +1530,20 @@ describe("SkeletonTracing", () => {
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2);
 
     // create three nodes and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].nodes.has(2)).toBeFalsy();
+    expect(newSkeletonTracing.trees.getOrThrow(1).nodes.has(2)).toBeFalsy();
+
     // tree is split
-    expect(newSkeletonTracing.trees[2]).toBeTruthy();
+    expect(newSkeletonTracing.trees.getOrThrow(2)).toBeTruthy();
     expect(newSkeletonTracing.activeNodeId).toBe(1);
     expect(newSkeletonTracing.activeTreeId).toBe(1);
   });
@@ -1418,17 +1559,17 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createBranchPointAction)
-      .unpack();
-
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createBranchPointAction,
+    ]);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].branchPoints[0].nodeId).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0].nodeId).toBe(2);
   });
 
   it("should create a branchpoint for a specified node (2/2)", () => {
@@ -1440,19 +1581,19 @@ describe("SkeletonTracing", () => {
       mag,
     );
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
-    // create some nodes and then set a specific one as branchpoint
 
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createBranchPointAction)
-      .unpack();
+    // create some nodes and then set a specific one as branchpoint
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createBranchPointAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].branchPoints.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].branchPoints[0].nodeId).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).branchPoints[0].nodeId).toBe(2);
   });
 
   it("should delete a specified tree", () => {
@@ -1460,16 +1601,16 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(2);
 
     // create some trees and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreeAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[2]).toBeFalsy();
-    expect(newSkeletonTracing.trees[3]).toBeTruthy();
+    expect(newSkeletonTracing.trees.getNullable(2)).toBe(undefined);
+    expect(newSkeletonTracing.trees.getOrThrow(3)).toBeTruthy();
     expect(newSkeletonTracing.activeTreeId).toBe(3);
   });
 
@@ -1478,17 +1619,17 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName, 2);
 
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, setTreeNameAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      setTreeNameAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[2].name).toBe(newName);
-    expect(newSkeletonTracing.trees[1].name).not.toBe(newName);
-    expect(newSkeletonTracing.trees[3].name).not.toBe(newName);
+    expect(newSkeletonTracing.trees.getOrThrow(2).name).toBe(newName);
+    expect(newSkeletonTracing.trees.getOrThrow(1).name).not.toBe(newName);
+    expect(newSkeletonTracing.trees.getOrThrow(3).name).not.toBe(newName);
   });
 
   it("should create a comment for a specified node", () => {
@@ -1503,18 +1644,18 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText, 2);
 
     // create a few nodes and adds one comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createCommentAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[0].content).toBe(commentText);
-    expect(newSkeletonTracing.trees[1].comments[0].nodeId).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].content).toBe(commentText);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].nodeId).toBe(2);
   });
 
   it("should delete a comment for a specified node (1/2)", () => {
@@ -1530,21 +1671,21 @@ describe("SkeletonTracing", () => {
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction(2);
 
     // create nodes with comments, then delete a specific comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
-      .apply(SkeletonTracingReducer, deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].comments.length).toBe(2);
-    expect(newSkeletonTracing.trees[1].comments[0].nodeId).toBe(1);
-    expect(newSkeletonTracing.trees[1].comments[1].nodeId).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments.length).toBe(2);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[0].nodeId).toBe(1);
+    expect(newSkeletonTracing.trees.getOrThrow(1).comments[1].nodeId).toBe(3);
   });
 
   it("should change the color of a specified tree", () => {
@@ -1554,7 +1695,146 @@ describe("SkeletonTracing", () => {
       SkeletonTracingActions.setTreeColorIndexAction(1, colorIndex),
     );
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
-    expect(newSkeletonTracing.trees[1].color).not.toEqual([23, 23, 23]);
+    expect(newSkeletonTracing.trees.getOrThrow(1).color).not.toEqual([23, 23, 23]);
+  });
+
+  it("should toggle inactive trees", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should toggle all trees", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleAllTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(false);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should toggle inactive trees when a group is active", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+
+      SkeletonTracingActions.setTreeGroupsAction([
+        { groupId: 1, name: "Some Group", children: [] },
+      ]),
+
+      SkeletonTracingActions.setTreeGroupAction(1, 1),
+      SkeletonTracingActions.setTreeGroupAction(1, 2),
+      SkeletonTracingActions.setTreeGroupAction(1, 3),
+    ]);
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should add a new tree with addTreesAndGroupsAction (without relabeling)", () => {
+    expect(initialState.annotation.skeleton?.trees.size()).toBe(2);
+    let ids: number[] | null = null;
+    const treeIdCallback = (_ids: number[]) => (ids = _ids);
+
+    const state = applyActions(initialState, [
+      // Id-relabeling is only done if the skeleton is not empty.
+      // Therefore, delete the two existing trees so that the new tree will
+      // be added without id-relabeling.
+      SkeletonTracingActions.deleteTreeAction(1),
+      SkeletonTracingActions.deleteTreeAction(2),
+      SkeletonTracingActions.addTreesAndGroupsAction(
+        new MutableTreeMap([[4, { ...initialTreeOne, treeId: 4 }]]),
+        [],
+        treeIdCallback,
+      ),
+    ]);
+
+    // The original tree id 4 should have survived.
+    expect(ids).toEqual([4]);
+    expect(state.annotation.skeleton?.trees.size()).toBe(1);
+    expect(state.annotation.skeleton?.trees.getNullable(4)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(4)?.treeId).toBe(4);
+  });
+
+  it("should add a new tree with addTreesAndGroupsAction (with id relabeling)", () => {
+    expect(initialState.annotation.skeleton?.trees.size()).toBe(2);
+    let ids: number[] | null = null;
+    const treeIdCallback = (_ids: number[]) => (ids = _ids);
+
+    const state = applyActions(initialState, [
+      SkeletonTracingActions.addTreesAndGroupsAction(
+        new MutableTreeMap([[8_000_000, { ...initialTreeOne, treeId: 8_000_000 }]]),
+        [],
+        treeIdCallback,
+      ),
+    ]);
+
+    // The original tree id 8_000_000 should have been changed to the next free id (3).
+    expect(ids).toEqual([3]);
+    expect(state.annotation.skeleton?.trees.size()).toBe(3);
+    expect(state.annotation.skeleton?.trees.getNullable(3)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(3)?.treeId).toBe(3);
+    expect(state.annotation.skeleton?.trees.getNullable(8_000_000)).toBeUndefined();
   });
 });

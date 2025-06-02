@@ -4,8 +4,8 @@ import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
-import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { map3 } from "libs/utils";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type * as THREE from "three";
@@ -30,10 +30,14 @@ import {
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
-import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
+import {
+  getHideUnregisteredSegmentsForLayer,
+  getSegmentsForLayer,
+} from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 
+// 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
@@ -128,8 +132,8 @@ export default class LayerRenderingManager {
   additionalCoordinates: AdditionalCoordinate[] | null = null;
   maximumZoomForAllMags: number[] | null = null;
 
-  cuckooTable: CuckooTableVec3 | undefined;
-  storePropertyUnsubscribers: Array<() => void> = [];
+  private colorCuckooTable: CuckooTableVec3 | undefined;
+  private storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(
     name: string,
@@ -292,53 +296,165 @@ export default class LayerRenderingManager {
     getSharedLookUpCuckooTable.clear();
     asyncBucketPick.clear();
     shaderEditor.destroy();
-    this.cuckooTable = undefined;
+    this.colorCuckooTable = undefined;
   }
 
   /* Methods related to custom segment colors: */
 
   getCustomColorCuckooTable() {
-    if (this.cuckooTable != null) {
-      return this.cuckooTable;
+    if (this.colorCuckooTable != null) {
+      return this.colorCuckooTable;
     }
     if (!this.cube.isSegmentation) {
       throw new Error(
         "getCustomColorCuckooTable should not be called for non-segmentation layers.",
       );
     }
-    this.cuckooTable = new CuckooTableVec3(CUSTOM_COLORS_TEXTURE_WIDTH);
-    return this.cuckooTable;
+    this.colorCuckooTable = new CuckooTableVec3(CUSTOM_COLORS_TEXTURE_WIDTH);
+    return this.colorCuckooTable;
   }
 
   listenToCustomSegmentColors() {
     let prevSegments: SegmentMap = new DiffableMap();
+    const clear = () => {
+      const cuckoo = this.getCustomColorCuckooTable();
+      prevSegments = new DiffableMap();
+      cuckoo.clear();
+    };
+    const ignoreCustomColors = () => {
+      throttledShowTooManyCustomColorsWarning();
+      clear();
+    };
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
-          const cuckoo = this.getCustomColorCuckooTable();
-          for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
-            if (
-              updateAction.name === "updateSegment" ||
-              updateAction.name === "createSegment" ||
-              updateAction.name === "deleteSegment"
-            ) {
-              const { id } = updateAction.value;
-              const color = "color" in updateAction.value ? updateAction.value.color : null;
-              if (color != null) {
-                cuckoo.set(
-                  id,
-                  map3((el) => el * 255, color),
-                );
-              } else {
-                cuckoo.unset(id);
-              }
-            }
-          }
-
-          prevSegments = newSegments;
+          updateToNewSegments(newSegments);
         },
       ),
     );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getHideUnregisteredSegmentsForLayer(storeState, this.name),
+        () => {
+          // Rebuild
+          clear();
+          const newSegments = getSegmentsForLayer(Store.getState(), this.name);
+          updateToNewSegments(newSegments);
+        },
+      ),
+    );
+
+    function extractAdaptedBlueChannel(color: Vector3, isVisible: boolean) {
+      // See the comments on the callee sites for an explanation of this logic.
+      const increment = isVisible ? 1 : 0;
+      return 2 * Math.floor((255 * color[2]) / 2) + increment;
+    }
+
+    const updateToNewSegments = (newSegments: SegmentMap) => {
+      const cuckoo = this.getCustomColorCuckooTable();
+      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
+        Store.getState(),
+        this.name,
+      );
+      for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
+        if (
+          updateAction.name === "updateSegment" ||
+          updateAction.name === "createSegment" ||
+          updateAction.name === "deleteSegment" ||
+          updateAction.name === "updateSegmentVisibility"
+        ) {
+          const { id } = updateAction.value;
+          const newSegment = newSegments.getNullable(id);
+          const isVisible = newSegment?.isVisible ?? !hideUnregisteredSegments;
+          const color = newSegment?.color;
+
+          if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {
+            ignoreCustomColors();
+            return;
+          }
+
+          /*
+           * For each segment, we have to take care that it is
+           * rendered with the correct color.
+           * In general, segments only need to be added to the cuckoo table,
+           * if they have a custom color and/or a custom visibility.
+           * If they have a custom visibility, but not a custom color,
+           * [0, 0, 0] is used as a special value for that.
+           * If they have a custom color, the visibility is additionally encoded
+           * in the blue channel of the RGB value. See below for details.
+           */
+          try {
+            if (!isVisible) {
+              if (color == null) {
+                if (hideUnregisteredSegments) {
+                  // Remove from cuckoo, because the rendering defaults to
+                  // hiding unregistered segments.
+                  cuckoo.unset(id);
+                } else {
+                  // Explicitly set to [0, 0, 0] because it should be invisible
+                  // (default color is chosen by shader on hover).
+                  // [0, 0, 0] encodes that this segment is only listed so that
+                  // the hideUnregisteredSegments behavior does not apply for it.
+                  // No actual color is encoded so that the default color is used.
+                  cuckoo.set(id, [0, 0, 0]);
+                }
+              } else {
+                // The segment has a special color. Even though, the segment should
+                // be invisible, the shader should still be able to render the segment
+                // when it's hovered. Therefore, we encode both the actual color and the
+                // invisibility state within the color attribute.
+                // This is done by effectively halving the precision of the blue channel.
+                // All even blue values encode "invisible". Odd values encode "visible".
+                if (V3.equals(color, [0, 0, 0])) {
+                  // If the user provided [0, 0, 0] as the segment's color, we have to take
+                  // care so that this does not get interpreted as "use the default color".
+                  // For that reason, we cast that color value to [0, 0, 2].
+                  cuckoo.set(id, [0, 0, 2]);
+                } else {
+                  const blueChannel = extractAdaptedBlueChannel(color, false);
+                  cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                }
+              }
+            } else if (color != null) {
+              // The segment should be visible and it has a custom color.
+              // We employ the same trick as above to encode color and visibility.
+              // The special value of [0, 0, 0] won't be used here ever, because
+              // of the + 1.
+              const blueChannel = extractAdaptedBlueChannel(color, true);
+              cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+            } else {
+              // The segment should be visible and no custom color exists for it.
+              if (hideUnregisteredSegments) {
+                // Explicitly set to [0, 0, 0] because it should be visible
+                // (default color is chosen by shader).
+                // [0, 0, 0] encodes that this segment is only listed so that
+                // the hideUnregisteredSegments behavior does not apply for it.
+                // No actual color is encoded so that the default color is used.
+                cuckoo.set(id, [0, 0, 0]);
+              } else {
+                // Remove from cuckoo, because the rendering defaults to
+                // showing unregistered segments.
+                cuckoo.unset(id);
+              }
+            }
+          } catch {
+            ignoreCustomColors();
+            return;
+          }
+        }
+      }
+
+      prevSegments = newSegments;
+    };
   }
 }
+function showTooManyCustomColorsWarning() {
+  Toast.warning(
+    "There are too many segments with custom colors/visibilities. Default rendering will be used for now.",
+  );
+}
+
+const throttledShowTooManyCustomColorsWarning = _.throttle(showTooManyCustomColorsWarning, 5000, {
+  leading: true,
+});

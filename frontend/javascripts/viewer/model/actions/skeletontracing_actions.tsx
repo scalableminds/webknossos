@@ -245,7 +245,7 @@ export const deleteEdgeAction = (
   }) as const;
 
 export const setActiveNodeAction = (
-  nodeId: number,
+  nodeId: number | null,
   suppressAnimation: boolean = false,
   suppressCentering: boolean = false,
 ) =>

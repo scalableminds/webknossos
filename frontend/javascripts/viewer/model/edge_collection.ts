@@ -89,7 +89,7 @@ export default class EdgeCollection implements NotEnumerableByObject {
   }
 
   map<T>(fn: (value: Edge) => T): Array<T> {
-    return this.asArray().map(fn);
+    return this.toArray().map(fn);
   }
 
   *all(): Generator<Edge, void, void> {
@@ -100,7 +100,7 @@ export default class EdgeCollection implements NotEnumerableByObject {
     }
   }
 
-  asArray(): Edge[] {
+  toArray(): Edge[] {
     return Array.from(this.all());
   }
 

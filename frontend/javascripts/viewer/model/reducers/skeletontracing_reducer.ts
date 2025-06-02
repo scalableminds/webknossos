@@ -6,7 +6,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
-import Constants, { TreeTypeEnum } from "viewer/constants";
+import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
   findTreeByNodeId,
@@ -36,6 +36,7 @@ import {
   deleteNode,
   deleteTrees,
   ensureTreeNames,
+  getMaximumNodeId,
   getOrCreateTree,
   mergeTrees,
   removeMissingGroupsFromTrees,
@@ -69,9 +70,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     let activeNodeId = userState?.activeNodeId ?? action.tracing.activeNodeId;
 
     const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
-    let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
-
-    cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
+    const cachedMaxNodeId = getMaximumNodeId(trees);
 
     let activeTreeId = null;
 
@@ -151,6 +150,27 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
   switch (action.type) {
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
+
+      console.log("SET_ACTIVE_NODE", nodeId);
+
+      if (nodeId == null) {
+        return update(state, {
+          annotation: {
+            skeleton: {
+              activeNodeId: {
+                $set: null,
+              },
+              activeTreeId: {
+                $set: null,
+              },
+              activeGroupId: {
+                $set: null,
+              },
+            },
+          },
+        });
+      }
+
       const tree = findTreeByNodeId(skeletonTracing.trees, nodeId);
       if (tree) {
         return update(state, {

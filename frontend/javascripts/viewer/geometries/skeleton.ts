@@ -347,6 +347,7 @@ class Skeleton {
     );
 
     for (const update of diff) {
+      console.log("Skeleton.ts: Applying", update.name);
       switch (update.name) {
         case "createNode": {
           const { treeId, id: nodeId } = update.value;

@@ -591,11 +591,14 @@ function* watchForSaveConflicts(): Saga<never> {
 
       const { url: tracingStoreUrl } = yield* select((state) => state.annotation.tracingStore);
 
+      // The order is ascending in the version number ([v_n, v_(n+1), ...]).
       const newerActions = yield* call(
         getUpdateActionLog,
         tracingStoreUrl,
         annotationId,
         versionOnClient + 1,
+        undefined,
+        true,
       );
 
       if (newerActions.length !== newerVersionCount) {
@@ -687,6 +690,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
   }
   for (const actionBatch of newerActions) {
     for (const action of actionBatch.value) {
+      console.log("incorporating", action.name);
       switch (action.name) {
         /////////////
         // Updates to user-specific state can be ignored:
@@ -716,6 +720,10 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "createNode":
         case "createEdge":
         case "updateNode":
+        case "moveTreeComponent":
+        case "deleteTree":
+        case "deleteEdge":
+        case "deleteNode":
         // Skeleton User Bounding Boxes
         case "addUserBoundingBoxInSkeletonTracing":
         case "updateUserBoundingBoxInSkeletonTracing":
@@ -840,12 +848,8 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         // Skeleton
         case "updateTreeEdgesVisibility":
         case "updateTreeGroups":
-        case "deleteEdge":
-        case "deleteNode":
-        case "deleteTree":
-        case "moveTreeComponent":
-
         case "mergeTree": // todop: this action is never used? legacy
+
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
         case "updateSkeletonTracing":

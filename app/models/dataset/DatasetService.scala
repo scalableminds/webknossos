@@ -319,6 +319,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                  adminViewConfiguration,
                                  coordinateTransformations,
                                  additionalAxes,
+                                 attachmentsOpt,
                                  _,
                                  numChannels,
                                  dataFormat,
@@ -330,50 +331,62 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                     throw new NotImplementedError(
                       "WKW data format not supported in this context, only datasets with MagLocators are supported")
                   case DataFormat.neuroglancerPrecomputed =>
-                    PrecomputedDataLayer(name,
-                                         boundingBox,
-                                         category,
-                                         elementClass,
-                                         mags,
-                                         defaultViewConfiguration,
-                                         adminViewConfiguration,
-                                         coordinateTransformations,
-                                         numChannels,
-                                         additionalAxes)
+                    PrecomputedDataLayer(
+                      name,
+                      boundingBox,
+                      category,
+                      elementClass,
+                      mags,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                      attachmentsOpt
+                    )
                   case DataFormat.n5 =>
-                    N5DataLayer(name,
-                                category,
-                                boundingBox,
-                                elementClass,
-                                mags,
-                                defaultViewConfiguration,
-                                adminViewConfiguration,
-                                coordinateTransformations,
-                                numChannels,
-                                additionalAxes)
+                    N5DataLayer(
+                      name,
+                      category,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                      attachmentsOpt
+                    )
                   case DataFormat.zarr =>
-                    ZarrDataLayer(name,
-                                  category,
-                                  boundingBox,
-                                  elementClass,
-                                  mags,
-                                  defaultViewConfiguration,
-                                  adminViewConfiguration,
-                                  coordinateTransformations,
-                                  numChannels,
-                                  additionalAxes,
-                                  df)
+                    ZarrDataLayer(
+                      name,
+                      category,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                      attachmentsOpt,
+                      df
+                    )
                   case DataFormat.zarr3 =>
-                    Zarr3DataLayer(name,
-                                   category,
-                                   boundingBox,
-                                   elementClass,
-                                   mags,
-                                   defaultViewConfiguration,
-                                   adminViewConfiguration,
-                                   coordinateTransformations,
-                                   numChannels,
-                                   additionalAxes)
+                    Zarr3DataLayer(
+                      name,
+                      category,
+                      boundingBox,
+                      elementClass,
+                      mags,
+                      defaultViewConfiguration,
+                      adminViewConfiguration,
+                      coordinateTransformations,
+                      numChannels,
+                      additionalAxes,
+                      attachmentsOpt,
+                    )
                 }
               case None => ???
             }
@@ -388,6 +401,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                          adminViewConfiguration,
                                          coordinateTransformations,
                                          additionalAxes,
+                                         attachmentsOpt,
                                          _,
                                          numChannels,
                                          dataFormat,
@@ -411,6 +425,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                       coordinateTransformations,
                       numChannels,
                       additionalAxes,
+                      attachmentsOpt
                     )
                   case DataFormat.n5 =>
                     N5SegmentationLayer(
@@ -424,7 +439,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                       adminViewConfiguration,
                       coordinateTransformations,
                       numChannels,
-                      additionalAxes
+                      additionalAxes,
+                      attachmentsOpt
                     )
                   case DataFormat.zarr =>
                     ZarrSegmentationLayer(
@@ -439,6 +455,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                       coordinateTransformations,
                       numChannels,
                       additionalAxes,
+                      attachmentsOpt,
                       df
                     )
                   case DataFormat.zarr3 =>
@@ -453,7 +470,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                       adminViewConfiguration,
                       coordinateTransformations,
                       numChannels,
-                      additionalAxes
+                      additionalAxes,
+                      attachmentsOpt
                     )
                 }
               case None => ???

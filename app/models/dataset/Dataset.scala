@@ -6,16 +6,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, datasource}
@@ -30,11 +20,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
   DataFormat,
+  DatasetLayerAttachments => AttachmentWrapper,
   DataSourceId,
   ElementClass,
-  SegmentationLayerLike,
   LayerAttachment,
+  LayerAttachmentDataFormat,
   LayerAttachmentType,
+  SegmentationLayerLike,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -54,6 +46,7 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
+import java.net.URI
 import scala.concurrent.ExecutionContext
 
 case class Dataset(_id: ObjectId,
@@ -905,6 +898,9 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
       additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
+      attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
+      attachmentsOpt = if (attachments.isEmpty) None else Some(attachments)
+
       dataFormat = row.dataformat.flatMap(df => DataFormat.fromString(df))
     } yield {
       category match {
@@ -924,7 +920,8 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               coordinateTransformationsOpt,
               additionalAxesOpt,
               numChannels = row.numchannels,
-              dataFormat = dataFormat
+              dataFormat = dataFormat,
+              attachments = attachmentsOpt
             ))
         case Category.color =>
           Fox.successful(
@@ -939,7 +936,8 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               coordinateTransformationsOpt,
               additionalAxesOpt,
               numChannels = row.numchannels,
-              dataFormat = dataFormat
+              dataFormat = dataFormat,
+              attachments = attachmentsOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -1058,6 +1056,39 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
+
+  def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
+    for {
+      dataFormat <- LayerAttachmentDataFormat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
+      uri = new URI(row.path)
+    } yield LayerAttachment(row.name, uri, dataFormat)
+
+  def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
+    for {
+      meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(parseRow)
+      agglomerateFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.agglomerate.toString))(
+        parseRow)
+      connectomeFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.connectome.toString))(parseRow)
+      segmentIndexFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.segmentIndex.toString))(
+        parseRow)
+      cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(parseRow)
+    } yield
+      AttachmentWrapper(
+        agglomerates = agglomerateFiles,
+        connectomes = connectomeFiles,
+        segmentIndex = segmentIndexFiles.headOption,
+        meshes = meshFiles,
+        cumsum = cumsumFiles.headOption
+      )
+
+  def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
+    for {
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
+                FROM webknossos.dataset_layer_attachments
+                WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
+      attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
+    } yield attachments
+
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
       q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)

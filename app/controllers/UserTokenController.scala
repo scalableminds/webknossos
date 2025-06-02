@@ -183,9 +183,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       } yield UserAccessAnswer(isAllowed)
 
     mode match {
-      case AccessMode.read => tryRead
+      case AccessMode.read  => tryRead
       case AccessMode.write => tryWrite
-      case _               => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
+      case _                => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
     }
   }
 

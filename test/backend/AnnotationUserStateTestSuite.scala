@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing
+import com.scalableminds.webknossos.datastore.idToBool.{Id32ToBool, Id64ToBool}
 import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import org.scalatestplus.play.PlaySpec
@@ -11,17 +12,13 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
     userStates = Seq(
       SkeletonTracing.SkeletonUserStateProto(
         userId = "userA",
-        treeIds = Seq(1),
-        treeVisibilities = Seq(false),
-        treeGroupIds = Seq(1),
-        treeGroupExpandedStates = Seq(true),
+        treeVisibilities = Seq(Id32ToBool(1, value = false)),
+        treeGroupExpandedStates = Seq(Id32ToBool(1, value = true)),
         activeNodeId = Some(5)
       ),
       SkeletonTracing.SkeletonUserStateProto(
         userId = "userB",
-        treeIds = Seq(1, 2),
-        treeVisibilities = Seq(true, true),
-        treeGroupIds = Seq.empty,
+        treeVisibilities = Seq(Id32ToBool(1, value = true), Id32ToBool(2, value = true)),
         treeGroupExpandedStates = Seq.empty,
         activeNodeId = Some(2)
       )
@@ -32,30 +29,23 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
     "be rendered into new skeleton user state correctly for userA (sparse user state present for them)" in {
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userA", "userB")
-      assert(renderedUserState.treeIds == Seq(1, 2))
-      assert(renderedUserState.treeVisibilities == Seq(false, true))
+      assert(renderedUserState.treeVisibilities == Seq(Id32ToBool(1, false), Id32ToBool(2, true)))
       assert(renderedUserState.activeNodeId == Some(5))
-      assert(renderedUserState.treeGroupIds == Seq(1))
-      assert(renderedUserState.treeGroupExpandedStates == Seq(true))
+      assert(renderedUserState.treeGroupExpandedStates == Seq(Id32ToBool(1, true)))
     }
 
     "be rendered into new skeleton user state correctly for userB (owner)" in {
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userB", "userB")
-      assert(renderedUserState.treeIds == Seq(1, 2))
-      assert(renderedUserState.treeVisibilities == Seq(true, true))
-      assert(renderedUserState.activeNodeId == Some(2))
-      assert(renderedUserState.treeGroupIds == Seq.empty)
+      assert(renderedUserState.treeVisibilities == Seq(Id32ToBool(1, true), Id32ToBool(2, true)))
       assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
     }
 
     "be rendered into new skeleton user state correctly for userC (no user state present for them)" in {
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userC", "userB")
-      assert(renderedUserState.treeIds == Seq(1, 2))
-      assert(renderedUserState.treeVisibilities == Seq(true, true))
+      assert(renderedUserState.treeVisibilities == Seq(Id32ToBool(1, true), Id32ToBool(2, true)))
       assert(renderedUserState.activeNodeId == Some(2))
-      assert(renderedUserState.treeGroupIds == Seq.empty)
       assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
     }
 
@@ -67,19 +57,15 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
         VolumeTracingDefaults
           .emptyUserState("userA")
           .copy(
-            segmentIds = Seq(1),
-            segmentVisibilities = Seq(true),
-            segmentGroupIds = Seq(1),
-            segmentGroupExpandedStates = Seq(true)
+            segmentVisibilities = Seq(Id64ToBool(1L, true)),
+            segmentGroupExpandedStates = Seq(Id32ToBool(1, true))
           ))
       val tracingBUserStates = Seq(
         VolumeTracingDefaults
           .emptyUserState("userA")
           .copy(
-            segmentIds = Seq(1),
-            segmentVisibilities = Seq(false),
-            segmentGroupIds = Seq(1),
-            segmentGroupExpandedStates = Seq(false)
+            segmentVisibilities = Seq(Id64ToBool(1L, false)),
+            segmentGroupExpandedStates = Seq(Id32ToBool(1, false))
           ))
 
       val segmentIdMapB = Map((1L, 2L))
@@ -93,12 +79,9 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
         mergedUserStates == Seq(
           VolumeTracingDefaults
             .emptyUserState("userA")
-            .copy(
-              segmentIds = Seq(1L, 2L),
-              segmentVisibilities = Seq(true, false),
-              segmentGroupIds = Seq(6, 1),
-              segmentGroupExpandedStates = Seq(true, false),
-            )))
+            .copy(segmentVisibilities = Seq(Id64ToBool(1, true), Id64ToBool(2L, false)),
+                  segmentGroupExpandedStates = Seq(Id32ToBool(6, true), Id32ToBool(1, false)))
+        ))
     }
   }
 }

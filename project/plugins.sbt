@@ -2,7 +2,7 @@
 addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.7")
 
 // buildinfo routes
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.0")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
 // protocol buffers
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
@@ -11,7 +11,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.7")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.4")
 
 // scala linter
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.12")
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.13")
 
 // check dependencies against published vulnerabilities with sbt dependencyCheck
 addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "5.1.0")

@@ -88,6 +88,9 @@ object TreeUtils {
       }
       .toMap
 
+  // When merging two skeletons, the node ids of skeleton A are remapped by adding this offset
+  // to keep everything unique.
+  // If the existing nodes of A don’t start at 0, their start is subtracted, densifying the ids.
   private def calculateNodeOffset(treesA: Seq[Tree], treesB: Seq[Tree]) =
     if (treesB.isEmpty)
       0

@@ -143,9 +143,9 @@ case class UpdateActiveSegmentIdVolumeAction(activeSegmentId: Long,
   override def applyOnUserState(tracing: VolumeTracing,
                                 actionUserId: String,
                                 existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
-    existingUserStateOpt.map { existingUserState =>
-      existingUserState.copy(activeSegmentId = Some(activeSegmentId))
-    }.getOrElse(VolumeTracingDefaults.emptyUserState(actionUserId).copy(activeSegmentId = Some(activeSegmentId)))
+    existingUserStateOpt
+      .getOrElse(VolumeTracingDefaults.emptyUserState(actionUserId))
+      .copy(activeSegmentId = Some(activeSegmentId))
 }
 
 case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
@@ -256,7 +256,7 @@ case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int],
+case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int], // No bbox id → update all bboxes!
                                                        isVisible: Boolean,
                                                        actionTracingId: String,
                                                        actionTimestamp: Option[Long] = None,
@@ -571,7 +571,7 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
+case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long], // No group id → update all segments!
                                                     isVisible: Boolean,
                                                     actionTracingId: String,
                                                     actionTimestamp: Option[Long] = None,

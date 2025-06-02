@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   SplitAgglomerateUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{UpdateUserBoundingBoxVolumeAction, _}
+import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import play.api.libs.json._
 
 trait UpdateAction {

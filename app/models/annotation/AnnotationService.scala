@@ -533,7 +533,7 @@ class AnnotationService @Inject()(
                                                                                               volumeTracingIdOpt,
                                                                                               skeletonTracingOpt,
                                                                                               volumeTracingOpt)
-            // user state is not used in compound download, so the annotationProto can be a dummy one.
+            // user state is not used in compound download, so the annotationProto can be a dummy one and requestingUser can be None.
             annotationProto = AnnotationProto("", 0L, Seq.empty, 0L)
             nml = nmlWriter.toNmlStream(
               name,

@@ -28,7 +28,7 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
-    userStateBoundingBoxVisibilities: Map[String, (Seq[Int], Seq[Boolean])] // UserId → (bboxIds bboxVisibleStates)
+    userStateBoundingBoxVisibilities: Map[String, (Seq[Int], Seq[Boolean])] // UserId → (bboxIds, bboxVisibleStates)
 )
 
 trait AnnotationLayerPrecedence extends FoxImplicits {

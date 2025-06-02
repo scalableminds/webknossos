@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -121,8 +122,8 @@ case class UpdateTdCameraAnnotationAction(actionTimestamp: Option[Long] = None,
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateCameraAnnotationAction(editPosition: com.scalableminds.util.geometry.Vec3Int,
-                                        editRotation: com.scalableminds.util.geometry.Vec3Double,
+case class UpdateCameraAnnotationAction(editPosition: Vec3Int,
+                                        editRotation: Vec3Double,
                                         zoomLevel: Double,
                                         editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                         actionTimestamp: Option[Long] = None,

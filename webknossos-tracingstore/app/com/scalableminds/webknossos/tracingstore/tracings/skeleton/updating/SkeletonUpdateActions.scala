@@ -36,9 +36,9 @@ trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateU
     case Some(actionUserId) =>
       val userStateAlreadyExists = tracing.userStates.exists(state => actionUserId == state.userId)
       if (userStateAlreadyExists) {
-        tracing.copy(userStates = tracing.userStates.map {
-          case userState if actionUserId == userState.userId => applyOnUserState(tracing, actionUserId, Some(userState))
-          case userState                                     => userState
+        tracing.copy(userStates = tracing.userStates.map { userState =>
+          if (actionUserId == userState.userId) applyOnUserState(tracing, actionUserId, Some(userState))
+          else userState
         })
       } else {
         tracing.copy(userStates = tracing.userStates :+ applyOnUserState(tracing, actionUserId, None))
@@ -561,7 +561,7 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
+case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int], // No group id → update all trees!
                                                    isVisible: Boolean,
                                                    actionTracingId: String,
                                                    actionTimestamp: Option[Long] = None,
@@ -728,7 +728,7 @@ case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int],
+case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int], // No bbox id → update all bboxes!
                                                          isVisible: Boolean,
                                                          actionTracingId: String,
                                                          actionTimestamp: Option[Long] = None,

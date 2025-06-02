@@ -49,6 +49,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved efficiency of saving bounding box related changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)
 - Fixed regression which caused the import of trees (also of agglomerate skeletons) to crash if the annotation was not empty. [#8656](https://github.com/scalableminds/webknossos/pull/8656)
 - Fixed that one could activate unavailable tools or toolkits in read-only mode. [#8658](https://github.com/scalableminds/webknossos/pull/8658)
+- When deleting a dataset, its caches are cleared, so that if a new dataset by the same name is uploaded afterwards, only new data is loaded. [#8638](https://github.com/scalableminds/webknossos/pull/8638)
 
 ### Removed
 - The old "Selective Segment Visibility" feature that allowed to only see the active and the hovered segment was removed. From now on the visibility of segments can be controlled with checkboxes in the segment list and with the "Hide unlisted segments" toggle in the layer settings. [#8546](https://github.com/scalableminds/webknossos/pull/8546)

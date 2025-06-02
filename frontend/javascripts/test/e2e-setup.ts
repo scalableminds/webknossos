@@ -53,8 +53,6 @@ const volatileKeys: Array<string | number | symbol> = [
   "tracingTime",
   "tracingId",
   "sortingKey",
-  "path",
-  "realPath",
 ];
 
 /**

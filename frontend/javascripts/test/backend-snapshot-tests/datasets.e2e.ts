@@ -147,10 +147,20 @@ describe("Dataset API (E2E)", () => {
     // Dataset paths are absolute, we will relativize them here to make the snapshot stable
     const makeRelative = (path: string) =>
       path.split("Organization_X")[1] ? "Organization_X" + path.split("Organization_X")[1] : path;
-    // @ts-ignore
-    pathsJson.forEach((pathInfo) =>
-      // @ts-ignore
-      pathInfo.magLinkInfos.forEach((magLink) => {
+
+    interface MagLink {
+      mag: {
+        path: string,
+        realPath: string;
+      }
+    }
+
+    interface PathInfo {
+      magLinkInfos: MagLink[];
+    }
+
+    pathsJson.forEach((pathInfo: PathInfo) =>
+      pathInfo.magLinkInfos.forEach((magLink: MagLink) => {
         magLink.mag.path = makeRelative(magLink.mag.path);
         magLink.mag.realPath = makeRelative(magLink.mag.realPath);
       }),

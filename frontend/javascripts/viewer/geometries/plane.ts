@@ -38,14 +38,15 @@ class Plane {
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  worldScaleInverse: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Array<THREE.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
+  // baseRotation is the base rotation the plane has in an unrotated scene. It will be applied additional to the flycams rotation.
+  // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
   baseRotation: THREE.Euler;
-  storePropertyUnsubscribes: Array<() => void> = [];
+  storePropertyUnsubscribers: Array<() => void> = [];
   datasetScaleFactor: Vector3 = [1, 1, 1];
 
   // Properties are only created here to avoid new creating objects for each setRotation call.
@@ -60,8 +61,6 @@ class Plane {
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
-    this.worldScaleInverse = new THREE.Vector3(...baseVoxelFactors);
     this.baseRotation = new THREE.Euler(0, 0, 0);
     this.bindToEvents();
     this.createMeshes();
@@ -154,11 +153,7 @@ class Plane {
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
     // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
-    const scaleVector: Vector3 = [
-      xFactor * this.datasetScaleFactor[0],
-      yFactor * this.datasetScaleFactor[1],
-      1 * this.datasetScaleFactor[2],
-    ];
+    const scaleVector: Vector3 = V3.multiply([xFactor, yFactor, 1], this.datasetScaleFactor);
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
@@ -182,7 +177,8 @@ class Plane {
     originalPosition: Vector3,
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
-    // As the world scaling by the dataset scale factor is inverted by the scene group
+    // The world scaling by the dataset scale factor is inverted by the scene group
+
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
@@ -209,12 +205,12 @@ class Plane {
 
   destroy() {
     this.materialFactory.destroy();
-    this.storePropertyUnsubscribes.forEach((f) => f());
-    this.storePropertyUnsubscribes = [];
+    this.storePropertyUnsubscribers.forEach((f) => f());
+    this.storePropertyUnsubscribers = [];
   }
 
   bindToEvents(): void {
-    this.storePropertyUnsubscribes = [
+    this.storePropertyUnsubscribers = [
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.scale.factor,
         (scaleFactor) => (this.datasetScaleFactor = scaleFactor),

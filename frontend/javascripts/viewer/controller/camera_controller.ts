@@ -66,7 +66,7 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
 class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
-  // Properties are only created here to avoid new creating objects for each update call.
+  // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new THREE.Euler();
   flycamRotationMatrix = new THREE.Matrix4();
   baseRotationMatrix = new THREE.Matrix4();
@@ -158,15 +158,27 @@ class CameraController extends React.PureComponent<Props> {
 
   update(): void {
     const state = Store.getState();
-    const gPos = getPosition(state.flycam);
+    const globalPosition = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cPos = voxelToUnit(state.dataset.dataSource.scale, gPos);
-    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
+    const cameraPosition = voxelToUnit(state.dataset.dataSource.scale, globalPosition);
+    this.props.cameras[OrthoViews.PLANE_XY].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
+    this.props.cameras[OrthoViews.PLANE_YZ].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
+    this.props.cameras[OrthoViews.PLANE_XZ].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
     // Now set rotation for all cameras respecting the base rotation of each camera.
-    const gRot = getRotationInRadian(state.flycam);
-    this.flycamRotationEuler.set(gRot[0], gRot[1], gRot[2], "ZYX");
+    const globalRotation = getRotationInRadian(state.flycam);
+    this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
     this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
     for (const viewport of OrthoViewValuesWithoutTDView) {
       this.baseRotationMatrix.makeRotationFromEuler(OrthoBaseRotations[viewport]);

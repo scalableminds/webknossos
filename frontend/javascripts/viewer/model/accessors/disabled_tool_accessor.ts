@@ -42,7 +42,7 @@ const disabledSkeletonExplanation =
   "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
 
 const rotationActiveDisabledExplanation =
-  "The tools is disabled because you are currently viewing the dataset rotated. Please reset the rotation to [0,0,0] to be able to use this tool.";
+  "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,

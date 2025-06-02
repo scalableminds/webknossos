@@ -388,9 +388,7 @@ const V3 = {
     return a[0] * a[1] * a[2];
   },
 
-  multiply(a: Vector3, b: Vector3): Vector3 {
-    return [a[0] * b[0], a[1] * b[1], a[2] * b[2]];
-  },
+  multiply: scale3,
 };
 
 const V4 = {

@@ -415,7 +415,6 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 function Infos() {
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
-  const activeViewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useWkSelector((state) =>
@@ -432,10 +431,9 @@ function Infos() {
   );
   const onChangeActiveNodeId = useCallback(
     (id: number) => {
-      const suppressRotation = activeViewMode === "orthogonal";
-      dispatch(setActiveNodeAction(id, false, false, suppressRotation));
+      dispatch(setActiveNodeAction(id));
     },
-    [dispatch, activeViewMode],
+    [dispatch],
   );
   const onChangeActiveTreeId = useCallback(
     (id: number) => dispatch(setActiveTreeAction(id)),

@@ -98,37 +98,37 @@ export type GlobalPosition = { rounded: Vector3; floating: Vector3 };
 const flycamRotationEuler = new THREE.Euler();
 const flycamRotationMatrix = new THREE.Matrix4();
 const flycamPositionMatrix = new THREE.Matrix4();
-const rotatedPositionVector = new THREE.Vector3();
+const rotatedDiff = new THREE.Vector3();
 const planeRationVector = new THREE.Vector3();
 
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
-  planeId?: OrthoView | null | undefined,
+  planeIdOpt?: OrthoView | null | undefined,
 ): GlobalPosition | null | undefined {
   let roundedPosition: Vector3, floatingPosition: Vector3;
-  const planeIdFilled = planeId || state.viewModeData.plane.activeViewport;
+  const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const { width, height } = getInputCatcherRect(state, planeIdFilled);
+  const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
-  const diffX = clickPos.x === 0 ? 0 : (width / 2 - clickPos.x) * state.flycam.zoomStep;
-  const diffY = clickPos.y === 0 ? 0 : (height / 2 - clickPos.y) * state.flycam.zoomStep;
-  const positionInPlane = [diffX, diffY, 0] as Vector3;
-  const positionPlaneDefaultRotation = Dimensions.transDim(positionInPlane, planeIdFilled);
+  const diffU = (width / 2 - clickPos.x) * state.flycam.zoomStep;
+  const diffV = (height / 2 - clickPos.y) * state.flycam.zoomStep;
+  const diffUvw = [diffU, diffV, 0] as Vector3;
+  const diffXyz = Dimensions.transDim(diffUvw, planeId);
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
   flycamPositionMatrix.makeTranslation(...curGlobalPos);
-  rotatedPositionVector.set(...positionPlaneDefaultRotation).applyMatrix4(flycamRotationMatrix);
-  const scaledRotatedPosition = rotatedPositionVector
+  rotatedDiff.set(...diffXyz).applyMatrix4(flycamRotationMatrix);
+  const scaledRotatedPosition = rotatedDiff
     .multiply(planeRationVector.set(...planeRatio))
     .multiplyScalar(-1);
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
 
-  switch (planeIdFilled) {
+  switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
         Math.round(globalFloatingPosition.x),

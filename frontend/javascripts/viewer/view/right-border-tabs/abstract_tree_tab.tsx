@@ -11,7 +11,6 @@ import AbstractTreeRenderer from "viewer/view/right-border-tabs/abstract_tree_re
 
 const AbstractTreeTab: React.FC<EmptyObject> = () => {
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
-  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const nodeListRef = useRef<Array<NodeListItem>>([]);
@@ -58,13 +57,12 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
         event.nativeEvent.offsetY,
         nodeListRef.current,
       );
-      const suppressRotation = viewMode === "orthogonal";
 
       if (id != null) {
-        dispatch(setActiveNodeAction(id, false, false, suppressRotation));
+        dispatch(setActiveNodeAction(id));
       }
     },
-    [dispatch, viewMode],
+    [dispatch],
   );
 
   const onClickShow = () => setIsVisible(true);

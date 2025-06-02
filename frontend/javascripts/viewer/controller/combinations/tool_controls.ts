@@ -761,7 +761,7 @@ export class QuickSelectToolController {
         const [h, s, l] = getSegmentColorAsHSLA(state, volumeTracing.activeCellId);
         const activeCellColor = new THREE.Color().setHSL(h, s, l);
         quickSelectGeometry.setColor(activeCellColor);
-        startPos = V3.floor(calculateGlobalPos(state, pos).rounded);
+        startPos = calculateGlobalPos(state, pos).rounded;
         currentPos = startPos;
         isDragging = true;
       },
@@ -795,7 +795,7 @@ export class QuickSelectToolController {
         ) {
           return;
         }
-        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos).rounded);
+        const newCurrentPos = calculateGlobalPos(Store.getState(), pos).rounded;
         if (event.shiftKey) {
           // If shift is held, the rectangle is resized on topLeft and bottomRight
           // so that the center is constant.
@@ -814,7 +814,7 @@ export class QuickSelectToolController {
       },
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         const state = Store.getState();
-        const clickedPos = V3.floor(calculateGlobalPos(state, pos).rounded);
+        const clickedPos = calculateGlobalPos(state, pos).rounded;
         isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
@@ -895,7 +895,6 @@ export class LineMeasurementToolController {
         return;
       }
       const state = Store.getState();
-      // TODOM: Maybe do not make this snap to voxel -> new issue
       const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane).rounded);
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
       Store.dispatch(setLastMeasuredAndViewportPositionAction(newPos, pos));

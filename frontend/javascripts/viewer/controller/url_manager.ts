@@ -289,7 +289,13 @@ class UrlManager {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
+    const flycamRotation = Utils.map3(
+      (e) => Utils.roundTo(e, 2),
+      getRotationInDegrees(state.flycam),
+    );
     const rotation = {
+      // Keep rotation state empty if default to have shorter urlhashes
+      // rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
       rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
     };
     const activeNode = state.annotation.skeleton?.activeNodeId;

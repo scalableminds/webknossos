@@ -254,7 +254,9 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
     const planeGroup = new THREE.Group();
-    _.values(this.planes).forEach((plane) => planeGroup.add(...plane.getMeshes()));
+    for (const plane of _.values(this.planes)) {
+      planeGroup.add(...plane.getMeshes());
+    }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
     planeGroup.scale.copy(
@@ -499,8 +501,8 @@ class SceneController {
     app.vent.emit("rerender");
   }
 
-  setClippingDistance(value: number): void {
-    this.clippingDistance = value;
+  setClippingDistance(valueInUnit: number): void {
+    this.clippingDistance = valueInUnit;
     app.vent.emit("rerender");
   }
 

@@ -290,13 +290,8 @@ class TracingApi {
     suppressCentering?: boolean,
     suppressRotation?: boolean,
   ) {
-    const { annotation, temporaryConfiguration } = Store.getState();
-    assertSkeleton(annotation);
+    assertSkeleton(Store.getState().annotation);
     assertExists(id, "Node id is missing.");
-    if (suppressRotation === undefined) {
-      // Per default disable setting rotation when orthogonal view is active.
-      suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
-    }
     Store.dispatch(setActiveNodeAction(id, suppressAnimation, suppressCentering, suppressRotation));
   }
 
@@ -361,9 +356,11 @@ class TracingApi {
   /**
    * Creates a new node in the current tree. If the active tree is not empty,
    * the node will be connected with an edge to the currently active node.
-   * To keep optional the centering animation of the new node correct,
-   * the position can be passed as {rounded: [x,y,z], floating: [x,y,z]},
-   * where floating is the not rounded more accurate position for a more precise annotation.
+   * To keep the same plane viewing perspective while a rotation is configured,
+   * a not-rounded position of the node is needed for the centering animation to stay in the same viewing slice.
+   * To achieve this the position can be passed as {rounded: [x,y,z], floating: [x,y,z]},
+   * where floating is the not rounded more accurate position for a more precise centering animation.
+   * If no centering animation or rotation is active, passing the floating position is not needed.
    */
   createNode(
     position: Vector3 | GlobalPosition,

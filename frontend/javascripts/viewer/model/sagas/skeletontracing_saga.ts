@@ -107,7 +107,9 @@ function* centerActiveNode(action: Action): Saga<void> {
   const activeNode = getActiveNode(
     yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
-  const suppressRotation = "suppressRotation" in action && action.suppressRotation;
+  const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const suppressRotation =
+    ("suppressRotation" in action && action.suppressRotation) ?? viewMode === "orthogonal";
 
   if (activeNode != null) {
     const activeNodePosition = yield* select((state: WebknossosState) =>

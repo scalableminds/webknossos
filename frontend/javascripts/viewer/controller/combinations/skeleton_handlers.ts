@@ -14,6 +14,7 @@ import {
   getRotationInRadian,
   getRotationOrthoInRadian,
   isMagRestrictionViolated,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
@@ -147,7 +148,7 @@ export function handleOpenContextMenu(
   const state = Store.getState();
   // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
   // only works for the data viewports, but this function is also called for the 3d viewport.
-  const globalPositions = calculateMaybeGlobalPos(state, position);
+  const globalPosition = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
 
@@ -163,7 +164,7 @@ export function handleOpenContextMenu(
           event.pageY,
           nodeId,
           clickedBoundingBoxId,
-          globalPositions?.rounded,
+          globalPosition?.rounded,
           activeViewport,
           meshId,
           meshIntersectionPosition,
@@ -174,7 +175,7 @@ export function handleOpenContextMenu(
   );
 }
 
-// Already defined here at toplevel to avoid object recreation with each call. Make sure to no do anything async between read and writes.
+// Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
 const flycamRotationEuler = new THREE.Euler();
 const flycamRotationMatrix = new THREE.Matrix4();
 const movementVector = new THREE.Vector3();
@@ -202,7 +203,7 @@ export function moveNode(
   const { activeViewport } = state.viewModeData.plane;
   const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const isRotated = V3.equals(flycamRotation, [0, 0, 0]);
+  const isFlycamRotated = isRotated(state.flycam);
 
   flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
   const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
@@ -211,7 +212,7 @@ export function moveNode(
   const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
   const op = (val: number) => {
-    if (useFloat || isRotated) {
+    if (useFloat || isFlycamRotated) {
       return val;
     }
     // Zero diffs should stay zero.
@@ -494,9 +495,7 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const { annotation, temporaryConfiguration } = Store.getState();
-  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
-  const tracing = enforceSkeletonTracing(annotation);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -509,12 +508,7 @@ export function toSubsequentNode(): void {
   ) {
     // navigate to subsequent node in list
     Store.dispatch(
-      setActiveNodeAction(
-        navigationList.list[navigationList.activeIndex + 1],
-        false,
-        false,
-        suppressRotation,
-      ),
+      setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1], false, false),
     );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
@@ -530,16 +524,14 @@ export function toSubsequentNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.push(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
+      Store.dispatch(setActiveNodeAction(nextNodeId));
     }
 
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
 export function toPrecedingNode(): void {
-  const { annotation, temporaryConfiguration } = Store.getState();
-  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
-  const tracing = enforceSkeletonTracing(annotation);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -547,14 +539,7 @@ export function toPrecedingNode(): void {
 
   if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
-    Store.dispatch(
-      setActiveNodeAction(
-        navigationList.list[navigationList.activeIndex - 1],
-        false,
-        false,
-        suppressRotation,
-      ),
-    );
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
@@ -569,7 +554,7 @@ export function toPrecedingNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.unshift(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
+      Store.dispatch(setActiveNodeAction(nextNodeId));
     }
 
     Store.dispatch(updateNavigationListAction(newList, 0));

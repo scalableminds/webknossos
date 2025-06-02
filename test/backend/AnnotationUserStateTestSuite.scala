@@ -1,7 +1,7 @@
 package backend
 
+import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.SkeletonTracing
-import com.scalableminds.webknossos.datastore.idToBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import org.scalatestplus.play.PlaySpec

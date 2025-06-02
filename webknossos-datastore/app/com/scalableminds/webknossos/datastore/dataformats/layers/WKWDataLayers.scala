@@ -36,16 +36,16 @@ trait WKWLayer extends DataLayer {
 }
 
 case class WKWDataLayer(
-                         name: String,
-                         category: Category.Value,
-                         boundingBox: BoundingBox,
-                         wkwResolutions: List[WKWResolution],
-                         elementClass: ElementClass.Value,
-                         defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                         adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                         coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-                         additionalAxes: Option[Seq[AdditionalAxis]] = None,
-                         attachments: Option[DatasetLayerAttachments] = None,
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    wkwResolutions: List[WKWResolution],
+    elementClass: ElementClass.Value,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
 ) extends WKWLayer
 
 object WKWDataLayer {

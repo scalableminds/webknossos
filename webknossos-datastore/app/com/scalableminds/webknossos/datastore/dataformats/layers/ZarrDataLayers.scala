@@ -25,18 +25,18 @@ trait ZarrLayer extends DataLayerWithMagLocators {
 }
 
 case class ZarrDataLayer(
-                          name: String,
-                          category: Category.Value,
-                          boundingBox: BoundingBox,
-                          elementClass: ElementClass.Value,
-                          mags: List[MagLocator],
-                          defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                          adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                          coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-                          override val numChannels: Option[Int] = Some(1),
-                          override val additionalAxes: Option[Seq[AdditionalAxis]],
-                          attachments: Option[DatasetLayerAttachments] = None,
-                          override val dataFormat: DataFormat.Value,
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[MagLocator],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    override val numChannels: Option[Int] = Some(1),
+    override val additionalAxes: Option[Seq[AdditionalAxis]],
+    attachments: Option[DatasetLayerAttachments] = None,
+    override val dataFormat: DataFormat.Value,
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -44,19 +44,19 @@ object ZarrDataLayer {
 }
 
 case class ZarrSegmentationLayer(
-                                  name: String,
-                                  boundingBox: BoundingBox,
-                                  elementClass: ElementClass.Value,
-                                  mags: List[MagLocator],
-                                  largestSegmentId: Option[Long] = None,
-                                  mappings: Option[Set[String]] = None,
-                                  defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                  adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                                  coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-                                  override val numChannels: Option[Int] = Some(1),
-                                  additionalAxes: Option[Seq[AdditionalAxis]] = None,
-                                  attachments: Option[DatasetLayerAttachments] = None,
-                                  override val dataFormat: DataFormat.Value,
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[MagLocator],
+    largestSegmentId: Option[Long] = None,
+    mappings: Option[Set[String]] = None,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    override val numChannels: Option[Int] = Some(1),
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
+    override val dataFormat: DataFormat.Value,
 ) extends SegmentationLayer
     with ZarrLayer
 

@@ -14,17 +14,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   AdditionalAxis,
-  AgglomerateFileInfo,
-  AttachedFile,
   Category,
-  ConnectomeFileInfo,
   CoordinateTransformation,
   CoordinateTransformationType,
-  CumsumFileInfo,
   DataSourceId,
   ElementClass,
-  MeshFileInfo,
-  SegmentIndexFileInfo,
+  LayerAttachment,
+  LayerAttachmentType,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -1020,25 +1016,25 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    def insertQuery(attachment: AttachedFile, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-          VALUES($datasetId, $layerName, ${attachment.path.toString}, $fileType::webknossos.ATTACHMENT_FILE_TYPE,
-          ${attachment.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)""".asUpdate
+    def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT)""".asUpdate
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.attachments match {
         case Some(attachments) =>
           attachments.agglomerates.map { agglomerate =>
-            insertQuery(agglomerate, layer.name, AgglomerateFileInfo.typ)
+            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate.toString)
           } ++ attachments.connectomes.map { connectome =>
-            insertQuery(connectome, layer.name, ConnectomeFileInfo.typ)
+            insertQuery(connectome, layer.name, LayerAttachmentType.connectome.toString)
           } ++ attachments.segmentIndex.map { segmentIndex =>
-            insertQuery(segmentIndex, layer.name, SegmentIndexFileInfo.typ)
+            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex.toString)
           } ++ attachments.meshes.map { mesh =>
-            insertQuery(mesh, layer.name, MeshFileInfo.typ)
+            insertQuery(mesh, layer.name, LayerAttachmentType.mesh.toString)
           } ++ attachments.cumsum.map { cumsumFile =>
-            insertQuery(cumsumFile, layer.name, CumsumFileInfo.typ)
+            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum.toString)
           }
         case None =>
           List.empty

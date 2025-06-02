@@ -345,7 +345,7 @@ class DataSourceService @Inject()(
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
       dataLayer.withAttachments(
-        DatasetAttachments(
+        DatasetLayerAttachments(
           MeshFileInfo.scanForMeshFiles(dataLayerPath),
           AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),

@@ -228,7 +228,7 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
-  def attachments: Option[DatasetAttachments]
+  def attachments: Option[DatasetLayerAttachments]
 
   // Datasets that are not in the WKW format use mags
   def magsOpt: Option[List[MagLocator]] = this match {
@@ -327,23 +327,23 @@ trait DataLayer extends DataLayerLike {
 
   def mags: List[MagLocator]
 
-  def withAttachments(attachments: DatasetAttachments): DataLayer = {
-    def mergeAttachments(existingAttachmentsOpt: Option[DatasetAttachments],
-                         newAttachments: DatasetAttachments): Option[DatasetAttachments] =
+  def withAttachments(attachments: DatasetLayerAttachments): DataLayer = {
+    def mergeAttachments(existingAttachmentsOpt: Option[DatasetLayerAttachments],
+                         newAttachments: DatasetLayerAttachments): Option[DatasetLayerAttachments] =
       existingAttachmentsOpt match {
         case None => Some(newAttachments)
         case Some(existingFiles) =>
           val segmentIndex = newAttachments.segmentIndex.orElse(existingFiles.segmentIndex)
-          val connectome = (newAttachments.connectomes ++ existingFiles.connectomes).distinct
+          val connectome = (newAttachments.connectomes ++ existingFiles.connectomes).distinctBy(_.path)
           val agglomerateFiles =
-            (newAttachments.agglomerates ++ existingFiles.agglomerates).distinct
+            (newAttachments.agglomerates ++ existingFiles.agglomerates).distinctBy(_.path)
           val meshFiles =
-            (newAttachments.meshes ++ existingFiles.meshes).distinct
+            (newAttachments.meshes ++ existingFiles.meshes).distinctBy(_.path)
           val cumsumFile =
             newAttachments.cumsum.orElse(existingFiles.cumsum)
 
           Some(
-            DatasetAttachments(
+            DatasetLayerAttachments(
               meshes = meshFiles,
               agglomerates = agglomerateFiles,
               segmentIndex = segmentIndex,
@@ -522,7 +522,7 @@ case class AbstractDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    attachments: Option[DatasetAttachments] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
@@ -564,7 +564,7 @@ case class AbstractSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    attachments: Option[DatasetAttachments] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,

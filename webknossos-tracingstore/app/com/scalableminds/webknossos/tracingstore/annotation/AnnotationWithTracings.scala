@@ -144,7 +144,8 @@ case class AnnotationWithTracings(
                 editRotation = a.editRotation,
                 zoomLevel = a.zoomLevel,
                 editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
-              ) else userState
+              )
+            else userState
           }))
         } else
           this.copy(

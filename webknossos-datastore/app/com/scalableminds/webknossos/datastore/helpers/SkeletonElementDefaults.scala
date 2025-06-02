@@ -31,11 +31,8 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
     SkeletonUserStateProto(
       userId = userId,
       activeNodeId = None,
-      treeGroupIds = Seq.empty,
       treeGroupExpandedStates = Seq.empty,
-      boundingBoxIds = Seq.empty,
       boundingBoxVisibilities = Seq.empty,
-      treeIds = Seq.empty,
       treeVisibilities = Seq.empty
     )
 }

@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{AnnotationProto, Annot
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
+import com.scalableminds.webknossos.datastore.idToBool.{Id32ToBool, Id64ToBool}
 import com.scalableminds.webknossos.datastore.models.annotation.FetchedAnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.TreeIdMap
@@ -29,6 +30,29 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
       .find(_.userId == requestingUserIdOpt.getOrElse(ownerId))
       .orElse(annotationProto.userStates.find(_.userId == ownerId))
 
+  private def idBoolsToMap(idBoolsOpt: Option[Seq[Id32ToBool]]): Map[Int, Boolean] =
+    idBoolsOpt.map { idBools =>
+      idBools.map { idBool =>
+        (idBool.id, idBool.value)
+      }.toMap
+    }.getOrElse(Map.empty[Int, Boolean])
+
+  private def mapToIdBools(idBoolMap: Map[Int, Boolean]): Seq[Id32ToBool] =
+    idBoolMap.toSeq.map {
+      case (id, value) => Id32ToBool(id, value)
+    }
+
+  private def mapToIdBools(idBoolMap: Map[Long, Boolean]): Seq[Id64ToBool] =
+    idBoolMap.toSeq.map {
+      case (id, value) => Id64ToBool(id, value)
+    }
+
+  private def idBoolsToMap(idBools: Seq[Id64ToBool]): Map[Long, Boolean] = {
+    idBools.map { idBool =>
+      (idBool.id, idBool.value)
+    }
+  }.toMap
+
   private def renderUserStateForTracing(tracing: Either[SkeletonTracing, VolumeTracing],
                                         annotationUserState: Option[AnnotationUserStateProto],
                                         requestingUserId: Option[String],
@@ -36,25 +60,12 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
     case Left(s: SkeletonTracing) =>
       val requestingUserState = requestingUserId.flatMap(u => s.userStates.find(_.userId == u))
       val ownerUserState = s.userStates.find(_.userId == ownerId)
-      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeVisibilityMap: Map[Int, Boolean] =
-        ownerUserState
-          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-          .getOrElse(Map.empty[Int, Boolean])
-      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserTreeVisibilityMap = idBoolsToMap(requestingUserState.map(_.treeVisibilities))
+      val ownerTreeVisibilityMap = idBoolsToMap(ownerUserState.map(_.treeVisibilities))
+      val requestingUserBoundingBoxVisibilityMap = idBoolsToMap(requestingUserState.map(_.boundingBoxVisibilities))
+      val ownerBoundingBoxVisibilityMap = idBoolsToMap(ownerUserState.map(_.boundingBoxVisibilities))
+      val requestingUserTreeGroupExpandedMap = idBoolsToMap(requestingUserState.map(_.treeGroupExpandedStates))
+      val ownerTreeGroupExpandedMap = idBoolsToMap(ownerUserState.map(_.treeGroupExpandedStates))
       Left(
         s.copy(
           editPosition = annotationUserState.map(_.editPosition).getOrElse(s.editPosition),
@@ -146,38 +157,22 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
       ownerUserState.getOrElse(SkeletonTracingDefaults.emptyUserState(requestingUserId))
     else {
       val requestingUserState = s.userStates.find(_.userId == requestingUserId)
-      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeVisibilityMap: Map[Int, Boolean] =
-        ownerUserState
-          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-          .getOrElse(Map.empty[Int, Boolean])
-      val mergedTreeVisibilityMap = (ownerTreeVisibilityMap ++ requestingUserTreeVisibilityMap).toSeq
-      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedBoundingBoxVisibilityMap =
-        (ownerBoundingBoxVisibilityMap ++ requestingUserBoundingBoxVisibilityMap).toSeq
-      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedTreeGroupExpandedMap = (ownerTreeGroupExpandedMap ++ requestingUserTreeGroupExpandedMap).toSeq
+      val requestingUserTreeVisibilityMap = idBoolsToMap(requestingUserState.map(_.treeVisibilities))
+      val ownerTreeVisibilityMap = idBoolsToMap(ownerUserState.map(_.treeVisibilities))
+      val mergedTreeVisibilityMap = ownerTreeVisibilityMap ++ requestingUserTreeVisibilityMap
+      val requestingUserBoundingBoxVisibilityMap = idBoolsToMap(requestingUserState.map(_.boundingBoxVisibilities))
+      val ownerBoundingBoxVisibilityMap = idBoolsToMap(ownerUserState.map(_.boundingBoxVisibilities))
+      val mergedBoundingBoxVisibilityMap = ownerBoundingBoxVisibilityMap ++ requestingUserBoundingBoxVisibilityMap
+      val requestingUserTreeGroupExpandedMap = idBoolsToMap(requestingUserState.map(_.treeGroupExpandedStates))
+      val ownerTreeGroupExpandedMap = idBoolsToMap(ownerUserState.map(_.treeGroupExpandedStates))
+      val mergedTreeGroupExpandedMap = ownerTreeGroupExpandedMap ++ requestingUserTreeGroupExpandedMap
+
       SkeletonUserStateProto(
         userId = requestingUserId,
         activeNodeId = requestingUserState.flatMap(_.activeNodeId).orElse(ownerUserState.flatMap(_.activeNodeId)),
-        treeGroupIds = mergedTreeGroupExpandedMap.map(_._1),
-        treeGroupExpandedStates = mergedTreeGroupExpandedMap.map(_._2),
-        boundingBoxIds = mergedBoundingBoxVisibilityMap.map(_._1),
-        boundingBoxVisibilities = mergedBoundingBoxVisibilityMap.map(_._2),
-        treeIds = mergedTreeVisibilityMap.map(_._1),
-        treeVisibilities = mergedTreeVisibilityMap.map(_._2)
+        treeGroupExpandedStates = mapToIdBools(mergedTreeGroupExpandedMap),
+        boundingBoxVisibilities = mapToIdBools(mergedBoundingBoxVisibilityMap),
+        treeVisibilities = mapToIdBools(mergedTreeVisibilityMap)
       )
     }
   }

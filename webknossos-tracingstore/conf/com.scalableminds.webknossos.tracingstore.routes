@@ -3,6 +3,7 @@
 
 # Health endpoint
 GET         /health                                                                 @com.scalableminds.webknossos.tracingstore.controllers.Application.health
+GET /test @com.scalableminds.webknossos.tracingstore.controllers.Application.testSerialization
 
 # Annotations (concerns AnnotationProto, not annotation info as stored in postgres)
 POST        /annotation/save                                                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.save(annotationId: String)

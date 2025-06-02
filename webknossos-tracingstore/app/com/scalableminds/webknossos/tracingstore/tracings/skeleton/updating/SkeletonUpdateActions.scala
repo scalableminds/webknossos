@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   Tree
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.idToBool.Id32ToBool
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
@@ -26,6 +27,17 @@ trait SkeletonUpdateAction extends LayerUpdateAction {
 }
 
 trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateUpdateAction {
+
+  protected def idBoolsToMutableMap(idBools: Seq[Id32ToBool]): collection.mutable.Map[Int, Boolean] =
+    idBools.map { idBool =>
+      (idBool.id, idBool.value)
+    }.to(collection.mutable.Map)
+
+  protected def mutableMapToIdBools(mutableMap: collection.mutable.Map[Int, Boolean]): Seq[Id32ToBool] =
+    mutableMap.toSeq.map {
+      case (id, value) => Id32ToBool(id, value)
+    }
+
   def actionAuthorId: Option[String]
   def applyOnUserState(tracing: SkeletonTracing,
                        actionUserId: String,
@@ -448,20 +460,16 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
                        actionUserId: String,
                        existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
-      val expandedStateMapMutable: mutable.Map[Int, Boolean] =
-        existingUserState.treeGroupIds.zip(existingUserState.treeGroupExpandedStates).to(collection.mutable.Map)
+      val expandedStateMapMutable = idBoolsToMutableMap(existingUserState.treeGroupExpandedStates)
       groupIds.foreach(expandedStateMapMutable(_) = areExpanded)
-      val (treeGroupIds, expandedStates) = expandedStateMapMutable.unzip
       existingUserState.copy(
-        treeGroupIds = treeGroupIds.toSeq,
-        treeGroupExpandedStates = expandedStates.toSeq
+        treeGroupExpandedStates = mutableMapToIdBools(expandedStateMapMutable)
       )
     }.getOrElse(
       SkeletonTracingDefaults
         .emptyUserState(actionUserId)
         .copy(
-          treeGroupIds = groupIds,
-          treeGroupExpandedStates = List.fill[Boolean](groupIds.length)(areExpanded)
+          treeGroupExpandedStates = groupIds.map(groupId => Id32ToBool(groupId, areExpanded))
         )
     )
 }

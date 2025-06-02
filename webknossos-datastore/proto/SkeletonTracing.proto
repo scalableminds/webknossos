@@ -4,6 +4,7 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 import "MetadataEntry.proto";
+import "idToBool.proto";
 
 message Node {
   required int32 id = 1;
@@ -69,12 +70,9 @@ message TreeGroup {
 message SkeletonUserStateProto {
   required string userId = 1;
   optional int32 activeNodeId = 2;
-  repeated int32 treeGroupIds = 3;
-  repeated bool treeGroupExpandedStates = 4;
-  repeated int32 boundingBoxIds = 5;
-  repeated bool boundingBoxVisibilities = 6;
-  repeated int32 treeIds = 7;
-  repeated bool treeVisibilities = 8;
+  repeated Id32ToBool treeGroupExpandedStates = 3;
+  repeated Id32ToBool boundingBoxVisibilities = 4;
+  repeated Id32ToBool treeVisibilities = 5;
 }
 
 message SkeletonTracing {

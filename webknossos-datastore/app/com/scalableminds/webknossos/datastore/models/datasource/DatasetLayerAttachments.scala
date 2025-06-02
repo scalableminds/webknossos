@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import net.liftweb.common.{Box, Full}
+import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
 import java.net.URI
@@ -45,7 +46,8 @@ object LayerAttachment {
         PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(scanExtension))
       paths match {
         case Full(p) =>
-          p.map(path => LayerAttachment(path.getFileName.toString, path.toUri, dataFormat))
+          p.map(path =>
+            LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString), path.toUri, dataFormat))
         case _ => Seq.empty
       }
     } else {

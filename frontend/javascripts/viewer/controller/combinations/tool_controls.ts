@@ -895,7 +895,7 @@ export class LineMeasurementToolController {
         return;
       }
       const state = Store.getState();
-      const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane).rounded);
+      const newPos = calculateGlobalPos(state, pos, this.initialPlane).floating;
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
       Store.dispatch(setLastMeasuredAndViewportPositionAction(newPos, pos));
     };
@@ -937,7 +937,7 @@ export class LineMeasurementToolController {
       }
       // Set a new measurement point.
       const state = Store.getState();
-      const position = V3.floor(calculateGlobalPos(state, pos, plane).rounded);
+      const position = calculateGlobalPos(state, pos, plane).floating;
       if (!this.isMeasuring) {
         this.initialPlane = plane;
         lineMeasurementGeometry.setStartPoint(position, plane);

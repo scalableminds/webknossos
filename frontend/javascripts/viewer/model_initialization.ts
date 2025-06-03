@@ -695,7 +695,6 @@ function determineDefaultState(
   }
 
   let rotation = datasetConfiguration.rotation;
-  //TODOM: Now even in ortho mode the default rotation is set. Discuss whether thats what we actually want.
   if (someTracing != null) {
     rotation = Utils.point3ToVector3(someTracing.editRotation);
   }

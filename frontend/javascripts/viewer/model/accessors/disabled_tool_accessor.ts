@@ -353,7 +353,6 @@ function getDisabledVolumeInfo(state: WebknossosState) {
   const isVolumeDisabled =
     !hasVolume ||
     !isSegmentationTracingVisible ||
-    isFlycamRotated ||
     // isSegmentationTracingVisibleForMag is false if isZoomInvalidForTracing is true which is why
     // this condition doesn't need to be checked here
     !isSegmentationTracingVisibleForMag ||
@@ -365,7 +364,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
     false;
 
-  return isVolumeDisabled || isEditableMappingActive
+  return isVolumeDisabled || isEditableMappingActive || isFlycamRotated
     ? // All segmentation-related tools are disabled.
       getDisabledInfoWhenVolumeIsDisabled(
         isSegmentationTracingVisible,

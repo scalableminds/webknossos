@@ -643,7 +643,7 @@ function getNodeContextMenuOptions({
               </>
             ),
           },
-          isProofreadingActive && !isRotated
+          isProofreadingActive
             ? {
                 key: "min-cut-node",
                 disabled: !areInSameTree || isTheSameNode,
@@ -655,7 +655,7 @@ function getNodeContextMenuOptions({
               }
             : null,
 
-          isProofreadingActive && !isRotated
+          isProofreadingActive
             ? {
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
@@ -1148,7 +1148,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
               </FastTooltip>
             ),
           },
-          isAgglomerateMappingEnabled.value && !isRotated
+          isAgglomerateMappingEnabled.value
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
@@ -1166,7 +1166,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          isAgglomerateMappingEnabled.value && !isRotated
+          isAgglomerateMappingEnabled.value
             ? {
                 key: "min-cut-agglomerate-at-position",
                 disabled: !isProofreadingActive,
@@ -1186,7 +1186,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          isAgglomerateMappingEnabled.value && !isRotated
+          isAgglomerateMappingEnabled.value
             ? {
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,

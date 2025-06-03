@@ -42,7 +42,7 @@ class ArbitraryView {
   group: THREE.Object3D;
   cameraPosition: Array<number>;
   unsubscribeFunctions: Array<() => void> = [];
-  isOrthoPlaneView = false;
+  isOrthoPlaneView: false = false;
 
   constructor() {
     this.animate = this.animateImpl.bind(this);

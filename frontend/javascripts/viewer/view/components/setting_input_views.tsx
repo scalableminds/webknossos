@@ -88,17 +88,22 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
       defaultValue,
       wheelFactor: stepSize,
       postComponent,
+      spans,
     } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
     // checked more thoroughly against invalid values.
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
+    const maybeCorrectedSpans =
+      postComponent != null && spans.length < 4
+        ? [spans[0] - 1, spans[1] - 1, spans[2] - 1, 3]
+        : spans;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={this.props.spans[0]}>
+        <Col span={maybeCorrectedSpans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={this.props.spans[1]}>
+        <Col span={maybeCorrectedSpans[1]}>
           <Slider
             min={min}
             max={max}
@@ -110,7 +115,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             wheelFactor={stepSize}
           />
         </Col>
-        <Col span={this.props.spans[2]}>
+        <Col span={maybeCorrectedSpans[2]}>
           <InputNumber
             controls={false}
             min={min}
@@ -125,9 +130,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             variant="borderless"
           />
         </Col>
-        {postComponent && this.props.spans.length > 3 ? (
-          <Col span={this.props.spans[3]}>{postComponent}</Col>
-        ) : null}
+        {postComponent ? <Col span={maybeCorrectedSpans[3]}>{postComponent}</Col> : null}
       </Row>
     );
   }

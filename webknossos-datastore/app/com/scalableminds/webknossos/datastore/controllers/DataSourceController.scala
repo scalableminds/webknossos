@@ -22,6 +22,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -438,23 +439,30 @@ class DataSourceController @Inject()(
       }
     }
 
+  private def clearCachesOfDataSource(organizationId: String,
+                                      datasetDirectoryName: String,
+                                      layerName: Option[String]): InboxDataSource = {
+    val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
+      binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
+    val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetDirectoryName, layerName)
+    val reloadedDataSource: InboxDataSource = dataSourceService.dataSourceFromDir(
+      dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
+      organizationId)
+    datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
+    val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
+    clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
+      logger.info(
+        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+    }
+    reloadedDataSource
+  }
+
   def reload(organizationId: String,
              datasetDirectoryName: String,
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
-        val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
-          binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
-        val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetDirectoryName, layerName)
-        val reloadedDataSource = dataSourceService.dataSourceFromDir(
-          dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
-          organizationId)
-        datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
-        val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
-        clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
-          logger.info(
-            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
-        }
+        val reloadedDataSource = clearCachesOfDataSource(organizationId, datasetDirectoryName, layerName)
         for {
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
@@ -465,12 +473,13 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
+        tryo(clearCachesOfDataSource(organizationId, datasetDirectoryName, None))
         for {
           _ <- dataSourceService.deleteOnDisk(
             organizationId,
             datasetDirectoryName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-          _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
+          _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
         } yield Ok
       }
     }

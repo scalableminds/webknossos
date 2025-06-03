@@ -11,7 +11,10 @@ import {
   getTree,
   getTreeAndNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
+import {
+  type AddNewUserBoundingBox,
+  AllUserBoundingBoxActions,
+} from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -136,7 +139,8 @@ export type SkeletonTracingAction =
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
   | LoadAgglomerateSkeletonAction
-  | ApplySkeletonUpdateActionsFromServerAction;
+  | ApplySkeletonUpdateActionsFromServerAction
+  | AddNewUserBoundingBox;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",

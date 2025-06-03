@@ -56,9 +56,10 @@ import scala.util.Try
  */
 case class WebAuthnPublicKeyCredentialCreationOptions(
   authenticatorSelection: WebAuthnCreationOptionsAuthenticatorSelection,
-  challenge: Array[Byte],
+  attestation: String = "none",
+  challenge: String,
   excludeCredentials: Array[WebAuthnCreationOptionsExcludeCredentials],
-  pubKeyParams: Array[WebAuthnCreationOptionsPubKeyParam],
+  pubKeyCredParams: Array[WebAuthnCreationOptionsPubKeyParam],
   timeout: Int, // NOTE: timeout in milliseconds
   rp: WebAuthnCreationOptionsRelyingParty,
   user: WebAuthnCreationOptionsUser
@@ -76,8 +77,9 @@ object WebAuthnPublicKeyCredentialCreationOptions {
  * - `hints` no restrictions.
  */
 case class WebAuthnCreationOptionsAuthenticatorSelection(
-  requiredResidentKey: Boolean,
-  residentKey: String,
+  requireResidentKey: Boolean = true,
+  residentKey: String = "required",
+  userVerification: String = "preferred"
   )
 object WebAuthnCreationOptionsAuthenticatorSelection {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsAuthenticatorSelection] = Json.format[WebAuthnCreationOptionsAuthenticatorSelection]
@@ -90,8 +92,8 @@ object WebAuthnCreationOptionsAuthenticatorSelection {
  * - `transports` not restricted by us.
  */
 case class WebAuthnCreationOptionsExcludeCredentials(
-  id: Array[Byte],
-  `type`: String, // NOTE: must be set to "public-key"
+  id: String,
+  `type`: String = "public-key", // NOTE: must be set to "public-key"
   )
 object WebAuthnCreationOptionsExcludeCredentials {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsExcludeCredentials] = Json.format[WebAuthnCreationOptionsExcludeCredentials]
@@ -102,7 +104,7 @@ object WebAuthnCreationOptionsExcludeCredentials {
  */
 case class WebAuthnCreationOptionsPubKeyParam(
   alg: Int,
-  `type`: String, // NOTE: must be set to "public-key"
+  `type`: String = "public-key", // NOTE: must be set to "public-key"
   )
 object WebAuthnCreationOptionsPubKeyParam {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsPubKeyParam] = Json.format[WebAuthnCreationOptionsPubKeyParam]
@@ -128,7 +130,7 @@ case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
  */
 case class WebAuthnCreationOptionsUser(
   displayName: String,
-  id: Array[Byte],
+  id: String,
   name: String
   )
 object WebAuthnCreationOptionsUser {
@@ -143,7 +145,7 @@ object WebAuthnCreationOptionsUser {
  *  - extensions: Not used
  */
 case class WebAuthnPublicKeyCredentialRequestOptions(
-  challenge: Array[Byte],
+  challenge: String,
   timeout: Option[Long] = None, // In milliseconds
   rpId: Option[String] = None, // Relying party ID
   userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
@@ -152,7 +154,6 @@ case class WebAuthnPublicKeyCredentialRequestOptions(
 object WebAuthnPublicKeyCredentialRequestOptions {
   implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialRequestOptions] = Json.format[WebAuthnPublicKeyCredentialRequestOptions]
 }
-
 
 case class WebAuthnRegistration(name: String, key: JsValue)
 object WebAuthnRegistration {
@@ -191,7 +192,7 @@ class AuthenticationController @Inject()(
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
     webAuthnCredentialDAO: WebAuthnCredentialDAO,
-    temporaryAssertionStore: TemporaryStore[String, WebAuthnPublicKeyCredentialRequestOptions],
+    temporaryAssertionStore: TemporaryStore[String, WebAuthnChallenge],
     temporaryRegistrationStore: TemporaryStore[String, WebAuthnChallenge],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -565,13 +566,13 @@ class AuthenticationController @Inject()(
     val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
     random.nextBytes(challenge)
     val assertion = WebAuthnPublicKeyCredentialRequestOptions(
-      challenge = challenge,
+      challenge = Base64.encodeBase64URLSafeString(challenge),
       timeout = Some(120000),
       rpId = Some(origin.getHost),
-      userVerification = None,
+      userVerification = Some("preferred"),
       hints = None
     )
-    temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
+    temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes));
     Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 
@@ -580,12 +581,11 @@ class AuthenticationController @Inject()(
         for {
           cookie <- request.cookies.get("webauthn-session").toFox
           sessionId = cookie.value
-          challengeData <- {
-            val challengeData = temporaryAssertionStore.get(sessionId)
+          challenge <- {
+            val challenge = temporaryAssertionStore.get(sessionId)
             temporaryAssertionStore.remove(sessionId)
-            challengeData.toFox
+            challenge.toFox
           }
-          challenge = WebAuthnChallenge(challengeData.challenge)
           authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox
           credentialId = authData.getCredentialId
           multiUserId = ObjectId(new String(authData.getUserHandle))
@@ -616,13 +616,12 @@ class AuthenticationController @Inject()(
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
-        id = request.identity._multiUser.id.getBytes,
+        id = Base64.encodeBase64URLSafeString(request.identity._multiUser.id.getBytes), // TODO: Not leak database id, but use email instead
         name = email
       )
       credentials <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
       excludeCredentials = credentials.map(c => WebAuthnCreationOptionsExcludeCredentials(
-        id=c._multiUser.id.getBytes(StandardCharsets.UTF_8),
-        `type`="public-key"
+        id=Base64.encodeBase64URLSafeString(c.credentialRecord.getAttestedCredentialData.getCredentialId)
       )).toArray
       random = new SecureRandom() // TODO: Initialize once
       challenge = {
@@ -630,23 +629,21 @@ class AuthenticationController @Inject()(
         random.nextBytes(challenge)
         challenge
       }
+      encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
       sessionId = UUID.randomUUID().toString
       cookie = Cookie("webauthn-registration", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
       _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
       options = WebAuthnPublicKeyCredentialCreationOptions(
-        authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(
-          requiredResidentKey = true,
-          residentKey = "required"
-          ),
-        challenge,
-        excludeCredentials,
-        pubKeyParams = webAuthnPubKeyParams, // NOTE: Could be created at startup
+        authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),
+        challenge = encodedChallenge,
+        excludeCredentials = excludeCredentials,
+        pubKeyCredParams = webAuthnPubKeyParams, // NOTE: Could be created at startup
         timeout = 120000, // 2 minutes timeout
         rp = WebAuthnCreationOptionsRelyingParty(
           id = origin.getHost(),
-          name = "Webknossos",
+          name = origin.getHost(),
           ),
-        user,
+        user = user,
         )
     } yield Ok(Json.toJson(options)).withCookies(cookie)
   }

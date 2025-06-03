@@ -151,24 +151,13 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
-function arrayBufferToBase64Url(buffer) {
-  // NOTE: Limited support: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/toBase64
-  return new Uint8Array(buffer).toBase64({alphabet: "base64url"});
-}
-
-
 export async function doWebAuthnLogin(): Promise<[APIUser, APIOrganization]> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
   });
-  const opts = {
-    challenge: arrayBufferToBase64Url(webAuthnAuthAssertion.challenge),
-    rpId: "webknossos.local",
-    timeout: 120000,
-  };
-  console.log(webAuthnAuthAssertion);
+  console.log(webAuthnAuthAssertion)
   const response = await webauthn.get({
-    publicKey: opts,
+    publicKey: webAuthnAuthAssertion,
   });
   console.log(response)
   await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
@@ -189,21 +178,9 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
     },
   );
 
-  const opts = {
-    challenge: arrayBufferToBase64Url(webAuthnRegistrationAssertion.challenge),
-    rp: webAuthnRegistrationAssertion.rp,
-    user: {
-      id: arrayBufferToBase64Url(webAuthnRegistrationAssertion.user.id),
-      name: webAuthnRegistrationAssertion.user.name,
-      displayName: webAuthnRegistrationAssertion.user.displayName,
-    },
-    pubKeyCredParams: webAuthnRegistrationAssertion.pubKeyParams,
-  };
-  console.log("options", opts)
   const credential = await webauthn.create({
-    publicKey: opts,
+    publicKey: webAuthnRegistrationAssertion,
   });
-  console.log("credential", credential)
 
   return Request.sendJSONReceiveJSON("/api/auth/webauthn/register/finalize", {
     data: {

@@ -57,7 +57,7 @@ type FinishedResizingUserBoundingBoxAction = ReturnType<
   typeof finishedResizingUserBoundingBoxAction
 >;
 type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
-type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
+export type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 export type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;

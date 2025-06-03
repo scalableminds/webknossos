@@ -54,6 +54,7 @@ object LayerAttachment {
       Seq.empty
     }
   }
+
 }
 
 object MeshFileInfo {

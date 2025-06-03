@@ -278,11 +278,12 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        skeleton <- agglomerateService.generateSkeleton(organizationId,
-                                                        datasetDirectoryName,
-                                                        dataLayerName,
-                                                        mappingName,
-                                                        agglomerateId) ?~> "agglomerateSkeleton.failed"
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        skeleton <- agglomerateService
+          .generateSkeleton(agglomerateFileAttachment, agglomerateId) ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -316,9 +317,12 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        position <- agglomerateService.positionForSegmentId(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        position <- agglomerateService
+          .positionForSegmentId(agglomerateFileAttachment, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
     }
   }
@@ -333,14 +337,11 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(
-          AgglomerateFileKey(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
-            mappingName
-          )
-        )
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileAttachment)
       } yield Ok(Json.toJson(largestAgglomerateId))
     }
   }
@@ -355,13 +356,12 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
         agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
-          AgglomerateFileKey(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
-            mappingName
-          ),
+          agglomerateFileAttachment,
           request.body.items
         )
       } yield Ok(ListOfLong(agglomerateIds).toByteArray)

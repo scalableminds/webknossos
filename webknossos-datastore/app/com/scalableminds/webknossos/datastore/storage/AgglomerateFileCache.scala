@@ -1,11 +1,10 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.nio.file.Path
 import java.util
-
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -19,45 +18,12 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
-case class AgglomerateFileKey(
-    organizationId: String,
-    datasetDirectoryName: String,
-    layerName: String,
-    mappingName: String
-) {
-  def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
-    dataBaseDir
-      .resolve(organizationId)
-      .resolve(datasetDirectoryName)
-      .resolve(layerName)
-      .resolve(agglomerateDir)
-      .resolve(s"$mappingName.$agglomerateFileExtension")
-
-  def zarrGroupPath(dataBaseDir: Path, agglomerateDir: String): Path =
-    dataBaseDir
-      .resolve(organizationId)
-      .resolve(datasetDirectoryName)
-      .resolve(layerName)
-      .resolve(agglomerateDir)
-      .resolve(mappingName)
-}
-
-object AgglomerateFileKey {
-  def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    AgglomerateFileKey(
-      dataRequest.dataSourceIdOrVolumeDummy.organizationId,
-      dataRequest.dataSourceIdOrVolumeDummy.directoryName,
-      dataRequest.dataLayer.name,
-      dataRequest.settings.appliedAgglomerate.get
-    )
-}
-
-class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
-  override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
+class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[LayerAttachment, CachedAgglomerateFile] {
+  override def onElementRemoval(key: LayerAttachment, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(agglomerateFileKey: AgglomerateFileKey)(
-      loadFn: AgglomerateFileKey => CachedAgglomerateFile): CachedAgglomerateFile = {
+  def withCache(agglomerateFileKey: LayerAttachment)(
+      loadFn: LayerAttachment => CachedAgglomerateFile): CachedAgglomerateFile = {
 
     def handleUncachedAgglomerateFile() = {
       val agglomerateFile = loadFn(agglomerateFileKey)

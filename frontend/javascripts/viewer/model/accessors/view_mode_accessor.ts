@@ -163,6 +163,64 @@ function _calculateMaybeGlobalPos(
   return { rounded: roundedPosition, floating: floatingPosition };
 }
 
+function _calculateMaybePlaneScreenPos(
+  state: WebknossosState,
+  globalPosition: Vector3,
+  planeId: OrthoView,
+): Vector2 | null | undefined {
+  // This method now accounts for flycam rotation, matching the forward transformation
+  let point: Vector2;
+
+  const { width, height, top, left } = getInputCatcherRect(state, planeId);
+
+  const flycamPosition = getPosition(state.flycam);
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const navbarHeight = state.uiInformation.navbarHeight;
+
+  // Difference in world space
+  const positionDiff = new THREE.Vector3(...V3.sub(globalPosition, flycamPosition));
+
+  // Inverse rotate the world difference vector into local plane-aligned space
+  const inverseRotationMatrix = new THREE.Matrix4()
+    .makeRotationFromEuler(new THREE.Euler(...flycamRotation, "ZYX"))
+    .invert();
+
+  const localDiff = positionDiff.applyMatrix4(inverseRotationMatrix);
+
+  // Unscale from voxel ratio (undo voxel scaling)
+  const scaledLocalDiff = localDiff
+    .divide(new THREE.Vector3(...planeRatio))
+    .multiplyScalar(1 / state.flycam.zoomStep);
+
+  // Get plane-aligned screen-space coordinates (u/v)
+  switch (planeId) {
+    case OrthoViews.PLANE_XY: {
+      point = [scaledLocalDiff.x, scaledLocalDiff.y];
+      break;
+    }
+
+    case OrthoViews.PLANE_YZ: {
+      point = [scaledLocalDiff.z, scaledLocalDiff.y];
+      break;
+    }
+
+    case OrthoViews.PLANE_XZ: {
+      point = [scaledLocalDiff.x, scaledLocalDiff.z];
+      break;
+    }
+
+    default:
+      return null;
+  }
+
+  point = [
+    Math.round(point[0] + width / 2 + left),
+    Math.round(point[1] + height / 2 + top + navbarHeight),
+  ];
+  return point;
+}
+
 function _calculateMaybeGlobalDelta(
   state: WebknossosState,
   delta: Point2,
@@ -260,6 +318,7 @@ export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
 export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGlobalPos);
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
+export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
 export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

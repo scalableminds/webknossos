@@ -1,4 +1,4 @@
-import type { OrthoView, Point2, Vector3 } from "viewer/constants";
+import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAIJobModalState } from "viewer/view/action-bar/starting_job_modals";
@@ -24,7 +24,7 @@ export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
 type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAction>;
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
-type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredAndViewportPositionAction>;
+type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
@@ -201,14 +201,10 @@ export const hideMeasurementTooltipAction = () =>
   ({
     type: "HIDE_MEASUREMENT_TOOLTIP",
   }) as const;
-export const setLastMeasuredAndViewportPositionAction = (
-  lastMeasuredPosition: Vector3,
-  viewportPosition: Point2,
-) =>
+export const setLastMeasuredPositionAction = (position: Vector3) =>
   ({
     type: "SET_LAST_MEASURED_POSITION",
-    lastMeasuredPosition,
-    viewportPosition,
+    position,
   }) as const;
 export const setIsMeasuringAction = (isMeasuring: boolean) =>
   ({

@@ -49,7 +49,7 @@ import {
   hideMeasurementTooltipAction,
   setActiveUserBoundingBoxId,
   setIsMeasuringAction,
-  setLastMeasuredAndViewportPositionAction,
+  setLastMeasuredPositionAction,
   setQuickSelectStateAction,
 } from "viewer/model/actions/ui_actions";
 import {
@@ -897,7 +897,7 @@ export class LineMeasurementToolController {
       const state = Store.getState();
       const newPos = calculateGlobalPos(state, pos, this.initialPlane).floating;
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
-      Store.dispatch(setLastMeasuredAndViewportPositionAction(newPos, pos));
+      Store.dispatch(setLastMeasuredPositionAction(newPos));
     };
     const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       // In case the tool was reset by the user, abort measuring.
@@ -946,7 +946,7 @@ export class LineMeasurementToolController {
       } else {
         lineMeasurementGeometry.addPoint(position);
       }
-      Store.dispatch(setLastMeasuredAndViewportPositionAction(position, pos));
+      Store.dispatch(setLastMeasuredPositionAction(position));
     };
     return {
       mouseMove,
@@ -1017,7 +1017,7 @@ export class AreaMeasurementToolController {
         const state = Store.getState();
         const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane).rounded);
         areaMeasurementGeometry.addEdgePoint(position);
-        Store.dispatch(setLastMeasuredAndViewportPositionAction(position, pos));
+        Store.dispatch(setLastMeasuredPositionAction(position));
       },
       leftMouseUp: () => {
         if (!this.isMeasuring) {

@@ -17,7 +17,10 @@ import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/con
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
-import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import {
+  calculateMaybePlaneScreenPos,
+  getInputCatcherRect,
+} from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
 
@@ -46,7 +49,8 @@ function isPositionStillInPlane(
   planeId: OrthoView,
 ) {
   const inverseFlycamRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    new THREE.Euler(...V3.scale(flycamRotation, -1), "ZYX"),
+    // As we apply the inverse of the euler angle the flycam currently has we need to invert the order as well.
+    new THREE.Euler(...V3.scale(flycamRotation, -1), "XYZ"),
   );
   const positionUvw = new THREE.Vector3(...V3.sub(positionXYZ, flycamPosition))
     .applyMatrix4(inverseFlycamRotationMatrix)
@@ -58,9 +62,6 @@ function isPositionStillInPlane(
 export default function DistanceMeasurementTooltip() {
   const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
-  );
-  const tooltipPosition = useWkSelector(
-    (state) => state.uiInformation.measurementToolInfo.viewportPosition,
   );
   const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
   const flycam = useWkSelector((state) => state.flycam);
@@ -76,6 +77,11 @@ export default function DistanceMeasurementTooltip() {
       ? lineMeasurementGeometry
       : areaMeasurementGeometry;
   const orthoView = activeGeometry.viewport;
+  const tooltipPosition = useWkSelector((state) =>
+    lastMeasuredGlobalPosition
+      ? calculateMaybePlaneScreenPos(state, lastMeasuredGlobalPosition, orthoView)
+      : null,
+  );
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const {
     left: viewportLeft,
@@ -126,18 +132,16 @@ export default function DistanceMeasurementTooltip() {
   }
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
-  const left =
-    clamp(
-      ADDITIONAL_OFFSET - tooltipWidth,
-      tooltipPosition.x + ADDITIONAL_OFFSET,
-      viewportWidth - ADDITIONAL_OFFSET,
-    ) + viewportLeft;
-  const top =
-    clamp(
-      ADDITIONAL_OFFSET,
-      tooltipPosition.y - ADDITIONAL_OFFSET,
-      viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-    ) + viewportTop;
+  const left = clamp(
+    viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
+    tooltipPosition[0] + ADDITIONAL_OFFSET,
+    viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
+  );
+  const top = clamp(
+    viewportTop + ADDITIONAL_OFFSET,
+    tooltipPosition[1] - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+  );
 
   return (
     <div

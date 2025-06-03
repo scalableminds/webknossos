@@ -23,6 +23,7 @@ class DSMeshController @Inject()(
     meshFileService: MeshFileService,
     neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     fullMeshService: DSFullMeshService,
+    dataSourceRepository: DataSourceRepository,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     val binaryDataServiceHolder: BinaryDataServiceHolder
@@ -66,10 +67,12 @@ class DSMeshController @Inject()(
                                                                           datasetDirectoryName,
                                                                           dataLayerName,
                                                                           request.body.meshFile.name)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
           segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
+            dataSource.id,
+            dataLayer,
             targetMappingName,
             editableMappingTracingId,
             request.body.segmentId,

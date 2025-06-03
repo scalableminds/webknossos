@@ -22,19 +22,19 @@ class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[Layer
   override def onElementRemoval(key: LayerAttachment, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(agglomerateFileKey: LayerAttachment)(
+  def withCache(agglomerateFileAttachment: LayerAttachment)(
       loadFn: LayerAttachment => CachedAgglomerateFile): CachedAgglomerateFile = {
 
     def handleUncachedAgglomerateFile() = {
-      val agglomerateFile = loadFn(agglomerateFileKey)
+      val agglomerateFile = loadFn(agglomerateFileAttachment)
       // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
       agglomerateFile.tryAccess()
-      put(agglomerateFileKey, agglomerateFile)
+      put(agglomerateFileAttachment, agglomerateFile)
       agglomerateFile
     }
 
     this.synchronized {
-      get(agglomerateFileKey) match {
+      get(agglomerateFileAttachment) match {
         case Some(agglomerateFile) =>
           if (agglomerateFile.tryAccess()) agglomerateFile else handleUncachedAgglomerateFile()
         case _ => handleUncachedAgglomerateFile()

@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.data.Form
@@ -299,9 +299,12 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          agglomerateId) ?~> "agglomerateGraph.failed"
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateGraph <- agglomerateService
+          .generateAgglomerateGraph(agglomerateFileAttachment, agglomerateId) ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -608,10 +611,12 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
           segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
+            dataSource.id,
+            dataLayer,
             request.body.mappingName,
             request.body.editableMappingTracingId,
             segmentId.toLong,
@@ -645,12 +650,14 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
           segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
             for {
               segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-                organizationId,
-                datasetDirectoryName,
-                dataLayerName,
+                dataSource.id,
+                dataLayer,
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
                 segmentOrAgglomerateId,

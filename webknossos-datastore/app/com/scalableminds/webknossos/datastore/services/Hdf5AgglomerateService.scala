@@ -27,6 +27,10 @@ import scala.collection.compat.immutable.ArraySeq
 
 class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter {
 
+  private val cumsumFileName = "cumsum.json"
+  // TODO other keys, also in zarr case
+  private val keySegmentToAgglomerate = "/segment_to_agglomerate"
+
   // TODO clear on reload
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
@@ -237,7 +241,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     val reader: IHDF5Reader = openHdf5(agglomerateFileAttachment)
     for {
       agglomerateIdArr: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
+        reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
       agglomerateId = agglomerateIdArr(0)
       segmentsRange: Array[Long] <- tryo(
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
@@ -266,26 +270,18 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     reader.uint64().readArrayBlockWithOffset(hdf5Dataset, blockSize.toInt, segmentId)
 
   // This uses the datasetName, which allows us to call it on the same hdf file in parallel.
-  private def readHDF(reader: IHDF5Reader, datasetName: String, segmentId: Long, blockSize: Long) =
-    reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
+  private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
+    reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, blockSize.toInt, segmentId)
 
   // An agglomerate file holds information about a specific mapping. wK translates the segment ids to agglomerate ids by looking at the HDF5 dataset "/segment_to_agglomerate".
   // In this array, the agglomerate id is found by using the segment id as index.
   // There are two ways of how we prevent a file lookup for every input element. When present, we use the cumsum.json to initialize a BoundingBoxCache (see comment there).
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
   private def openAsCachedAgglomerateFile(agglomerateFileAttachment: LayerAttachment) = {
-    val hdfFile =
-      agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
-
     val cumsumPath =
-      dataBaseDir
-        .resolve(agglomerateFileKey.organizationId)
-        .resolve(agglomerateFileKey.datasetDirectoryName)
-        .resolve(agglomerateFileKey.layerName)
-        .resolve(agglomerateDir)
-        .resolve(cumsumFileName)
+      Path.of(agglomerateFileAttachment.path).getParent.resolve(cumsumFileName)
 
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    val reader = openHdf5(agglomerateFileAttachment)
 
     val agglomerateIdCache = new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
                                                     config.Datastore.Cache.AgglomerateFile.blockSize)
@@ -297,6 +293,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
         Left(agglomerateIdCache)
       }
 
-    CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), agglomerateIdCache, defaultCache)
+    CachedAgglomerateFile(reader,
+                          reader.`object`().openDataSet(keySegmentToAgglomerate),
+                          agglomerateIdCache,
+                          defaultCache)
   }
 }

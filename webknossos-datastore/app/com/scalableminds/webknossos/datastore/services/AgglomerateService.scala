@@ -31,12 +31,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     with FoxImplicits {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
-  private val datasetName = "/segment_to_agglomerate"
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
-  private val cumsumFileName = "cumsum.json"
-
-  // TODO remove
-  private val useZarr = false
 
   def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
@@ -72,6 +67,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       "agglomerate_view_100"
     )
   }
+
+  def clearCaches(hdf5Predicate: LayerAttachment => Boolean): Int =
+    // TODO also clear zarr caches
+    hdf5AgglomerateService.agglomerateFileCache.clear(hdf5Predicate)
 
   // TODO cache?
   def lookUpAgglomerateFile(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String): LayerAttachment = {

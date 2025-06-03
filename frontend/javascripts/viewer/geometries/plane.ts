@@ -10,8 +10,6 @@ import constants, {
 } from "viewer/constants";
 import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import Store from "viewer/store";
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).

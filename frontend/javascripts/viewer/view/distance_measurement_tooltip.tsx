@@ -7,19 +7,18 @@ import {
   formatNumberToArea,
   formatNumberToLength,
 } from "libs/format_utils";
+import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
-import _ from "lodash";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
+import * as THREE from "three";
 import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import * as THREE from "three";
-import { V3 } from "libs/mjs";
 import Dimensions from "viewer/model/dimensions";
 
 const TOOLTIP_HEIGHT = 48;

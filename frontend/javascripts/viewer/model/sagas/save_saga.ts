@@ -848,7 +848,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         // Skeleton
         case "updateTreeEdgesVisibility":
         case "updateTreeGroups":
-        case "mergeTree": // todop: this action is never used? legacy
+        case "mergeTree": // todop: this action is never used? legacy?
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.

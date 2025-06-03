@@ -151,8 +151,6 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "SET_ACTIVE_NODE": {
       const { nodeId } = action;
 
-      console.log("SET_ACTIVE_NODE", nodeId);
-
       if (nodeId == null) {
         return update(state, {
           annotation: {

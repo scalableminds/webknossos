@@ -86,15 +86,13 @@ export function applySkeletonUpdateActionsFromServer(
         });
         const newTrees = skeleton.trees.set(newTree.treeId, newTree);
 
-        console.log("setting cachedMaxNodeId to", node.id);
-
         newState = update(newState, {
           annotation: {
             skeleton: {
               trees: {
                 $set: newTrees,
               },
-              cachedMaxNodeId: { $set: Math.max(skeleton.cachedMaxNodeId, node.id) },
+              cachedMaxNodeId: { $set: getMaximumNodeId(newTrees) },
             },
           },
         });
@@ -128,7 +126,6 @@ export function applySkeletonUpdateActionsFromServer(
               trees: {
                 $set: newTrees,
               },
-              cachedMaxNodeId: { $set: node.id },
             },
           },
         });
@@ -174,6 +171,7 @@ export function applySkeletonUpdateActionsFromServer(
           annotation: {
             skeleton: {
               trees: { $set: updatedTrees },
+              cachedMaxNodeId: { $set: getMaximumNodeId(updatedTrees) },
             },
           },
         });
@@ -226,7 +224,9 @@ export function applySkeletonUpdateActionsFromServer(
         }
 
         // todop: check why tests did not fail when .addEdges(movedEdges) was missing
-        const updatedTargetEdges = targetTree.edges.clone().addEdges(movedEdges);
+        const updatedTargetEdges = targetTree.edges.clone().addEdges(movedEdges, true);
+
+        console.log("movedEdges.values()", Array.from(movedEdges.values()));
 
         const updatedTargetTree = {
           ...targetTree,

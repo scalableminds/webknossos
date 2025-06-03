@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.06.1](https://github.com/scalableminds/webknossos/releases/tag/25.06.1) - 2025-06-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...25.06.1)
+
+### Fixed
+- Fixed viewing the results of volume anotation tasks in compound view. [#8668](https://github.com/scalableminds/webknossos/pull/8668)
+
 ## [25.06.0](https://github.com/scalableminds/webknossos/releases/tag/25.06.0) - 2025-05-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...25.06.0)
 

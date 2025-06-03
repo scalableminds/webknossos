@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed viewing the results of volume anotation tasks in compound view. [#8668](https://github.com/scalableminds/webknossos/pull/8668)
 
 ### Removed
 

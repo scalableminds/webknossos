@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -93,13 +92,11 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileAttachment, "segment_to_agglomerate")
-      beforeBuildMap = Instant.now
       relevantAgglomerateMap: Map[Long, Long] <- Fox
         .serialCombined(distinctSegmentIds) { segmentId =>
           mapSingleSegment(segmentToAgglomerate, segmentId).map((segmentId, _))
         }
         .map(_.toMap)
-      _ = Instant.logSince(beforeBuildMap, "build map")
       mappedBytes: Array[Byte] = convertData(data, elementClass) match {
         case data: Array[Byte] =>
           val longBuffer = LongBuffer.allocate(data.length)

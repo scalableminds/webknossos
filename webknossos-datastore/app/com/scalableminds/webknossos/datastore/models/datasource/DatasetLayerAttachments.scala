@@ -10,15 +10,16 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 
 case class DatasetLayerAttachments(
-    meshes: Seq[LayerAttachment],
-    agglomerates: Seq[LayerAttachment],
-    segmentIndex: Option[LayerAttachment],
-    connectomes: Seq[LayerAttachment],
-    cumsum: Option[LayerAttachment]
+    meshes: Seq[LayerAttachment] = Seq.empty,
+    agglomerates: Seq[LayerAttachment] = Seq.empty,
+    segmentIndex: Option[LayerAttachment] = None,
+    connectomes: Seq[LayerAttachment] = Seq.empty,
+    cumsum: Option[LayerAttachment] = None
 )
 
 object DatasetLayerAttachments {
-  implicit val jsonFormat: Format[DatasetLayerAttachments] = Json.format[DatasetLayerAttachments]
+  implicit val jsonFormat: Format[DatasetLayerAttachments] =
+    Json.using[Json.WithDefaultValues].format[DatasetLayerAttachments]
 }
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {

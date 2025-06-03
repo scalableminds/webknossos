@@ -262,7 +262,10 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateList = agglomerateService.exploreAgglomerates(organizationId, datasetDirectoryName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName)
+        agglomerateList = agglomerateService.exploreAgglomerates(organizationId, datasetDirectoryName, dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }
@@ -281,7 +284,9 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileAttachment <- agglomerateService
+          .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          .toFox
         skeleton <- agglomerateService
           .generateSkeleton(agglomerateFileAttachment, agglomerateId) ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
@@ -302,7 +307,9 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileAttachment <- agglomerateService
+          .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          .toFox
         agglomerateGraph <- agglomerateService
           .generateAgglomerateGraph(agglomerateFileAttachment, agglomerateId) ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
@@ -323,7 +330,9 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileAttachment <- agglomerateService
+          .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          .toFox
         position <- agglomerateService
           .positionForSegmentId(agglomerateFileAttachment, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
@@ -343,7 +352,9 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileAttachment <- agglomerateService
+          .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          .toFox
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileAttachment)
       } yield Ok(Json.toJson(largestAgglomerateId))
     }
@@ -362,7 +373,9 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileAttachment = agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileAttachment <- agglomerateService
+          .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          .toFox
         agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
           agglomerateFileAttachment,
           request.body.items

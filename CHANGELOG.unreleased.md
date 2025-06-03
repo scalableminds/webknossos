@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed viewing the results of volume anotation tasks in compound view. [#8668](https://github.com/scalableminds/webknossos/pull/8668)
 
 ### Removed
 

@@ -90,8 +90,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
       agglomerateFileAttachment <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy,
-                                                        request.dataLayer,
-                                                        mappingName).toFox
+                                                         request.dataLayer,
+                                                         mappingName).toFox
       data <- agglomerateFileAttachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.applyAgglomerate(agglomerateFileAttachment, elementClass)(data)

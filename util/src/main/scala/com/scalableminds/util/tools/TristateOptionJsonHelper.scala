@@ -4,6 +4,8 @@ import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.JsonConfiguration.Aux
 import play.api.libs.json._
 
+// Allows a case class json format that distinguishes between absent keys and keys with the value null
+// See TristateJsonTestSuite for a usage example. The Some(None) default must by set for the case class
 trait TristateOptionJsonHelper {
 
   implicit protected def optionFormat[T: Format]: Format[Option[T]] = new Format[Option[T]] {

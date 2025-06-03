@@ -113,6 +113,7 @@ describe("Update Action Application for SkeletonTracing", () => {
   test.skip("User actions for test should not contain no-ops", () => {
     let state = initialState;
     for (const action of userActions) {
+      // todop: use wk reducer so that addUserBoundingBoxAction does sth
       const newState = SkeletonTracingReducer(state, action);
       expect(newState !== state).toBeTruthy();
 

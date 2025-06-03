@@ -101,8 +101,6 @@ import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { doWithToken } from "./api/token";
 
-import Base64 from "base64-js";
-
 export * from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
@@ -155,11 +153,9 @@ export async function doWebAuthnLogin(): Promise<[APIUser, APIOrganization]> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
   });
-  console.log(webAuthnAuthAssertion)
   const response = await webauthn.get({
     publicKey: webAuthnAuthAssertion,
   });
-  console.log(response)
   await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
     method: "POST",
     data: { key: response },

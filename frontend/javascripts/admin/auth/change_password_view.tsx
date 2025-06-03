@@ -8,12 +8,7 @@ import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
-import {
-  doWebAuthnRegistration,
-  listWebAuthnKeys,
-  removeWebAuthnKey,
-  revokeAuthToken,
-} from "admin/rest_api";
+import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/rest_api";
 import { useEffect, useState } from "react";
 import type { WebAuthnKeyDescriptor } from "types/api_flow_types";
 

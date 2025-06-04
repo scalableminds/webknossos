@@ -25,7 +25,7 @@ export class VertexSegmentMapping {
    * E.g., one query allows to go from a vertex index ("position", named
    * like the BufferAttribute "position") to
    * the unmapped segment id of the geometry that belongs to the vertex.
-   * Similarily, one can obtain the range that covers all vertices
+   * Similarly, one can obtain the range that covers all vertices
    * that belong to a certain unmapped segment id.
    * Other queries allow a similar mapping between vertex index ("position")
    * and unmapped segment id.

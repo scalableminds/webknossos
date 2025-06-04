@@ -35,7 +35,8 @@ case class PrecomputedDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
 ) extends PrecomputedLayer
 
 object PrecomputedDataLayer {
@@ -53,7 +54,8 @@ case class PrecomputedSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
 ) extends SegmentationLayer
     with PrecomputedLayer
 

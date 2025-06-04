@@ -452,7 +452,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                      dataSourceId.directoryName,
                      datasetNeedsConversion,
                      Some("the upload failed"))
-        dataSourceRepository.cleanUpDataSource(dataSourceId)
+        dataSourceRepository.removeDataSource(dataSourceId)
         for {
           _ <- result.toFox ?~> f"Error while $label"
         } yield ()
@@ -673,7 +673,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- dataSourceRepository.cleanUpDataSource(dataSourceId)
+      _ <- dataSourceRepository.removeDataSource(dataSourceId)
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =

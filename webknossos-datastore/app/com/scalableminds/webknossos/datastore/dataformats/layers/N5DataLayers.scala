@@ -35,7 +35,8 @@ case class N5DataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
 ) extends N5Layer
 
 object N5DataLayer {
@@ -53,7 +54,8 @@ case class N5SegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
 ) extends SegmentationLayer
     with N5Layer
 

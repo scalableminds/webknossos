@@ -324,8 +324,12 @@ class DataSourceService @Inject()(
     if (new File(propertiesFile.toString).exists()) {
       JsonHelper.parseFromFileAs[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
-          if (dataSource.dataLayers.nonEmpty) dataSource.copy(id)
-          else
+          if (dataSource.dataLayers.nonEmpty) {
+            val dataSourceWithAttachments = dataSource.copy(
+              dataLayers = scanForAttachedFiles(path, dataSource)
+            )
+            dataSourceWithAttachments.copy(id)
+          } else
             UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
         case e =>
           UnusableDataSource(id,
@@ -336,6 +340,19 @@ class DataSourceService @Inject()(
       UnusableDataSource(id, "Not imported yet.")
     }
   }
+
+  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
+    dataSource.dataLayers.map(dataLayer => {
+      val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
+      dataLayer.withAttachments(
+        DatasetLayerAttachments(
+          MeshFileInfo.scanForMeshFiles(dataLayerPath),
+          AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
+          SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
+          ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
+          CumsumFileInfo.scanForCumsumFile(dataLayerPath)
+        ))
+    })
 
   def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =
     for {

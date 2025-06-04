@@ -46,7 +46,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 

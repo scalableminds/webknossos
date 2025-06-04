@@ -46,9 +46,9 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
-import scala.jdk.CollectionConverters
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 /**
   * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions

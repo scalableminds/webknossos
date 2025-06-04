@@ -858,7 +858,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield
       MagLocator(
         mag,
-        row.path, // Does this make sense -> mag path may be something different than path in DB :/
+        row.path,
         None,
         axisOrderParsed,
         row.channelindex,

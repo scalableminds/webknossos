@@ -309,16 +309,13 @@ class BinaryDataController @Inject()(
       }
     }
 
-  // TODO: ObjectId params
-  def requestViaWebknossosById(organizationId: String,
-                               datasetId: String,
-                               dataLayerName: String): Action[List[WebknossosDataRequest]] =
+  def requestViaWebknossosById(datasetId: String, dataLayerName: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         // TODO Log time
         for {
           datasetId <- ObjectId.fromString(datasetId)
-          dataSource <- datasetCache.getById(organizationId, datasetId)
+          dataSource <- datasetCache.getById(datasetId)
           dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found" ~> NOT_FOUND
           (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
         } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)

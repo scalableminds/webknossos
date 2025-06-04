@@ -775,12 +775,11 @@ class DataSourceController @Inject()(
       }
     }
 
-  def updateCache(organizationId: String, datasetId: String): Action[DataSource] =
+  def updateCache(datasetId: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-        for {
-          _ <- datasetCache.updateById(organizationId, datasetId, request.body)
-        } yield Ok
+        datasetCache.updateById(datasetId, request.body)
+        Future.successful(Ok)
       }
     }
 

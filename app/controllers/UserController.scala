@@ -195,6 +195,15 @@ class UserController @Inject()(userService: UserService,
         Fox.successful(())
     })
 
+  private def checkTeamManagerOnlyUpdates(user: User,
+                                          experiences: Map[String, Int],
+                                          oldExperiences: Map[String, Int],
+                                          teams: List[TeamMembership],
+                                          oldTeams: List[TeamMembership])(issuingUser: User): Fox[Boolean] =
+    if (experiences == oldExperiences && teams == oldTeams)
+      Fox.successful(true)
+    else userService.isEditableBy(user, issuingUser)
+
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
       issuingUser: User): Boolean =
     if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
@@ -264,6 +273,7 @@ class UserController @Inject()(userService: UserService,
             lastTaskTypeIdOpt) =>
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
+          // properties for team managers dataset manager and admins only: experiences, teams
           oldExperience <- userService.experiencesFor(user._id)
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
           firstName = firstNameOpt.getOrElse(user.firstName)
@@ -276,7 +286,13 @@ class UserController @Inject()(userService: UserService,
           assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
-          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox
+            .runIf(user._id != issuingUser._id)(Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- checkTeamManagerOnlyUpdates(user,
+                                           experiences,
+                                           oldExperience,
+                                           assignedMemberships,
+                                           oldAssignedMemberships)(issuingUser) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox
             .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox.fromBool(checkAdminOrSelfUpdates(user, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN

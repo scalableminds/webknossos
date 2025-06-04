@@ -1,5 +1,6 @@
 import update from "immutability-helper";
 import _ from "lodash";
+import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultState } from "test/fixtures/hybridtracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
 import type { Vector3 } from "viewer/constants";
@@ -18,7 +19,7 @@ import type {
   ApplicableSkeletonUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/update_actions";
-import type { WebknossosState } from "viewer/store";
+import { combinedReducers, type WebknossosState } from "viewer/store";
 import { describe, expect, test, it, afterAll } from "vitest";
 
 const initialState: WebknossosState = update(defaultState, {
@@ -33,6 +34,13 @@ const initialState: WebknossosState = update(defaultState, {
     },
     annotationType: { $set: "Explorational" },
   },
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        $set: [sampleTracingLayer],
+      },
+    },
+  },
 });
 
 const position = [10, 10, 10] as Vector3;
@@ -40,7 +48,7 @@ const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
 
-const applyActions = chainReduce(SkeletonTracingReducer);
+const applyActions = chainReduce(combinedReducers);
 
 const actionNamesList: Record<ApplicableSkeletonUpdateAction["name"], true> = {
   updateTree: true,
@@ -67,12 +75,12 @@ describe("Update Action Application for SkeletonTracing", () => {
   /*
    * Hardcode these values if you want to focus on a specific test.
    */
-  const compactionModes = [false];
-  const hardcodedBeforeVersionIndex: number | null = null; // 14;
-  const hardcodedAfterVersionIndex: number | null = null; // 26;
+  const compactionModes = [true, false];
+  const hardcodedBeforeVersionIndex: number | null = null;
+  const hardcodedAfterVersionIndex: number | null = null;
   // const compactionModes = [true];
-  // const hardcodedBeforeVersionIndex: number | null = 9; // 14;
-  // const hardcodedAfterVersionIndex: number | null = 26; // 26;
+  // const hardcodedBeforeVersionIndex: number | null = 27; // 14;
+  // const hardcodedAfterVersionIndex: number | null = 28; // 26;
 
   const userActions: SkeletonTracingAction[] = [
     SkeletonTracingActions.deleteTreeAction(2), // delete second tree. one tree remains.

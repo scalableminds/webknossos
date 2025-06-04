@@ -1414,7 +1414,7 @@ export async function getHistogramForLayer(
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/wkDatasets/683d9643f600008d0e26a0a3/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );

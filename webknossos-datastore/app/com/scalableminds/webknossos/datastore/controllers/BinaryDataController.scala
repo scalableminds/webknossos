@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -39,8 +38,7 @@ class BinaryDataController @Inject()(
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService,
-    datasetCache: DatasetCache
+    findDataService: FindDataService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {
@@ -306,19 +304,6 @@ class BinaryDataController @Inject()(
           listOfHistograms <- findDataService.createHistogram(dataSource.id, dataLayer) ?~> Messages("histogram.failed",
                                                                                                      dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))
-      }
-    }
-
-  def requestViaWebknossosById(datasetId: String, dataLayerName: String): Action[List[WebknossosDataRequest]] =
-    Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-        // TODO Log time
-        for {
-          datasetId <- ObjectId.fromString(datasetId)
-          dataSource <- datasetCache.getById(datasetId)
-          dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found" ~> NOT_FOUND
-          (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
       }
     }
 

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.inject.name.Named
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import org.apache.pekko.actor.ActorSystem
 
@@ -25,6 +25,12 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient,
           _ = cache.insert(id, dataSource)
         } yield dataSource
     }
+
+  def getWithLayer(id: ObjectId, dataLayerName: String): Fox[(DataSource, DataLayer)] =
+    for {
+      dataSource <- getById(id)
+      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found"
+    } yield (dataSource, dataLayer)
 
   def updateById(datasetId: String, dataSource: DataSource): Unit =
     cache.insert(ObjectId(datasetId), dataSource)

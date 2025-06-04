@@ -103,7 +103,7 @@ export async function requestWithFallback(
   const tracingStoreHost = state.annotation.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
+    `${dataStoreHost}/data/wkDatasets/683d9643f600008d0e26a0a3/layers/${
       optLayerName || layerInfo.name
     }`;
 
@@ -227,8 +227,6 @@ export async function requestFromStore(
       if (maybeAnnotationId != null) {
         params.append("annotationId", maybeAnnotationId);
       }
-      // REMOVE ME
-      dataUrl = "http://localhost:9000/data/wkDatasets/683d9643f600008d0e26a0a3/layers/layer424242"
       const { buffer: responseBuffer, headers } =
         await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?${params}`, {
           data: bucketInfo,

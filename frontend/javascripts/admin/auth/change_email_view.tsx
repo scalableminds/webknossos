@@ -5,6 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { handleResendVerificationEmail } from "./verify_email_view";
 const FormItem = Form.Item;
 
 function ChangeEmailView() {
@@ -22,6 +23,7 @@ function ChangeEmailView() {
     const newEmail = form.getFieldValue("newEmail");
     changeEmail(newEmail)
       .then(() => {
+        handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
         return Request.receiveJSON("/api/auth/logout");
       })

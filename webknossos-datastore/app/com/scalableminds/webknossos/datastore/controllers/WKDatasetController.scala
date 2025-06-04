@@ -5,8 +5,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
@@ -21,14 +21,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
   BinaryDataServiceHolder,
-  DataSourceRepository,
   DataStoreAccessTokenService,
   DatasetCache,
   FindDataService,
-  MappingService,
   UserAccessRequest
 }
-import com.scalableminds.webknossos.datastore.services.mesh.AdHocMeshServiceHolder
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -36,6 +33,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
 
 import java.io.ByteArrayOutputStream
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 /**
   * This is equivalent to the BinaryDataController for Datasets by DatasetId
@@ -44,6 +42,7 @@ class WKDatasetController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     findDataService: FindDataService,
+    slackNotificationService: DSSlackNotificationService,
     datasetCache: DatasetCache
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -54,13 +53,22 @@ class WKDatasetController @Inject()(
   def requestViaWebknossos(datasetId: String, dataLayerName: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-        // TODO Log time
-        for {
-          datasetId <- ObjectId.fromString(datasetId)
-          dataSource <- datasetCache.getById(datasetId)
-          dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found" ~> NOT_FOUND
-          (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        logTime(slackNotificationService.noticeSlowRequest) {
+          val t = Instant.now
+          for {
+            datasetId <- ObjectId.fromString(datasetId)
+            dataSource <- datasetCache.getById(datasetId)
+            dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found" ~> NOT_FOUND
+            (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
+            duration = Instant.since(t)
+            _ = if (duration > (10 seconds))
+              logger.info(
+                s"Complete data request for $datasetId/$dataLayerName took ${formatDuration(duration)}."
+                  + request.body.headOption
+                    .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
+                    .getOrElse(""))
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        }
       }
     }
 

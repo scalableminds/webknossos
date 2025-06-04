@@ -488,7 +488,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
+      // Setting the target lazily, to finally let olvy load the "what's new" modal, as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
@@ -675,9 +675,13 @@ function LoggedInAvatar({
               : null,
             {
               key: "resetpassword",
-              label: <Link to="/auth/changePassword">Change Password</Link>,
+              label: <Link to="/account/password">Change Password</Link>,
             },
-            { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
+            { key: "token", label: <Link to="/account/token">Auth Token</Link> },
+            {
+              key: "account",
+              label: <Link to="/account">Account Settings</Link>,
+            },
             {
               key: "theme",
               label: "Theme",

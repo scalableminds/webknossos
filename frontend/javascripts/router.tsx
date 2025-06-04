@@ -75,6 +75,7 @@ import type { EmptyObject } from "types/globals";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
+import AccountSettingsView from "admin/auth/account_settings_view";
 
 const { Content } = Layout;
 
@@ -814,6 +815,16 @@ class ReactRouter extends React.Component<Props> {
               {!features().isWkorgInstance && (
                 <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
               )}
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/account"
+                render={() => <AccountSettingsView />}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/account/:tab"
+                render={() => <AccountSettingsView />}
+              />
               <RouteWithErrorBoundary component={PageNotFoundView} />
             </Switch>
           </Content>

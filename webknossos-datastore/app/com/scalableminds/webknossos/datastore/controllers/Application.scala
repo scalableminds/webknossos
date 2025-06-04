@@ -4,7 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.services.{ApplicationHealthService, ZarrAgglomerateService}
+import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import net.liftweb.common.Box.tryo
 
@@ -13,9 +13,8 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(redisClient: DataStoreRedisStore,
-                            applicationHealthService: ApplicationHealthService,
-                            agglomerateService: ZarrAgglomerateService)(implicit ec: ExecutionContext)
+class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
+    implicit ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true

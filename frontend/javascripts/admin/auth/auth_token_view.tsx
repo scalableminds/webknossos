@@ -46,16 +46,11 @@ function AuthTokenView() {
 
   return (
     <div>
-      <Row
-        justify="center"
-        style={{
-          padding: 50,
-        }}
-        align="middle"
-      >
+      <h2>API Authentication</h2>
+      <Row>
         <Col span={8}>
           <Spin size="large" spinning={isLoading}>
-            <h3>Auth Token</h3>
+            <h4>Auth Token</h4>
             <Form form={form}>
               <FormItem>
                 <Space.Compact>
@@ -95,17 +90,15 @@ function AuthTokenView() {
               </>
             )}
           </Spin>
-        </Col>
-      </Row>
-      <Row justify="center" align="middle">
-        <Col span={8}>
+
           <p>
-            An Auth Token is a series of symbols that serves to authenticate you. It is used in
-            communication with the Python API and sent with every request to verify your identity.
+            Your Auth Token is a unique string of characters that authenticates you when using our
+            <a href="https://docs.webknossos.org/webknossos-py/index.html"> Python API</a>. It is
+            request to verify your identity.
           </p>
           <p>
-            You should revoke it if somebody else has acquired your token or you have the suspicion
-            this has happened.{" "}
+            Revoke your token if it has been compromised or if you suspect someone else has gained
+            access to it.
             <a href="https://docs.webknossos.org/webknossos-py/index.html">Read more</a>
           </p>
         </Col>

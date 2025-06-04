@@ -45,116 +45,112 @@ function ChangePasswordView({ history }: Props) {
   }
 
   return (
-    <Row
-      justify="center"
-      align="middle"
-      style={{
-        padding: 50,
-      }}
-    >
-      <Col span={8}>
-        <h3>Change Password</h3>
-        <Alert
-          type="info"
-          message={messages["auth.reset_logout"]}
-          showIcon
-          style={{
-            marginBottom: 24,
-          }}
-        />
-        <Form onFinish={onFinish} form={form}>
-          <FormItem
-            name="oldPassword"
-            rules={[
-              {
-                required: true,
-                message: messages["auth.reset_old_password"],
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Old Password"
-            />
-          </FormItem>
-          <FormItem
-            hasFeedback
-            name={["password", "password1"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password"],
-              },
-              {
-                min: MIN_PASSWORD_LENGTH,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value: string) =>
-                  checkPasswordsAreMatching(value, ["password", "password2"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="New Password"
-            />
-          </FormItem>
-          <FormItem
-            hasFeedback
-            name={["password", "password2"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password2"],
-              },
-              {
-                min: MIN_PASSWORD_LENGTH,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value: string) =>
-                  checkPasswordsAreMatching(value, ["password", "password1"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Confirm New Password"
-            />
-          </FormItem>
-          <FormItem>
-            <Button
-              type="primary"
-              htmlType="submit"
-              style={{
-                width: "100%",
-              }}
+    <div>
+      <h2>Password</h2>
+      <Row>
+        <Col span={8}>
+          <Form onFinish={onFinish} form={form}>
+            <FormItem
+              name="oldPassword"
+              rules={[
+                {
+                  required: true,
+                  message: messages["auth.reset_old_password"],
+                },
+              ]}
             >
-              Change Password
-            </Button>
-          </FormItem>
-        </Form>
-      </Col>
-    </Row>
+              <Password
+                prefix={
+                  <LockOutlined
+                    style={{
+                      fontSize: 13,
+                    }}
+                  />
+                }
+                placeholder="Old Password"
+              />
+            </FormItem>
+            <FormItem
+              hasFeedback
+              name={["password", "password1"]}
+              rules={[
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password"],
+                },
+                {
+                  min: MIN_PASSWORD_LENGTH,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: (_, value: string) =>
+                    checkPasswordsAreMatching(value, ["password", "password2"]),
+                },
+              ]}
+            >
+              <Password
+                prefix={
+                  <LockOutlined
+                    style={{
+                      fontSize: 13,
+                    }}
+                  />
+                }
+                placeholder="New Password"
+              />
+            </FormItem>
+            <FormItem
+              hasFeedback
+              name={["password", "password2"]}
+              rules={[
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password2"],
+                },
+                {
+                  min: MIN_PASSWORD_LENGTH,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: (_, value: string) =>
+                    checkPasswordsAreMatching(value, ["password", "password1"]),
+                },
+              ]}
+            >
+              <Password
+                prefix={
+                  <LockOutlined
+                    style={{
+                      fontSize: 13,
+                    }}
+                  />
+                }
+                placeholder="Confirm New Password"
+              />
+            </FormItem>
+            <Alert
+              type="info"
+              message={messages["auth.reset_logout"]}
+              showIcon
+              style={{
+                marginBottom: 24,
+              }}
+            />
+            <FormItem>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{
+                  width: "100%",
+                }}
+              >
+                Change Password
+              </Button>
+            </FormItem>
+          </Form>
+        </Col>
+      </Row>
+    </div>
   );
 }
 

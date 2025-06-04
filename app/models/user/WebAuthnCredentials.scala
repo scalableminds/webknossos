@@ -56,15 +56,15 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
                               RegistrationExtensionAuthenticatorOutput]] {})).toFox
       record = new CredentialRecordImpl(
         new NoneAttestationStatement(),
-        null,
-        null,
-        null,
+        null, // attestationData - document why null is safe
+        null, // clientData - document why null is safe
+        null, // clientDataJSON - document why null is safe
         r.signaturecount.toLong,
         attestedCredential,
         authenticatorExtensions,
-        null,
-        null,
-        null
+        null, // attestationObject - document why null is safe
+        null, // transports - document why null is safe
+        null  // largeBlob - document why null is safe
       )
     } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
   }
@@ -91,9 +91,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
   def insertOne(c: WebAuthnCredential): Fox[Unit] = {
     val converter = new ObjectConverter()
     val serializedAttestedCredential = c.serializeAttestedCredential(converter)
-    print(serializedAttestedCredential)
     val serializedAuthenticatorExtensions = c.serializedExtensions(converter)
-    print(serializedAuthenticatorExtensions)
     val credentialId = c.credentialRecord.getAttestedCredentialData.getCredentialId
     for {
       _ <- run(

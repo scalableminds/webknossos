@@ -1,5 +1,6 @@
 import { withoutValues } from "libs/utils";
 import _ from "lodash";
+import { CreateNodeAction, DeleteNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import type {
   CreateEdgeUpdateAction,
@@ -9,7 +10,7 @@ import type {
   DeleteTreeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/update_actions";
-import { moveTreeComponent } from "viewer/model/sagas/update_actions";
+import { moveTreeComponent, updateNode } from "viewer/model/sagas/update_actions";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
@@ -17,7 +18,11 @@ function cantor(a: number, b: number): number {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsolationRequirement>) {
+function compactMovedNodesAndEdges(
+  updateActions: Array<UpdateActionWithoutIsolationRequirement>,
+  prevTracing: SkeletonTracing | VolumeTracing,
+  tracing: SkeletonTracing | VolumeTracing,
+) {
   // This function detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -28,6 +33,10 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
   // is inserted for each group, containing the respective moved node ids.
   // The exact spot where the moveTreeComponent update action is inserted is important. This is
   // described later.
+
+  if (prevTracing.type !== "skeleton" || tracing.type !== "skeleton") {
+    return updateActions;
+  }
   let compactedActions = [...updateActions];
   // Detect moved nodes and edges
   const movedNodesAndEdges: Array<
@@ -74,18 +83,26 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
   // to create a single unique id
   const groupedMovedNodesAndEdges = _.groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
     cantor(createUA.value.treeId, deleteUA.value.treeId),
-  );
+  ) as Record<
+    number,
+    Array<
+      | [CreateNodeUpdateAction, DeleteNodeUpdateAction]
+      | [CreateEdgeUpdateAction, DeleteEdgeUpdateAction]
+    >
+  >;
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
     const actionTracingId = movedPairings[0][1].value.actionTracingId;
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
-    // This could be done with a .filter(...).map(...), but flow cannot comprehend that
-    const nodeIds = movedPairings.reduce((agg: number[], [createUA]) => {
-      if (createUA.name === "createNode") agg.push(createUA.value.id);
-      return agg;
-    }, []);
+    const nodeIds = movedPairings
+      .filter(
+        (tuple): tuple is [CreateNodeUpdateAction, DeleteNodeUpdateAction] =>
+          tuple[0].name === "createNode",
+      )
+      .map(([createUA]) => createUA.value.id);
+
     // The moveTreeComponent update action needs to be placed:
     // BEFORE the possible deleteTree update action of the oldTreeId and
     // AFTER the possible createTree update action of the newTreeId
@@ -96,6 +113,8 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
       (ua) => ua.name === "createTree" && ua.value.id === newTreeId,
     );
 
+    const moveAction = moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId);
+
     if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
       // This should not happen, but in case it does, the moveTreeComponent update action
       // cannot be inserted as the createTreeUA is after the deleteTreeUA
@@ -103,21 +122,26 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
       continue;
     } else if (createTreeUAIndex > -1) {
       // Insert after the createTreeUA
-      compactedActions.splice(
-        createTreeUAIndex + 1,
-        0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
-      );
+      compactedActions.splice(createTreeUAIndex + 1, 0, moveAction);
     } else if (deleteTreeUAIndex > -1) {
       // Insert before the deleteTreeUA
-      compactedActions.splice(
-        deleteTreeUAIndex,
-        0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
-      );
+      compactedActions.splice(deleteTreeUAIndex, 0, moveAction);
     } else {
       // Insert in front
       compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId));
+    }
+
+    // Add updateNode actions if node was changed (by reference)
+    for (const [createUA, deleteUA] of movedPairings) {
+      if (createUA.name === "createNode" && deleteUA.name === "deleteNode") {
+        const nodeId = createUA.value.id;
+        const newNode = tracing.trees.getNullable(newTreeId)?.nodes.getNullable(nodeId);
+        const oldNode = prevTracing.trees.getNullable(oldTreeId)?.nodes.getNullable(nodeId);
+
+        if (newNode !== oldNode && newNode != null) {
+          compactedActions.push(updateNode(newTreeId, newNode, actionTracingId));
+        }
+      }
     }
 
     // Remove the original create/delete update actions of the moved nodes and edges.
@@ -126,6 +150,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsola
       | DeleteNodeUpdateAction
       | CreateEdgeUpdateAction
       | DeleteEdgeUpdateAction;
+
     compactedActions = withoutValues(
       compactedActions,
       // Cast movedPairs type to satisfy _.flatten
@@ -157,10 +182,11 @@ function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRe
 
 export default function compactUpdateActions(
   updateActions: Array<UpdateActionWithoutIsolationRequirement>,
+  prevTracing: SkeletonTracing | VolumeTracing,
   tracing: SkeletonTracing | VolumeTracing,
 ): Array<UpdateActionWithoutIsolationRequirement> {
   return compactToggleActions(
-    compactDeletedTrees(compactMovedNodesAndEdges(updateActions)),
+    compactDeletedTrees(compactMovedNodesAndEdges(updateActions, prevTracing, tracing)),
     tracing,
   );
 }

@@ -478,6 +478,7 @@ export function* setupSavingForTracingType(
 
     const items = compactUpdateActions(
       Array.from(yield* call(performDiffTracing, prevTracing, tracing)),
+      prevTracing,
       tracing,
     );
 

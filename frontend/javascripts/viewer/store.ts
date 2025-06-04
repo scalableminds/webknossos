@@ -579,7 +579,7 @@ export type WebknossosState = {
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
-const combinedReducers = reduceReducers(
+export const combinedReducers = reduceReducers(
   SettingsReducer,
   DatasetReducer,
   SkeletonTracingReducer,

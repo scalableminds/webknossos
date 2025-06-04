@@ -15,35 +15,22 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
-import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.ExecutionContext
 
-class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
+class ZarrAgglomerateService(config: DataStoreConfig,
+                             dataVaultService: DataVaultService,
+                             sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DataConverter
     with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(AgglomerateFileKey, String), DatasetArray]()
 
-  // TODO unify with existing chunkContentsCache from binaryDataService?
-  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
-    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
-
-    val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
-
-    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
-      arrayBox match {
-        case Full(array) =>
-          (array.getSizeBytes / 1000L).toInt
-        case _ => 0
-      }
-
-    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
-  }
+  def clearCache(predicate: ((AgglomerateFileKey, String)) => Boolean): Int =
+    openArraysCache.clear(predicate)
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 

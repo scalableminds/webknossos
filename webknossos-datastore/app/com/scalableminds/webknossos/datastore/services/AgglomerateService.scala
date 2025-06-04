@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
@@ -23,19 +24,21 @@ import org.apache.commons.io.FilenameUtils
 
 import java.net.URI
 import java.nio.file.Paths
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService @Inject()(config: DataStoreConfig,
-                                   zarrAgglomerateService: ZarrAgglomerateService,
-                                   hdf5AgglomerateService: Hdf5AgglomerateService,
-                                   remoteSourceDescriptorService: RemoteSourceDescriptorService)
+class AgglomerateService(config: DataStoreConfig,
+                         zarrAgglomerateService: ZarrAgglomerateService,
+                         hdf5AgglomerateService: Hdf5AgglomerateService,
+                         remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends LazyLogging
     with FoxImplicits {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+
+  private val agglomerateKeyCache
+    : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey
 
   def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayer: DataLayer): Set[String] = {
     val attachedAgglomerates = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
@@ -55,14 +58,31 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     attachedAgglomerates ++ exploredAgglomerates
   }
 
-  def clearCaches(hdf5Predicate: AgglomerateFileKey => Boolean): Int =
-    // TODO also clear zarr caches
-    hdf5AgglomerateService.agglomerateFileCache.clear(hdf5Predicate)
+  def clearCaches(dataSourceId: DataSourceId, layerName: Option[String]): Int = {
+    agglomerateKeyCache.clear {
+      case (keyDataSourceId, keyLayerName, _) => dataSourceId == keyDataSourceId && layerName.forall(_ == keyLayerName)
+    }
 
-  // TODO cache?
-  def lookUpAgglomerateFile(dataSourceId: DataSourceId,
-                            dataLayer: DataLayer,
-                            mappingName: String): Box[AgglomerateFileKey] = {
+    val clearedHdf5Count = hdf5AgglomerateService.clearCache { agglomerateFileKey =>
+      agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+    }
+
+    val clearedZarrCount = zarrAgglomerateService.clearCache {
+      case (agglomerateFileKey, _) =>
+        agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+    }
+
+    clearedHdf5Count + clearedZarrCount
+  }
+
+  def lookUpAgglomerateFile(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String)(
+      implicit ec: ExecutionContext): Fox[AgglomerateFileKey] =
+    agglomerateKeyCache.getOrLoad((dataSourceId, dataLayer.name, mappingName),
+                                  _ => lookUpAgglomerateFileImpl(dataSourceId, dataLayer, mappingName).toFox)
+
+  private def lookUpAgglomerateFileImpl(dataSourceId: DataSourceId,
+                                        dataLayer: DataLayer,
+                                        mappingName: String): Box[AgglomerateFileKey] = {
     val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
       case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
       case None              => None
@@ -93,7 +113,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     for {
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
-      agglomerateFileKey <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName).toFox
+      agglomerateFileKey <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName)
       data <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)

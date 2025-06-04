@@ -227,13 +227,11 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          agglomerateFileAttachment <- agglomerateService
-            .lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
-            .toFox
-          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileAttachment)
+          agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
           segmentIds <- if (segmentOrAgglomerateId <= largestAgglomerateId) {
             agglomerateService.segmentIdsForAgglomerateId(
-              agglomerateFileAttachment,
+              agglomerateFileKey,
               segmentOrAgglomerateId
             )
           } else

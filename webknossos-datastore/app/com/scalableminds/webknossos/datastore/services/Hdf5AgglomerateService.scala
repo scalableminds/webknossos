@@ -32,8 +32,10 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // TODO other keys, also in zarr case
   private val keySegmentToAgglomerate = "/segment_to_agglomerate"
 
-  // TODO clear on reload
-  lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
+  private lazy val agglomerateFileCache = new AgglomerateFileCache(
+    config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
+
+  def clearCache(predicate: AgglomerateFileKey => Boolean): Int = agglomerateFileCache.clear(predicate)
 
   private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader = {
     if (agglomerateFileKey.attachment.path.getScheme.nonEmpty && agglomerateFileKey.attachment.path.getScheme != "file") {

@@ -259,14 +259,11 @@ class BinaryDataService(val dataBaseDir: Path,
   def clearCache(organizationId: String, datasetDirectoryName: String, layerName: Option[String]): (Int, Int, Int) = {
     val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
 
-    def agglomerateFileMatchPredicate(agglomerateFileKey: AgglomerateFileKey) =
-      agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
-
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
       key._1 == DataSourceId(datasetDirectoryName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
-      agglomerateServiceOpt.map(_.clearCaches(agglomerateFileMatchPredicate)).getOrElse(0)
+      agglomerateServiceOpt.map(_.clearCaches(dataSourceId, layerName)).getOrElse(0)
 
     val clearedBucketProviderCount = bucketProviderCache.clear(bucketProviderPredicate)
 
@@ -278,4 +275,5 @@ class BinaryDataService(val dataBaseDir: Path,
 
     (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
+
 }

@@ -66,11 +66,11 @@ function ChangePasswordView({ history }: Props) {
   }
 
   const registerNewPasskey = async () => {
-    const passkeyName = newPasskeyName.trim()
+    const passkeyName = newPasskeyName.trim();
     if (!passkeyName.trim()) {
       Toast.error("Passkey name cannot be empty");
       return;
-    } else if (passkeys.some(pk => pk.name === passkeyName)) {
+    } else if (passkeys.some((pk) => pk.name === passkeyName)) {
       Toast.error("A passkey with this name already exists");
       return;
     }

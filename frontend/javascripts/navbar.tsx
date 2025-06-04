@@ -677,6 +677,7 @@ function LoggedInAvatar({
               key: "resetpassword",
               label: <Link to="/auth/changePassword">Change Password</Link>,
             },
+            { key: "changeEmail", label: <Link to="/auth/changeEmail">Change Email</Link> },
             { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
             {
               key: "theme",

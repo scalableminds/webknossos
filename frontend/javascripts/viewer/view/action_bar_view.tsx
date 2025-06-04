@@ -16,8 +16,9 @@ import {
   doesSupportVolumeWithFallback,
   getColorLayers,
   getMappingInfoForSupportedLayer,
+  getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
-  getVisibleSegmentationLayer,
+  getVisibleSegmentationLayers,
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
@@ -139,13 +140,19 @@ function AdditionalCoordinatesInputView() {
 function CreateAnnotationButton() {
   const history = useHistory();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
+  const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
+  const dataset = useWkSelector((state) => state.dataset);
+
+  const getSegmentationLayer = () => {
+    if (visibleSegmentationLayers?.length === 1) return visibleSegmentationLayers[0];
+    if (segmentationLayers.length === 1) return segmentationLayers[0];
+  };
 
   const onClick = async () => {
-    const state = Store.getState();
-    const { dataset } = state;
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(state);
+    const maybeSegmentationLayer = getSegmentationLayer();
     const fallbackLayerName =
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name

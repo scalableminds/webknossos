@@ -195,15 +195,14 @@ class UserController @Inject()(userService: UserService,
         Fox.successful(())
     })
 
-  private def checkAdminOnlyUpdates(user: User,
-                                    isActive: Boolean,
-                                    isAdmin: Boolean,
-                                    isDatasetManager: Boolean,
-                                    oldEmail: String,
-                                    email: String)(issuingUser: User): Boolean =
-    if (isActive && user.isAdmin == isAdmin && oldEmail == email && isDatasetManager == user.isDatasetManager)
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
+      issuingUser: User): Boolean =
+    if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
+
+  private def checkAdminOrSelfUpdates(user: User, oldEmail: String, email: String)(issuingUser: User): Boolean =
+    if (oldEmail == email) true else issuingUser.isAdminOf(user) || issuingUser._id == user._id
 
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
@@ -232,6 +231,7 @@ class UserController @Inject()(userService: UserService,
         count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
         issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
         _ <- Fox.fromBool(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
+        // TODOM: @fm3 should we keep this check as now we can have guest users?
       } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
@@ -277,8 +277,9 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(
-            issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox
+            .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(checkAdminOrSelfUpdates(user, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)

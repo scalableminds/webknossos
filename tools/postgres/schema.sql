@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(134);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
 COMMIT TRANSACTION;
 
 
@@ -162,6 +162,18 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
+CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
+CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json');
+CREATE TABLE webknossos.dataset_layer_attachments(
+   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+   layerName TEXT NOT NULL,
+   name TEXT NOT NULL,
+   path TEXT NOT NULL,
+   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
+   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+   PRIMARY KEY(_dataset, layerName, name, type)
+);
+
 CREATE TABLE webknossos.dataset_allowedTeams(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -201,6 +213,7 @@ CREATE TABLE webknossos.dataset_thumbnails(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
 );
+
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(
@@ -897,6 +910,9 @@ ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_additionalAxes
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
+ALTER TABLE webknossos.dataset_layer_attachments
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE,
+  ADD CONSTRAINT layer_ref FOREIGN KEY(_dataset, layerName) REFERENCES webknossos.dataset_layers(_dataset, name) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs

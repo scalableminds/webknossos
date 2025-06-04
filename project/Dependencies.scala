@@ -2,8 +2,9 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "10.0.1"
-  private val brotliVersion = "1.17.0"
+  private val silhouetteVersion = "10.0.3"
+  private val brotliVersion = "1.18.0"
+  private val slickVersion = "3.5.2"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -11,11 +12,11 @@ object Dependencies {
     // Play Web Framework. import play
     "org.playframework" %% "play" % "3.0.7",
     // Play’s JSON serialization. import play.api.libs.json
-    "com.typesafe.play" %% "play-json" % "2.10.5",
+    "org.playframework" %% "play-json" % "3.0.4",
     // Sending emails. import org.apache.commons.mail
-    "org.apache.commons" % "commons-email" % "1.5",
+    "org.apache.commons" % "commons-email" % "1.6.0",
     // File utils. import org.apache.commons.io
-    "commons-io" % "commons-io" % "2.17.0",
+    "commons-io" % "commons-io" % "2.19.0",
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.17.0",
     // Box/Tryo. import net.liftweb
@@ -42,7 +43,7 @@ object Dependencies {
     // Protocol buffer GRPC health check for FossilDB. import io.grpc
     "io.grpc" % "grpc-services" % grpcVersion,
     // Streaming JSON parsing. import com.google.gson
-    "com.google.code.gson" % "gson" % "2.10.1",
+    "com.google.code.gson" % "gson" % "2.13.1",
     // Play WS Http client, used for RPC calls. import play.api.libs.ws
     ws,
     // Dependency Injection. import javax.inject.Inject
@@ -56,15 +57,15 @@ object Dependencies {
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
-    "software.amazon.awssdk" % "s3" % "2.26.21",
+    "software.amazon.awssdk" % "s3" % "2.31.50",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.43.1",
+    "com.google.cloud" % "google-cloud-storage" % "2.52.3",
     // Blosc compression. import org.blosc
     "org.lasersonlab" % "jblosc" % "1.0.1",
     // Zstd compression. import org.apache.commons.compress
     "org.apache.commons" % "commons-compress" % "1.27.1",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.5-5",
+    "com.github.luben" % "zstd-jni" % "1.5.7-3",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -82,7 +83,7 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.17.0",
+    "commons-codec" % "commons-codec" % "1.18.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette
@@ -94,19 +95,19 @@ object Dependencies {
     // Writing XML. import com.sun.xml.txw2
     "org.glassfish.jaxb" % "txw2" % "4.0.5",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "org.codehaus.woodstox" % "wstx-asl" % "4.0.6",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.1.0",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
-    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.1",
+    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.4",
     // SQL Queries. import slick
-    "com.typesafe.slick" %% "slick" % "3.5.2",
+    "com.typesafe.slick" %% "slick" % slickVersion,
     // SQL Queries connection pool. not imported.
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.5.2",
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
-    "com.typesafe.slick" %% "slick-codegen" % "3.5.2",
+    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.4",
+    "org.postgresql" % "postgresql" % "42.7.5",
     /// WebAuthn Dependencies
-    "com.webauthn4j" % "webauthn4j-core" % "0.28.6.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+    "com.webauthn4j" % "webauthn4j-core" % "0.29.2.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

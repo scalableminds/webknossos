@@ -848,7 +848,8 @@ class VolumeTracingService @Inject()(
           mergedAdditionalAxes,
           temporaryTracingService,
           tc,
-          toTemporaryStore
+          isReadOnly = false,
+          toTemporaryStore = toTemporaryStore
         )
         volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>

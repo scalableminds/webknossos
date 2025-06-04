@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type {
   BoundingBoxType,
@@ -1349,4 +1349,14 @@ export function safeZipObject<K extends string | number | symbol, V>(
     throw new Error("Cannot construct objects because keys and values don't match in length.");
   }
   return _.zipObject(keys, values) as Record<K, V>;
+}
+
+export function mapEntriesToMap<K extends string | number | symbol, V>(
+  entries: MapEntries<K, V>,
+): Record<K, V> {
+  const dict = {} as Record<K, V>;
+  for (const entry of entries) {
+    dict[entry.id] = entry.value;
+  }
+  return dict;
 }

@@ -47,7 +47,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
-  const idToVisible = userState ? Object.fromEntries(userState.boundingBoxVisibilities) : {};
+  const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
@@ -231,7 +231,7 @@ export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
       ? userState.segmentGroupExpandedStates
       : userState.treeGroupExpandedStates;
 
-  const groupIdToExpanded: Record<number, boolean> = Object.fromEntries(expandedStates);
+  const groupIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(expandedStates);
   return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
     return {
       ...group,
@@ -249,7 +249,7 @@ export function getApplyUserStateToTreeFn(
   }
 
   const visibilities = userState.treeVisibilities;
-  const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(visibilities);
+  const treeIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(visibilities);
   return (tree) => {
     return {
       ...tree,

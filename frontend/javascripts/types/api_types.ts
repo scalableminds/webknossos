@@ -913,14 +913,16 @@ export type ServerTracingBase = {
   zoomLevel: number;
 };
 
+export type MapEntries<K extends number | string | symbol, V> = Array<{ id: K; value: V }>;
+
 export type SkeletonUserState = {
   userId: string;
   activeNodeId: number | null;
   // The following properties are the values of a
   // id->boolean dictionary.
-  boundingBoxVisibilities: Array<[number, boolean]>;
-  treeGroupExpandedStates: Array<[number, boolean]>;
-  treeVisibilities: Array<[number, boolean]>;
+  treeVisibilities: MapEntries<number, boolean>;
+  treeGroupExpandedStates: MapEntries<number, boolean>;
+  boundingBoxVisibilities: MapEntries<number, boolean>;
 };
 
 export type ServerSkeletonTracing = ServerTracingBase & {
@@ -941,9 +943,9 @@ export type VolumeUserState = {
   activeSegmentId?: number;
   // The following properties are the values of a
   // id->boolean dictionary.
-  segmentGroupExpandedStates: Array<[number, boolean]>;
-  boundingBoxVisibilities: Array<[number, boolean]>;
-  segmentVisibilities: Array<[number, boolean]>;
+  segmentVisibilities: MapEntries<number, boolean>;
+  segmentGroupExpandedStates: MapEntries<number, boolean>;
+  boundingBoxVisibilities: MapEntries<number, boolean>;
 };
 
 export type ServerVolumeTracing = ServerTracingBase & {

@@ -280,7 +280,7 @@ export function serverVolumeToClientVolumeTracing(
   );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
   const segmentVisibilityMap: Record<number, boolean> = userState
-    ? Object.fromEntries(userState.segmentVisibilities)
+    ? Utils.mapEntriesToMap(userState.segmentVisibilities)
     : {};
 
   const volumeTracing = {

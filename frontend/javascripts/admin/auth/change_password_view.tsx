@@ -66,6 +66,14 @@ function ChangePasswordView({ history }: Props) {
   }
 
   const registerNewPasskey = async () => {
+    const passkeyName = newPasskeyName.trim()
+    if (!passkeyName.trim()) {
+      Toast.error("Passkey name cannot be empty");
+      return;
+    } else if (passkeys.some(pk => pk.name === passkeyName)) {
+      Toast.error("A passkey with this name already exists");
+      return;
+    }
     try {
       setIsPasskeyNameModalOpen(false);
       await doWebAuthnRegistration(newPasskeyName);
@@ -221,7 +229,7 @@ function ChangePasswordView({ history }: Props) {
           ))}
           <div style={{ paddingTop: 10 }}>
             <Button onClick={() => setIsPasskeyNameModalOpen(true)} type="primary">
-              Register new Passkey
+              Register Passkey
             </Button>
           </div>
         </Col>

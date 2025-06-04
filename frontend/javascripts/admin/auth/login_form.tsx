@@ -154,7 +154,6 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                   }
                 } catch (error) {
                   console.error("WebAuthn login failed", error);
-                  Toast.error("Login with Passkey failed");
                 }
               }}
             >

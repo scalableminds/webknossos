@@ -156,10 +156,16 @@ app.all("/*", toBackend);
 
 if (process.argv.includes("--tls")) {
   console.log(loggingPrefix, "Using TLS")
-  https.createServer({
-    key: fs.readFileSync("target/dev.key.pem"),
-    cert: fs.readFileSync("target/dev.cert.pem"),
-  }, app).listen(PORT)
+  try {
+    https.createServer({
+      key: fs.readFileSync("target/dev.key.pem"),
+      cert: fs.readFileSync("target/dev.cert.pem"),
+    }, app).listen(PORT)
+  } catch (error) {
+    console.error(loggingPrefix, "Failed to start HTTPS server:", error.message);
+    console.error(loggingPrefix, "Make sure you've generated SSL certificates using the gen-ssl-dev-certs.sh script");
+    process.exit(1);
+  }
 } else {
   app.listen(PORT);
 }

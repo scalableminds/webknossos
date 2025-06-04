@@ -37,6 +37,7 @@ import security._
 import utils.WkConf
 
 import java.net.URLEncoder
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -171,7 +172,6 @@ object WebAuthnKeyDescriptor {
 }
 
 class AuthenticationController @Inject()(
-    configuration: Configuration,
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
@@ -202,17 +202,22 @@ class AuthenticationController @Inject()(
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
+  private val secureRandom = new SecureRandom()
+
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
 
-  private lazy val origin = new Origin("https://webknossos.local:9000") // TODO: Load from config
+  private lazy val origin = new Origin(conf.Http.uri)
   private lazy val webAuthnPubKeyParams = Array(
-    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"), // NOTE: COSE Algorithm: Ed25519
-    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"), // NOTE: COSE Algorithm: ES256
-    WebAuthnCreationOptionsPubKeyParam(-257, "public-key"), // NOTE: COSE Algorithm: RS256
+    // NOTE: COSE Algorithm: Ed25519
+    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
+    // NOTE: COSE Algorithm: ES256
+    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),
+    // NOTE: COSE Algorithm: RS256
+    WebAuthnCreationOptionsPubKeyParam(-257, "public-key"),
   )
   private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
 
@@ -310,7 +315,7 @@ class AuthenticationController @Inject()(
           Future.successful(BadRequest(Messages("error.noUser")))
         case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
       }
-    } yield result;
+    } yield result
 
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm
@@ -560,11 +565,10 @@ class AuthenticationController @Inject()(
   }
 
   def webauthnAuthStart(): Action[AnyContent] = Action {
-    val sessionId = UUID.randomUUID().toString;
+    val sessionId = UUID.randomUUID().toString
     val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
-    val random = new SecureRandom() // TODO: Initialize once
     val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
-    random.nextBytes(challenge)
+    secureRandom.nextBytes(challenge)
     val assertion = WebAuthnPublicKeyCredentialRequestOptions(
       challenge = Base64.encodeBase64URLSafeString(challenge),
       timeout = Some(120000),
@@ -572,7 +576,7 @@ class AuthenticationController @Inject()(
       userVerification = Some("preferred"),
       hints = None
     )
-    temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes));
+    temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
     Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 
@@ -586,21 +590,21 @@ class AuthenticationController @Inject()(
             temporaryAssertionStore.remove(sessionId)
             challenge.toFox
           }
-          authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox
+          authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ?~> "Bad Request" ~> BAD_REQUEST
           credentialId = authData.getCredentialId
-          multiUserId = ObjectId(new String(authData.getUserHandle))
-          multiUser <- multiUserDAO.findOne(multiUserId)(GlobalAccessContext)
-          credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext)
+          multiUserEmail = new String(authData.getUserHandle)
+          multiUser <- multiUserDAO.findOneByEmail(multiUserEmail)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
           serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
           params = new AuthenticationParameters(
             serverProperty,
             credential.credentialRecord,
             null,
-            true, // TODO
-            false // TODO
+            false, // NOTE: User verification is not required put preferred.
+            false // NOTE: User presence is not required.
           )
-          _ <- tryo(webAuthnManager.verify(authData, params)).toFox
+          _ <- tryo(webAuthnManager.verify(authData, params)).toFox ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
           _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
           _ <- webAuthnCredentialDAO.updateSignCount(credential)
 
@@ -616,17 +620,16 @@ class AuthenticationController @Inject()(
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
-        id = Base64.encodeBase64URLSafeString(request.identity._multiUser.id.getBytes), // TODO: Not leak database id, but use email instead
+        id = Base64.encodeBase64URLSafeString(email.getBytes), // NOTE: Not leak database id, but use email instead
         name = email
       )
-      credentials <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
+      credentials <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser) ?~> "Failed to fetch Passkeys" ~> INTERNAL_SERVER_ERROR
       excludeCredentials = credentials.map(c => WebAuthnCreationOptionsExcludeCredentials(
         id=Base64.encodeBase64URLSafeString(c.credentialRecord.getAttestedCredentialData.getCredentialId)
       )).toArray
-      random = new SecureRandom() // TODO: Initialize once
       challenge = {
         val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
-        random.nextBytes(challenge)
+        secureRandom.nextBytes(challenge)
         challenge
       }
       encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
@@ -640,8 +643,8 @@ class AuthenticationController @Inject()(
         pubKeyCredParams = webAuthnPubKeyParams, // NOTE: Could be created at startup
         timeout = 120000, // 2 minutes timeout
         rp = WebAuthnCreationOptionsRelyingParty(
-          id = origin.getHost(),
-          name = origin.getHost(),
+          id = origin.getHost,
+          name = origin.getHost,
           ),
         user = user,
         )
@@ -683,7 +686,7 @@ class AuthenticationController @Inject()(
         credentialRecord = credentialRecord,
         isDeleted = false
       )
-      _ <- webAuthnCredentialDAO.insertOne(credential)
+      _ <- webAuthnCredentialDAO.insertOne(credential) ?~> "Failed to add Passkey" ~> INTERNAL_SERVER_ERROR
     } yield Ok(Json.obj("message" -> "Key registered successfully"))
   }
 

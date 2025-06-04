@@ -1,11 +1,12 @@
 import { LockOutlined } from "@ant-design/icons";
-import { Alert, Button, Col, Form, Input, Row } from "antd";
+import { Alert, Button, Col, Descriptions, Form, Input, Row, Space } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
+import { AccountSettingTitle } from "./profile_view";
 const FormItem = Form.Item;
 const { Password } = Input;
 
@@ -44,9 +45,41 @@ function ChangePasswordView({ history }: Props) {
     return Promise.resolve();
   }
 
+  const items = [
+    {
+      label: "Password",
+      children: (
+        <>
+          <Space.Compact>
+            <Input.Password
+              prefix={
+                <LockOutlined
+                  style={{
+                    fontSize: 13,
+                  }}
+                />
+              }
+              value="***************"
+            />
+            <Button
+              type="primary"
+              htmlType="submit"
+              style={{
+                width: "100%",
+              }}
+            >
+              Change Password
+            </Button>
+          </Space.Compact>
+        </>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <h2>Password</h2>
+      <AccountSettingTitle title="Password" description="Manage and update your password" />
+      <Descriptions column={2} layout="vertical" colon={false} items={items} />
       <Row>
         <Col span={8}>
           <Form onFinish={onFinish} form={form}>
@@ -144,12 +177,13 @@ function ChangePasswordView({ history }: Props) {
                   width: "100%",
                 }}
               >
-                Change Password
+                Update Password
               </Button>
             </FormItem>
           </Form>
         </Col>
       </Row>
+      <AccountSettingTitle title="Passkeys" description="Login passwordless with Passkeys" />
     </div>
   );
 }

@@ -12,6 +12,21 @@ import { setThemeAction } from "viewer/model/actions/ui_actions";
 
 const { Title, Text } = Typography;
 
+export function AccountSettingTitle({
+  title,
+  description,
+}: { title: string; description: string }) {
+  return (
+    <div>
+      <h2 style={{ marginBottom: 0 }}>{title}</h2>
+      <Text type="secondary" style={{ display: "block" }}>
+        {description}
+      </Text>
+      <Divider style={{ margin: "12px 0 32px 0" }} />
+    </div>
+  );
+}
+
 function ProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
@@ -76,32 +91,26 @@ function ProfileView() {
     {
       label: "Theme",
       children: (
-        <Dropdown menu={{ items: themeItems }} trigger={["click"]}>
-          <Text>
-            {themeItems.find((item) => item.key === selectedTheme)?.label} <DownOutlined />
-          </Text>
-        </Dropdown>
+        <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
+          {themeItems.find((item) => item.key === selectedTheme)?.label}
+        </Dropdown.Button>
       ),
     },
   ];
 
   return (
     <div>
-      <Title level={2}>Profile</Title>
-      <Text type="secondary" style={{ display: "block", marginBottom: 24 }}>
-        Manage your personal information and preferences
-      </Text>
-      <Divider />
-      <Card>
-        <Card.Meta title="Profile" description="Manage your personal information and preferences" />
-        <Descriptions
-          column={2}
-          colon={false}
-          layout="vertical"
-          style={{ marginBottom: 24 }}
-          items={profileItems}
-        />
-      </Card>
+      <AccountSettingTitle
+        title="Profile"
+        description="Manage your personal information and preferences"
+      />
+      <Descriptions
+        column={2}
+        colon={false}
+        layout="vertical"
+        style={{ marginBottom: 24 }}
+        items={profileItems}
+      />
     </div>
   );
 }

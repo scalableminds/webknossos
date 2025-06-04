@@ -1,16 +1,18 @@
-import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import Icon, { CopyOutlined, InfoCircleOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
-import { Button, Col, Form, Input, Row, Space, Spin } from "antd";
+import { Button, Typography, Descriptions, Form, Input, Row, Space, Spin, Popover } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-const FormItem = Form.Item;
+import { AccountSettingTitle } from "./profile_view";
+
+const { Text } = Typography;
 
 function AuthTokenView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentToken, setCurrentToken] = useState<string>("");
-  const [form] = Form.useForm();
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -44,65 +46,58 @@ function AuthTokenView() {
     }
   };
 
+  const APIitems = [
+    {
+      label: "Auth Token",
+      children: (
+        <Text code copyable>
+          {currentToken}
+        </Text>
+      ),
+    },
+    {
+      label: (
+        <>
+          <span className="icon-margin-right">Token Revocation</span>
+          <Popover
+            content="Revoke your token if it has been compromised or if you suspect someone else has gained
+        access to it. This will invalidate all active sessions."
+          >
+            <InfoCircleOutlined />
+          </Popover>
+        </>
+      ),
+      children: (
+        <Button icon={<SwapOutlined />} onClick={handleRevokeToken}>
+          Revoke and Generate New Token
+        </Button>
+      ),
+    },
+    activeUser
+      ? {
+          label: "Organization ID",
+          children: (
+            <Text code copyable>
+              {activeUser.organization}
+            </Text>
+          ),
+        }
+      : null,
+    {
+      label: "API Documentation",
+      children: <a href="https://docs.webknossos.org/webknossos-py/index.html">Read the docs</a>,
+    },
+  ];
+
   return (
     <div>
-      <h2>API Authentication</h2>
-      <Row>
-        <Col span={8}>
-          <Spin size="large" spinning={isLoading}>
-            <h4>Auth Token</h4>
-            <Form form={form}>
-              <FormItem>
-                <Space.Compact>
-                  <Input
-                    value={currentToken}
-                    style={{
-                      width: "90%",
-                    }}
-                    readOnly
-                  />
-                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
-                </Space.Compact>
-              </FormItem>
-              <FormItem>
-                <Button icon={<SwapOutlined />} onClick={handleRevokeToken}>
-                  Revoke Token
-                </Button>
-              </FormItem>
-            </Form>
-            {activeUser != null && (
-              <>
-                <h4>Organization ID</h4>
-                <Form>
-                  <FormItem>
-                    <Space.Compact>
-                      <Input
-                        value={activeUser.organization}
-                        style={{
-                          width: "90%",
-                        }}
-                        readOnly
-                      />
-                      <Button onClick={copyOrganizationIdToClipboard} icon={<CopyOutlined />} />
-                    </Space.Compact>
-                  </FormItem>
-                </Form>
-              </>
-            )}
-          </Spin>
-
-          <p>
-            Your Auth Token is a unique string of characters that authenticates you when using our
-            <a href="https://docs.webknossos.org/webknossos-py/index.html"> Python API</a>. It is
-            request to verify your identity.
-          </p>
-          <p>
-            Revoke your token if it has been compromised or if you suspect someone else has gained
-            access to it.
-            <a href="https://docs.webknossos.org/webknossos-py/index.html">Read more</a>
-          </p>
-        </Col>
-      </Row>
+      <AccountSettingTitle
+        title="API Authorization"
+        description="Access the WEBKNOSSO Python API with your API token"
+      />
+      <Spin size="large" spinning={isLoading}>
+        <Descriptions column={2} layout="vertical" colon={false} items={APIitems} />
+      </Spin>
     </div>
   );
 }

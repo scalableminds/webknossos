@@ -7,15 +7,6 @@ import ProfileView from "./profile_view";
 
 const { Sider, Content } = Layout;
 
-function PasskeysSettings() {
-  return (
-    <div>
-      <h2>Passkeys</h2>
-      <p>Passkeys settings page content will be added here.</p>
-    </div>
-  );
-}
-
 function AccountSettingsView() {
   const location = useLocation();
   const history = useHistory();
@@ -23,24 +14,31 @@ function AccountSettingsView() {
 
   const menuItems = [
     {
-      key: "profile",
-      icon: <UserOutlined />,
-      label: "Profile",
+      label: "Account",
+      type: "group",
+      children: [
+        {
+          key: "profile",
+          icon: <UserOutlined />,
+          label: "Profile",
+        },
+        {
+          key: "password",
+          icon: <SafetyOutlined />,
+          label: "Password",
+        },
+      ],
     },
     {
-      key: "password",
-      icon: <LockOutlined />,
-      label: "Password",
-    },
-    {
-      key: "passkeys",
-      icon: <SafetyOutlined />,
-      label: "Passkeys",
-    },
-    {
-      key: "token",
-      icon: <SettingOutlined />,
-      label: "Auth Token",
+      label: "Developer",
+      type: "group",
+      children: [
+        {
+          key: "token",
+          icon: <SettingOutlined />,
+          label: "Auth Token",
+        },
+      ],
     },
   ];
 
@@ -61,7 +59,6 @@ function AccountSettingsView() {
           <Switch>
             <Route path="/account/profile" component={ProfileView} />
             <Route path="/account/password" component={ChangePasswordView} />
-            <Route path="/account/passkeys" component={PasskeysSettings} />
             <Route path="/account/token" component={AuthTokenView} />
             <Route path="/account" component={ProfileView} />
           </Switch>

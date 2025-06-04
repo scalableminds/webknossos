@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...HEAD)
 
 ### Added
+- Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
 

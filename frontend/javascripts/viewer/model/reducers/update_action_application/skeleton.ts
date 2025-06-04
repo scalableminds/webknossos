@@ -223,10 +223,7 @@ export function applySkeletonUpdateActionsFromServer(
           updatedTargetNodes.mutableSet(id, node);
         }
 
-        // todop: check why tests did not fail when .addEdges(movedEdges) was missing
         const updatedTargetEdges = targetTree.edges.clone().addEdges(movedEdges, true);
-
-        console.log("movedEdges.values()", Array.from(movedEdges.values()));
 
         const updatedTargetTree = {
           ...targetTree,

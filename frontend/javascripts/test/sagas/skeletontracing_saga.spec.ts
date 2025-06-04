@@ -40,12 +40,13 @@ function testDiffing(prevAnnotation: StoreAnnotation, nextAnnotation: StoreAnnot
 function createCompactedSaveQueueFromUpdateActions(
   updateActions: UpdateActionWithoutIsolationRequirement[][],
   timestamp: number,
+  prevTracing: SkeletonTracing,
   tracing: SkeletonTracing,
   stats: TracingStats | null = null,
 ) {
   return compactSaveQueue(
     createSaveQueueFromUpdateActions(
-      updateActions.map((batch) => compactUpdateActions(batch, tracing)),
+      updateActions.map((batch) => compactUpdateActions(batch, prevTracing, tracing)),
       timestamp,
       stats,
     ),
@@ -567,7 +568,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -630,7 +632,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
       TIMESTAMP,
-      skeletonTracing,
+      newState1.annotation.skeleton!,
+      newState2.annotation.skeleton!,
     );
 
     // This should result in one created node and its edge (a)
@@ -725,7 +728,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
       TIMESTAMP,
-      skeletonTracing,
+      initialState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     // This should result in a moved treeComponent of size one (a)
@@ -814,7 +818,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     // This should result in a new tree
@@ -873,7 +878,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     // This should result in two new trees and two moved treeComponents of size three and two
@@ -950,7 +956,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState2.annotation.skeleton!,
     );
 
     // This should result in the creation of a new tree (a)
@@ -1042,7 +1049,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
     // The deleteTree optimization in compactUpdateActions (that is unrelated to this test)
     // will remove the first deleteNode update action as the first tree is deleted because of the merge,
@@ -1068,7 +1076,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -1097,7 +1106,8 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       [updateActions],
       TIMESTAMP,
-      skeletonTracing,
+      testState.annotation.skeleton!,
+      newState.annotation.skeleton!,
     );
 
     const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;

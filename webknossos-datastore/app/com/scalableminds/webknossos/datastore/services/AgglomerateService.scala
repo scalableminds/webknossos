@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -55,14 +55,14 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     attachedAgglomerates ++ exploredAgglomerates
   }
 
-  def clearCaches(hdf5Predicate: LayerAttachment => Boolean): Int =
+  def clearCaches(hdf5Predicate: AgglomerateFileKey => Boolean): Int =
     // TODO also clear zarr caches
     hdf5AgglomerateService.agglomerateFileCache.clear(hdf5Predicate)
 
   // TODO cache?
   def lookUpAgglomerateFile(dataSourceId: DataSourceId,
                             dataLayer: DataLayer,
-                            mappingName: String): Box[LayerAttachment] = {
+                            mappingName: String): Box[AgglomerateFileKey] = {
     val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
       case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
       case None              => None
@@ -75,11 +75,15 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatsetDir, dataLayer.name))
       })
     } yield
-      registeredAttachmentNormalized.getOrElse(
-        LayerAttachment(
-          mappingName,
-          new URI(dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toString),
-          LayerAttachmentDataformat.hdf5
+      AgglomerateFileKey(
+        dataSourceId,
+        dataLayer.name,
+        registeredAttachmentNormalized.getOrElse(
+          LayerAttachment(
+            mappingName,
+            new URI(dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toString),
+            LayerAttachmentDataformat.hdf5
+          )
         )
       )
   }
@@ -89,24 +93,22 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     for {
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
-      agglomerateFileAttachment <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy,
-                                                         request.dataLayer,
-                                                         mappingName).toFox
-      data <- agglomerateFileAttachment.dataFormat match {
+      agglomerateFileKey <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName).toFox
+      data <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
-          zarrAgglomerateService.applyAgglomerate(agglomerateFileAttachment, elementClass)(data)
-        case _ => hdf5AgglomerateService.applyAgglomerate(agglomerateFileAttachment, request)(data).toFox
+          zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)
+        case _ => hdf5AgglomerateService.applyAgglomerate(agglomerateFileKey, request)(data).toFox
       }
     } yield data
 
-  def generateSkeleton(agglomerateFileAttachment: LayerAttachment,
+  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,
                        agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
     for {
       before <- Instant.nowFox
-      skeleton <- agglomerateFileAttachment.dataFormat match {
+      skeleton <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
-          zarrAgglomerateService.generateSkeleton(agglomerateFileAttachment, agglomerateId)
-        case _ => hdf5AgglomerateService.generateSkeleton(agglomerateFileAttachment, agglomerateId).toFox
+          zarrAgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId)
+        case _ => hdf5AgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId).toFox
       }
       _ = if (Instant.since(before) > (100 milliseconds)) {
         Instant.logSince(
@@ -119,46 +121,46 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       }
     } yield skeleton
 
-  def largestAgglomerateId(agglomerateFileAttachment: LayerAttachment)(implicit ec: ExecutionContext,
-                                                                       tc: TokenContext): Fox[Long] =
-    agglomerateFileAttachment.dataFormat match {
-      case LayerAttachmentDataformat.zarr3 => zarrAgglomerateService.largestAgglomerateId(agglomerateFileAttachment)
-      case _                               => hdf5AgglomerateService.largestAgglomerateId(agglomerateFileAttachment).toFox
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext,
+                                                                   tc: TokenContext): Fox[Long] =
+    agglomerateFileKey.attachment.dataFormat match {
+      case LayerAttachmentDataformat.zarr3 => zarrAgglomerateService.largestAgglomerateId(agglomerateFileKey)
+      case _                               => hdf5AgglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
     }
 
-  def segmentIdsForAgglomerateId(agglomerateFileAttachment: LayerAttachment,
+  def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey,
                                  agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
-    agglomerateFileAttachment.dataFormat match {
+    agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileAttachment, agglomerateId)
-      case _ => hdf5AgglomerateService.segmentIdsForAgglomerateId(agglomerateFileAttachment, agglomerateId).toFox
+        zarrAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
+      case _ => hdf5AgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).toFox
     }
 
-  def agglomerateIdsForSegmentIds(agglomerateFileAttachment: LayerAttachment, segmentIds: Seq[Long])(
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
-    agglomerateFileAttachment.dataFormat match {
+    agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileAttachment, segmentIds)
-      case _ => hdf5AgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileAttachment, segmentIds).toFox
+        zarrAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds)
+      case _ => hdf5AgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds).toFox
     }
 
-  def positionForSegmentId(agglomerateFileAttachment: LayerAttachment,
-                           segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Vec3Int] =
-    agglomerateFileAttachment.dataFormat match {
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
+                                                                                    tc: TokenContext): Fox[Vec3Int] =
+    agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.positionForSegmentId(agglomerateFileAttachment, segmentId)
-      case _ => hdf5AgglomerateService.positionForSegmentId(agglomerateFileAttachment, segmentId).toFox
+        zarrAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId)
+      case _ => hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
     }
 
-  def generateAgglomerateGraph(agglomerateFileAttachment: LayerAttachment, agglomerateId: Long)(
+  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[AgglomerateGraph] =
-    agglomerateFileAttachment.dataFormat match {
+    agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
-        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileAttachment, agglomerateId)
+        zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
       case _ =>
-        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileAttachment, agglomerateId).toFox
+        hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId).toFox
     }
 
 }

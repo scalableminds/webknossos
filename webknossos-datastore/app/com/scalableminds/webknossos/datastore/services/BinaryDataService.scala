@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId, LayerAttachment}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -258,11 +258,9 @@ class BinaryDataService(val dataBaseDir: Path,
 
   def clearCache(organizationId: String, datasetDirectoryName: String, layerName: Option[String]): (Int, Int, Int) = {
     val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
-    val localDatasourcePath = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
-    val localAgglomeratePathPrefix = layerName.map(localDatasourcePath.resolve).getOrElse(localDatasourcePath)
 
-    def agglomerateFileMatchPredicate(agglomerateFileAttachment: LayerAttachment) =
-      agglomerateFileAttachment.path.toString.startsWith(localAgglomeratePathPrefix.toString)
+    def agglomerateFileMatchPredicate(agglomerateFileKey: AgglomerateFileKey) =
+      agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
       key._1 == DataSourceId(datasetDirectoryName, organizationId) && layerName.forall(_ == key._2)

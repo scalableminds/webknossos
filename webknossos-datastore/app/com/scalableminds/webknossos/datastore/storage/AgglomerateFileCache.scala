@@ -4,11 +4,13 @@ import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
+
+case class AgglomerateFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
 case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,
@@ -18,23 +20,23 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
-class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[LayerAttachment, CachedAgglomerateFile] {
-  override def onElementRemoval(key: LayerAttachment, value: CachedAgglomerateFile): Unit =
+class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
+  override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(agglomerateFileAttachment: LayerAttachment)(
-      loadFn: LayerAttachment => CachedAgglomerateFile): CachedAgglomerateFile = {
+  def withCache(agglomerateFileKey: AgglomerateFileKey)(
+      loadFn: AgglomerateFileKey => CachedAgglomerateFile): CachedAgglomerateFile = {
 
     def handleUncachedAgglomerateFile() = {
-      val agglomerateFile = loadFn(agglomerateFileAttachment)
+      val agglomerateFile = loadFn(agglomerateFileKey)
       // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
       agglomerateFile.tryAccess()
-      put(agglomerateFileAttachment, agglomerateFile)
+      put(agglomerateFileKey, agglomerateFile)
       agglomerateFile
     }
 
     this.synchronized {
-      get(agglomerateFileAttachment) match {
+      get(agglomerateFileKey) match {
         case Some(agglomerateFile) =>
           if (agglomerateFile.tryAccess()) agglomerateFile else handleUncachedAgglomerateFile()
         case _ => handleUncachedAgglomerateFile()

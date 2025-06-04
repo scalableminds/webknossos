@@ -7,10 +7,11 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, LayerAttachment}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{
   AgglomerateFileCache,
+  AgglomerateFileKey,
   AgglomerateIdCache,
   BoundingBoxCache,
   CachedAgglomerateFile,
@@ -34,28 +35,28 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // TODO clear on reload
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
-  private def openHdf5(agglomerateFileAttachment: LayerAttachment): IHDF5Reader = {
-    if (agglomerateFileAttachment.path.getScheme.nonEmpty && agglomerateFileAttachment.path.getScheme != "file") {
+  private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader = {
+    if (agglomerateFileKey.attachment.path.getScheme.nonEmpty && agglomerateFileKey.attachment.path.getScheme != "file") {
       throw new Exception(
         "Trying to open non-local hdf5 agglomerate file. Hdf5 agglomerate files are only supported on the datastore-local file system")
     }
-    HDF5FactoryProvider.get.openForReading(Path.of(agglomerateFileAttachment.path).toFile)
+    HDF5FactoryProvider.get.openForReading(Path.of(agglomerateFileKey.attachment.path).toFile)
   }
 
-  def largestAgglomerateId(agglomerateFileAttachment: LayerAttachment): Box[Long] =
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
     tryo {
-      val reader = openHdf5(agglomerateFileAttachment)
+      val reader = openHdf5(agglomerateFileKey)
       reader.`object`().getNumberOfElements("/agglomerate_to_segments_offsets") - 1L
     }
 
-  def applyAgglomerate(agglomerateFileAttachment: LayerAttachment, request: DataServiceDataRequest)(
+  def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, request: DataServiceDataRequest)(
       data: Array[Byte]): Box[Array[Byte]] = tryo {
 
     def convertToAgglomerate(input: Array[Long],
                              bytesPerElement: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
 
-      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileAttachment)(openAsCachedAgglomerateFile)
+      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
 
       val agglomerateIds = cachedAgglomerateFile.cache match {
         case Left(agglomerateIdCache) =>
@@ -97,8 +98,8 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     }
   }
 
-  def agglomerateIdsForSegmentIds(agglomerateFileAttachment: LayerAttachment, segmentIds: Seq[Long]): Box[Seq[Long]] = {
-    val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileAttachment)(openAsCachedAgglomerateFile)
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] = {
+    val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
     tryo {
       val agglomerateIds = segmentIds.map { segmentId: Long =>
         cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
@@ -110,9 +111,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     }
   }
 
-  def generateSkeleton(agglomerateFileAttachment: LayerAttachment, agglomerateId: Long): Box[SkeletonTracing] =
+  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
     try {
-      val reader = openHdf5(agglomerateFileAttachment)
+      val reader = openHdf5(agglomerateFileKey)
       val positionsRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
       val edgesRange: Array[Long] =
@@ -164,7 +165,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           nodes = ArraySeq.unsafeWrapArray(nodes),
           edges = ArraySeq.unsafeWrapArray(skeletonEdges),
-          name = s"agglomerate $agglomerateId (${agglomerateFileAttachment.name})",
+          name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
           `type` = Some(TreeTypeProto.AGGLOMERATE)
         ))
 
@@ -174,9 +175,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       case e: Exception => Failure(e.getMessage)
     }
 
-  def generateAgglomerateGraph(agglomerateFileAttachment: LayerAttachment, agglomerateId: Long): Box[AgglomerateGraph] =
+  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
     tryo {
-      val reader = openHdf5(agglomerateFileAttachment)
+      val reader = openHdf5(agglomerateFileKey)
 
       val positionsRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
@@ -222,9 +223,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       )
     }
 
-  def segmentIdsForAgglomerateId(agglomerateFileAttachment: LayerAttachment, agglomerateId: Long): Box[Seq[Long]] =
+  def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[Seq[Long]] =
     tryo {
-      val reader = openHdf5(agglomerateFileAttachment)
+      val reader = openHdf5(agglomerateFileKey)
       val positionsRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
 
@@ -237,8 +238,8 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       segmentIds.toSeq
     }
 
-  def positionForSegmentId(agglomerateFileAttachment: LayerAttachment, segmentId: Long): Box[Vec3Int] = {
-    val reader: IHDF5Reader = openHdf5(agglomerateFileAttachment)
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
+    val reader: IHDF5Reader = openHdf5(agglomerateFileKey)
     for {
       agglomerateIdArr: Array[Long] <- tryo(
         reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
@@ -277,11 +278,11 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // In this array, the agglomerate id is found by using the segment id as index.
   // There are two ways of how we prevent a file lookup for every input element. When present, we use the cumsum.json to initialize a BoundingBoxCache (see comment there).
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
-  private def openAsCachedAgglomerateFile(agglomerateFileAttachment: LayerAttachment) = {
+  private def openAsCachedAgglomerateFile(agglomerateFileKey: AgglomerateFileKey) = {
     val cumsumPath =
-      Path.of(agglomerateFileAttachment.path).getParent.resolve(cumsumFileName)
+      Path.of(agglomerateFileKey.attachment.path).getParent.resolve(cumsumFileName)
 
-    val reader = openHdf5(agglomerateFileAttachment)
+    val reader = openHdf5(agglomerateFileKey)
 
     val agglomerateIdCache = new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
                                                     config.Datastore.Cache.AgglomerateFile.blockSize)

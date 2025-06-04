@@ -933,9 +933,14 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     }
 
     case "ADD_TREES_AND_GROUPS": {
-      const { trees, treeGroups } = action;
+      const { trees, treeGroups, assignNewGroupId } = action;
       const treesWithNames = ensureTreeNames(state, trees);
-      const treesResult = addTreesAndGroups(skeletonTracing, treesWithNames, treeGroups);
+      const treesResult = addTreesAndGroups(
+        skeletonTracing,
+        treesWithNames,
+        treeGroups,
+        assignNewGroupId,
+      );
       if (treesResult == null) {
         return state;
       }

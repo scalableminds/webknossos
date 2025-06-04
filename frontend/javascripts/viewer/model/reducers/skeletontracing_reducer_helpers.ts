@@ -630,8 +630,9 @@ export function addTreesAndGroups(
 
     // Assign the new group id to the tree if the tree belongs to a group that was newly added
     // or keep the old group id if the tree should be assigned to an existing group.
-    tree.groupId =
-      tree.groupId != null && assignNewGroupId ? groupIdMap[tree.groupId] : tree.groupId;
+    if (tree.groupId != null && assignNewGroupId) {
+      tree.groupId = groupIdMap[tree.groupId];
+    }
     tree.treeId = newTreeId;
 
     newTrees.mutableSet(newTreeId, tree);

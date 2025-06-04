@@ -259,6 +259,17 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  def getDataset(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+          dataSource <- datasetService.fullDataSourceFor(dataset)
+        } yield Ok(Json.toJson(dataSource))
+      }
+
+    }
+
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>

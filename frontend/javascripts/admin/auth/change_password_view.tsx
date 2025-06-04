@@ -10,7 +10,7 @@ const FormItem = Form.Item;
 const { Password } = Input;
 import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/rest_api";
 import { useEffect, useState } from "react";
-import type { WebAuthnKeyDescriptor } from "types/api_flow_types";
+import type { WebAuthnKeyDescriptor } from "types/api_types";
 
 type Props = {
   history: RouteComponentProps["history"];

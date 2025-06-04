@@ -9,14 +9,16 @@ import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.credential.CredentialRecordImpl
 import com.webauthn4j.data.attestation.statement.NoneAttestationStatement
-import com.webauthn4j.data.extension.authenticator.{AuthenticationExtensionsAuthenticatorOutputs, RegistrationExtensionAuthenticatorOutput}
+import com.webauthn4j.data.extension.authenticator.{
+  AuthenticationExtensionsAuthenticatorOutputs,
+  RegistrationExtensionAuthenticatorOutput
+}
 import net.liftweb.common.Box.tryo
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
 
 case class WebAuthnCredential(
     _id: ObjectId,
@@ -30,9 +32,8 @@ case class WebAuthnCredential(
     converter.convert(credentialRecord.getAttestedCredentialData)
   }
 
-  def serializedExtensions(converter: ObjectConverter): String = {
+  def serializedExtensions(converter: ObjectConverter): String =
     converter.getJsonConverter.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
-  }
 }
 
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -49,7 +50,10 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
     for {
       attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox
-      authenticatorExtensions <- tryo(converter.readValue(r.serializedextensions, new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {})).toFox
+      authenticatorExtensions <- tryo(
+        converter.readValue(r.serializedextensions,
+                            new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[
+                              RegistrationExtensionAuthenticatorOutput]] {})).toFox
       record = new CredentialRecordImpl(
         new NoneAttestationStatement(),
         null,
@@ -74,10 +78,12 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
       parsed <- parseAll(r)
     } yield parsed
 
-  def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+  def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(
+      implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND credentialId = $credentialId AND $accessQuery"
+      r <- run(
+        q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND credentialId = $credentialId AND $accessQuery"
           .as[WebauthncredentialsRow])
       parsed <- parseFirst(r, multiUserId)
     } yield parsed
@@ -100,7 +106,8 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
   def updateSignCount(c: WebAuthnCredential): Fox[Unit] = {
     val signatureCount = c.credentialRecord.getCounter
     for {
-      _ <- run(q"""UPDATE webknossos.webauthncredentials SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
+      _ <- run(
+        q"""UPDATE webknossos.webauthncredentials SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
     } yield ()
   }
 

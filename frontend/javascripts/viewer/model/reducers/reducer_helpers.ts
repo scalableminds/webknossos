@@ -47,9 +47,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
-  const idToVisible = userState
-    ? Utils.safeZipObject(userState.boundingBoxIds, userState.boundingBoxVisibilities)
-    : {};
+  const idToVisible = userState ? Object.fromEntries(userState.boundingBoxVisibilities) : {};
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
@@ -228,14 +226,12 @@ export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
     return groups;
   }
 
-  const groupIds =
-    "segmentGroupIds" in userState ? userState.segmentGroupIds : userState.treeGroupIds;
   const expandedStates =
     "segmentGroupExpandedStates" in userState
       ? userState.segmentGroupExpandedStates
       : userState.treeGroupExpandedStates;
 
-  const groupIdToExpanded: Record<number, boolean> = Utils.safeZipObject(groupIds, expandedStates);
+  const groupIdToExpanded: Record<number, boolean> = Object.fromEntries(expandedStates);
   return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
     return {
       ...group,
@@ -252,10 +248,8 @@ export function getApplyUserStateToTreeFn(
     return undefined;
   }
 
-  const treeIds = userState.treeIds;
   const visibilities = userState.treeVisibilities;
-
-  const treeIdToExpanded: Record<number, boolean> = Utils.safeZipObject(treeIds, visibilities);
+  const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(visibilities);
   return (tree) => {
     return {
       ...tree,

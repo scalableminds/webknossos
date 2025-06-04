@@ -916,18 +916,11 @@ export type ServerTracingBase = {
 export type SkeletonUserState = {
   userId: string;
   activeNodeId: number | null;
-  // ids and visibilities form the entries for a
-  // id->isVisible map
-  boundingBoxIds: number[];
-  boundingBoxVisibilities: boolean[];
-  // ids and states form the entries for a
-  // id->isExpanded map
-  treeGroupIds: number[];
-  treeGroupExpandedStates: boolean[];
-  // ids and visibilities form the entries for a
-  // id->isVisible map
-  treeIds: number[];
-  treeVisibilities: boolean[];
+  // The following properties are the values of a
+  // id->boolean dictionary.
+  boundingBoxVisibilities: Array<[number, boolean]>;
+  treeGroupExpandedStates: Array<[number, boolean]>;
+  treeVisibilities: Array<[number, boolean]>;
 };
 
 export type ServerSkeletonTracing = ServerTracingBase & {
@@ -946,18 +939,11 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 export type VolumeUserState = {
   userId: string;
   activeSegmentId?: number;
-  // ids and visibilities form the entries for a
-  // bbox id -> isVisible map
-  boundingBoxIds: number[];
-  boundingBoxVisibilities: boolean[];
-  // These two properties are the dictionary entries
-  // for an segment group id -> expanded mapping.
-  segmentGroupIds: number[];
-  segmentGroupExpandedStates: boolean[];
-  // These two properties are the dictionary entries
-  // for an segment id -> isVisible mapping.
-  segmentIds: number[];
-  segmentVisibilities: boolean[];
+  // The following properties are the values of a
+  // id->boolean dictionary.
+  segmentGroupExpandedStates: Array<[number, boolean]>;
+  boundingBoxVisibilities: Array<[number, boolean]>;
+  segmentVisibilities: Array<[number, boolean]>;
 };
 
 export type ServerVolumeTracing = ServerTracingBase & {

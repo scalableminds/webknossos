@@ -306,6 +306,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def findLayersForDatasetWithMags(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
       layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
+      _ <- Fox.fromBool(!layers.flatMap(_.dataFormatOpt).contains(DataFormat.wkw)) ?~> "WKW data format not supported in this context, only datasets with MagLocators are supported"
       layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
       layersWithMags = layers.map { layer =>
         val mags = layerNamesAndMags.filter(_._1 == layer.name).map(_._2).toList

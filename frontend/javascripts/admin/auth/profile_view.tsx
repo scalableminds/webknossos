@@ -12,7 +12,7 @@ import Store from "viewer/store";
 
 const { Text } = Typography;
 
-export function AccountSettingTitle({
+export function AccountSettingsTitle({
   title,
   description,
 }: { title: string; description: string }) {
@@ -100,7 +100,7 @@ function ProfileView() {
 
   return (
     <div>
-      <AccountSettingTitle
+      <AccountSettingsTitle
         title="Profile"
         description="Manage your personal information and preferences"
       />

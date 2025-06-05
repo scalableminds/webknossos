@@ -3,7 +3,7 @@ import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Descriptions, Popover, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { AccountSettingTitle } from "./profile_view";
+import { AccountSettingsTitle } from "./profile_view";
 
 const { Text } = Typography;
 
@@ -80,7 +80,7 @@ function AuthTokenView() {
 
   return (
     <div>
-      <AccountSettingTitle
+      <AccountSettingsTitle
         title="API Authorization"
         description="Access the WEBKNOSSO Python API with your API token"
       />

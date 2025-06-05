@@ -7,7 +7,7 @@ import { useState } from "react";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { AccountSettingTitle } from "./profile_view";
+import { AccountSettingsTitle } from "./profile_view";
 const FormItem = Form.Item;
 const { Password } = Input;
 
@@ -181,7 +181,7 @@ function ChangePasswordView({ history }: Props) {
 
   return (
     <div>
-      <AccountSettingTitle title="Password" description="Manage and update your password" />
+      <AccountSettingsTitle title="Password" description="Manage and update your password" />
       <Descriptions
         column={2}
         layout="vertical"
@@ -190,7 +190,7 @@ function ChangePasswordView({ history }: Props) {
         style={{ marginBottom: "3rem" }}
       />
 
-      <AccountSettingTitle title="Passkeys" description="Login passwordless with Passkeys" />
+      <AccountSettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
       <List
         className="demo-loadmore-list"
         itemLayout="horizontal"

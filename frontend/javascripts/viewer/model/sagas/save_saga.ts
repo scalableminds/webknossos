@@ -9,12 +9,13 @@ import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { call, delay, fork, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, delay, fork, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
+  type EnsureTracingsWereDiffedToSaveQueueAction,
   pushSaveQueueTransaction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
@@ -385,32 +386,41 @@ export function* setupSavingForTracingType(
     old and new state.
     The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
-  const saveQueueType =
+  const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* call(ensureWkReady);
 
+  const tracingActionChannel = yield* actionChannel(
+    tracingType === "skeleton"
+      ? [
+          ...SkeletonTracingSaveRelevantActions,
+          ...FlycamActions,
+          ...ViewModeSaveRelevantActions,
+          // SET_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
+          // should not create its own Undo/Redo stack entry
+          "SET_TRACING",
+        ]
+      : [...VolumeTracingSaveRelevantActions, ...FlycamActions, ...ViewModeSaveRelevantActions],
+  );
+  const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
+    "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+  );
+
   while (true) {
-    if (saveQueueType === "skeleton") {
-      yield* take([
-        ...SkeletonTracingSaveRelevantActions,
-        ...FlycamActions,
-        ...ViewModeSaveRelevantActions,
-        // SET_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
-        // should not create its own Undo/Redo stack entry
-        "SET_TRACING",
-      ]);
-    } else {
-      yield* take([
-        ...VolumeTracingSaveRelevantActions,
-        ...FlycamActions,
-        ...ViewModeSaveRelevantActions,
-      ]);
+    // todop: prioritize tracingAction?
+    const { ensureAction } = yield* race({
+      _tracingAction: take(tracingActionChannel),
+      ensureAction: take(ensureDiffedChannel),
+    });
+    if (ensureAction != null) {
+      ensureAction.callback(tracingId);
+      continue;
     }
 
     // The allowUpdate setting could have changed in the meantime
@@ -419,7 +429,7 @@ export function* setupSavingForTracingType(
         state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;
     const flycam = yield* select((state) => state.flycam);

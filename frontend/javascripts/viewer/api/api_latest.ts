@@ -73,7 +73,6 @@ import {
   mapGroups,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import type { GlobalPosition } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
@@ -354,16 +353,17 @@ class TracingApi {
   }
 
   /**
-   * Creates a new node in the current tree. If the active tree is not empty,
-   * the node will be connected with an edge to the currently active node.
-   * To keep the same plane viewing perspective while a rotation is configured,
-   * a not-rounded position of the node is needed for the centering animation to stay in the same viewing slice.
-   * To achieve this the position can be passed as {rounded: [x,y,z], floating: [x,y,z]},
-   * where floating is the not rounded more accurate position for a more precise centering animation.
-   * If no centering animation or rotation is active, passing the floating position is not needed.
+   * Creates a new node in the current tree.
+   * If the active tree already contains nodes, the new node will be connected to the currently active one via an edge.
+   *
+   * When the camera is rotated and centering animation is enabled, using unrounded (floating-point)
+   * coordinates [x, y, z] helps maintain a consistent viewing slice. This prevents the viewports from jumping
+   * between slices due to the animation.
+   *
+   * In scenarios without raseotation or centering animation, rounded integer coordinates are sufficient.
    */
   createNode(
-    position: Vector3 | GlobalPosition,
+    position: Vector3,
     options?: {
       additionalCoordinates?: AdditionalCoordinate[];
       rotation?: Vector3;
@@ -373,9 +373,7 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
-    const globalPosition = Array.isArray(position)
-      ? { rounded: Utils.map3(Math.round, position), floating: position }
-      : position;
+    const globalPosition = { rounded: Utils.map3(Math.round, position), floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(

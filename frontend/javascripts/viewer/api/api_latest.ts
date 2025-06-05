@@ -57,7 +57,7 @@ import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transfo
 import {
   getActiveMagIndexForLayer,
   getPosition,
-  getRotation,
+  getRotationInDegrees,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
@@ -283,10 +283,15 @@ class TracingApi {
   /**
    * Sets the active node given a node id.
    */
-  setActiveNode(id: number) {
+  setActiveNode(
+    id: number,
+    suppressAnimation?: boolean,
+    suppressCentering?: boolean,
+    suppressRotation?: boolean,
+  ) {
     assertSkeleton(Store.getState().annotation);
     assertExists(id, "Node id is missing.");
-    Store.dispatch(setActiveNodeAction(id));
+    Store.dispatch(setActiveNodeAction(id, suppressAnimation, suppressCentering, suppressRotation));
   }
 
   /**
@@ -348,9 +353,14 @@ class TracingApi {
   }
 
   /**
-   * Creates a new node in the current tree. If the active tree
-   * is not empty, the node will be connected with an edge to
-   * the currently active node.
+   * Creates a new node in the current tree.
+   * If the active tree already contains nodes, the new node will be connected to the currently active one via an edge.
+   *
+   * When the camera is rotated and centering animation is enabled, using unrounded (floating-point)
+   * coordinates [x, y, z] helps maintain a consistent viewing slice. This prevents the viewports from jumping
+   * between slices due to the animation.
+   *
+   * In scenarios without raseotation or centering animation, rounded integer coordinates are sufficient.
    */
   createNode(
     position: Vector3,
@@ -363,10 +373,11 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
+    const globalPosition = { rounded: Utils.map3(Math.round, position), floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
-      position,
+      globalPosition,
       options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
       options?.rotation ?? defaultOptions.rotation,
       options?.center ?? defaultOptions.center,
@@ -1399,13 +1410,15 @@ class TracingApi {
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    const { activeViewport } = Store.getState().viewModeData.plane;
+    const { viewModeData, flycam } = Store.getState();
+    const { activeViewport } = viewModeData.plane;
+    const curPosition = getPosition(flycam);
+    const curRotation = getRotationInDegrees(flycam);
+    const isNotRotated = V3.equals(curRotation, [0, 0, 0]);
     const dimensionToSkip =
-      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
-    const curPosition = getPosition(Store.getState().flycam);
-    const curRotation = getRotation(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
     rotation = this.getShortestRotation(curRotation, rotation);
 

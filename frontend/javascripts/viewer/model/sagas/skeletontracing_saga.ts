@@ -24,7 +24,7 @@ import {
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -107,6 +107,9 @@ function* centerActiveNode(action: Action): Saga<void> {
   const activeNode = getActiveNode(
     yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
+  const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const suppressRotation =
+    ("suppressRotation" in action && action.suppressRotation) ?? viewMode === "orthogonal";
 
   if (activeNode != null) {
     const activeNodePosition = yield* select((state: WebknossosState) =>
@@ -114,9 +117,15 @@ function* centerActiveNode(action: Action): Saga<void> {
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
       Store.dispatch(setPositionAction(activeNodePosition));
-      Store.dispatch(setRotationAction(activeNode.rotation));
+      if (!suppressRotation) {
+        Store.dispatch(setRotationAction(activeNode.rotation));
+      }
     } else {
-      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+      api.tracing.centerPositionAnimated(
+        activeNodePosition,
+        false,
+        suppressRotation ? undefined : activeNode.rotation,
+      );
     }
     if (activeNode.additionalCoordinates) {
       Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
@@ -692,7 +701,7 @@ export function* diffSkeletonTracing(
       skeletonTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
-      getRotation(flycam),
+      getRotationInDegrees(flycam),
       flycam.zoomStep,
     );
   }

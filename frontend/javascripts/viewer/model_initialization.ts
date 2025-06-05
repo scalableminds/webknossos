@@ -660,8 +660,7 @@ function determineDefaultState(
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
-  const { dataset, datasetConfiguration, temporaryConfiguration } = Store.getState();
-  const { viewMode } = temporaryConfiguration;
+  const { dataset, datasetConfiguration } = Store.getState();
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
   let additionalCoordinates = null;
@@ -695,17 +694,13 @@ function determineDefaultState(
     zoomStep = urlStateZoomStep;
   }
 
-  let rotation = undefined;
-  if (viewMode !== "orthogonal") {
-    rotation = datasetConfiguration.rotation;
+  let rotation = datasetConfiguration.rotation;
+  if (someTracing != null) {
+    rotation = Utils.point3ToVector3(someTracing.editRotation);
+  }
 
-    if (someTracing != null) {
-      rotation = Utils.point3ToVector3(someTracing.editRotation);
-    }
-
-    if (urlStateRotation != null) {
-      rotation = urlStateRotation;
-    }
+  if (urlStateRotation != null) {
+    rotation = urlStateRotation;
   }
 
   const stateByLayer = urlStateByLayer ?? {};

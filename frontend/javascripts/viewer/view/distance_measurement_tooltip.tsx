@@ -7,20 +7,22 @@ import {
   formatNumberToArea,
   formatNumberToLength,
 } from "libs/format_utils";
+import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import * as THREE from "three";
+import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import {
   calculateMaybePlaneScreenPos,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import dimensions from "viewer/model/dimensions";
+import Dimensions from "viewer/model/dimensions";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -40,44 +42,72 @@ function DistanceEntry({ distance }: { distance: string }) {
   );
 }
 
+function isPositionStillInPlane(
+  positionXYZ: Vector3,
+  flycamRotation: Vector3,
+  flycamPosition: Vector3,
+  planeId: OrthoView,
+) {
+  const inverseFlycamRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+    // As we apply the inverse of the euler angle the flycam currently has we need to invert the order as well.
+    new THREE.Euler(...V3.scale(flycamRotation, -1), "XYZ"),
+  );
+  const positionUvw = new THREE.Vector3(...V3.sub(positionXYZ, flycamPosition))
+    .applyMatrix4(inverseFlycamRotationMatrix)
+    .toArray();
+  const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
+  return Math.abs(positionUvw[thirdDim]) < 1;
+}
+
 export default function DistanceMeasurementTooltip() {
-  const position = useWkSelector(
+  const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
   );
   const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
   const flycam = useWkSelector((state) => state.flycam);
-  const state = useWkSelector((state) => state);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);
+  const rotation = getRotationInRadian(flycam);
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
   const activeGeometry =
     activeTool === AnnotationTool.LINE_MEASUREMENT
       ? lineMeasurementGeometry
       : areaMeasurementGeometry;
   const orthoView = activeGeometry.viewport;
+  const tooltipPosition = useWkSelector((state) =>
+    lastMeasuredGlobalPosition
+      ? calculateMaybePlaneScreenPos(state, lastMeasuredGlobalPosition, orthoView)
+      : null,
+  );
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
-  const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(thirdDim): thirdDim is more or less a constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(position[thirdDim]):
   // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
   // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(position):
   // biome-ignore lint/correctness/useExhaustiveDependencies(activeGeometry.resetAndHide):
   useEffect(() => {
     if (
-      position != null &&
-      Math.floor(currentPosition[thirdDim]) !== Math.floor(position[thirdDim])
+      lastMeasuredGlobalPosition &&
+      !isPositionStillInPlane(lastMeasuredGlobalPosition, rotation, currentPosition, orthoView)
     ) {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }
-  }, [currentPosition[thirdDim]]);
+  }, [lastMeasuredGlobalPosition, rotation, currentPosition, orthoView]);
 
-  if (position == null || !MeasurementTools.includes(activeTool)) {
+  if (
+    lastMeasuredGlobalPosition == null ||
+    tooltipPosition == null ||
+    !MeasurementTools.includes(activeTool)
+  ) {
     return null;
   }
 
@@ -101,27 +131,15 @@ export default function DistanceMeasurementTooltip() {
     );
   }
 
-  const {
-    left: viewportLeft,
-    top: viewportTop,
-    width: viewportWidth,
-    height: viewportHeight,
-  } = getInputCatcherRect(state, orthoView);
-  const tooltipPosition = calculateMaybePlaneScreenPos(state, position, orthoView);
-
-  if (tooltipPosition == null) {
-    return null;
-  }
-
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const left = clamp(
     viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
-    tooltipPosition.x + ADDITIONAL_OFFSET,
+    tooltipPosition[0] + ADDITIONAL_OFFSET,
     viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
   );
   const top = clamp(
     viewportTop + ADDITIONAL_OFFSET,
-    tooltipPosition.y - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    tooltipPosition[1] - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
     viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
   );
 

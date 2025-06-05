@@ -1,15 +1,16 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.nio.file.Path
 import java.util
-
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
+
+case class AgglomerateFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
 case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,
@@ -17,31 +18,6 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  cache: Either[AgglomerateIdCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
-}
-
-case class AgglomerateFileKey(
-    organizationId: String,
-    datasetDirectoryName: String,
-    layerName: String,
-    mappingName: String
-) {
-  def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
-    dataBaseDir
-      .resolve(organizationId)
-      .resolve(datasetDirectoryName)
-      .resolve(layerName)
-      .resolve(agglomerateDir)
-      .resolve(s"$mappingName.$agglomerateFileExtension")
-}
-
-object AgglomerateFileKey {
-  def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    AgglomerateFileKey(
-      dataRequest.dataSourceIdOrVolumeDummy.organizationId,
-      dataRequest.dataSourceIdOrVolumeDummy.directoryName,
-      dataRequest.dataLayer.name,
-      dataRequest.settings.appliedAgglomerate.get
-    )
 }
 
 class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {

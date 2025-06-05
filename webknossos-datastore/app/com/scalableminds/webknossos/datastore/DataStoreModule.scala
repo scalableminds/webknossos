@@ -27,7 +27,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[DSRemoteWebknossosClient]).asEagerSingleton()
     bind(classOf[BinaryDataServiceHolder]).asEagerSingleton()
     bind(classOf[MappingService]).asEagerSingleton()
-    bind(classOf[AgglomerateService]).asEagerSingleton()
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[ApplicationHealthService]).asEagerSingleton()
     bind(classOf[DSDatasetErrorLoggingService]).asEagerSingleton()

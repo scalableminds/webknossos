@@ -137,10 +137,12 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                       datasetDirectoryName,
                                                                       layerName,
                                                                       meshFileName)
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                datasetDirectoryName,
+                                                                                layerName)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-        organizationId,
-        datasetDirectoryName,
-        layerName,
+        dataSource.id,
+        dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,

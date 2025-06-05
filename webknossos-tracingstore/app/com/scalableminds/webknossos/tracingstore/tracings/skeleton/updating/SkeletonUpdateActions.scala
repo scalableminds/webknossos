@@ -168,7 +168,7 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
-  lazy val nodeIdsSet = nodeIds.toSet
+  private lazy val nodeIdsSet = nodeIds.toSet
 
   // this should only move a whole component,
   // that is disjoint from the rest of the tree

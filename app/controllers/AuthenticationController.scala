@@ -215,7 +215,7 @@ class AuthenticationController @Inject()(
     } yield result
 
   def accessibleBySwitching(datasetId: Option[ObjectId],
-                            annotationId: Option[String],
+                            annotationId: Option[ObjectId],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {

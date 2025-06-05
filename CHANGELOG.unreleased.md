@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added the ability to duplicate trees in skeleton annotations. Users can create a copy of any tree (including all nodes, edges, and properties) via the context menu in the skeleton tab. [#8662](https://github.com/scalableminds/webknossos/pull/8662)
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
+- Agglomerate Mappings can now also be read from the new zarr3-based format, and from remote object storage. [#8633](https://github.com/scalableminds/webknossos/pull/8633)
 
 ### Changed
 

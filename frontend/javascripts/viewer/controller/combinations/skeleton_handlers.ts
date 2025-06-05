@@ -26,7 +26,7 @@ import {
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
-  type GlobalPosition,
+  type PositionWithRounding,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
@@ -262,7 +262,7 @@ export function finishNodeMovement(nodeId: number) {
 }
 
 export function handleCreateNodeFromGlobalPosition(
-  nodePosition: GlobalPosition,
+  nodePosition: PositionWithRounding,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
@@ -343,7 +343,7 @@ export function getOptionsForCreateSkeletonNode(
 }
 
 export function createSkeletonNode(
-  position: GlobalPosition,
+  position: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   center: boolean,

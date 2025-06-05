@@ -92,7 +92,7 @@ export function getViewportScale(state: WebknossosState, viewport: Viewport): [n
   return [xScale, yScale];
 }
 
-export type GlobalPosition = { rounded: Vector3; floating: Vector3 };
+export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
 
 // Avoiding object creation with each call.
 const flycamRotationEuler = new THREE.Euler();
@@ -105,7 +105,7 @@ function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeIdOpt?: OrthoView | null | undefined,
-): GlobalPosition | null | undefined {
+): PositionWithRounding | null | undefined {
   let roundedPosition: Vector3, floatingPosition: Vector3;
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
@@ -259,7 +259,7 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
-): GlobalPosition {
+): PositionWithRounding {
   const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
 
   if (!positions || !positions.rounded) {

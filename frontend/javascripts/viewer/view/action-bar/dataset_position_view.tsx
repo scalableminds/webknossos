@@ -16,11 +16,19 @@ import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action-bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
-import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
+import DatasetRotationPopoverButtonView, { warningColors } from "./dataset_rotation_popover_view";
 
 const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
   marginRight: 0,
+};
+const iconErrorStyle: React.CSSProperties = { ...warningColors };
+const positionInputDefaultStyle: React.CSSProperties = {
+  textAlign: "center",
+};
+const positionInputErrorStyle: React.CSSProperties = {
+  ...positionInputDefaultStyle,
+  ...warningColors,
 };
 
 const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
@@ -64,8 +72,9 @@ const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
   );
 
   const { isOutOfDatasetBounds, isOutOfTaskBounds } = isPositionOutOfBounds(position);
-  const useDangerStyle = isOutOfDatasetBounds || isOutOfTaskBounds;
-  const inputStatus = useDangerStyle ? "error" : undefined;
+  const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconErrorStyle : {};
+  const positionInputStyle =
+    isOutOfDatasetBounds || isOutOfTaskBounds ? positionInputErrorStyle : positionInputDefaultStyle;
 
   let maybeErrorMessage = null;
   if (isOutOfDatasetBounds) {
@@ -98,8 +107,7 @@ const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
         <FastTooltip title={message["tracing.copy_position"]} placement="bottom-start">
           <ButtonComponent
             onClick={copyPositionToClipboard}
-            style={{ padding: "0 10px" }}
-            danger={useDangerStyle}
+            style={{ padding: "0 10px", ...iconColoringStyle }}
             className="hide-on-small-screen"
           >
             <PushpinOutlined style={positionIconStyle} />
@@ -109,12 +117,11 @@ const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
           value={position}
           onChange={handleChangePosition}
           autoSize
-          status={inputStatus}
-          style={{ textAlign: "center" }}
+          style={positionInputStyle}
           allowDecimals
         />
-        <DatasetRotationPopoverButtonView danger={useDangerStyle} />
-        <ShareButton dataset={dataset} danger={useDangerStyle} />
+        <DatasetRotationPopoverButtonView style={iconColoringStyle} />
+        <ShareButton dataset={dataset} style={iconColoringStyle} />
       </Space.Compact>
     </div>
   );

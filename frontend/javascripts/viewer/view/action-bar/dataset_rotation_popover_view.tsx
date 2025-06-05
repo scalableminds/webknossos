@@ -82,14 +82,12 @@ const PopoverContent: React.FC<EmptyObject> = () => {
   );
 };
 
-const DatasetRotationPopoverButtonView: React.FC<{ danger: boolean }> = ({ danger }) => {
+const DatasetRotationPopoverButtonView: React.FC<{ style: React.CSSProperties }> = ({ style }) => {
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
-  const useWarningColor = danger || isFlycamRotated;
-  // Needed as else not all red borders of the button are shown.
-  const maybeMoveToFrontStyle = isFlycamRotated ? { zIndex: 1 } : {};
+  const maybeWarningStyle = isFlycamRotated ? { ...style, ...warningColors, zIndex: 1 } : style;
   return (
     <Popover title="Rotation" content={<PopoverContent />}>
-      <Button icon={<SyncOutlined />} danger={useWarningColor} style={maybeMoveToFrontStyle} />
+      <Button icon={<SyncOutlined />} style={maybeWarningStyle} />
     </Popover>
   );
 };

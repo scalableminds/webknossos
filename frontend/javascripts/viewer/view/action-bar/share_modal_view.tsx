@@ -121,8 +121,8 @@ export async function copyUrlToClipboard(url: string) {
   await navigator.clipboard.writeText(url);
   Toast.success("URL copied to clipboard.");
 }
-export function ShareButton(props: { dataset: APIDataset; danger?: boolean }) {
-  const { dataset, danger } = props;
+export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
+  const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
   const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
@@ -169,7 +169,7 @@ export function ShareButton(props: { dataset: APIDataset; danger?: boolean }) {
       icon={<ShareAltOutlined />}
       title={messages["tracing.copy_sharing_link"]}
       onClick={createAndCopySharingUrl}
-      danger={danger}
+      style={style}
     />
   );
 }

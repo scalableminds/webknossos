@@ -294,9 +294,8 @@ class UrlManager {
       getRotationInDegrees(state.flycam),
     );
     const rotation = {
-      // Keep rotation state empty if default to have shorter urlhashes
-      // rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
-      rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
+      // Keep rotation state empty if no rotation is active to have shorter url hashes.
+      rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
     };
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};

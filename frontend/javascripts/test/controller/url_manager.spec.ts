@@ -12,6 +12,7 @@ import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
 import _ from "lodash";
+import { M4x4 } from "libs/mjs";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -206,11 +207,58 @@ describe("UrlManager", () => {
     expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
   });
 
+  it("should support hashes with active node id and without a rotation", () => {
+    location.hash = "#3705,5200,795,0,1.3,15";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3705, 5200, 795],
+      mode: "orthogonal",
+      zoomStep: 1.3,
+      activeNode: 15,
+    });
+  });
+
+  it("should parse an empty rotation", () => {
+    location.hash = "#3584,3584,1024,0,2,0,0,0";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3584, 3584, 1024],
+      mode: "orthogonal",
+      zoomStep: 2,
+      rotation: [0, 0, 0],
+    });
+  });
+
+  it("should parse a rotation and active node id correctly", () => {
+    location.hash = "#3334,3235,999,0,2,282,308,308,11";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3334, 3235, 999],
+      mode: "orthogonal",
+      zoomStep: 2,
+      rotation: [282, 308, 308],
+      activeNode: 11,
+    });
+  });
+
   it("should build default url in csv format", () => {
     UrlManager.initialize();
     const url = UrlManager.buildUrl();
     // There is a default rotation of 180 around z which needs to be accounted for here.
     expect(url).toBe("#0,0,0,0,1.3,0,0,180");
+  });
+
+  it("should build csv url hash without rotation if it is [0,0,0]", () => {
+    const rotationMatrixWithDefaultRotation = M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []);
+    const initialState = update(defaultState, {
+      flycam: {
+        currentMatrix: {
+          $set: rotationMatrixWithDefaultRotation,
+        },
+      },
+    });
+    const hash = `#${UrlManager.buildUrlHashCsv(initialState)}`;
+    expect(hash).toBe("#0,0,0,0,1.3");
   });
 
   it("The dataset name should be correctly extracted from view URLs", () => {

@@ -20,9 +20,6 @@ type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
 export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
-export type SetLastUpdateCounterFlushedToSaveQueueAction = ReturnType<
-  typeof setLastUpdateCounterFlushedToSaveQueueAction
->;
 export type UndoAction = ReturnType<typeof undoAction>;
 export type RedoAction = ReturnType<typeof redoAction>;
 type DisableSavingAction = ReturnType<typeof disableSavingAction>;
@@ -35,7 +32,6 @@ export type SaveAction =
   | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
-  | SetLastUpdateCounterFlushedToSaveQueueAction
   | UndoAction
   | RedoAction
   | DisableSavingAction;
@@ -93,12 +89,6 @@ export const setVersionNumberAction = (version: number) =>
   ({
     type: "SET_VERSION_NUMBER",
     version,
-  }) as const;
-
-export const setLastUpdateCounterFlushedToSaveQueueAction = (updateCounter: number) =>
-  ({
-    type: "SET_LAST_UPDATE_COUNTER_FLUSHED_TO_SAVE_QUEUE",
-    updateCounter,
   }) as const;
 
 export const undoAction = (callback?: () => void) =>

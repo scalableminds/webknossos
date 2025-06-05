@@ -385,10 +385,10 @@ export function* setupSavingForTracingType(
     old and new state.
     The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
-  const tracingType =
+  const saveQueueType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
+  let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
@@ -396,7 +396,7 @@ export function* setupSavingForTracingType(
   yield* call(ensureWkReady);
 
   while (true) {
-    if (tracingType === "skeleton") {
+    if (saveQueueType === "skeleton") {
       yield* take([
         ...SkeletonTracingSaveRelevantActions,
         ...FlycamActions,
@@ -419,7 +419,7 @@ export function* setupSavingForTracingType(
         state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
+    const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;
     const flycam = yield* select((state) => state.flycam);

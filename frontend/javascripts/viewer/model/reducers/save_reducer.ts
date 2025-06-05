@@ -166,11 +166,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_LAST_UPDATE_COUNTER_FLUSHED_TO_SAVE_QUEUE": {
-      return updateKey(state, "save", {
-        lastUpdateCounterFlushedToSaveQueue: action.updateCounter,
-      });
-    }
     case "DISABLE_SAVING": {
       if (state.task != null) {
         // Don't disable saving in a task, even when this action was dispatched somehow.

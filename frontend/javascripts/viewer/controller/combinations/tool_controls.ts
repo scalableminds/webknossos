@@ -1015,7 +1015,7 @@ export class AreaMeasurementToolController {
           return;
         }
         const state = Store.getState();
-        const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane).rounded);
+        const position = calculateGlobalPos(state, pos, this.initialPlane).rounded);
         areaMeasurementGeometry.addEdgePoint(position);
         Store.dispatch(setLastMeasuredPositionAction(position));
       },

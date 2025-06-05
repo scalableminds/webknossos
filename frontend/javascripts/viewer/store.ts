@@ -81,6 +81,7 @@ import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import { incrementAnnotationCounter } from "./model/actions/annotation_actions";
 
 export type BoundingBoxObject = {
   readonly topLeft: Vector3;
@@ -220,24 +221,25 @@ export type StoreAnnotation = Annotation & {
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
+  readonly updateCounter: number; // this value will be incremented each time store.annotation is updated
 };
 export type LegacyViewCommand = APIDataSourceId & {
   readonly type: typeof ControlModeEnum.VIEW;
 };
 export type TraceOrViewCommand =
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.VIEW;
-    }
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.VIEW;
+  }
   | {
-      readonly type: typeof ControlModeEnum.TRACE;
-      readonly annotationId: string;
-    }
+    readonly type: typeof ControlModeEnum.TRACE;
+    readonly annotationId: string;
+  }
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.SANDBOX;
-      readonly tracingType: TracingType;
-    };
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.SANDBOX;
+    readonly tracingType: TracingType;
+  };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;
@@ -349,10 +351,10 @@ export type UserConfiguration = {
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-    DatasetConfiguration & {
-      zoom: number;
-      segmentationOpacity: number;
-    }
+  DatasetConfiguration & {
+    zoom: number;
+    segmentationOpacity: number;
+  }
 >;
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
@@ -415,6 +417,7 @@ export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
+  readonly lastUpdateCounterFlushedToSaveQueue: number;
   readonly progressInfo: ProgressInfo;
 };
 export type Flycam = {
@@ -504,9 +507,9 @@ type UiInformation = {
   readonly isWkReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
-    | "inactive"
-    | "drawing" // the user is currently drawing a bounding box
-    | "active"; // the quick select saga is currently running (calculating as well as preview mode)
+  | "inactive"
+  | "drawing" // the user is currently drawing a bounding box
+  | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
@@ -596,10 +599,28 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
+
+
+const annotationChangeWatcherMiddleware: Middleware = storeAPI => next => action => {
+  if (action.type === "INCREMENT_ANNOTATION_COUNTER") {
+    return next(action);
+  }
+
+  const prevAnnotation = storeAPI.getState().annotation;
+  const result = next(action);
+  const nextAnnotation = storeAPI.getState().annotation;
+
+  if (prevAnnotation !== nextAnnotation) {
+    storeAPI.dispatch(incrementAnnotationCounter());
+  }
+
+  return result;
+};
+
 const store = createStore<WebknossosState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, annotationChangeWatcherMiddleware, sagaMiddleware as Middleware),
 );
 
 export function startSaga(saga: Saga<any[]>) {

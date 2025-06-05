@@ -511,6 +511,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "INCREMENT_ANNOTATION_COUNTER": {
+      return updateKey(state, "annotation", {
+        updateCounter: state.annotation.updateCounter + 1,
+      });
+    }
+
     default:
       return state;
   }

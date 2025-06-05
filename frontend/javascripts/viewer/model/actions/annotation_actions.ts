@@ -77,6 +77,7 @@ export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshActio
 export type SetOthersMayEditForAnnotationAction = ReturnType<
   typeof setOthersMayEditForAnnotationAction
 >;
+export type IncrementAnnotationCounter = ReturnType<typeof incrementAnnotationCounter>;
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
@@ -107,7 +108,8 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
-  | SetOthersMayEditForAnnotationAction;
+  | SetOthersMayEditForAnnotationAction
+  | IncrementAnnotationCounter;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -391,3 +393,8 @@ export const dispatchMaybeFetchMeshFilesAsync = async (
   dispatch(action);
   return readyDeferred.promise();
 };
+
+export const incrementAnnotationCounter = () =>
+  ({
+    type: "INCREMENT_ANNOTATION_COUNTER",
+  }) as const;

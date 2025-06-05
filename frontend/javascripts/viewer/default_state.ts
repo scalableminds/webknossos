@@ -46,6 +46,7 @@ const initialAnnotationInfo = {
   },
   annotationType: "View" as APIAnnotationType,
   meshes: [],
+  updateCounter: 0,
 };
 
 const defaultState: WebknossosState = {
@@ -186,6 +187,7 @@ const defaultState: WebknossosState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+    lastUpdateCounterFlushedToSaveQueue: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

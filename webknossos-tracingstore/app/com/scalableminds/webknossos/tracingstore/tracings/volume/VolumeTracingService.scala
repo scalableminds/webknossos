@@ -765,6 +765,8 @@ class VolumeTracingService @Inject()(
           )
         }
       }
+      tracingASegments = tracingA.segments.map(s =>
+        s.groupId.map(groupId => s.copy(groupId = Some(groupMappingA(groupId)))).getOrElse(s))
     } yield
       tracingA.copy(
         largestSegmentId = largestSegmentId,
@@ -775,7 +777,7 @@ class VolumeTracingService @Inject()(
             0,
             0)), // should never be empty for volumes
         userBoundingBoxes = mergedUserBoundingBoxes,
-        segments = (tracingA.segments ++ tracingBSegments).distinctBy(_.segmentId),
+        segments = (tracingASegments ++ tracingBSegments).distinctBy(_.segmentId),
         segmentGroups = mergedGroups,
         additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
         userStates = userStates

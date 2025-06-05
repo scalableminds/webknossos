@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -33,7 +34,7 @@ trait FallbackDataHelper extends FoxImplicits {
   private lazy val fallbackBucketDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
     AlfuCache(maxCapacity = 3000)
 
-  def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: String)(
+  def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: ObjectId)(
       implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."

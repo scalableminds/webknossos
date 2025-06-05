@@ -79,7 +79,7 @@ const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: We
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
   isPlaneVisible: OrthoViewMap<boolean>;
-  clippingDistance: number;
+  clippingDistanceInUnit: number;
   datasetBoundingBox!: Cube;
   userBoundingBoxGroup!: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
@@ -114,7 +114,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
       [OrthoViews.TDView]: true,
     };
-    this.clippingDistance = 0;
+    this.clippingDistanceInUnit = 0;
     this.segmentMeshController = new SegmentMeshController();
     this.storePropertyUnsubscribers = [];
   }
@@ -434,8 +434,8 @@ class SceneController {
           const unrotatedPositionOffset = [0, 0, 0] as Vector3;
           unrotatedPositionOffset[ind[2]] =
             planeId === OrthoViews.PLANE_XY
-              ? Math.floor(this.clippingDistance)
-              : Math.floor(-this.clippingDistance);
+              ? Math.floor(this.clippingDistanceInUnit)
+              : Math.floor(-this.clippingDistanceInUnit);
           this.rotatedPositionOffsetVector
             .set(...unrotatedPositionOffset)
             .applyEuler(this.flycamRotationEuler);
@@ -502,7 +502,7 @@ class SceneController {
   }
 
   setClippingDistance(valueInUnit: number): void {
-    this.clippingDistance = valueInUnit;
+    this.clippingDistanceInUnit = valueInUnit;
     app.vent.emit("rerender");
   }
 

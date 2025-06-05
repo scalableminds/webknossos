@@ -1,5 +1,6 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Layout, Menu } from "antd";
+import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Route, Switch, useHistory, useLocation } from "react-router-dom";
 import AuthTokenView from "./auth_token_view";
 import ChangePasswordView from "./change_password_view";
@@ -12,7 +13,7 @@ function AccountSettingsView() {
   const history = useHistory();
   const selectedKey = location.pathname.split("/").pop() || "profile";
 
-  const menuItems = [
+  const menuItems: MenuItemGroupType[] = [
     {
       label: "Account",
       type: "group",

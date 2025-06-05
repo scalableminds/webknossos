@@ -60,16 +60,18 @@ function AuthTokenView() {
         </Button>
       ),
     },
-    activeUser
-      ? {
-          label: "Organization ID",
-          children: (
-            <Text code copyable>
-              {activeUser.organization}
-            </Text>
-          ),
-        }
-      : null,
+    ...(activeUser
+      ? [
+          {
+            label: "Organization ID",
+            children: (
+              <Text code copyable>
+                {activeUser.organization}
+              </Text>
+            ),
+          },
+        ]
+      : []),
     {
       label: "API Documentation",
       children: <a href="https://docs.webknossos.org/webknossos-py/index.html">Read the docs</a>,

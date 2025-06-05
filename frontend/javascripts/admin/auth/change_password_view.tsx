@@ -148,7 +148,7 @@ function ChangePasswordView({ history }: Props) {
     ) : (
       <>
         <Space.Compact>
-          <Input.Password visibilityToggle={false} readOnly value="******************" />
+          <Input.Password visibilityToggle={false} disabled value="******************" />
           <Button type="primary" onClick={handleResetPassword}>
             Reset Password
           </Button>

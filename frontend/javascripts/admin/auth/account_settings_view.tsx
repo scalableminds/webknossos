@@ -8,6 +8,12 @@ import ProfileView from "./profile_view";
 
 const { Sider, Content } = Layout;
 
+const BREADCRUMB_LABELS = {
+  token: "Auth Token",
+  password: "Password",
+  profile: "Profile",
+};
+
 function AccountSettingsView() {
   const location = useLocation();
   const history = useHistory();
@@ -43,8 +49,6 @@ function AccountSettingsView() {
     },
   ];
 
-  const subPageBreadcrumb = selectedKey.charAt(0).toUpperCase() + selectedKey.slice(1);
-
   return (
     <Layout style={{ minHeight: "calc(100vh - 64px)" }} className="container">
       <Sider width={200}>
@@ -59,7 +63,9 @@ function AccountSettingsView() {
       <Content style={{ padding: "24px", paddingTop: 0, minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px", padding: "8px 0" }}>
           <Breadcrumb.Item>Account Settings</Breadcrumb.Item>
-          <Breadcrumb.Item>{subPageBreadcrumb}</Breadcrumb.Item>
+          <Breadcrumb.Item>
+            {BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS]}
+          </Breadcrumb.Item>
         </Breadcrumb>
         <Switch>
           <Route path="/account/profile" component={ProfileView} />

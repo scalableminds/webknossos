@@ -29,8 +29,14 @@ import scala.collection.compat.immutable.ArraySeq
 class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter {
 
   private val cumsumFileName = "cumsum.json"
-  // TODO other keys, also in zarr case
+
   private val keySegmentToAgglomerate = "/segment_to_agglomerate"
+  private val keyAgglomerateToSegmentsOffsets = "/agglomerate_to_segments_offsets"
+  private val keyAgglomerateToSegments = "/agglomerate_to_segments"
+  private val keyAgglomerateToPositions = "/agglomerate_to_positions"
+  private val keyAgglomerateToEdges = "/agglomerate_to_edges"
+  private val keyAgglomerateToEdgesOffsets = "/agglomerate_to_edges_offsets"
+  private val keyAgglomerateToAffinities = "/agglomerate_to_affinities"
 
   private lazy val agglomerateFileCache = new AgglomerateFileCache(
     config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
@@ -48,7 +54,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
     tryo {
       val reader = openHdf5(agglomerateFileKey)
-      reader.`object`().getNumberOfElements("/agglomerate_to_segments_offsets") - 1L
+      reader.`object`().getNumberOfElements(keyAgglomerateToSegmentsOffsets) - 1L
     }
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, request: DataServiceDataRequest)(
@@ -117,9 +123,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     try {
       val reader = openHdf5(agglomerateFileKey)
       val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
       val edgesRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
@@ -134,15 +140,13 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
         if (nodeCount == 0L) {
           Array.empty[Array[Long]]
         } else {
-          reader
-            .uint64()
-            .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
         }
       val edges: Array[Array[Long]] = {
         if (edgeCount == 0L) {
           Array.empty[Array[Long]]
         } else {
-          reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
         }
       }
 
@@ -182,9 +186,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       val reader = openHdf5(agglomerateFileKey)
 
       val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
       val edgesRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
@@ -198,21 +202,19 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       val segmentIds: Array[Long] =
         if (nodeCount == 0L) Array[Long]()
         else
-          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", nodeCount.toInt, positionsRange(0))
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, nodeCount.toInt, positionsRange(0))
       val positions: Array[Array[Long]] =
         if (nodeCount == 0L) Array[Array[Long]]()
         else
-          reader
-            .uint64()
-            .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
       val edges: Array[Array[Long]] =
         if (edgeCount == 0L) Array[Array[Long]]()
         else
-          reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
       val affinities: Array[Float] =
         if (edgeCount == 0L) Array[Float]()
         else
-          reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
+          reader.float32().readArrayBlockWithOffset(keyAgglomerateToAffinities, edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(
         // unsafeWrapArray is fine, because the underlying arrays are never mutated
@@ -229,13 +231,13 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     tryo {
       val reader = openHdf5(agglomerateFileKey)
       val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
 
       val segmentCount = positionsRange(1) - positionsRange(0)
       val segmentIds: Array[Long] =
         if (segmentCount == 0) Array.empty[Long]
         else {
-          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", segmentCount.toInt, positionsRange(0))
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, segmentCount.toInt, positionsRange(0))
         }
       segmentIds.toSeq
     }
@@ -247,9 +249,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
         reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
       agglomerateId = agglomerateIdArr(0)
       segmentsRange: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
+        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId))
       segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
-      position <- tryo(reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
+      position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
     } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
   }
 
@@ -261,7 +263,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     if (rangeStart > rangeEnd) Failure("Could not find segmentId in agglomerate file")
     else {
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
-      val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", 1, middle)(0)
+      val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, 1, middle)(0)
       if (segmentIdAtMiddle == segmentId) Full(middle)
       else if (segmentIdAtMiddle < segmentId) binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
       else binarySearchForSegment(rangeStart, middle - 1L, segmentId, reader)

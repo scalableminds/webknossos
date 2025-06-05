@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
@@ -27,8 +26,7 @@ class DatasetArray(vaultPath: VaultPath,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends FoxImplicits
-    with LazyLogging {
+    extends FoxImplicits {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
@@ -308,7 +306,6 @@ class DatasetArray(vaultPath: VaultPath,
       (globalOffset(dim) - (chunkIndex(dim).toLong * chunkShape(dim).toLong)).toInt
     }.toArray
 
-  // TODO works only for wk dataet arrays, not agglomerate files
   override def toString: String =
     s"${getClass.getCanonicalName} fullAxisOrder=$fullAxisOrder shape=${header.datasetShape.map(s => printAsInner(s.map(_.toInt)))} chunkShape=${printAsInner(
       header.chunkShape)} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, vault=${vaultPath.summary}}"

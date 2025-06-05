@@ -5,12 +5,21 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationLayerTypeProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationLayerTypeProto,
+  AnnotationProto
+}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, ResetToBaseAnnotationAction, TSAnnotationService, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationTransactionService,
+  ResetToBaseAnnotationAction,
+  TSAnnotationService,
+  UpdateActionGroup
+}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService

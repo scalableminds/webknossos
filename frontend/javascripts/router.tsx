@@ -63,6 +63,7 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
+import AccountSettingsView from "admin/auth/account_settings_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
@@ -75,7 +76,6 @@ import type { EmptyObject } from "types/globals";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
-import AccountSettingsView from "admin/auth/account_settings_view";
 
 const { Content } = Layout;
 

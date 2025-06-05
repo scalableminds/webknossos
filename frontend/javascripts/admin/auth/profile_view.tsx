@@ -1,16 +1,16 @@
-import { Descriptions, Typography, Dropdown, Divider, Card } from "antd";
-import { useWkSelector } from "libs/react_hooks";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-import * as Utils from "libs/utils";
 import { CheckOutlined, DownOutlined } from "@ant-design/icons";
-import type { APIUserTheme } from "types/api_types";
-import { getSystemColorTheme } from "theme";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import Store from "viewer/store";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { Descriptions, Divider, Dropdown, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
+import * as Utils from "libs/utils";
+import { getSystemColorTheme } from "theme";
+import type { APIUserTheme } from "types/api_types";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import Store from "viewer/store";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 export function AccountSettingTitle({
   title,

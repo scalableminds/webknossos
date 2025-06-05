@@ -1,8 +1,8 @@
+import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Layout, Menu } from "antd";
-import { Route, Switch, useLocation, useHistory } from "react-router-dom";
-import { LockOutlined, SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
-import ChangePasswordView from "./change_password_view";
+import { Route, Switch, useHistory, useLocation } from "react-router-dom";
 import AuthTokenView from "./auth_token_view";
+import ChangePasswordView from "./change_password_view";
 import ProfileView from "./profile_view";
 
 const { Sider, Content } = Layout;

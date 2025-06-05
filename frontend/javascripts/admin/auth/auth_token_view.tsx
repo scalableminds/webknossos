@@ -1,8 +1,7 @@
-import Icon, { CopyOutlined, InfoCircleOutlined, SwapOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
-import { Button, Typography, Descriptions, Form, Input, Row, Space, Spin, Popover } from "antd";
+import { Button, Descriptions, Popover, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { AccountSettingTitle } from "./profile_view";
 
@@ -31,18 +30,6 @@ function AuthTokenView() {
       setCurrentToken(token);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const copyTokenToClipboard = async () => {
-    await navigator.clipboard.writeText(currentToken);
-    Toast.success("Token copied to clipboard");
-  };
-
-  const copyOrganizationIdToClipboard = async () => {
-    if (activeUser != null) {
-      await navigator.clipboard.writeText(activeUser.organization);
-      Toast.success("Organization ID copied to clipboard");
     }
   };
 

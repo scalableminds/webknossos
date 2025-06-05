@@ -1,5 +1,5 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
-import { Layout, Menu } from "antd";
+import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Route, Switch, useHistory, useLocation } from "react-router-dom";
 import AuthTokenView from "./auth_token_view";
@@ -43,9 +43,10 @@ function AccountSettingsView() {
     },
   ];
 
+  const subPageBreadcrumb = selectedKey.charAt(0).toUpperCase() + selectedKey.slice(1);
+
   return (
     <Layout style={{ minHeight: "calc(100vh - 64px)" }} className="container">
-      <h1>Account Settings</h1>
       <Layout>
         <Sider width={200}>
           <Menu
@@ -56,7 +57,11 @@ function AccountSettingsView() {
             onClick={({ key }) => history.push(`/account/${key}`)}
           />
         </Sider>
-        <Content style={{ padding: "24px", paddingTop: 0, minHeight: 280 }}>
+        <Content style={{ padding: "24px", paddingTop: 0, minHeight: 280, maxWidth: 1000 }}>
+          <Breadcrumb style={{ marginBottom: "16px", padding: "8px 0" }}>
+            <Breadcrumb.Item>Account Settings</Breadcrumb.Item>
+            <Breadcrumb.Item>{subPageBreadcrumb}</Breadcrumb.Item>
+          </Breadcrumb>
           <Switch>
             <Route path="/account/profile" component={ProfileView} />
             <Route path="/account/password" component={ChangePasswordView} />

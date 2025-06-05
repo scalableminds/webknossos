@@ -1,6 +1,4 @@
 import AcceptInviteView from "admin/auth/accept_invite_view";
-import AuthTokenView from "admin/auth/auth_token_view";
-import ChangePasswordView from "admin/auth/change_password_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -643,12 +641,12 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
-                component={AuthTokenView}
+                render={() => <Redirect to="/account/login" />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
-                component={ChangePasswordView}
+                render={() => <Redirect to="/account/password" />}
               />
               <RouteWithErrorBoundary path="/login" render={() => <Redirect to="/auth/login" />} />
 

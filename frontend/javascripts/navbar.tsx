@@ -1,7 +1,6 @@
 import {
   BarChartOutlined,
   BellOutlined,
-  CheckOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -36,7 +35,6 @@ import {
   sendAnalyticsEvent,
   switchToOrganization,
   updateNovelUserExperienceInfos,
-  updateSelectedThemeOfUser,
 } from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
@@ -50,20 +48,14 @@ import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import { getAntdTheme, getSystemColorTheme } from "theme";
-import type {
-  APIOrganizationCompact,
-  APIUser,
-  APIUserCompact,
-  APIUserTheme,
-} from "types/api_types";
+import { getAntdTheme } from "theme";
+import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
   isAnnotationFromDifferentOrganization,
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -573,7 +565,7 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
   const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
@@ -590,16 +582,6 @@ function LoggedInAvatar({
   const onEnterOrganization = () => {
     if (filteredOrganizations.length > 0) {
       switchTo(filteredOrganizations[0]);
-    }
-  };
-
-  const setSelectedTheme = async (newTheme: APIUserTheme) => {
-    if (newTheme === "auto") newTheme = getSystemColorTheme();
-
-    if (selectedTheme !== newTheme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
-      Store.dispatch(setThemeAction(newTheme));
-      Store.dispatch(setActiveUserAction(newUser));
     }
   };
 
@@ -674,32 +656,8 @@ function LoggedInAvatar({
                 }
               : null,
             {
-              key: "resetpassword",
-              label: <Link to="/account/password">Change Password</Link>,
-            },
-            { key: "token", label: <Link to="/account/token">Auth Token</Link> },
-            {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
-            },
-            {
-              key: "theme",
-              label: "Theme",
-              children: [
-                ["auto", "System-default"],
-                ["light", "Light"],
-                ["dark", "Dark"],
-              ].map(([key, label]) => {
-                return {
-                  key,
-                  label: label,
-                  icon: selectedTheme === key ? <CheckOutlined /> : null,
-                  onClick: () => {
-                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-                    setSelectedTheme(key);
-                  },
-                };
-              }),
             },
             {
               key: "logout",

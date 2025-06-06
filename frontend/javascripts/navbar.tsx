@@ -635,9 +635,7 @@ function LoggedInAvatar({
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
-                  label: (
-                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
-                  ),
+                  label: <Link to={"/organization/profile"}>Manage Organization</Link>,
                 }
               : null,
             isMultiMember

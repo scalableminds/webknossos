@@ -65,7 +65,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
     const applyUserStateToTreeFn = getApplyUserStateToTreeFn(userState);
     const trees = createTreeMapFromTreeArray(action.tracing.trees, applyUserStateToTreeFn);
-    let activeNodeId = userState?.activeNodeId;
+    let activeNodeId = userState?.activeNodeId ?? action.tracing.activeNodeId;
 
     const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
     let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));

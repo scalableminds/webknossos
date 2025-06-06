@@ -415,12 +415,6 @@ export function* setupSavingForTracingType(
       continue;
     }
 
-    if (process.env.IS_TESTING) {
-      // This provokes a race condition in tests against which the ensureDiffedChannel
-      // guards. Removing the guard would make specs fail.
-      yield* delay(500);
-    }
-
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>

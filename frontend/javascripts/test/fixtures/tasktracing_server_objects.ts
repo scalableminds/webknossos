@@ -42,7 +42,7 @@ export const tracing: ServerSkeletonTracing = {
         b: 0,
         a: 1,
       },
-      name: "Tree Name for treeId=1",
+      name: "", // there is a test that asserts that empty names will be renamed automatically
       isVisible: true,
       createdTimestamp: 1528811979356,
       metadata: [],

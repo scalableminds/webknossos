@@ -115,6 +115,7 @@ vi.mock("viewer/model/helpers/shader_editor.ts", () => ({
 
 vi.mock("antd", () => {
   return {
+    Button: {},
     theme: {
       getDesignToken: () => ({ colorPrimary: "white" }),
       defaultAlgorithm: {},

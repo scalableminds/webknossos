@@ -144,7 +144,7 @@ describe("SkeletonTracingSaga", () => {
       Store.dispatch(restartSagaAction());
       Store.dispatch(discardSaveQueuesAction());
       Store.dispatch(setActiveUserAction(dummyUser));
-      await setupWebknossosForTesting(context, "task");
+      await setupWebknossosForTesting(context, "skeleton");
 
       // Dispatch the wkReadyAction, so the sagas are started
       Store.dispatch(wkReadyAction());

@@ -155,6 +155,8 @@ function CreateAnnotationButton() {
   };
 
   const continueWithLayer = (layer: APISegmentationLayer | null) => {
+    // If the dataset supports creating an annotation with a fallback segmentation,
+    // use it (as the fallback can always be removed later)
     const fallbackLayerName = getFallbackLayerName(layer);
     const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
     let maybeMappingName = null;
@@ -179,7 +181,8 @@ function CreateAnnotationButton() {
   };
 
   const onClick = async () => {
-    const obviousSegmentationLayer = getUnambiguousSegmentationLayer(); // This will be set is cases where it is clear which layer to use.
+    // This will be set is cases where it is clear which layer to use.
+    const obviousSegmentationLayer = getUnambiguousSegmentationLayer();
 
     if (!obviousSegmentationLayer && segmentationLayers.length > 1) {
       setLayerSelectionModalVisible(true);

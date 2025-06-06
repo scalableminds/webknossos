@@ -10,7 +10,7 @@ const volumeTracing = {
   largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],
-  tracingId: "tracingId",
+  tracingId: "volumeTracingId",
 };
 const notEmptyViewportRect = {
   top: 0,

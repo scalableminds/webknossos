@@ -68,16 +68,16 @@ export const tracing: ServerSkeletonTracing = {
   id: TRACING_ID,
 };
 export const annotation: APIAnnotation = {
-  datasetId: "66f3c82966010034942e9740",
+  datasetId: "datasetId-66f3c82966010034942e9740",
   modified: 1529066010230,
   state: "Active",
-  id: "5b1fd1cf97000027049c67ee",
+  id: "annotationId-5b1fd1cf97000027049c67ee",
   name: "",
   description: "",
   stats: {},
   typ: "Task",
   task: {
-    id: "5b1fd1cb97000027049c67ec",
+    id: "taskId-5b1fd1cb97000027049c67ec",
     projectName: "sampleProject",
     projectId: "dummy-project-id",
     team: "Connectomics department",
@@ -85,7 +85,7 @@ export const annotation: APIAnnotation = {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",
       description: "Description",
-      teamId: "5b1e45f9a00000a000abc2c3",
+      teamId: "teamId-5b1e45f9a00000a000abc2c3",
       teamName: "Connectomics department",
       settings: {
         allowedModes: ["orthogonal", "oblique", "flight"],
@@ -98,7 +98,7 @@ export const annotation: APIAnnotation = {
       recommendedConfiguration: null,
       tracingType: "skeleton",
     },
-    datasetId: "66f3c82966010034942e9740",
+    datasetId: "datasetId-66f3c82966010034942e9740",
     datasetName: "ROI2017_wkw",
     neededExperience: {
       domain: "oxalis",
@@ -156,7 +156,7 @@ export const annotation: APIAnnotation = {
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
   owner: {
-    id: "5b1e45faa00000a900abc2c5",
+    id: "userId-5b1e45faa00000a900abc2c5",
     email: "sample@scm.io",
     firstName: "Sample",
     lastName: "User",
@@ -165,7 +165,7 @@ export const annotation: APIAnnotation = {
     isDatasetManager: true,
     teams: [
       {
-        id: "5b1e45f9a00000a000abc2c3",
+        id: "teamId-5b1e45f9a00000a000abc2c3",
         name: "Connectomics department",
         isTeamManager: true,
       },
@@ -176,7 +176,7 @@ export const annotation: APIAnnotation = {
   isLockedByOwner: false,
   teams: [
     {
-      id: "5b1e45f9a00000a000abc2c3",
+      id: "teamId-5b1e45f9a00000a000abc2c3",
       name: "Connectomics department",
       organization: "Connectomics department",
     },

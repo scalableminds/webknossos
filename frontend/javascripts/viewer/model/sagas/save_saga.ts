@@ -1,8 +1,6 @@
-import { doWithToken, getNewestVersionForAnnotation } from "admin/rest_api";
+import { getNewestVersionForAnnotation, sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
-import type { RequestOptionsWithData } from "libs/request";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
@@ -123,12 +121,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     yield* put(setSaveBusyAction(false));
   }
 }
-export function sendRequestWithToken(
-  urlWithoutToken: string,
-  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
-): Promise<any> {
-  return doWithToken((token) => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
-}
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
@@ -182,7 +174,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
     try {
       const startTime = Date.now();
       yield* call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -421,6 +413,12 @@ export function* setupSavingForTracingType(
     if (ensureAction != null) {
       ensureAction.callback(tracingId);
       continue;
+    }
+
+    if (process.env.IS_TESTING) {
+      // This provokes a race condition in tests against which the ensureDiffedChannel
+      // guards. Removing the guard would make specs fail.
+      yield* delay(500);
     }
 
     // The allowUpdate setting could have changed in the meantime

@@ -637,6 +637,14 @@ function CollapsibleSplitMergerEvaluationSettings({
           children: (
             <Row>
               <Col style={{ width: "100%" }}>
+                <div style={{ marginBottom: 24 }}>
+                  To use it as the ground truth, your annotation should contain
+                  <ul>
+                    <li>a user-defined bounding box,</li>
+                    <li>at least one tree,</li>
+                    <li>and every tree should have at least one node.</li>
+                  </ul>
+                </div>
                 <Form.Item
                   layout="horizontal"
                   label="Use sparse ground truth tracing"

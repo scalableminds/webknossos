@@ -5,6 +5,7 @@ import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_a
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type {
+  BoundingBoxObject,
   NumberLike,
   SegmentGroup,
   UserBoundingBox,
@@ -104,6 +105,28 @@ export type MergeAgglomerateUpdateAction = ReturnType<typeof mergeAgglomerate>;
 export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
+
+export type ApplicableSkeletonUpdateAction =
+  | UpdateTreeUpdateAction
+  | UpdateNodeUpdateAction
+  | CreateNodeUpdateAction
+  | CreateEdgeUpdateAction
+  | DeleteTreeUpdateAction
+  | DeleteEdgeUpdateAction
+  | DeleteNodeUpdateAction
+  | MoveTreeComponentUpdateAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction;
+
+export type ApplicableVolumeUpdateAction =
+  | UpdateLargestSegmentIdVolumeAction
+  | UpdateSegmentUpdateAction
+  | CreateSegmentUpdateAction
+  | DeleteSegmentUpdateAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
@@ -330,36 +353,40 @@ export type CreateActionNode = Omit<Node, "untransformedPosition" | "mag"> & {
   position: Node["untransformedPosition"];
   treeId: number;
   resolution: number;
+  actionTracingId: string;
 };
 
 export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   position: Node["untransformedPosition"];
   treeId: number;
+  actionTracingId: string;
 };
 
 export function createNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, mag, ...restNode } = node;
+  const value: CreateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+    resolution: mag,
+  };
   return {
     name: "createNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-      resolution: mag,
-    } as CreateActionNode,
+    value,
   } as const;
 }
 export function updateNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, ...restNode } = node;
+  const value: UpdateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+  };
   return {
     name: "updateNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-    } as UpdateActionNode,
+    value,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number, actionTracingId: string) {
@@ -563,24 +590,26 @@ export function deleteUserBoundingBoxInVolumeTracing(
 }
 
 function _updateUserBoundingBoxHelper(
-  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
-) {
+): {
+  boundingBoxId: number;
+  actionTracingId: string;
+  boundingBox?: BoundingBoxObject;
+  name?: string;
+  color?: Vector3;
+} {
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropsForServer =
     boundingBox != null
       ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
-      : updatedProps;
+      : (updatedProps as Omit<PartialBoundingBoxWithoutVisibility, "boundingBox">);
   return {
-    name: actionName,
-    value: {
-      boundingBoxId,
-      actionTracingId,
-      ...updatedPropsForServer,
-    },
-  } as const;
+    boundingBoxId,
+    actionTracingId,
+    ...updatedPropsForServer,
+  };
 }
 
 export function updateUserBoundingBoxInVolumeTracing(
@@ -588,12 +617,10 @@ export function updateUserBoundingBoxInVolumeTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInVolumeTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInVolumeTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxInSkeletonTracing(
@@ -601,12 +628,10 @@ export function updateUserBoundingBoxInSkeletonTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInSkeletonTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInSkeletonTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxVisibilityInSkeletonTracing(

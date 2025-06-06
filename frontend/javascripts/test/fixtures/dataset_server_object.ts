@@ -1,5 +1,63 @@
 import { UnitLong } from "viewer/constants";
-import type { APIDataset } from "types/api_types";
+import type { APIColorLayer, APIDataset, APISegmentationLayer } from "types/api_types";
+
+const sampleColorLayer: APIColorLayer = {
+  name: "color",
+  category: "color",
+  boundingBox: {
+    topLeft: [0, 0, 0],
+    width: 10240,
+    height: 10240,
+    depth: 10240,
+  },
+  resolutions: [
+    [1, 1, 1],
+    [2, 2, 2],
+    [32, 32, 32],
+    [4, 4, 4],
+    [8, 8, 8],
+    [16, 16, 16],
+  ],
+  elementClass: "uint8",
+  additionalAxes: [],
+};
+
+const sampleSegmentationLayer: APISegmentationLayer = {
+  name: "segmentation",
+  category: "segmentation",
+  boundingBox: {
+    topLeft: [0, 0, 0],
+    width: 10240,
+    height: 10240,
+    depth: 10240,
+  },
+  resolutions: [
+    [1, 1, 1],
+    [2, 2, 2],
+    [32, 32, 32],
+    [4, 4, 4],
+    [8, 8, 8],
+    [16, 16, 16],
+  ],
+  elementClass: "uint32",
+  largestSegmentId: 1000000000,
+  mappings: [
+    "larger5um1",
+    "axons",
+    "astrocyte-ge-7",
+    "astrocyte",
+    "mitochondria",
+    "astrocyte-full",
+  ],
+  tracingId: undefined,
+  additionalAxes: [],
+};
+
+export const sampleTracingLayer: APISegmentationLayer = {
+  ...sampleSegmentationLayer,
+  name: "tracingId",
+  tracingId: "tracingId",
+};
 
 const apiDataset: APIDataset = {
   id: "66f3c82966010034942e9740",
@@ -9,58 +67,7 @@ const apiDataset: APIDataset = {
       name: "ROI2017_wkw",
       team: "Connectomics department",
     },
-    dataLayers: [
-      {
-        name: "color",
-        category: "color",
-        boundingBox: {
-          topLeft: [0, 0, 0],
-          width: 10240,
-          height: 10240,
-          depth: 10240,
-        },
-        resolutions: [
-          [1, 1, 1],
-          [2, 2, 2],
-          [32, 32, 32],
-          [4, 4, 4],
-          [8, 8, 8],
-          [16, 16, 16],
-        ],
-        elementClass: "uint8",
-        additionalAxes: [],
-      },
-      {
-        name: "segmentation",
-        category: "segmentation",
-        boundingBox: {
-          topLeft: [0, 0, 0],
-          width: 10240,
-          height: 10240,
-          depth: 10240,
-        },
-        resolutions: [
-          [1, 1, 1],
-          [2, 2, 2],
-          [32, 32, 32],
-          [4, 4, 4],
-          [8, 8, 8],
-          [16, 16, 16],
-        ],
-        elementClass: "uint32",
-        largestSegmentId: 1000000000,
-        mappings: [
-          "larger5um1",
-          "axons",
-          "astrocyte-ge-7",
-          "astrocyte",
-          "mitochondria",
-          "astrocyte-full",
-        ],
-        tracingId: undefined,
-        additionalAxes: [],
-      },
-    ],
+    dataLayers: [sampleColorLayer, sampleSegmentationLayer],
     scale: { factor: [11.239999771118164, 11.239999771118164, 28], unit: UnitLong.nm },
   },
   dataStore: {

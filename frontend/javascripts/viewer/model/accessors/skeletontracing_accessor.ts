@@ -117,10 +117,6 @@ export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefin
   return trees.values().find((tree) => tree.nodes.has(nodeId));
 }
 
-export function hasEmptyTrees(trees: TreeMap): boolean {
-  return trees.values().some((tree: Tree) => tree.nodes.size() === 0);
-}
-
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
   return trees.values().find((tree: Tree) => tree.name === treeName);
 }

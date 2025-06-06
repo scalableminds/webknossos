@@ -1,7 +1,7 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Route, Switch, useHistory, useLocation } from "react-router-dom";
+import { Redirect, Route, Switch, useHistory, useLocation } from "react-router-dom";
 import AccountAuthTokenView from "./account_auth_token_view";
 import AccountPasswordView from "./account_password_view";
 import AccountProfileView from "./account_profile_view";
@@ -50,17 +50,19 @@ function AccountSettingsView() {
   ];
 
   return (
-    <Layout style={{ minHeight: "calc(100vh - 64px)" }} className="container">
+    <Layout
+      style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "var(--ant-layout-body-bg)" }}
+    >
       <Sider width={200}>
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
-          style={{ height: "100%" }}
+          style={{ height: "100%", padding: 24 }}
           items={menuItems}
           onClick={({ key }) => history.push(`/account/${key}`)}
         />
       </Sider>
-      <Content style={{ padding: "24px", paddingTop: 0, minHeight: 280, maxWidth: 1000 }}>
+      <Content style={{ padding: "24px", minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px", padding: "8px 0" }}>
           <Breadcrumb.Item>Account Settings</Breadcrumb.Item>
           <Breadcrumb.Item>
@@ -71,7 +73,7 @@ function AccountSettingsView() {
           <Route path="/account/profile" component={AccountProfileView} />
           <Route path="/account/password" component={AccountPasswordView} />
           <Route path="/account/token" component={AccountAuthTokenView} />
-          <Route path="/account" component={AccountProfileView} />
+          <Route path="/account" render={() => <Redirect to="/account/profile" />} />
         </Switch>
       </Content>
     </Layout>

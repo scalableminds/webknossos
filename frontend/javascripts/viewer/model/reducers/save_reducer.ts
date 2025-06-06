@@ -30,6 +30,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       // Use `dispatchedAction` to better distinguish this variable from
       // update actions.
       const dispatchedAction = action;
+      if (dispatchedAction.items.length === 0) {
+        console.warn("PUSH_SAVE_QUEUE_TRANSACTION was dispatched with empty items.");
+        return state;
+      }
       const { items, transactionId } = dispatchedAction;
       const stats: TracingStats = getStats(state.annotation);
       const { activeUser } = state;

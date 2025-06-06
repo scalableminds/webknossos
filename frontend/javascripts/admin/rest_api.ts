@@ -742,7 +742,7 @@ export async function getTracingForAnnotationType(
 
   if (!process.env.IS_TESTING) {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
-    console.log("Parsed protobuf tracing:", tracing);
+    console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;

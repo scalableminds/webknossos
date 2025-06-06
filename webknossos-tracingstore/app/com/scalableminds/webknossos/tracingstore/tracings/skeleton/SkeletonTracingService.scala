@@ -19,6 +19,7 @@ class SkeletonTracingService @Inject()(
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
+    with AnnotationUserStateUtils
     with FoxImplicits {
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
@@ -58,13 +59,17 @@ class SkeletonTracingService @Inject()(
                                 editPosition: Option[Vec3Int],
                                 editRotation: Option[Vec3Double],
                                 boundingBox: Option[BoundingBox],
-                                newVersion: Long): SkeletonTracing = {
+                                newVersion: Long,
+                                ownerId: String,
+                                requestingUserId: String): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
         NamedBoundingBoxProto(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
+
+    val userStates = Seq(renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))
 
     val newTracing =
       tracing
@@ -74,7 +79,8 @@ class SkeletonTracingService @Inject()(
           editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
           boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
           version = newVersion,
-          storedWithExternalTreeBodies = Some(false)
+          storedWithExternalTreeBodies = Some(false),
+          userStates = userStates
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
     if (fromTask) newTracing.clearBoundingBox else newTracing
@@ -96,15 +102,28 @@ class SkeletonTracingService @Inject()(
       tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
-      nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-      groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
-      mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
-      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
+      nodeMappingA = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+      (treeMappingA, treeMappingB) = TreeUtils.calculateTreeMappings(tracingA.trees, tracingB.trees)
+      groupMappingA = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+      mergedTrees = TreeUtils.mergeTrees(tracingA.trees,
+                                         tracingB.trees,
+                                         treeMappingA,
+                                         treeMappingB,
+                                         nodeMappingA,
+                                         groupMappingA)
+      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMappingA)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-      userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                   tracingB.userBoundingBox,
-                                                   tracingA.userBoundingBoxes,
-                                                   tracingB.userBoundingBoxes)
+      (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                             tracingB.userBoundingBox,
+                                                                             tracingA.userBoundingBoxes,
+                                                                             tracingB.userBoundingBoxes)
+      userStates = mergeSkeletonUserStates(tracingA.userStates,
+                                           tracingB.userStates,
+                                           groupMappingA,
+                                           treeMappingA,
+                                           treeMappingB,
+                                           bboxIdMapA,
+                                           bboxIdMapB)
     } yield
       tracingA.copy(
         trees = mergedTrees,
@@ -112,10 +131,12 @@ class SkeletonTracingService @Inject()(
         boundingBox = mergedBoundingBox,
         userBoundingBox = None,
         userBoundingBoxes = userBoundingBoxes,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
       )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
+  // Note that this is only used for freshly uploaded annotations, so there is no user state that would have to be mapped with the id changes
   def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
     if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
       val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)

@@ -4,6 +4,7 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 import "MetadataEntry.proto";
+import "IdWithBool.proto";
 
 message Node {
   required int32 id = 1;
@@ -66,6 +67,14 @@ message TreeGroup {
   optional bool isExpanded = 4;
 }
 
+message SkeletonUserStateProto {
+  required string userId = 1;
+  optional int32 activeNodeId = 2;
+  repeated Id32WithBool treeGroupExpandedStates = 3;
+  repeated Id32WithBool boundingBoxVisibilities = 4;
+  repeated Id32WithBool treeVisibilities = 5;
+}
+
 message SkeletonTracing {
   required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
   repeated Tree trees = 2;
@@ -83,6 +92,7 @@ message SkeletonTracing {
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool storedWithExternalTreeBodies = 23; // Only set to true on storing. If false, all trees will be stored
+  repeated SkeletonUserStateProto userStates = 24;
 }
 
 message SkeletonTracingOpt {

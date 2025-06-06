@@ -55,7 +55,7 @@ import {
   dispatchRedoAsync,
   dispatchUndoAsync,
 } from "viewer/model/actions/save_actions";
-import { setTracingAction } from "viewer/model/actions/skeletontracing_actions";
+import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import {
   setDownloadModalVisibilityAction,
   setMergeModalVisibilityAction,
@@ -569,7 +569,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       tracingId: skeletonTracing.tracingId,
       createdTimestamp: skeletonTracing.createdTimestamp,
     };
-    Store.dispatch(setTracingAction(newSkeletonTracing));
+    Store.dispatch(setSkeletonTracingAction(newSkeletonTracing));
     await Model.ensureSavedState();
     // Do a complete page refresh, because the URL changed and the router
     // would cause a reload the next time the URL hash changes (because the

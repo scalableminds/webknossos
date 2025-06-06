@@ -56,6 +56,7 @@ import {
   getMagInfo,
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
+import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
@@ -1054,9 +1055,10 @@ export function NucleiDetectionForm() {
 export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const hasSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
+  const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
+  const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -1099,6 +1101,20 @@ export function NeuronSegmentationForm() {
             doSplitMergerEvaluation,
           );
         }
+        if (userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBox.id) == null) {
+          Toast.error(
+            "To use the split/merger evaluation, please select a bounding box that is not the full layer bounding box.",
+          );
+          return;
+        }
+        if (skeletonAnnotation == null || skeletonAnnotation?.trees.size() === 0) {
+          Toast.error("Please ensure that the skeleton annotation has at least one tree.");
+          return;
+        }
+        if (hasEmptyTrees(skeletonAnnotation.trees)) {
+          Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
+          return;
+        }
         return startNeuronInferralJob(
           dataset.id,
           colorLayer.name,
@@ -1126,7 +1142,7 @@ export function NeuronSegmentationForm() {
         </>
       }
       jobSpecificInputFields={
-        hasSkeletonAnnotation && (
+        skeletonAnnotation != null && (
           <CollapsibleSplitMergerEvaluationSettings
             isActive={doSplitMergerEvaluation}
             setActive={setDoSplitMergerEvaluation}

@@ -126,6 +126,7 @@ export const dispatchRedoAsync = async (dispatch: Dispatch<any>): Promise<void> 
   await readyDeferred.promise();
 };
 
+// See Model.ensureSavedState for an explanation of this action.
 export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: string) => void) =>
   ({
     type: "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",

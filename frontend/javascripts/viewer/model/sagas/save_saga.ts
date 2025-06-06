@@ -7,6 +7,7 @@ import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import { buffers } from "redux-saga";
 import { actionChannel, call, delay, fork, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -53,6 +54,7 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
+import type { Action } from "../actions/actions";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -388,6 +390,7 @@ export function* setupSavingForTracingType(
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* call(ensureWkReady);
 
+  const actionBuffer = buffers.expanding<Action>();
   const tracingActionChannel = yield* actionChannel(
     tracingType === "skeleton"
       ? [
@@ -399,20 +402,30 @@ export function* setupSavingForTracingType(
           "SET_TRACING",
         ]
       : [...VolumeTracingSaveRelevantActions, ...FlycamActions, ...ViewModeSaveRelevantActions],
+    actionBuffer,
   );
+
+  // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
     "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
   );
 
   while (true) {
-    // todop: prioritize tracingAction?
-    const { ensureAction } = yield* race({
-      _tracingAction: take(tracingActionChannel),
-      ensureAction: take(ensureDiffedChannel),
-    });
-    if (ensureAction != null) {
-      ensureAction.callback(tracingId);
-      continue;
+    // Prioritize consumption of tracingActionChannel since we don't want to
+    // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
+    // are unprocessed user actions.
+    if (!actionBuffer.isEmpty()) {
+      yield* take(tracingActionChannel);
+    } else {
+      // Wait for either a user action or the "ensureAction".
+      const { ensureAction } = yield* race({
+        _tracingAction: take(tracingActionChannel),
+        ensureAction: take(ensureDiffedChannel),
+      });
+      if (ensureAction != null) {
+        ensureAction.callback(tracingId);
+        continue;
+      }
     }
 
     // The allowUpdate setting could have changed in the meantime

@@ -1,5 +1,4 @@
 import _ from "lodash";
-import "test/sagas/saga_integration.mock";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "viewer/store";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";

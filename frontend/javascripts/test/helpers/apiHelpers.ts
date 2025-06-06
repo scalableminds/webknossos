@@ -29,7 +29,7 @@ import Model from "viewer/model";
 import UrlManager from "viewer/controller/url_manager";
 
 import WebknossosApi from "viewer/api/api_loader";
-import { default as Store, startSaga } from "viewer/store";
+import { type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setStore, setModel } from "viewer/singletons";
 import { setupApi } from "viewer/api/internal_api";
@@ -37,6 +37,7 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
+import { sendSaveRequestWithToken } from "admin/rest_api";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -51,6 +52,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
   tearDownPullQueues: () => void;
+  receivedDataPerRequest: Array<SaveQueueEntry[]>;
 }
 
 // Create mock objects
@@ -66,6 +68,21 @@ vi.mock("libs/request", () => ({
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
+
+vi.mock("admin/rest_api.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
+
+  const receivedDataPerRequest: Array<SaveQueueEntry[]> = [];
+  const mockedSendRequestWithToken = vi.fn((_, payload) => {
+    receivedDataPerRequest.push(payload.data);
+    return Promise.resolve();
+  });
+  (mockedSendRequestWithToken as any).receivedDataPerRequest = receivedDataPerRequest;
+  return {
+    ...actual,
+    sendSaveRequestWithToken: mockedSendRequestWithToken,
+  };
+});
 
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
@@ -192,6 +209,7 @@ export async function setupWebknossosForTesting(
     Model.getAllLayers().map((layer) => {
       layer.pullQueue.destroy();
     });
+  testContext.receivedDataPerRequest = (sendSaveRequestWithToken as any).receivedDataPerRequest;
 
   const webknossos = new WebknossosApi(Model);
   const annotationFixture = modelData[mode].annotation;

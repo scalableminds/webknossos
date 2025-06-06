@@ -1,6 +1,5 @@
 import { vi, it, expect, beforeEach, describe } from "vitest";
 import { waitForCondition } from "libs/utils";
-import "test/sagas/saga_integration.mock";
 import {
   setupWebknossosForTesting,
   createBucketResponseFunction,

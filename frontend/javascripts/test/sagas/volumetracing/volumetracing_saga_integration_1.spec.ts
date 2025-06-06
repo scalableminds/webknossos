@@ -3,7 +3,6 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import "test/sagas/saga_integration.mock";
 import _ from "lodash";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";

@@ -1,4 +1,3 @@
-import "test/sagas/saga_integration.mock";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants, {
   ContourModeEnum,

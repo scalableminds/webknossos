@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
-import type { RequestOptions } from "libs/request";
+import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
@@ -90,6 +90,7 @@ import type {
   MappingType,
   NumberLike,
   PartialDatasetConfiguration,
+  SaveQueueEntry,
   StoreAnnotation,
   TraceOrViewCommand,
   UserConfiguration,
@@ -2397,4 +2398,13 @@ export function requestVerificationMail() {
   return Request.receiveJSON("/api/verifyEmail", {
     method: "POST",
   });
+}
+
+export function sendSaveRequestWithToken(
+  urlWithoutToken: string,
+  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
+): Promise<void> {
+  // Ideally, this function should be refactored further so that it generates the
+  // correct urlWithoutToken itself.
+  return doWithToken((token) => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }

@@ -1,5 +1,4 @@
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
-import "test/sagas/saga_integration.mock";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";

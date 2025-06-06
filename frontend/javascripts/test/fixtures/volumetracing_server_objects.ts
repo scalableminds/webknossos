@@ -5,7 +5,7 @@ import {
   type APITracingStoreAnnotation,
 } from "types/api_types";
 
-const TRACING_ID = "tracingId-1234";
+const TRACING_ID = "volumeTracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,

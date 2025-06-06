@@ -76,26 +76,13 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
     organization.pricingPlan === PricingPlanEnum.PowerTrial ||
     organization.pricingPlan === PricingPlanEnum.Custom
   )
-    return null;
-
-  let title = "Upgrade to unlock more features";
-  let cardBody = (
-    <TeamAndPowerPlanUpgradeCards
-      teamUpgradeCallback={() =>
-        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team)
-      }
-      powerUpgradeCallback={() =>
-        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
-      }
-    />
-  );
+    return "TODO";
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
-    title = `Upgrade to ${PricingPlanEnum.Power} Plan`;
-    cardBody = (
+    return (
       <Row gutter={24}>
         <Col span={18}>
           <p>
@@ -125,24 +112,14 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
   }
 
   return (
-    <Card
-      title={title}
-      style={{
-        marginBottom: 20,
-      }}
-      styles={{
-        body: {
-          background: "var(--color-wk-blue)",
-          color: "white",
-        },
-      }}
-    >
-      <p>
-        Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user and
-        storage quotas.
-      </p>
-      {cardBody}
-    </Card>
+    <TeamAndPowerPlanUpgradeCards
+      teamUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Team)
+      }
+      powerUpgradeCallback={() =>
+        UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+      }
+    />
   );
 }
 
@@ -150,7 +127,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
   if (organization.paidUntil === Constants.MAXIMUM_DATE_TIMESTAMP) return null;
 
   return (
-    <Card style={{ marginBottom: 20 }}>
+    <Card style={{ marginBottom: 36 }}>
       <Row gutter={24}>
         <Col flex="auto">
           Your current plan is paid until{" "}
@@ -170,6 +147,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
   );
 }
 
+// TODO: Consider removing this card
 export function PlanDashboardCard({
   organization,
   activeUsersCount,

@@ -5,8 +5,15 @@ import { useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { logoutUserAction } from "viewer/model/actions/user_actions";
+import { Store } from "viewer/singletons";
 import { handleResendVerificationEmail } from "./verify_email_view";
+
 const FormItem = Form.Item;
+
+const NEW_EMAIL_FIELD_KEY = "newEmail";
+const CONFIRM_NEW_EMAIL_FIELD_KEY = "confirmNewEmail";
+const PASSWORD_FIELD_KEY = "password";
 
 function ChangeEmailView() {
   const [form] = Form.useForm();
@@ -20,17 +27,14 @@ function ChangeEmailView() {
   }
 
   function onFinish() {
-    const newEmail = form.getFieldValue("newEmail");
+    const newEmail = form.getFieldValue(NEW_EMAIL_FIELD_KEY);
     changeEmail(newEmail)
-      .then(() => {
+      .then(async () => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
-        return Request.receiveJSON("/api/auth/logout");
-      })
-      .then(() => {
-        form.resetFields();
-        // Redirect to login page after successful email change
+        await Request.receiveJSON("/api/auth/logout");
         window.location.href = "/auth/login";
+        Store.dispatch(logoutUserAction());
       })
       .catch((error) => {
         Toast.error(
@@ -73,7 +77,7 @@ function ChangeEmailView() {
         />
         <Form onFinish={onFinish} form={form}>
           <FormItem
-            name="password"
+            name={PASSWORD_FIELD_KEY}
             rules={[
               {
                 required: true,
@@ -94,7 +98,7 @@ function ChangeEmailView() {
           </FormItem>
           <FormItem
             hasFeedback
-            name="newEmail"
+            name={NEW_EMAIL_FIELD_KEY}
             rules={[
               {
                 required: true,
@@ -105,7 +109,8 @@ function ChangeEmailView() {
                 message: "Please enter a valid email address",
               },
               {
-                validator: (_, value: string) => checkEmailsAreMatching(value, ["confirmNewEmail"]),
+                validator: (_, value: string) =>
+                  checkEmailsAreMatching(value, [CONFIRM_NEW_EMAIL_FIELD_KEY]),
               },
             ]}
           >
@@ -122,7 +127,7 @@ function ChangeEmailView() {
           </FormItem>
           <FormItem
             hasFeedback
-            name="confirmNewEmail"
+            name={CONFIRM_NEW_EMAIL_FIELD_KEY}
             rules={[
               {
                 required: true,
@@ -133,7 +138,8 @@ function ChangeEmailView() {
                 message: "Please enter a valid email address",
               },
               {
-                validator: (_, value: string) => checkEmailsAreMatching(value, ["newEmail"]),
+                validator: (_, value: string) =>
+                  checkEmailsAreMatching(value, [NEW_EMAIL_FIELD_KEY]),
               },
             ]}
           >

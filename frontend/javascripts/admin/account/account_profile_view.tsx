@@ -27,7 +27,7 @@ export function AccountSettingsTitle({
   );
 }
 
-function ProfileView() {
+function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
@@ -115,4 +115,4 @@ function ProfileView() {
   );
 }
 
-export default ProfileView;
+export default AccountProfileView;

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { AccountSettingsTitle } from "./profile_view";
+import { AccountSettingsTitle } from "./account_profile_view";
 const FormItem = Form.Item;
 const { Password } = Input;
 
@@ -17,7 +17,7 @@ type Props = {
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function ChangePasswordView({ history }: Props) {
+function AccountPasswordView({ history }: Props) {
   const [form] = Form.useForm();
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
@@ -205,4 +205,4 @@ function ChangePasswordView({ history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps, any>(ChangePasswordView);
+export default withRouter<RouteComponentProps, any>(AccountPasswordView);

@@ -2,9 +2,9 @@ import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Route, Switch, useHistory, useLocation } from "react-router-dom";
-import AuthTokenView from "./auth_token_view";
-import ChangePasswordView from "./change_password_view";
-import ProfileView from "./profile_view";
+import AccountAuthTokenView from "./account_auth_token_view";
+import AccountPasswordView from "./account_password_view";
+import AccountProfileView from "./account_profile_view";
 
 const { Sider, Content } = Layout;
 
@@ -68,10 +68,10 @@ function AccountSettingsView() {
           </Breadcrumb.Item>
         </Breadcrumb>
         <Switch>
-          <Route path="/account/profile" component={ProfileView} />
-          <Route path="/account/password" component={ChangePasswordView} />
-          <Route path="/account/token" component={AuthTokenView} />
-          <Route path="/account" component={ProfileView} />
+          <Route path="/account/profile" component={AccountProfileView} />
+          <Route path="/account/password" component={AccountPasswordView} />
+          <Route path="/account/token" component={AccountAuthTokenView} />
+          <Route path="/account" component={AccountProfileView} />
         </Switch>
       </Content>
     </Layout>

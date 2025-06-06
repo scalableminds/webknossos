@@ -3,11 +3,11 @@ import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Descriptions, Popover, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { AccountSettingsTitle } from "./profile_view";
+import { AccountSettingsTitle } from "./account_profile_view";
 
 const { Text } = Typography;
 
-function AuthTokenView() {
+function AccountAuthTokenView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentToken, setCurrentToken] = useState<string>("");
@@ -91,4 +91,4 @@ function AuthTokenView() {
   );
 }
 
-export default AuthTokenView;
+export default AccountAuthTokenView;

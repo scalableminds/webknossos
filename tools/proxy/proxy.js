@@ -1,7 +1,7 @@
 const express = require("express");
 const httpProxy = require("http-proxy");
-const { spawn, exec } = require("child_process");
-const path = require("path");
+const { spawn, exec } = require("node:child_process");
+const path = require("node:path");
 const prefixLines = require("prefix-stream-lines");
 
 const proxy = httpProxy.createProxyServer({
@@ -11,7 +11,7 @@ const proxy = httpProxy.createProxyServer({
 const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
-const PORT = parseInt(process.env.PORT || 9000, 10);
+const PORT = Number.parseInt(process.env.PORT || 9000, 10);
 const HOST = `http://127.0.0.1:${PORT}`;
 const loggingPrefix = "Proxy:";
 
@@ -90,7 +90,7 @@ process.on("SIGINT", shutdown);
 
 proxy.on("error", (err, req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
-  res.writeHead(503, { 'Content-Type': 'text/html' });
+  res.writeHead(503, { "Content-Type": "text/html" });
   res.end(`
     <html>
       <head>
@@ -129,7 +129,7 @@ function toWebpackDev(req, res) {
 }
 
 function toSam(req, res) {
-  proxy.web(req, res, { target: `http://127.0.0.1:8080` });
+  proxy.web(req, res, { target: "http://127.0.0.1:8080" });
 }
 
 proxy.on("proxyReq", (proxyReq, req) => {

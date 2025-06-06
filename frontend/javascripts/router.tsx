@@ -1,6 +1,4 @@
 import AcceptInviteView from "admin/auth/accept_invite_view";
-import AuthTokenView from "admin/auth/auth_token_view";
-import ChangePasswordView from "admin/auth/change_password_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -63,6 +61,7 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
+import AccountSettingsView from "admin/account/account_settings_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
@@ -642,12 +641,12 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
-                component={AuthTokenView}
+                render={() => <Redirect to="/account/login" />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
-                component={ChangePasswordView}
+                render={() => <Redirect to="/account/password" />}
               />
               <RouteWithErrorBoundary path="/login" render={() => <Redirect to="/auth/login" />} />
 
@@ -814,6 +813,16 @@ class ReactRouter extends React.Component<Props> {
               {!features().isWkorgInstance && (
                 <RouteWithErrorBoundary path="/onboarding" component={Onboarding} />
               )}
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/account"
+                render={() => <AccountSettingsView />}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/account/:tab"
+                render={() => <AccountSettingsView />}
+              />
               <RouteWithErrorBoundary component={PageNotFoundView} />
             </Switch>
           </Content>

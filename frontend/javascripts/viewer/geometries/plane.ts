@@ -160,9 +160,9 @@ class Plane {
     this.baseRotationMatrix.makeRotationFromEuler(this.baseRotation);
   };
 
-  setRotation = (rotVec: THREE.Euler): void => {
+  updateToFlycamRotation = (flycamRotationVec: THREE.Euler): void => {
     // rotVec must be in "ZYX" order as this is how the flycam operates (see flycam_reducer setRotationReducer)
-    this.flycamRotationMatrix.makeRotationFromEuler(rotVec);
+    this.flycamRotationMatrix.makeRotationFromEuler(flycamRotationVec);
     const combinedMatrix = this.flycamRotationMatrix.multiply(this.baseRotationMatrix);
     this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
   };
@@ -180,7 +180,7 @@ class Plane {
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
-    // The offset is in screen space already so no scaling is necessary.
+    // The offset is in world space already so no scaling is necessary.
     const offsetPosition = V3.add(scaledPosition, positionOffset);
     this.TDViewBorders.position.set(...offsetPosition);
     this.crosshair[0].position.set(...offsetPosition);

@@ -160,6 +160,9 @@ class PlaneMaterialFactory {
       is3DViewBeingRendered: {
         value: true,
       },
+      // This offset represent the offset of the plane during rendering its viewport. The offset is needed to see the skeleton behind the plane
+      // configured by the clippingDistance setting. It is necessary to calculate the position of the data that should be rendered by subtracting
+      // the offset in the shader. Note, that the position offset should already be in world scale.
       positionOffset: {
         value: new THREE.Vector3(0, 0, 0),
       },

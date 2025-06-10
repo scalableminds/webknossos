@@ -441,7 +441,7 @@ class SceneController {
             .applyEuler(this.flycamRotationEuler);
           const rotatedPositionOffset = this.rotatedPositionOffsetVector.toArray();
           this.planes[planeId].setPosition(originalPosition, rotatedPositionOffset);
-          this.planes[planeId].setRotation(this.flycamRotationEuler);
+          this.planes[planeId].updateToFlycamRotation(this.flycamRotationEuler);
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {

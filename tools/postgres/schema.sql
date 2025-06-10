@@ -465,7 +465,7 @@ CREATE TABLE webknossos.multiUsers(
 
 CREATE TABLE webknossos.webauthnCredentials(
   _id TEXT PRIMARY KEY,
-  _multiUser CHAR(24) NOT NULL,
+  _multiUser TEXT NOT NULL,
   credentialId BYTEA NOT NULL,
   name TEXT NOT NULL,
   serializedAttestedCredential BYTEA NOT NULL,

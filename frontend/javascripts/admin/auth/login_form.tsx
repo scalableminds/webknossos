@@ -1,5 +1,6 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { doWebAuthnLogin, loginUser, requestSingleSignOnLogin } from "admin/rest_api";
+import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
+import { doWebAuthnLogin } from "admin/webauthn";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
@@ -22,6 +23,19 @@ type Props = {
 const DEFAULT_STYLE = {
   maxWidth: 500,
 };
+
+async function webauthnLogin() {
+  try {
+    const [user, organization] = await doWebAuthnLogin();
+    Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setActiveOrganizationAction(organization));
+    if (onLoggedIn) {
+      onLoggedIn();
+    }
+  } catch (error) {
+    console.error("WebAuthn login failed", error);
+  }
+}
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
@@ -143,18 +157,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           <FormItem style={{ flexGrow: 1 }}>
             <Button
               style={{ width: "100%" }}
-              onClick={async () => {
-                try {
-                  const [user, organization] = await doWebAuthnLogin();
-                  Store.dispatch(setActiveUserAction(user));
-                  Store.dispatch(setActiveOrganizationAction(organization));
-                  if (onLoggedIn) {
-                    onLoggedIn();
-                  }
-                } catch (error) {
-                  console.error("WebAuthn login failed", error);
-                }
-              }}
+              onClick={webauthnLogin}
             >
               Log in with Passkey
             </Button>

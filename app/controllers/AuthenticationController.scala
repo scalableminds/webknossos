@@ -15,7 +15,7 @@ import com.webauthn4j.data.{
 }
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
-import com.webauthn4j.credential.CredentialRecordImpl
+import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
@@ -46,7 +46,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 
@@ -63,7 +63,7 @@ case class WebAuthnPublicKeyCredentialCreationOptions(
     challenge: String,
     excludeCredentials: Array[WebAuthnCreationOptionsExcludeCredentials],
     pubKeyCredParams: Array[WebAuthnCreationOptionsPubKeyParam],
-    timeout: Int, // NOTE: timeout in milliseconds
+    timeout: Int, // timeout in milliseconds
     rp: WebAuthnCreationOptionsRelyingParty,
     user: WebAuthnCreationOptionsUser
 )
@@ -98,7 +98,7 @@ object WebAuthnCreationOptionsAuthenticatorSelection {
   */
 case class WebAuthnCreationOptionsExcludeCredentials(
     id: String,
-    `type`: String = "public-key" // NOTE: must be set to "public-key"
+    `type`: String = "public-key" // must be set to "public-key"
 )
 object WebAuthnCreationOptionsExcludeCredentials {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsExcludeCredentials] =
@@ -110,7 +110,7 @@ object WebAuthnCreationOptionsExcludeCredentials {
   */
 case class WebAuthnCreationOptionsPubKeyParam(
     alg: Int,
-    `type`: String = "public-key" // NOTE: must be set to "public-key"
+    `type`: String = "public-key" // must be set to "public-key"
 )
 object WebAuthnCreationOptionsPubKeyParam {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsPubKeyParam] = Json.format[WebAuthnCreationOptionsPubKeyParam]
@@ -120,7 +120,7 @@ object WebAuthnCreationOptionsPubKeyParam {
   * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
   */
 case class WebAuthnCreationOptionsRelyingParty(
-    id: String, // NOTE: Should be set to the hostname
+    id: String, // Should be set to the hostname
     name: String
 )
 object WebAuthnCreationOptionsRelyingParty {
@@ -163,16 +163,26 @@ object WebAuthnPublicKeyCredentialRequestOptions {
     Json.format[WebAuthnPublicKeyCredentialRequestOptions]
 }
 
+/**
+ * Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
+ * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+ */
 case class WebAuthnRegistration(name: String, key: JsValue)
 object WebAuthnRegistration {
   implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
 }
 
+/**
+ * Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+ */
 case class WebAuthnAuthentication(key: JsValue)
 object WebAuthnAuthentication {
   implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
 }
 
+/**
+ * Custom object for WebAuthnCredential's id and name.
+ */
 case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
 object WebAuthnKeyDescriptor {
   implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
@@ -219,14 +229,15 @@ class AuthenticationController @Inject()(
 
   private lazy val origin = new Origin(conf.Http.uri)
   private lazy val webAuthnPubKeyParams = Array(
-    // NOTE: COSE Algorithm: Ed25519
+    // COSE Algorithm: Ed25519
     WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
-    // NOTE: COSE Algorithm: ES256
+    // COSE Algorithm: ES256
     WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),
-    // NOTE: COSE Algorithm: RS256
+    // COSE Algorithm: RS256
     WebAuthnCreationOptionsPubKeyParam(-257, "public-key"),
   )
   private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
+  private val webauthnTimeout = 2 minutes
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -573,12 +584,12 @@ class AuthenticationController @Inject()(
 
   def webauthnAuthStart(): Action[AnyContent] = Action {
     val sessionId = UUID.randomUUID().toString
-    val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
-    val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
+    val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(webauthnTimeout.toSeconds.toInt), httpOnly = true, secure = true)
+    val challenge = new Array[Byte](32) // Minimum required length are 16 bytes.
     secureRandom.nextBytes(challenge)
     val assertion = WebAuthnPublicKeyCredentialRequestOptions(
       challenge = Base64.encodeBase64URLSafeString(challenge),
-      timeout = Some(120000),
+      timeout = Some(webauthnTimeout.toMillis.toInt),
       rpId = Some(origin.getHost),
       userVerification = Some("preferred"),
       hints = None
@@ -592,11 +603,7 @@ class AuthenticationController @Inject()(
       for {
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
-        challenge <- {
-          val challenge = temporaryAssertionStore.get(sessionId)
-          temporaryAssertionStore.remove(sessionId)
-          challenge.toFox
-        }
+        challenge <- temporaryAssertionStore.pop(sessionId).toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ?~> "Bad Request" ~> BAD_REQUEST
         credentialId = authData.getCredentialId
         multiUserEmail = new String(authData.getUserHandle)
@@ -610,8 +617,8 @@ class AuthenticationController @Inject()(
           serverProperty,
           credential.credentialRecord,
           null,
-          false, // NOTE: User verification is not required put preferred.
-          false // NOTE: User presence is not required.
+          false, // User verification is not required put preferred.
+          false // User presence is not required.
         )
         _ <- tryo(webAuthnManager.verify(authData, params)).toFox ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
@@ -629,7 +636,7 @@ class AuthenticationController @Inject()(
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
-        id = Base64.encodeBase64URLSafeString(email.getBytes), // NOTE: Not leak database id, but use email instead
+        id = Base64.encodeBase64URLSafeString(email.getBytes),
         name = email
       )
       credentials <- webAuthnCredentialDAO
@@ -641,21 +648,18 @@ class AuthenticationController @Inject()(
               id = Base64.encodeBase64URLSafeString(c.credentialRecord.getAttestedCredentialData.getCredentialId)
           ))
         .toArray
-      challenge = {
-        val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
-        secureRandom.nextBytes(challenge)
-        challenge
-      }
+      challenge = new Array[Byte](32)
+      _ = secureRandom.nextBytes(challenge)
       encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
       sessionId = UUID.randomUUID().toString
-      cookie = Cookie("webauthn-registration", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
-      _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
+      cookie = Cookie("webauthn-registration", sessionId, maxAge = Some(webauthnTimeout.toSeconds.toInt), httpOnly = true, secure = true)
+      _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
       options = WebAuthnPublicKeyCredentialCreationOptions(
         authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),
         challenge = encodedChallenge,
         excludeCredentials = excludeCredentials,
-        pubKeyCredParams = webAuthnPubKeyParams, // NOTE: Could be created at startup
-        timeout = 120000, // 2 minutes timeout
+        pubKeyCredParams = webAuthnPubKeyParams,
+        timeout = webauthnTimeout.toMillis.toInt,
         rp = WebAuthnCreationOptionsRelyingParty(
           id = origin.getHost,
           name = origin.getHost,
@@ -671,18 +675,14 @@ class AuthenticationController @Inject()(
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
-        challenge <- {
-          val challenge = temporaryRegistrationStore.get(sessionId)
-          temporaryRegistrationStore.remove(sessionId)
-          challenge.toFox
-        }
+        challenge <- temporaryRegistrationStore.pop(sessionId).toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))
         registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
         _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
         attestation = registrationData.getAttestationObject
-        credentialRecord = new CredentialRecordImpl( // TODO: Rename or minimal custom implementation
+        credentialRecord = new WebAuthnCredentialRecord( // TODO: Rename or minimal custom implementation
           attestation.getAttestationStatement,
           null, // User Verification not used
           null, // Backup not used

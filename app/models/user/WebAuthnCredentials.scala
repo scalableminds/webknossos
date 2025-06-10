@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
-import com.webauthn4j.credential.CredentialRecordImpl
+import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
 import com.webauthn4j.data.attestation.statement.NoneAttestationStatement
 import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
@@ -24,7 +24,7 @@ case class WebAuthnCredential(
     _id: ObjectId,
     _multiUser: ObjectId,
     name: String,
-    credentialRecord: CredentialRecordImpl,
+    credentialRecord: WebAuthnCredentialRecord,
     isDeleted: Boolean,
 ) {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
@@ -54,7 +54,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
         converter.readValue(r.serializedextensions,
                             new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[
                               RegistrationExtensionAuthenticatorOutput]] {})).toFox
-      record = new CredentialRecordImpl(
+      record = new WebAuthnCredentialRecord(
         new NoneAttestationStatement(),
         null, // attestationData - document why null is safe
         null, // clientData - document why null is safe

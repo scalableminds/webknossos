@@ -1,6 +1,7 @@
 import { LockOutlined } from "@ant-design/icons";
-import { Alert, Button, Col, Form, Input, Modal, Row } from "antd";
+import { Alert, Button, Col, Form, Input, Modal, Row, Table } from "antd";
 import Request from "libs/request";
+import { useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import messages from "messages";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
@@ -8,7 +9,7 @@ import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
-import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/rest_api";
+import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/webauthn";
 import { useEffect, useState } from "react";
 import type { WebAuthnKeyDescriptor } from "types/api_types";
 
@@ -23,14 +24,15 @@ function ChangePasswordView({ history }: Props) {
   const [form] = Form.useForm();
 
   /// Passkeys
+  const [updateCounter, setUpdateCounter] = useState(0);
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
-  const [passkeys, setPasskeys] = useState<WebAuthnKeyDescriptor[]>([]);
-  const [_isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
-
-  useEffect(() => {
-    fetchPasskeys();
-  }, []);
+  const [passkeys, _isLoading] = useGuardedFetch(
+    listWebAuthnKeys,
+    [],
+    [updateCounter],
+    "Failed to fetch Passkeys"
+  );
 
   function onFinish(formValues: Record<string, any>) {
     Request.sendJSONReceiveJSON("/api/auth/changePassword", {
@@ -58,11 +60,11 @@ function ChangePasswordView({ history }: Props) {
     return Promise.resolve();
   }
 
-  async function fetchPasskeys(): Promise<void> {
-    setIsLoadingPasskeys(true);
-    const keys = await listWebAuthnKeys();
-    setPasskeys(keys);
-    setIsLoadingPasskeys(false);
+  function webauthnRemoveKey(passkey): () => Promise<void> {
+    return async function() {
+      await removeWebAuthnKey(passkey);
+      setUpdateCounter(updateCounter + 1);
+    }
   }
 
   const registerNewPasskey = async () => {
@@ -79,15 +81,34 @@ function ChangePasswordView({ history }: Props) {
       await doWebAuthnRegistration(newPasskeyName);
       Toast.success("Passkey registered successfully");
       setNewPasskeyName("");
-      await fetchPasskeys();
+      setUpdateCounter(updateCounter + 1)
     } catch (e) {
       Toast.error(`Registering new Passkey '${newPasskeyName}' failed`);
       console.error("Could not register new Passkey", e);
     }
   };
 
+  const passkeyColumns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      width: '100%',
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'id',
+      key: 'id',
+      render: (id, passkey) => (
+        <Button key={id} onClick={webauthnRemoveKey(passkey)}>
+          Delete
+        </Button>
+      )
+    }
+  ];
+
   return (
-    <div>
+    <>
       <Row
         justify="center"
         align="middle"
@@ -210,23 +231,12 @@ function ChangePasswordView({ history }: Props) {
           <p>
             Passkeys are a new web authentication method that allows you to log in without a
             password in a secured way. Microsoft Hello and Apple FaceID are examples of technologies
-            that can be used as passkeys to log in in WEBKNOSSOS. If you want to add a new passkey
+            that can be used as passkeys to log in to WEBKNOSSOS. If you want to add a new passkey
             to your account use the button below.
           </p>
 
-          {passkeys.map((passkey) => (
-            <Row key={passkey.id}>
-              {passkey.name}
-              <Button
-                onClick={async () => {
-                  await removeWebAuthnKey(passkey);
-                  await fetchPasskeys();
-                }}
-              >
-                Delete
-              </Button>
-            </Row>
-          ))}
+          <Table dataSource={passkeys} columns={passkeyColumns} showHeader={false} />
+
           <div style={{ paddingTop: 10 }}>
             <Button onClick={() => setIsPasskeyNameModalOpen(true)} type="primary">
               Register Passkey
@@ -246,7 +256,7 @@ function ChangePasswordView({ history }: Props) {
           onChange={(e) => setNewPasskeyName(e.target.value)}
         />
       </Modal>
-    </div>
+    </>
   );
 }
 

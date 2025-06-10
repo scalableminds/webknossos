@@ -73,7 +73,8 @@ object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class MeshFileService @Inject()(config: DataStoreConfig, zarrMeshFileService: ZarrMeshFileService)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Hdf5HashedArrayUtils

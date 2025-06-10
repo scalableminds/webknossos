@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3Array, Zarr3GroupHeader}
@@ -97,4 +98,16 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService)
                                    chunkCacheService.sharedChunkContentsCache)
     } yield zarrArray
   }
+
+  override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
+                                     lod: Int,
+                                     lodScaleMultiplier: Double,
+                                     currentChunk: Int): Vec3Float =
+    segmentInfo.gridOrigin + segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float * segmentInfo.chunkShape * Math
+      .pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
+
+  override def getLodTransform(segmentInfo: NeuroglancerSegmentManifest,
+                               lodScaleMultiplier: Double,
+                               transform: Array[Array[Double]],
+                               lod: Int): Array[Array[Double]] = transform
 }

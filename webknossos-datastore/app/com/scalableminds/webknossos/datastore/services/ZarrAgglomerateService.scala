@@ -59,7 +59,7 @@ class ZarrAgglomerateService(config: DataStoreConfig,
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(agglomerateFileKey.attachment.path, None))
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
-                                   DataSourceId("zarr", "test"),
+                                   DataSourceId("dummy", "unused"),
                                    "layer",
                                    None,
                                    None,

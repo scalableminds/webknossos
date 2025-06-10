@@ -437,6 +437,9 @@ function VolumeTracingReducer(
           volumes: {
             $set: newVolumes,
           },
+          readOnly: {
+            $set: null,
+          },
         },
       });
 

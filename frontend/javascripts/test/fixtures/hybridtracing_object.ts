@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import { TreeMap, type Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import { initialState as defaultState } from "test/fixtures/volumetracing_object";
+import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -9,7 +9,7 @@ import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_h
 import { TreeTypeEnum } from "viewer/constants";
 import type { APIColorLayer } from "types/api_types";
 
-const colorLayer: APIColorLayer = {
+export const colorLayer: APIColorLayer = {
   name: "color",
   category: "color",
   boundingBox: {
@@ -85,16 +85,19 @@ export const initialSkeletonTracing: SkeletonTracing = {
   additionalAxes: [],
 };
 
-export const initialState = update(defaultState, {
+export const initialState = update(defaultVolumeState, {
   annotation: {
     skeleton: {
       $set: initialSkeletonTracing,
+    },
+    readOnly: {
+      $set: null,
     },
   },
   dataset: {
     dataSource: {
       dataLayers: {
-        $set: [...defaultState.dataset.dataSource.dataLayers, colorLayer],
+        $set: [...defaultVolumeState.dataset.dataSource.dataLayers, colorLayer],
       },
     },
   },

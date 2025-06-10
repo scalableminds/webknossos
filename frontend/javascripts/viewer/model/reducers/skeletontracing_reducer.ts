@@ -134,6 +134,9 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         skeleton: {
           $set: skeletonTracing,
         },
+        readOnly: {
+          $set: null,
+        },
       },
     });
   }

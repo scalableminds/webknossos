@@ -38,7 +38,7 @@ const initialState = {
     additionalCoordinates: [],
     // Apply the default 180 z axis rotation to get correct result in ortho related tests.
     // This makes the calculated flycam rotation to  [0, 0, 0]. Otherwise it would be  [0, 0, 180].
-    currentMatrix: M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []),
+    currentMatrix: FlycamMatrixWithDefaultRotation,
     spaceDirectionOrtho: [1, 1, 1],
   },
   temporaryConfiguration: {

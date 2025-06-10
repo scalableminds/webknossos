@@ -12,7 +12,7 @@ import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
 import _ from "lodash";
-import { M4x4 } from "libs/mjs";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/hybridtracing_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -249,7 +249,7 @@ describe("UrlManager", () => {
   });
 
   it("should build csv url hash without rotation if it is [0,0,0]", () => {
-    const rotationMatrixWithDefaultRotation = M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []);
+    const rotationMatrixWithDefaultRotation = FlycamMatrixWithDefaultRotation;
     const initialState = update(defaultState, {
       flycam: {
         currentMatrix: {

@@ -725,6 +725,8 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "deleteTree":
         case "deleteEdge":
         case "deleteNode":
+        case "updateTreeEdgesVisibility":
+        case "updateTreeGroups":
         // Skeleton User Bounding Boxes
         case "addUserBoundingBoxInSkeletonTracing":
         case "updateUserBoundingBoxInSkeletonTracing":
@@ -768,6 +770,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "createSegment":
         case "deleteSegment":
         case "updateSegment":
+        case "updateSegmentGroups":
         // Volume User Bounding Boxes
         case "addUserBoundingBoxInVolumeTracing":
         case "deleteUserBoundingBoxInVolumeTracing":
@@ -827,7 +830,7 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         }
 
         /*
-         * Currently not supported:
+         * Currently NOT supported:
          */
 
         // High-level annotation specific
@@ -842,20 +845,17 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
 
         // Volume
         case "removeFallbackLayer":
-        case "updateSegmentGroups":
-        case "updateUserBoundingBoxesInVolumeTracing": // Wait for #8492 first.
         case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Skeleton
-        case "updateTreeEdgesVisibility":
-        case "updateTreeGroups":
         case "mergeTree": // todop: this action is never used? legacy?
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
-        case "updateUserBoundingBoxesInSkeletonTracing": {
+        case "updateUserBoundingBoxesInSkeletonTracing":
+        case "updateUserBoundingBoxesInVolumeTracing": {
           console.log("cannot apply action", action.name);
           yield* call(finalize);
           return false;

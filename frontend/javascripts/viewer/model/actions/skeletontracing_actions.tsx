@@ -651,14 +651,10 @@ export const updateNavigationListAction = (list: Array<number>, activeIndex: num
 
 export const applySkeletonUpdateActionsFromServerAction = (
   actions: Array<ApplicableSkeletonUpdateAction>,
-  // version: number,
-  // author: string,
 ) =>
   ({
     type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",
     actions,
-    // version,
-    // author,
   }) as const;
 
 export const loadAgglomerateSkeletonAction = (

@@ -484,6 +484,4 @@ export const applyVolumeUpdateActionsFromServerAction = (
   ({
     type: "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
     actions,
-    // version,
-    // author,
   }) as const;

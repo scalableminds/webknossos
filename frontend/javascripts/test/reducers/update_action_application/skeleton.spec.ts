@@ -24,6 +24,7 @@ import type {
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
+import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, expect, test, it, afterAll } from "vitest";
 
 const initialState: WebknossosState = update(defaultSkeletonState, {
@@ -68,6 +69,9 @@ const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = 
   deleteEdge: true,
   deleteNode: true,
   moveTreeComponent: true,
+  updateTreeGroups: true,
+  updateTreeGroupsExpandedState: true,
+  updateTreeEdgesVisibility: true,
   addUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
@@ -125,6 +129,12 @@ describe("Update Action Application for SkeletonTracing", () => {
     }),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
+    SkeletonTracingActions.setTreeGroupsAction([
+      makeBasicGroupObject(3, "group 3"),
+      makeBasicGroupObject(7, "group 7"),
+    ]),
+    SkeletonTracingActions.setTreeGroupAction(7, 2),
+    SkeletonTracingActions.setTreeEdgeVisibilityAction(2, false),
   ];
 
   test("User actions for test should not contain no-ops", () => {

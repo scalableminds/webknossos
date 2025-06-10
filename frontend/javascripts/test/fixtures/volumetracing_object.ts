@@ -31,15 +31,18 @@ export const initialState = update(defaultState, {
     restrictions: {
       $set: {
         branchPointsAllowed: true,
+        initialAllowUpdate: true,
         allowUpdate: true,
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
+        allowedModes: [],
+        somaClickingAllowed: true,
+        volumeInterpolationAllowed: true,
+        mergerMode: false,
         magRestrictions: {
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
-          min: null,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
-          max: null,
+          min: undefined,
+          max: undefined,
         },
       },
     },

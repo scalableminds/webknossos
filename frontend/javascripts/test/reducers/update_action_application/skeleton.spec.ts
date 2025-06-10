@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import _ from "lodash";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
-import { initialState as defaultState } from "test/fixtures/hybridtracing_object";
+import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -9,19 +9,20 @@ import {
   getActiveNode,
   getActiveTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import type { Action } from "viewer/model/actions/actions";
+import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
-import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
+import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import type {
   ApplicableSkeletonUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/update_actions";
-import { combinedReducers, type WebknossosState } from "viewer/store";
+import { combinedReducer, type WebknossosState } from "viewer/store";
 import { describe, expect, test, it, afterAll } from "vitest";
 
-const initialState: WebknossosState = update(defaultState, {
+const initialState: WebknossosState = update(defaultSkeletonState, {
   annotation: {
     restrictions: {
       allowUpdate: {
@@ -47,7 +48,7 @@ const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
 
-const applyActions = chainReduce(combinedReducers);
+const applyActions = chainReduce(combinedReducer);
 
 const actionNamesList: Record<ApplicableSkeletonUpdateAction["name"], true> = {
   updateTree: true,
@@ -78,10 +79,10 @@ describe("Update Action Application for SkeletonTracing", () => {
   const hardcodedBeforeVersionIndex: number | null = null;
   const hardcodedAfterVersionIndex: number | null = null;
   // const compactionModes = [true];
-  // const hardcodedBeforeVersionIndex: number | null = 27; // 14;
-  // const hardcodedAfterVersionIndex: number | null = 28; // 26;
+  // const hardcodedBeforeVersionIndex: number | null = 25;
+  // const hardcodedAfterVersionIndex: number | null = 27;
 
-  const userActions: SkeletonTracingAction[] = [
+  const userActions: Action[] = [
     SkeletonTracingActions.deleteTreeAction(2), // delete second tree. one tree remains.
     createNode(), // nodeId=1
     createNode(), // nodeId=2
@@ -109,19 +110,19 @@ describe("Update Action Application for SkeletonTracing", () => {
     createNode(), // nodeId=14, tree components == {1,2} {4,5} {6,7,8} {12,13,14}
     SkeletonTracingActions.deleteTreeAction(3),
     SkeletonTracingActions.setNodePositionAction([1, 2, 3], 6),
-    // addUserBoundingBoxAction({
-    //   boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
-    //   name: "UserBBox",
-    //   color: [1, 2, 3],
-    //   isVisible: true,
-    // }),
+    addUserBoundingBoxAction({
+      boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
+      name: "UserBBox",
+      color: [1, 2, 3],
+      isVisible: true,
+    }),
   ];
 
-  test.skip("User actions for test should not contain no-ops", () => {
+  test("User actions for test should not contain no-ops", () => {
     let state = initialState;
     for (const action of userActions) {
       // todop: use wk reducer so that addUserBoundingBoxAction does sth
-      const newState = SkeletonTracingReducer(state, action);
+      const newState = combinedReducer(state, action);
       expect(newState !== state).toBeTruthy();
 
       state = newState;
@@ -133,7 +134,6 @@ describe("Update Action Application for SkeletonTracing", () => {
       ? [hardcodedBeforeVersionIndex]
       : _.range(0, userActions.length);
 
-  // it.only("should re-apply update actions from complex diff and get same state", () => {
   describe.each(compactionModes)(
     "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
     (withCompaction) => {
@@ -151,12 +151,16 @@ describe("Update Action Application for SkeletonTracing", () => {
 
           const state2WithoutActiveTree = applyActions(state2WithActiveTree, [
             SkeletonTracingActions.setActiveNodeAction(null),
+            setActiveUserBoundingBoxId(null),
           ]);
 
           const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
           const state3 = applyActions(
             state2WithActiveTree,
-            actionsToApply.concat([SkeletonTracingActions.setActiveNodeAction(null)]),
+            actionsToApply.concat([
+              SkeletonTracingActions.setActiveNodeAction(null),
+              setActiveUserBoundingBoxId(null),
+            ]),
           );
           expect(state2WithoutActiveTree !== state3).toBeTruthy();
 
@@ -188,10 +192,13 @@ describe("Update Action Application for SkeletonTracing", () => {
           const reappliedNewState = applyActions(state2WithoutActiveTree, [
             SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
             SkeletonTracingActions.setActiveNodeAction(null),
+            setActiveUserBoundingBoxId(null),
           ]);
 
+          // console.log("state3.annotation", state3.annotation);
+          // console.log("reappliedNewState.annotation", reappliedNewState.annotation);
           // logTrees("state3", state3);
-          // logTrees("reappliedNewState", reappliedNewState);
+          // logTrees("reappliedNewState.", reappliedNewState);
 
           expect(reappliedNewState).toEqual(state3);
         });
@@ -199,7 +206,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     },
   );
 
-  it.skip("should clear the active node if it was deleted", () => {
+  it("should clear the active node if it was deleted", () => {
     const createNode = SkeletonTracingActions.createNodeAction(
       position,
       null,
@@ -227,7 +234,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     expect(getActiveNode(enforceSkeletonTracing(newState3.annotation))).toBeNull();
   });
 
-  it.skip("should clear the active node and active tree if the active tree was deleted", () => {
+  it("should clear the active node and active tree if the active tree was deleted", () => {
     const createNode = SkeletonTracingActions.createNodeAction(
       position,
       null,
@@ -262,7 +269,7 @@ describe("Update Action Application for SkeletonTracing", () => {
   });
 });
 
-function _logTrees(prefix: string, state: WebknossosState) {
+function logTrees(prefix: string, state: WebknossosState) {
   const size = state.annotation.skeleton!.trees.getOrThrow(1).nodes.size();
   console.log("logTrees. size", size);
   for (const tree of state.annotation.skeleton!.trees.values()) {

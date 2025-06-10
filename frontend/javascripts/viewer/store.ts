@@ -579,7 +579,7 @@ export type WebknossosState = {
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
-export const combinedReducers = reduceReducers(
+export const combinedReducer = reduceReducers(
   SettingsReducer,
   DatasetReducer,
   SkeletonTracingReducer,
@@ -597,7 +597,7 @@ export const combinedReducers = reduceReducers(
 );
 
 const store = createStore<WebknossosState, Action, unknown, unknown>(
-  enableBatching(combinedReducers),
+  enableBatching(combinedReducer),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );

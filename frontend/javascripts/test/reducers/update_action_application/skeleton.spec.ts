@@ -9,9 +9,8 @@ import {
   getActiveNode,
   getActiveTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
-import { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
+import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";

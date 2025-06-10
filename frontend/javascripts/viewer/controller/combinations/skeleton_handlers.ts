@@ -13,7 +13,7 @@ import {
   getFlycamRotationWithPrependedRotation,
   getPosition,
   getRotationInRadian,
-  getRotationOrthoInRadian,
+  getRelativeViewportRotationToXYViewport,
   isMagRestrictionViolated,
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
@@ -296,7 +296,7 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  const initialViewportRotation = getRotationOrthoInRadian(
+  const initialViewportRotation = getRelativeViewportRotationToXYViewport(
     activeViewport || state.viewModeData.plane.activeViewport,
   );
   const rotationInDegree = getFlycamRotationWithPrependedRotation(

@@ -28,7 +28,7 @@ import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   getPosition,
   getRotationInDegrees,
-  getRotationOrthoInRadian,
+  getRelativeViewportRotationToXYViewport,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
@@ -103,7 +103,10 @@ function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>):
     new THREE.Euler(...nodeRotationRadian, "ZYX"),
   );
   const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(...getRotationOrthoInRadian(NumberToOrthoView[activeNode.viewport]), "ZYX"),
+    new THREE.Euler(
+      ...getRelativeViewportRotationToXYViewport(NumberToOrthoView[activeNode.viewport]),
+      "ZYX",
+    ),
   );
   const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
   // Invert the rotation of the viewport to get the rotation configured during node creation.

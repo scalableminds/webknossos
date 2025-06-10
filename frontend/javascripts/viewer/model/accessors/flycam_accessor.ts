@@ -557,7 +557,7 @@ export function getPlaneExtentInVoxel(
 }
 
 // TODOM: Investigate why these values are different to OrthoBaseRotations.
-export function getRotationOrthoInRadian(planeId: OrthoView): Vector3 {
+export function getRelativeViewportRotationToXYViewport(planeId: OrthoView): Vector3 {
   switch (planeId) {
     case OrthoViews.PLANE_YZ:
       return [0, Math.PI / 2, 0];

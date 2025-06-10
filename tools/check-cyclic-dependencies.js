@@ -3,22 +3,21 @@ const { parseDependencyTree, parseCircular } = dpdm;
 
 const KNOWN_CYCLES = [
   [
-    "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts",
+    "frontend/javascripts/admin/rest_api.ts",
+    "frontend/javascripts/libs/request.ts",
+    "frontend/javascripts/admin/datastore_health_check.ts",
+  ],
+  [
     "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
+    "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts",
   ],
   [
     "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
     "frontend/javascripts/viewer/model/reducers/flycam_reducer.ts",
   ],
   [
-    "frontend/javascripts/viewer/view/right-border-tabs/tree_hierarchy_view_helpers.ts",
+    "frontend/javascripts/viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers.ts",
     "frontend/javascripts/viewer/model/accessors/skeletontracing_accessor.ts",
-  ],
-  ["frontend/javascripts/libs/request.ts", "frontend/javascripts/admin/datastore_health_check.ts"],
-  [
-    "frontend/javascripts/admin/rest_api.ts",
-    "frontend/javascripts/libs/request.ts",
-    "frontend/javascripts/admin/datastore_health_check.ts",
   ],
   [
     "frontend/javascripts/viewer/view/action-bar/download_modal_view.tsx",
@@ -41,8 +40,8 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/dashboard/folders/folder_tree.tsx",
   ],
   [
-    "frontend/javascripts/viewer/model_initialization.ts",
     "frontend/javascripts/viewer/controller/url_manager.ts",
+    "frontend/javascripts/viewer/model_initialization.ts",
   ],
   [
     "frontend/javascripts/viewer/geometries/plane.ts",
@@ -50,6 +49,7 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/viewer/shaders/main_data_shaders.glsl.ts",
   ],
 ];
+
 parseDependencyTree("frontend/javascripts/main.tsx", {
   /* options, see below */
   extensions: [".ts", ".tsx"],

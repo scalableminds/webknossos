@@ -1,6 +1,5 @@
 import { withoutValues } from "libs/utils";
 import _ from "lodash";
-import { CreateNodeAction, DeleteNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import type {
   CreateEdgeUpdateAction,

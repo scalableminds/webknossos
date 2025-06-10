@@ -699,11 +699,11 @@ describe("SkeletonTracingSaga", () => {
 
     // Create three nodes in the first tree, then create a second tree with one node
     const testState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
+      createNodeAction, // nodeId=1
+      createNodeAction, // nodeId=2
+      createNodeAction, // nodeId=3
       createTreeAction,
-      createNodeAction,
+      createNodeAction, // nodeId=4
     ]);
 
     // Merge the second tree into the first tree (a)
@@ -714,8 +714,8 @@ describe("SkeletonTracingSaga", () => {
     // Create another tree and two nodes (b)
     const newState = applyActions(stateAfterFirstMerge, [
       createTreeAction,
-      createNodeAction,
-      createNodeAction,
+      createNodeAction, // nodeId=5
+      createNodeAction, // nodeId=6
     ]);
 
     updateActions.push(testDiffing(stateAfterFirstMerge.annotation, newState.annotation));
@@ -728,7 +728,7 @@ describe("SkeletonTracingSaga", () => {
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
       TIMESTAMP,
-      initialState.annotation.skeleton!,
+      testState.annotation.skeleton!,
       newState.annotation.skeleton!,
     );
 
@@ -938,30 +938,35 @@ describe("SkeletonTracingSaga", () => {
 
     // Create six nodes
     const testState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
+      createNodeAction, // nodeId=1
+      createNodeAction, // nodeId=2 <-- will be deleted
+      createNodeAction, // nodeId=3
+      createNodeAction, // nodeId=4 <-- will be deleted
+      createNodeAction, // nodeId=5
+      createNodeAction, // nodeId=6
     ]);
 
     // Delete the second node to split the tree (a)
     const newState1 = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
-    const updateActions = [];
-    updateActions.push(testDiffing(testState.annotation, newState1.annotation));
-    // Delete node 4 to split the tree again (b)
-    const newState2 = SkeletonTracingReducer(newState1, deleteOtherMiddleNodeAction);
-    updateActions.push(testDiffing(newState1.annotation, newState2.annotation));
-    const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
-      updateActions,
+    const updateActions1 = [testDiffing(testState.annotation, newState1.annotation)];
+    const simplifiedUpdateActions1 = createCompactedSaveQueueFromUpdateActions(
+      updateActions1,
       TIMESTAMP,
       testState.annotation.skeleton!,
+      newState1.annotation.skeleton!,
+    );
+    // Delete node 4 to split the tree again (b)
+    const newState2 = SkeletonTracingReducer(newState1, deleteOtherMiddleNodeAction);
+    const updateActions2 = [testDiffing(newState1.annotation, newState2.annotation)];
+    const simplifiedUpdateActions2 = createCompactedSaveQueueFromUpdateActions(
+      updateActions2,
+      TIMESTAMP,
+      newState1.annotation.skeleton!,
       newState2.annotation.skeleton!,
     );
 
     // This should result in the creation of a new tree (a)
-    const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
+    const simplifiedFirstBatch = simplifiedUpdateActions1[0].actions;
     expect(simplifiedFirstBatch[0]).toMatchObject({
       name: "createTree",
       value: {
@@ -991,9 +996,11 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedFirstBatch[3].name).toBe("deleteEdge");
     expect(simplifiedFirstBatch[4].name).toBe("deleteEdge");
     expect(simplifiedFirstBatch.length).toBe(5);
+    expect(simplifiedUpdateActions1.length).toBe(1);
 
     // the creation of a new tree (b)
-    const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
+    const simplifiedSecondBatch = simplifiedUpdateActions2[0].actions;
+    expect(simplifiedUpdateActions2.length).toBe(1);
     expect(simplifiedSecondBatch[0]).toMatchObject({
       name: "createTree",
       value: {
@@ -1023,6 +1030,7 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedSecondBatch[3].name).toBe("deleteEdge");
     expect(simplifiedSecondBatch[4].name).toBe("deleteEdge");
     expect(simplifiedSecondBatch.length).toBe(5);
+    expect(simplifiedUpdateActions2.length).toBe(1);
   });
 
   it("compactUpdateActions should do nothing if it cannot compact", () => {

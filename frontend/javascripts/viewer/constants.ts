@@ -101,6 +101,20 @@ export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_XZ,
 ];
 
+export const OrthoViewToNumber: OrthoViewMap<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
+
+export const NumberToOrthoView: Record<number, OrthoView> = {
+  0: OrthoViews.PLANE_XY,
+  1: OrthoViews.PLANE_YZ,
+  2: OrthoViews.PLANE_XZ,
+  3: OrthoViews.TDView,
+};
+
 const PINK = 0xeb4b98;
 const BLUE = 0x5660ff;
 const TURQUOISE = 0x59f8e8;

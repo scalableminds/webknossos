@@ -294,7 +294,7 @@ export class SkeletonToolController {
           if (plane) {
             const globalPosition = calculateGlobalPos(Store.getState(), pos);
             // SkeletonHandlers.handleCreateNodeFromEvent(pos, false);
-            api.tracing.createNode(globalPosition, { center: false });
+            api.tracing.createNode(globalPosition.rounded, { center: false });
           }
         } else {
           if (
@@ -1015,7 +1015,7 @@ export class AreaMeasurementToolController {
           return;
         }
         const state = Store.getState();
-        const position = calculateGlobalPos(state, pos, this.initialPlane).rounded);
+        const position = calculateGlobalPos(state, pos, this.initialPlane).rounded;
         areaMeasurementGeometry.addEdgePoint(position);
         Store.dispatch(setLastMeasuredPositionAction(position));
       },

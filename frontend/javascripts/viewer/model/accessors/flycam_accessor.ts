@@ -339,6 +339,35 @@ function _getRotationInDegrees(flycamOrMatrix: Flycam | Matrix4x4): Vector3 {
 function _isRotated(flycam: Flycam): boolean {
   return !V3.equals(getRotationInRadian(flycam), [0, 0, 0]);
 }
+
+// Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
+const flycamRotationEuler = new THREE.Euler(0, 0, 0);
+const flycamRotationQuaternion = new THREE.Quaternion();
+const totalRotationQuaternion = new THREE.Quaternion();
+const initialViewportRotationEuler = new THREE.Euler();
+
+// Memoizing this function makes no sense as its result will always be used to change the flycam rotation.
+export function getFlycamRotationWithPrependedRotation(
+  flycam: Flycam,
+  prependedRotation: Vector3,
+): Vector3 {
+  const flycamRotation = getRotationInRadian(flycam);
+  flycamRotationQuaternion.setFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  totalRotationQuaternion
+    .setFromEuler(initialViewportRotationEuler.set(...prependedRotation, "ZYX"))
+    .multiply(flycamRotationQuaternion);
+  const rotationEuler = initialViewportRotationEuler.setFromQuaternion(
+    totalRotationQuaternion,
+    "ZYX",
+  );
+  const rotationInDegree = map3(THREE.MathUtils.radToDeg, [
+    rotationEuler.x,
+    rotationEuler.y,
+    rotationEuler.z,
+  ]);
+  return rotationInDegree;
+}
+
 function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
@@ -531,10 +560,10 @@ export function getPlaneExtentInVoxel(
 export function getRotationOrthoInRadian(planeId: OrthoView): Vector3 {
   switch (planeId) {
     case OrthoViews.PLANE_YZ:
-      return [0, (3 / 2) * Math.PI, 0];
+      return [0, Math.PI / 2, 0];
 
     case OrthoViews.PLANE_XZ:
-      return [Math.PI / 2, 0, 0];
+      return [(3 / 2) * Math.PI, 0, 0];
 
     case OrthoViews.PLANE_XY:
     default:

@@ -22,6 +22,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
+  applyNodeRotationOnActivation: "Auto-rotate to Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",

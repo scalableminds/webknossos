@@ -324,6 +324,7 @@ export type UserConfiguration = {
   readonly newNodeNewTree: boolean;
   readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
+  readonly applyNodeRotationOnActivation: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
   readonly presetBrushSizes: BrushPresets | null;

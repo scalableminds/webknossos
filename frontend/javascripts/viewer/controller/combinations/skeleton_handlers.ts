@@ -3,13 +3,14 @@ import { values } from "libs/utils";
 import _ from "lodash";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { OrthoView, OrthoViewMap, Point2, Vector3, Viewport } from "viewer/constants";
-import { OrthoViews } from "viewer/constants";
+import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
+import { OrthoViews, OrthoViewToNumber } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
+  getFlycamRotationWithPrependedRotation,
   getPosition,
   getRotationInRadian,
   getRotationOrthoInRadian,
@@ -51,12 +52,7 @@ import Store from "viewer/store";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
-const OrthoViewToNumber: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0,
-  [OrthoViews.PLANE_YZ]: 1,
-  [OrthoViews.PLANE_XZ]: 2,
-  [OrthoViews.TDView]: 3,
-};
+
 export function handleMergeTrees(
   view: PlaneView | ArbitraryView,
   position: Point2,
@@ -101,8 +97,7 @@ export function handleSelectNode(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    const suppressRotation = "isOrthoPlaneView" in view && view.isOrthoPlaneView;
-    Store.dispatch(setActiveNodeAction(nodeId, false, false, suppressRotation));
+    Store.dispatch(setActiveNodeAction(nodeId));
     return true;
   }
 
@@ -293,11 +288,6 @@ export function handleCreateNodeFromGlobalPosition(
   );
 }
 
-// Already defined here at toplevel to avoid object recreation with each call. Make sure to no do anything async between read and writes.
-const flycamRotationQuaternion = new THREE.Quaternion();
-const totalRotationQuaternion = new THREE.Quaternion();
-const initialViewportRotationEuler = new THREE.Euler();
-
 export function getOptionsForCreateSkeletonNode(
   activeViewport: OrthoView | null = null,
   ctrlIsPressed: boolean = false,
@@ -306,19 +296,13 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  // TODOM: Why is this different to the OrthoBaseRotations???
   const initialViewportRotation = getRotationOrthoInRadian(
     activeViewport || state.viewModeData.plane.activeViewport,
   );
-  const flycamRotation = getRotationInRadian(state.flycam);
-  flycamRotationQuaternion.setFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
-  totalRotationQuaternion
-    .setFromEuler(initialViewportRotationEuler.set(...initialViewportRotation))
-    .multiply(flycamRotationQuaternion);
-  const rotationEuler = initialViewportRotationEuler.setFromQuaternion(totalRotationQuaternion);
-  const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
-    (a) => (a * 180) / Math.PI,
-  ) as Vector3;
+  const rotationInDegree = getFlycamRotationWithPrependedRotation(
+    state.flycam,
+    initialViewportRotation,
+  );
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;

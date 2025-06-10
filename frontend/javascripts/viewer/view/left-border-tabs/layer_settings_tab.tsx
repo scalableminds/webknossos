@@ -1299,6 +1299,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               tooltipText="When disabled, the active node will not be centered after node creation/deletion."
             />
             <SwitchSetting
+              label={settings.applyNodeRotationOnActivation}
+              value={userConfiguration.applyNodeRotationOnActivation}
+              onChange={this.onChangeUser.applyNodeRotationOnActivation}
+              tooltipText="When enabled, the rotation active during creation of the new active node will be set upon activation."
+            />
+            <SwitchSetting
               label={settings.highlightCommentedNodes}
               value={userConfiguration.highlightCommentedNodes}
               onChange={this.onChangeUser.highlightCommentedNodes}

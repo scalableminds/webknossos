@@ -70,6 +70,7 @@ const defaultState: WebknossosState = {
     newNodeNewTree: false,
     continuousNodeCreation: false,
     centerNewNode: true,
+    applyNodeRotationOnActivation: false,
     overrideNodeRadius: true,
     particleSize: 5,
     presetBrushSizes: null,

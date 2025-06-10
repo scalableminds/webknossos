@@ -349,13 +349,12 @@ const initialViewportRotationEuler = new THREE.Euler();
 // Memoizing this function makes no sense as its result will always be used to change the flycam rotation.
 export function getFlycamRotationWithPrependedRotation(
   flycam: Flycam,
-  prependedRotation: Vector3,
+  // prependedRotation must be in ZYX order.
+  prependedRotation: THREE.Euler,
 ): Vector3 {
   const flycamRotation = getRotationInRadian(flycam);
   flycamRotationQuaternion.setFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
-  totalRotationQuaternion
-    .setFromEuler(initialViewportRotationEuler.set(...prependedRotation, "ZYX"))
-    .multiply(flycamRotationQuaternion);
+  totalRotationQuaternion.setFromEuler(prependedRotation).multiply(flycamRotationQuaternion);
   const rotationEuler = initialViewportRotationEuler.setFromQuaternion(
     totalRotationQuaternion,
     "ZYX",
@@ -557,19 +556,6 @@ export function getPlaneExtentInVoxel(
 }
 
 // TODOM: Investigate why these values are different to OrthoBaseRotations.
-export function getRelativeViewportRotationToXYViewport(planeId: OrthoView): Vector3 {
-  switch (planeId) {
-    case OrthoViews.PLANE_YZ:
-      return [0, Math.PI / 2, 0];
-
-    case OrthoViews.PLANE_XZ:
-      return [(3 / 2) * Math.PI, 0, 0];
-
-    case OrthoViews.PLANE_XY:
-    default:
-      return [0, 0, 0];
-  }
-}
 export type Area = {
   left: number;
   top: number;

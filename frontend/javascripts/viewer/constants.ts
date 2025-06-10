@@ -138,6 +138,13 @@ export const OrthoBaseRotations = {
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
+export const RelativeViewportRotationToXYViewport = {
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0, "ZYX"),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (1 / 2) * Math.PI, 0, "ZYX"),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((3 / 2) * Math.PI, 0, 0, "ZYX"),
+  [OrthoViews.TDView]: new THREE.Euler(0, 0, 0, "ZYX"),
+};
+
 export type BorderTabType = {
   id: string;
   name: string;

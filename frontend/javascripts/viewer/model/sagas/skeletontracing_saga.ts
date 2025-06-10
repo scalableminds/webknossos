@@ -23,13 +23,14 @@ import {
   throttle,
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
-import { NumberToOrthoView, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
-  getPosition,
-  getRotationInDegrees,
-  getRelativeViewportRotationToXYViewport,
-} from "viewer/model/accessors/flycam_accessor";
+  NumberToOrthoView,
+  RelativeViewportRotationToXYViewport,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
+import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -103,10 +104,7 @@ function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>):
     new THREE.Euler(...nodeRotationRadian, "ZYX"),
   );
   const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(
-      ...getRelativeViewportRotationToXYViewport(NumberToOrthoView[activeNode.viewport]),
-      "ZYX",
-    ),
+    RelativeViewportRotationToXYViewport[NumberToOrthoView[activeNode.viewport]],
   );
   const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
   // Invert the rotation of the viewport to get the rotation configured during node creation.

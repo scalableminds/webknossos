@@ -3,11 +3,6 @@ const { parseDependencyTree, parseCircular } = dpdm;
 
 const KNOWN_CYCLES = [
   [
-    "frontend/javascripts/admin/rest_api.ts",
-    "frontend/javascripts/libs/request.ts",
-    "frontend/javascripts/admin/datastore_health_check.ts",
-  ],
-  [
     "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
     "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts",
   ],

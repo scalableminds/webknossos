@@ -322,6 +322,11 @@ export function applySkeletonUpdateActionsFromServer(
         );
         break;
       }
+      case "updateUserBoundingBoxVisibilityInSkeletonTracing": {
+        // Visibility updates are user-specific and don't need to be
+        // incorporated for the current user.
+        break;
+      }
       case "deleteUserBoundingBoxInSkeletonTracing": {
         newState = applyDeleteUserBoundingBox(
           newState,

@@ -117,6 +117,7 @@ export type ApplicableSkeletonUpdateAction =
   | MoveTreeComponentUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction;
 
 export type ApplicableVolumeUpdateAction =

@@ -10,7 +10,11 @@ import {
   getActiveTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxAction,
+  changeUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
@@ -50,7 +54,11 @@ const mag = 0;
 
 const applyActions = chainReduce(combinedReducer);
 
-const actionNamesList: Record<ApplicableSkeletonUpdateAction["name"], true> = {
+// This helper dict exists so that we can ensure via typescript that
+// the list contains all members of ApplicableSkeletonUpdateAction. As soon as
+// ApplicableSkeletonUpdateAction is extended with another action, TS will complain
+// if the following dictionary doesn't contain that action.
+const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = {
   updateTree: true,
   createTree: true,
   updateNode: true,
@@ -62,8 +70,10 @@ const actionNamesList: Record<ApplicableSkeletonUpdateAction["name"], true> = {
   moveTreeComponent: true,
   addUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   deleteUserBoundingBoxInSkeletonTracing: true,
 };
+const actionNamesList = Object.keys(actionNamesHelper);
 
 describe("Update Action Application for SkeletonTracing", () => {
   const seenActionTypes = new Set<string>();
@@ -78,9 +88,6 @@ describe("Update Action Application for SkeletonTracing", () => {
   const compactionModes = [true, false];
   const hardcodedBeforeVersionIndex: number | null = null;
   const hardcodedAfterVersionIndex: number | null = null;
-  // const compactionModes = [true];
-  // const hardcodedBeforeVersionIndex: number | null = 25;
-  // const hardcodedAfterVersionIndex: number | null = 27;
 
   const userActions: Action[] = [
     SkeletonTracingActions.deleteTreeAction(2), // delete second tree. one tree remains.
@@ -116,12 +123,13 @@ describe("Update Action Application for SkeletonTracing", () => {
       color: [1, 2, 3],
       isVisible: true,
     }),
+    changeUserBoundingBoxAction(1, { name: "Updated Name" }),
+    deleteUserBoundingBoxAction(1),
   ];
 
   test("User actions for test should not contain no-ops", () => {
     let state = initialState;
     for (const action of userActions) {
-      // todop: use wk reducer so that addUserBoundingBoxAction does sth
       const newState = combinedReducer(state, action);
       expect(newState !== state).toBeTruthy();
 
@@ -141,7 +149,7 @@ describe("Update Action Application for SkeletonTracing", () => {
         const afterVersionIndices =
           hardcodedAfterVersionIndex != null
             ? [hardcodedAfterVersionIndex]
-            : _.range(beforeVersionIndex + 1, userActions.length + 1);
+            : _.range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
           const state2WithActiveTree = applyActions(
@@ -149,7 +157,7 @@ describe("Update Action Application for SkeletonTracing", () => {
             userActions.slice(0, beforeVersionIndex),
           );
 
-          const state2WithoutActiveTree = applyActions(state2WithActiveTree, [
+          const state2WithoutActiveState = applyActions(state2WithActiveTree, [
             SkeletonTracingActions.setActiveNodeAction(null),
             setActiveUserBoundingBoxId(null),
           ]);
@@ -162,17 +170,14 @@ describe("Update Action Application for SkeletonTracing", () => {
               setActiveUserBoundingBoxId(null),
             ]),
           );
-          expect(state2WithoutActiveTree !== state3).toBeTruthy();
+          expect(state2WithoutActiveState !== state3).toBeTruthy();
 
-          // logTrees("state2", state2);
-          // logTrees("state3", state3);
-          const skeletonTracing2 = enforceSkeletonTracing(state2WithoutActiveTree.annotation);
+          const skeletonTracing2 = enforceSkeletonTracing(state2WithoutActiveState.annotation);
           const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
 
           const updateActionsBeforeCompaction = Array.from(
             diffSkeletonTracing(skeletonTracing2, skeletonTracing3),
           );
-          // console.log("updateActionsBeforeCompaction", updateActionsBeforeCompaction);
           const maybeCompact = withCompaction
             ? compactUpdateActions
             : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
@@ -186,19 +191,11 @@ describe("Update Action Application for SkeletonTracing", () => {
             seenActionTypes.add(action.name);
           }
 
-          // console.log("updateActions", updateActions);
-          expect(updateActions.length > 0).toBeTruthy();
-
-          const reappliedNewState = applyActions(state2WithoutActiveTree, [
+          const reappliedNewState = applyActions(state2WithoutActiveState, [
             SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
             SkeletonTracingActions.setActiveNodeAction(null),
             setActiveUserBoundingBoxId(null),
           ]);
-
-          // console.log("state3.annotation", state3.annotation);
-          // console.log("reappliedNewState.annotation", reappliedNewState.annotation);
-          // logTrees("state3", state3);
-          // logTrees("reappliedNewState.", reappliedNewState);
 
           expect(reappliedNewState).toEqual(state3);
         });
@@ -264,19 +261,18 @@ describe("Update Action Application for SkeletonTracing", () => {
   });
 
   afterAll(() => {
-    console.log("Seen action types:", [...seenActionTypes]);
-    // expect(seenActionTypes).toEqual(new Set(Object.keys(actionNamesList)));
+    expect(seenActionTypes).toEqual(new Set(actionNamesList));
   });
 });
 
-function logTrees(prefix: string, state: WebknossosState) {
+function _debugLogTrees(prefix: string, state: WebknossosState) {
   const size = state.annotation.skeleton!.trees.getOrThrow(1).nodes.size();
   console.log("logTrees. size", size);
   for (const tree of state.annotation.skeleton!.trees.values()) {
     console.log(
       `${prefix}. tree.id=${tree.treeId}.`,
       "edges: ",
-      // Array.from(tree.edges.values().map((edge) => `${edge.source}-${edge.target}`)).join(", "),
+      Array.from(tree.edges.values().map((edge) => `${edge.source}-${edge.target}`)).join(", "),
       "nodes: ",
       Array.from(tree.nodes.values().map((n) => n.id)).join(", "),
     );

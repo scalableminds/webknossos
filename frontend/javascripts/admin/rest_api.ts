@@ -15,7 +15,9 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfo,
+  type APIBuildInfoDatastore,
+  type APIBuildInfoTracingstore,
+  type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
   type APIDataSource,
@@ -1788,17 +1790,31 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 
 export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
 
-// ### BuildInfo webknossos
-export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo", {
+// ### Health
+export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
+  const healthEndpoint = `${url}/${path}/health`;
+  return Request.triggerRequest(healthEndpoint, {
     doNotInvestigate: true,
+    mode: "cors",
+    timeout: 5000,
   });
 }
 
-// ### BuildInfo datastore
-export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, {
+// ### BuildInfo webknossos
+export function getBuildInfo(): Promise<APIBuildInfoWk> {
+  return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
+    mode: "cors",
+  });
+}
+
+// ### BuildInfo datastore/tracingstore
+export function getDataOrTracingStoreBuildInfo(
+  dataOrTracingStoreUrl: string,
+): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
+  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
+    doNotInvestigate: true,
+    mode: "cors",
   });
 }
 

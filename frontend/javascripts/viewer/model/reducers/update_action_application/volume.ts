@@ -1,6 +1,7 @@
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import {
   removeSegmentAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/update_actions";
@@ -12,6 +13,7 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import type { TreeGroup } from "viewer/model/types/tree_types";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
@@ -46,6 +48,13 @@ export function applyVolumeUpdateActionsFromServer(
         newState = VolumeTracingReducer(
           newState,
           removeSegmentAction(ua.value.id, ua.value.actionTracingId),
+        );
+        break;
+      }
+      case "updateSegmentGroups": {
+        newState = VolumeTracingReducer(
+          newState,
+          setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
         );
         break;
       }

@@ -115,6 +115,9 @@ export type ApplicableSkeletonUpdateAction =
   | DeleteEdgeUpdateAction
   | DeleteNodeUpdateAction
   | MoveTreeComponentUpdateAction
+  | UpdateTreeEdgesVisibilityUpdateAction
+  | UpdateTreeGroupsUpdateAction
+  | UpdateTreeGroupsExpandedStateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
@@ -125,6 +128,7 @@ export type ApplicableVolumeUpdateAction =
   | UpdateSegmentUpdateAction
   | CreateSegmentUpdateAction
   | DeleteSegmentUpdateAction
+  | UpdateSegmentGroupsUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction;

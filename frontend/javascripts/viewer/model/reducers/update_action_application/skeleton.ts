@@ -11,6 +11,11 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import SkeletonTracingReducer from "../skeletontracing_reducer";
+import {
+  setTreeEdgeVisibilityAction,
+  setTreeGroupsAction,
+} from "viewer/model/actions/skeletontracing_actions";
 
 export function applySkeletonUpdateActionsFromServer(
   actions: ApplicableSkeletonUpdateAction[],
@@ -303,6 +308,24 @@ export function applySkeletonUpdateActionsFromServer(
           },
         });
 
+        break;
+      }
+
+      case "updateTreeGroups": {
+        newState = SkeletonTracingReducer(newState, setTreeGroupsAction(ua.value.treeGroups));
+        break;
+      }
+
+      case "updateTreeGroupsExpandedState": {
+        // changes to user specific state does not need to be reacted to
+        break;
+      }
+
+      case "updateTreeEdgesVisibility": {
+        newState = SkeletonTracingReducer(
+          newState,
+          setTreeEdgeVisibilityAction(ua.value.treeId, ua.value.edgesAreVisible),
+        );
         break;
       }
 

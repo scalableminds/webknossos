@@ -48,7 +48,12 @@ export function convertServerBoundingBoxToFrontend(
 export function convertUserBoundingBoxFromUpdateActionToFrontend(
   bboxValue: UpdateUserBoundingBoxInSkeletonTracingAction["value"],
 ): Partial<UserBoundingBox> {
-  const { boundingBox, actionTracingId: _actionTracingId, ...valueWithoutBoundingBox } = bboxValue;
+  const {
+    boundingBox,
+    boundingBoxId: _boundingBoxId,
+    actionTracingId: _actionTracingId,
+    ...valueWithoutBoundingBox
+  } = bboxValue;
   const maybeBoundingBoxValue =
     boundingBox != null
       ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }

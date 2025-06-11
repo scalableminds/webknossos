@@ -239,11 +239,7 @@ function ChangePasswordView({ history }: Props) {
             to your account use the button below.
           </p>
 
-          <Table
-            dataSource={passkeys}
-            columns={passkeyColumns}
-            rowKey="id"
-            showHeader={false} />
+          <Table dataSource={passkeys} columns={passkeyColumns} rowKey="id" showHeader={false} />
 
           <div style={{ paddingTop: 10 }}>
             <Button onClick={() => setIsPasskeyNameModalOpen(true)} type="primary">

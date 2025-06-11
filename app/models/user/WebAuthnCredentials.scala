@@ -103,14 +103,14 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
   def updateSignCount(c: WebAuthnCredential): Fox[Unit] = {
     val signatureCount = c.credentialRecord.getCounter
     for {
-      _ <- run(
-        q"""UPDATE $existingCollectionName SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
+      _ <- run(q"""UPDATE $existingCollectionName SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
     } yield ()
   }
 
   def removeById(id: ObjectId, multiUser: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate)
+      _ <- run(
+        q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate)
     } yield ()
 
 }

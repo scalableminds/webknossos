@@ -638,11 +638,15 @@ function CollapsibleSplitMergerEvaluationSettings({
             <Row>
               <Col style={{ width: "100%" }}>
                 <div style={{ marginBottom: 24 }}>
-                  To use it as the ground truth, your annotation should contain
+                  You can use the selected bounding box to evaluate the splits/mergers.
+                  <br />
+                  The selected bounding box should
                   <ul>
-                    <li>a user-defined bounding box,</li>
-                    <li>at least one tree,</li>
-                    <li>and every tree should have at least one node.</li>
+                    <li>be either user-defined or the bounding box of a task</li>
+                    <li>
+                      contain at least one neuron (sparse) or all neurons (dense) annotated as
+                      skeletons.
+                    </li>
                   </ul>
                 </div>
                 <Form.Item
@@ -1066,7 +1070,7 @@ export function NeuronSegmentationForm() {
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
-  const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const userAndTaskBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -1109,7 +1113,7 @@ export function NeuronSegmentationForm() {
             doSplitMergerEvaluation,
           );
         }
-        if (userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBox.id) == null) {
+        if (userAndTaskBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBox.id) == null) {
           Toast.error(
             "To use the split/merger evaluation, please select a bounding box that is not the full layer bounding box.",
           );

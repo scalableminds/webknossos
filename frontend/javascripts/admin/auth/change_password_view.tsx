@@ -10,6 +10,7 @@ import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
 import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/webauthn";
+import type { WebAuthnKeyDescriptor } from "admin/webauthn";
 import { useState } from "react";
 
 type Props = {
@@ -59,7 +60,7 @@ function ChangePasswordView({ history }: Props) {
     return Promise.resolve();
   }
 
-  function webauthnRemoveKey(passkey): () => Promise<void> {
+  function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): () => Promise<void> {
     return async function () {
       await removeWebAuthnKey(passkey);
       setUpdateCounter(updateCounter + 1);
@@ -98,7 +99,7 @@ function ChangePasswordView({ history }: Props) {
       title: "Actions",
       dataIndex: "id",
       key: "id",
-      render: (id, passkey) => (
+      render: (id: string, passkey: WebAuthnKeyDescriptor) => (
         <Button key={id} onClick={webauthnRemoveKey(passkey)}>
           Delete
         </Button>

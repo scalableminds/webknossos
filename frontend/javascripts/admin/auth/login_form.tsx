@@ -24,17 +24,19 @@ const DEFAULT_STYLE = {
   maxWidth: 500,
 };
 
-async function webauthnLogin() {
-  try {
-    const [user, organization] = await doWebAuthnLogin();
-    Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setActiveOrganizationAction(organization));
-    if (onLoggedIn) {
-      onLoggedIn();
+function webauthnLogin(onLoggedIn?: () => unknown): () => Promise<void> {
+  return async function () {
+    try {
+      const [user, organization] = await doWebAuthnLogin();
+      Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
+      if (onLoggedIn) {
+        onLoggedIn();
+      }
+    } catch (error) {
+      console.error("WebAuthn login failed", error);
     }
-  } catch (error) {
-    console.error("WebAuthn login failed", error);
-  }
+  };
 }
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
@@ -155,7 +157,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
           <FormItem style={{ flexGrow: 1 }}>
-            <Button style={{ width: "100%" }} onClick={webauthnLogin}>
+            <Button style={{ width: "100%" }} onClick={webauthnLogin(onLoggedIn)}>
               Log in with Passkey
             </Button>
           </FormItem>

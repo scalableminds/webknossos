@@ -847,11 +847,9 @@ function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<bo
         case "removeFallbackLayer":
         case "updateMappingName": // Refactor mapping activation first before implementing this.
 
-        // Skeleton
-        case "mergeTree": // todop: this action is never used? legacy?
-
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
+        case "mergeTree":
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":

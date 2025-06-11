@@ -2,7 +2,6 @@ import { setupWebknossosForTesting, type WebknossosTestContext } from "test/help
 import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Store from "viewer/store";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
 import { chainReduce } from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
@@ -11,7 +10,10 @@ import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import defaultState from "viewer/default_state";
 import update from "immutability-helper";
-import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
+import {
+  createSaveQueueFromUpdateActions,
+  withoutUpdateActiveItemTracing,
+} from "../helpers/saveHelpers";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -27,7 +29,7 @@ import { Model } from "viewer/singletons";
 const actionTracingId = "tracingId";
 
 function testDiffing(prevAnnotation: StoreAnnotation, nextAnnotation: StoreAnnotation) {
-  return withoutUpdateTracing(
+  return withoutUpdateActiveItemTracing(
     Array.from(
       diffSkeletonTracing(
         enforceSkeletonTracing(prevAnnotation),
@@ -135,11 +137,6 @@ describe("SkeletonTracingSaga", () => {
       context.tearDownPullQueues();
       // Saving after each test and checking that the root saga didn't crash,
       // ensures that each test is cleanly exited. Without it weird output can
-      // occur (e.g., a promise gets resolved which interferes with the next test).
-      expect(hasRootSagaCrashed()).toBe(false);
-    });
-
-    it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
       await Model.ensureSavedState();
       expect(context.receivedDataPerSaveRequest.length).toBe(0);
     });

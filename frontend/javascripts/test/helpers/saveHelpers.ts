@@ -21,7 +21,7 @@ export function createSaveQueueFromUpdateActions(
   }));
 }
 
-export function withoutUpdateTracing(
+export function withoutUpdateActiveItemTracing(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter(

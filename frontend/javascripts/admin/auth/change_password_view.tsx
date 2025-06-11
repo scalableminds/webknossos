@@ -73,16 +73,16 @@ function ChangePasswordView({ history }: Props) {
 
   const registerNewPasskey = async () => {
     const passkeyName = newPasskeyName.trim();
-    if (!passkeyName.trim()) {
-      Toast.error("Passkey name cannot be empty");
+    if (passkeyName.length < 3) {
+      Toast.error("Passkey name must be at least 3 characters");
       return;
-    } else if (passkeys.some((pk) => pk.name === passkeyName)) {
+    } else if (passkeys.some((pk) => pk.name.toLowerCase() === passkeyName.toLowerCase())) {
       Toast.error("A passkey with this name already exists");
       return;
     }
     try {
       setIsPasskeyNameModalOpen(false);
-      await doWebAuthnRegistration(newPasskeyName);
+      await doWebAuthnRegistration(passkeyName);
       Toast.success("Passkey registered successfully");
       setNewPasskeyName("");
       setUpdateCounter((c) => c + 1);
@@ -239,7 +239,11 @@ function ChangePasswordView({ history }: Props) {
             to your account use the button below.
           </p>
 
-          <Table dataSource={passkeys} columns={passkeyColumns} showHeader={false} />
+          <Table
+            dataSource={passkeys}
+            columns={passkeyColumns}
+            rowKey="id"
+            showHeader={false} />
 
           <div style={{ paddingTop: 10 }}>
             <Button onClick={() => setIsPasskeyNameModalOpen(true)} type="primary">

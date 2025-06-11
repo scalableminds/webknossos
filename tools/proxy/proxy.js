@@ -29,6 +29,9 @@ function makeEnv(port, host) {
   return env;
 }
 
+const webpack_tls_args = ["--server-type", "https", "--server-options-key", "./target/dev.key.pem", , "--server-options-cert", "./target/dev.cert.pem"];
+const webpack_args = process.argv.includes("--tls") ? webpack_tls_args : [];
+
 const processes = {
   backend: spawnIfNotSpecified(
     "noBackend",
@@ -40,7 +43,7 @@ const processes = {
       shell: true,
     },
   ),
-  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
+  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", webpack_args, {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
     shell: true,
@@ -130,12 +133,22 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, {
-    headers: {
-      host: "localhost",
-    },
-    target: `http://127.0.0.1:${PORT + 2}`
-  });
+  if (process.argv.includes("--tls")) {
+    proxy.web(req, res, {
+      headers: {
+        host: "localhost",
+      },
+      secure: false,
+      target: `https://127.0.0.1:${PORT + 2}`
+    });
+  } else {
+    proxy.web(req, res, {
+      headers: {
+        host: "localhost",
+      },
+      target: `http://127.0.0.1:${PORT + 2}`
+    });
+  }
 }
 
 function toSam(req, res) {

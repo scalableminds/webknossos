@@ -222,8 +222,8 @@ describe("Update Action Application for SkeletonTracing", () => {
       mag,
     );
     const newState = applyActions(initialState, [
-      createNode, // 1
-      createNode, // 2
+      createNode, // nodeId=1
+      createNode, // nodeId=2
       SkeletonTracingActions.setActiveNodeAction(2),
     ]);
     expect(getActiveNode(enforceSkeletonTracing(newState.annotation))?.id).toBe(2);
@@ -250,8 +250,8 @@ describe("Update Action Application for SkeletonTracing", () => {
       mag,
     );
     const newState = applyActions(initialState, [
-      createNode, // 1
-      createNode, // 2
+      createNode, // nodeId=1
+      createNode, // nodeId=2
       SkeletonTracingActions.setActiveTreeAction(2),
     ]);
     expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);

@@ -673,7 +673,6 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      // use this code as template
       const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
         action;
       const tree = getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT);

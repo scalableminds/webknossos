@@ -23,7 +23,7 @@ type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisi
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
 export type MoveTreeComponentUpdateAction = ReturnType<typeof moveTreeComponent>;
-export type MergeTreeUpdateAction = ReturnType<typeof mergeTree>;
+export type LEGACY_MergeTreeUpdateAction = ReturnType<typeof LEGACY_mergeTree>;
 export type CreateNodeUpdateAction = ReturnType<typeof createNode>;
 export type UpdateNodeUpdateAction = ReturnType<typeof updateNode>;
 export type UpdateTreeVisibilityUpdateAction = ReturnType<typeof updateTreeVisibility>;
@@ -141,7 +141,7 @@ export type UpdateActionWithIsolationRequirement =
 export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeUpdateAction
   | DeleteTreeUpdateAction
-  | MergeTreeUpdateAction
+  | LEGACY_MergeTreeUpdateAction
   | MoveTreeComponentUpdateAction
   | CreateNodeUpdateAction
   | UpdateNodeUpdateAction
@@ -313,7 +313,11 @@ export function updateTreeGroupVisibility(
     },
   } as const;
 }
-export function mergeTree(sourceTreeId: number, targetTreeId: number, actionTracingId: string) {
+export function LEGACY_mergeTree(
+  sourceTreeId: number,
+  targetTreeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "mergeTree",
     value: {

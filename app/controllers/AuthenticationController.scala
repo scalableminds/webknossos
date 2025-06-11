@@ -164,25 +164,25 @@ object WebAuthnPublicKeyCredentialRequestOptions {
 }
 
 /**
- * Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
- * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
- */
+  * Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
+  * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+  */
 case class WebAuthnRegistration(name: String, key: JsValue)
 object WebAuthnRegistration {
   implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
 }
 
 /**
- * Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
- */
+  * Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+  */
 case class WebAuthnAuthentication(key: JsValue)
 object WebAuthnAuthentication {
   implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
 }
 
 /**
- * Custom object for WebAuthnCredential's id and name.
- */
+  * Custom object for WebAuthnCredential's id and name.
+  */
 case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
 object WebAuthnKeyDescriptor {
   implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
@@ -584,7 +584,11 @@ class AuthenticationController @Inject()(
 
   def webauthnAuthStart(): Action[AnyContent] = Action {
     val sessionId = UUID.randomUUID().toString
-    val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(webauthnTimeout.toSeconds.toInt), httpOnly = true, secure = true)
+    val cookie = Cookie("webauthn-session",
+                        sessionId,
+                        maxAge = Some(webauthnTimeout.toSeconds.toInt),
+                        httpOnly = true,
+                        secure = true)
     val challenge = new Array[Byte](32) // Minimum required length are 16 bytes.
     secureRandom.nextBytes(challenge)
     val assertion = WebAuthnPublicKeyCredentialRequestOptions(
@@ -603,7 +607,9 @@ class AuthenticationController @Inject()(
       for {
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
-        challenge <- temporaryAssertionStore.pop(sessionId).toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
+        challenge <- temporaryAssertionStore
+          .pop(sessionId)
+          .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ?~> "Bad Request" ~> BAD_REQUEST
         credentialId = authData.getCredentialId
         multiUserEmail = new String(authData.getUserHandle)
@@ -652,7 +658,11 @@ class AuthenticationController @Inject()(
       _ = secureRandom.nextBytes(challenge)
       encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
       sessionId = UUID.randomUUID().toString
-      cookie = Cookie("webauthn-registration", sessionId, maxAge = Some(webauthnTimeout.toSeconds.toInt), httpOnly = true, secure = true)
+      cookie = Cookie("webauthn-registration",
+                      sessionId,
+                      maxAge = Some(webauthnTimeout.toSeconds.toInt),
+                      httpOnly = true,
+                      secure = true)
       _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
       options = WebAuthnPublicKeyCredentialCreationOptions(
         authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),
@@ -675,7 +685,9 @@ class AuthenticationController @Inject()(
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
-        challenge <- temporaryRegistrationStore.pop(sessionId).toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
+        challenge <- temporaryRegistrationStore
+          .pop(sessionId)
+          .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
         publicKeyParams = webAuthnPubKeyParams.map(k =>
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))

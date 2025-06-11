@@ -1,7 +1,7 @@
 import { LockOutlined } from "@ant-design/icons";
 import { Alert, Button, Col, Form, Input, Modal, Row, Table } from "antd";
-import Request from "libs/request";
 import { useGuardedFetch } from "libs/react_helpers";
+import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
@@ -10,8 +10,7 @@ import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
 import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/webauthn";
-import { useEffect, useState } from "react";
-import type { WebAuthnKeyDescriptor } from "types/api_types";
+import { useState } from "react";
 
 type Props = {
   history: RouteComponentProps["history"];
@@ -31,7 +30,7 @@ function ChangePasswordView({ history }: Props) {
     listWebAuthnKeys,
     [],
     [updateCounter],
-    "Failed to fetch Passkeys"
+    "Failed to fetch Passkeys",
   );
 
   function onFinish(formValues: Record<string, any>) {
@@ -61,10 +60,10 @@ function ChangePasswordView({ history }: Props) {
   }
 
   function webauthnRemoveKey(passkey): () => Promise<void> {
-    return async function() {
+    return async function () {
       await removeWebAuthnKey(passkey);
       setUpdateCounter(updateCounter + 1);
-    }
+    };
   }
 
   const registerNewPasskey = async () => {
@@ -81,7 +80,7 @@ function ChangePasswordView({ history }: Props) {
       await doWebAuthnRegistration(newPasskeyName);
       Toast.success("Passkey registered successfully");
       setNewPasskeyName("");
-      setUpdateCounter(updateCounter + 1)
+      setUpdateCounter(updateCounter + 1);
     } catch (e) {
       Toast.error(`Registering new Passkey '${newPasskeyName}' failed`);
       console.error("Could not register new Passkey", e);
@@ -90,21 +89,21 @@ function ChangePasswordView({ history }: Props) {
 
   const passkeyColumns = [
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      width: '100%',
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      width: "100%",
     },
     {
-      title: 'Actions',
-      dataIndex: 'id',
-      key: 'id',
+      title: "Actions",
+      dataIndex: "id",
+      key: "id",
       render: (id, passkey) => (
         <Button key={id} onClick={webauthnRemoveKey(passkey)}>
           Delete
         </Button>
-      )
-    }
+      ),
+    },
   ];
 
   return (

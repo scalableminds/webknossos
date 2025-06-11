@@ -155,10 +155,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
           <FormItem style={{ flexGrow: 1 }}>
-            <Button
-              style={{ width: "100%" }}
-              onClick={webauthnLogin}
-            >
+            <Button style={{ width: "100%" }} onClick={webauthnLogin}>
               Log in with Passkey
             </Button>
           </FormItem>

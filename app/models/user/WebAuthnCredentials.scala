@@ -64,7 +64,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
         authenticatorExtensions,
         null, // attestationObject - document why null is safe
         null, // transports - document why null is safe
-        null  // largeBlob - document why null is safe
+        null // largeBlob - document why null is safe
       )
     } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
   }

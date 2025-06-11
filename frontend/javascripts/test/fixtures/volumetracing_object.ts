@@ -63,6 +63,7 @@ const stateWithoutDatasetInitialization = update(defaultState, {
     volumes: {
       $set: [volumeTracing],
     },
+    readOnly: { $set: null },
   },
   dataset: {
     dataSource: {

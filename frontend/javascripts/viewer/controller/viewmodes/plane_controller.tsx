@@ -44,7 +44,6 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   createBranchPointAction,
   createTreeAction,
-  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
@@ -70,6 +69,7 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,

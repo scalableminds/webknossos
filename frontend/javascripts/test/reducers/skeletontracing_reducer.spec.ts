@@ -22,6 +22,7 @@ import {
   type Tree,
   MutableTreeMap,
 } from "viewer/model/types/tree_types";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -170,7 +171,7 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
-    const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
+    const { createTreeAction } = SkeletonTracingActions;
     const newState = applyActions(initialStateWithActiveTreeId2, [
       createTreeAction(),
       (currentState: WebknossosState) => deleteNodeAsUserAction(currentState),

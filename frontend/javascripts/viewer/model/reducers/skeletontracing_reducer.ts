@@ -653,7 +653,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
     case "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
-      return applySkeletonUpdateActionsFromServer(actions, state).value;
+      return applySkeletonUpdateActionsFromServer(SkeletonTracingReducer, actions, state).value;
     }
 
     default: // pass

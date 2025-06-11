@@ -108,7 +108,6 @@ import {
   createTreeAction,
   deleteBranchpointByIdAction,
   deleteEdgeAction,
-  deleteNodeAsUserAction,
   expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -145,6 +144,7 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

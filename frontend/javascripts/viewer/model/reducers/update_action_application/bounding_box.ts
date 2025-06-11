@@ -84,7 +84,7 @@ function handleUserBoundingBoxUpdateInTracing(
     tracing.tracingId === volumeTracing.tracingId
       ? {
           ...volumeTracing,
-          updatedUserBoundingBoxes,
+          userBoundingBoxes: updatedUserBoundingBoxes,
         }
       : volumeTracing,
   );

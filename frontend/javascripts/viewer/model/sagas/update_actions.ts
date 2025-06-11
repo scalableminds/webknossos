@@ -131,7 +131,9 @@ export type ApplicableVolumeUpdateAction =
   | UpdateSegmentGroupsUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
-  | DeleteUserBoundingBoxInVolumeTracingAction;
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction

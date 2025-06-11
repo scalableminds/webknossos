@@ -5,7 +5,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/update_actions";
-import type { WebknossosState } from "viewer/store";
+import type { Segment, WebknossosState } from "viewer/store";
 import type { VolumeTracingReducerAction } from "../volumetracing_reducer";
 import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
 import {
@@ -36,10 +36,15 @@ export function applyVolumeUpdateActionsFromServer(
       }
       case "createSegment":
       case "updateSegment": {
-        const { actionTracingId, ...segment } = ua.value;
+        const { actionTracingId, ...originalSegment } = ua.value;
+        const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
+        const segment: Partial<Segment> = {
+          somePosition: anchorPosition ?? undefined,
+          ...segmentWithoutAnchor,
+        };
         newState = VolumeTracingReducer(
           newState,
-          updateSegmentAction(segment.id, segment, actionTracingId),
+          updateSegmentAction(originalSegment.id, segment, actionTracingId),
         );
         break;
       }
@@ -79,6 +84,12 @@ export function applyVolumeUpdateActionsFromServer(
           getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
           ua,
         );
+        break;
+      }
+      case "updateSegmentGroupsExpandedState":
+      case "updateUserBoundingBoxVisibilityInVolumeTracing": {
+        // These update actions are user specific and don't need to be incorporated here
+        // because they are from another user.
         break;
       }
       default: {

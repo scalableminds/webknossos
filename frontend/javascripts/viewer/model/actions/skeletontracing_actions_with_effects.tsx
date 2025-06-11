@@ -10,12 +10,12 @@ import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
 import {
-  deleteNodeAction,
   type DeleteNodeAction,
-  deleteTreeAction,
   type DeleteTreeAction,
-  noAction,
   type NoAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  noAction,
 } from "./skeletontracing_actions";
 
 // The following functions are used as a direct response to a user action.

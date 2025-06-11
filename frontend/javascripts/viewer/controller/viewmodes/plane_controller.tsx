@@ -48,6 +48,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
   cycleToolAction,
   enterAction,
@@ -69,7 +70,6 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,

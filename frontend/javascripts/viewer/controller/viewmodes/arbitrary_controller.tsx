@@ -35,7 +35,6 @@ import {
   createBranchPointAction,
   createNodeAction,
   createTreeAction,
-  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   setActiveNodeAction,
   toggleAllTreesAction,
@@ -47,6 +46,7 @@ import Store from "viewer/store";
 import ArbitraryView from "viewer/view/arbitrary_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {

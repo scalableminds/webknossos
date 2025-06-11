@@ -1,23 +1,23 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import { enforceSkeletonTracing, getTree } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  setTreeEdgeVisibilityAction,
+  setTreeGroupsAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
 import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/update_actions";
 import type { Tree } from "viewer/model/types/tree_types";
-import type { WebknossosState } from "viewer/store";
+import type { Reducer, WebknossosState } from "viewer/store";
 import { getMaximumNodeId } from "../skeletontracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
-import SkeletonTracingReducer from "../skeletontracing_reducer";
-import {
-  setTreeEdgeVisibilityAction,
-  setTreeGroupsAction,
-} from "viewer/model/actions/skeletontracing_actions";
 
 export function applySkeletonUpdateActionsFromServer(
+  SkeletonTracingReducer: Reducer,
   actions: ApplicableSkeletonUpdateAction[],
   newState: WebknossosState,
 ): { value: WebknossosState } {

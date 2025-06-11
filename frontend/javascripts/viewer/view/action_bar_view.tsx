@@ -154,7 +154,7 @@ function CreateAnnotationButton() {
     return null;
   };
 
-  const continueWithLayer = (layer: APISegmentationLayer | null | undefined) => {
+  const continueWithLayer = async (layer: APISegmentationLayer | null | undefined) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
     const fallbackLayerName = getFallbackLayerName(layer);
@@ -181,21 +181,21 @@ function CreateAnnotationButton() {
   };
 
   const onClick = async () => {
-    // This will be set is cases where it is clear which layer to use.
-    const obviousSegmentationLayer = getUnambiguousSegmentationLayer();
-    if (!obviousSegmentationLayer && segmentationLayers.length > 1) {
+    // This will be set in cases where it is clear which layer to use.
+    const unambiguousSegmentationLayer = getUnambiguousSegmentationLayer();
+    if (unambiguousSegmentationLayer == null && segmentationLayers.length > 1) {
       setLayerSelectionModalVisible(true);
       return;
     }
-    continueWithLayer(obviousSegmentationLayer);
+    await continueWithLayer(unambiguousSegmentationLayer);
   };
 
-  const handleLayerSelected = () => {
+  const handleLayerSelected = async () => {
     setLayerSelectionModalVisible(false);
     const selectedLayer = selectedLayerName
       ? segmentationLayers.find((layer) => layer.name === selectedLayerName)
       : null;
-    continueWithLayer(selectedLayer);
+    await continueWithLayer(selectedLayer);
   };
 
   const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(

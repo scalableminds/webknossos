@@ -137,6 +137,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
@@ -144,7 +145,6 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

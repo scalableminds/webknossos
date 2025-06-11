@@ -1,26 +1,40 @@
 import update from "immutability-helper";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { combinedReducer, type VolumeTracing } from "viewer/store";
+import DiffableMap from "libs/diffable_map";
+import { setDatasetAction } from "viewer/model/actions/dataset_actions";
+import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
+import { apiDatasetForVolumeTracing } from "./dataset_server_object";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
-const volumeTracing = {
+const volumeTracing: VolumeTracing = {
   type: "volume",
+  segments: new DiffableMap(),
+  segmentGroups: [],
+  hasSegmentIndex: true,
+  contourTracingMode: "DRAW",
+  hideUnregisteredSegments: false,
   activeCellId: 0,
-  activeTool: AnnotationTool.MOVE,
   largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],
   tracingId: VOLUME_TRACING_ID,
-};
+  createdTimestamp: 1234,
+  boundingBox: { min: [0, 1, 2], max: [10, 11, 12] },
+  userBoundingBoxes: [],
+  additionalAxes: [],
+} as const;
+
 const notEmptyViewportRect = {
   top: 0,
   left: 0,
   width: Constants.VIEWPORT_WIDTH,
   height: Constants.VIEWPORT_WIDTH,
 };
-export const initialState = update(defaultState, {
+
+const stateWithoutDatasetInitialization = update(defaultState, {
   annotation: {
     annotationType: {
       $set: "Explorational",
@@ -47,7 +61,6 @@ export const initialState = update(defaultState, {
       },
     },
     volumes: {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: string; activeCellId: number; active... Remove this comment to see the full error message
       $set: [volumeTracing],
     },
   },
@@ -64,12 +77,12 @@ export const initialState = update(defaultState, {
               [4, 4, 4],
             ],
             category: "segmentation",
+            largestSegmentId: volumeTracing.largestSegmentId ?? 0,
             elementClass: "uint32",
             name: volumeTracing.tracingId,
             tracingId: volumeTracing.tracingId,
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
-            isDisabled: false,
-            alpha: 100,
+            additionalAxes: [],
+            boundingBox: convertFrontendBoundingBoxToServer(volumeTracing.boundingBox!),
           },
         ],
       },
@@ -111,3 +124,8 @@ export const initialState = update(defaultState, {
     },
   },
 });
+
+export const initialState = combinedReducer(
+  stateWithoutDatasetInitialization,
+  setDatasetAction(apiDatasetForVolumeTracing),
+);

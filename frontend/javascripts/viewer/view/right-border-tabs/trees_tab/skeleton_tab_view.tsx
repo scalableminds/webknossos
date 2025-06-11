@@ -54,6 +54,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { handleDeleteTreeByUser } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import {
   importVolumeTracingAction,
@@ -86,7 +87,6 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
-import { handleDeleteTreeByUser } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";

@@ -11,7 +11,7 @@ import type ApiLoader from "./api_loader";
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
 export const WkDevFlags = {
-  logActions: true,
+  logActions: false,
   sam: {
     useLocalMask: true,
   },

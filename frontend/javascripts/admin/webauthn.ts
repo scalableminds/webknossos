@@ -50,8 +50,8 @@ export async function listWebAuthnKeys(): Promise<Array<WebAuthnKeyDescriptor>> 
   return await Request.receiveJSON("/api/auth/webauthn/keys");
 }
 
-export async function removeWebAuthnKey(key: WebAuthnKeyDescriptor): Promise<any> {
-  return await Request.sendJSONReceiveArraybuffer("/api/auth/webauthn/keys", {
+export async function removeWebAuthnKey(key: WebAuthnKeyDescriptor): Promise<void> {
+  await Request.sendJSONReceiveArraybuffer("/api/auth/webauthn/keys", {
     method: "DELETE",
     data: key,
   });

@@ -9,8 +9,12 @@ import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
-import { doWebAuthnRegistration, listWebAuthnKeys, removeWebAuthnKey } from "admin/webauthn";
-import type { WebAuthnKeyDescriptor } from "admin/webauthn";
+import {
+  type WebAuthnKeyDescriptor,
+  doWebAuthnRegistration,
+  listWebAuthnKeys,
+  removeWebAuthnKey,
+} from "admin/webauthn";
 import { useState } from "react";
 
 type Props = {
@@ -63,7 +67,7 @@ function ChangePasswordView({ history }: Props) {
   function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): () => Promise<void> {
     return async function () {
       await removeWebAuthnKey(passkey);
-      setUpdateCounter(updateCounter + 1);
+      setUpdateCounter((c) => c + 1);
     };
   }
 
@@ -81,7 +85,7 @@ function ChangePasswordView({ history }: Props) {
       await doWebAuthnRegistration(newPasskeyName);
       Toast.success("Passkey registered successfully");
       setNewPasskeyName("");
-      setUpdateCounter(updateCounter + 1);
+      setUpdateCounter((c) => c + 1);
     } catch (e) {
       Toast.error(`Registering new Passkey '${newPasskeyName}' failed`);
       console.error("Could not register new Passkey", e);

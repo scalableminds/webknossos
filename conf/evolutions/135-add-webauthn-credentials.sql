@@ -14,6 +14,8 @@ CREATE TABLE webknossos.webauthnCredentials(
   UNIQUE (_id, credentialId)
 );
 
+CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthnCredentials WHERE NOT isDeleted;
+
 ALTER TABLE webknossos.webauthnCredentials
   ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 

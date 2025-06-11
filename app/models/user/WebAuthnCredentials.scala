@@ -41,7 +41,6 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
   protected val collection = Webauthncredentials
 
   override protected def idColumn(x: Webauthncredentials): Rep[String] = x._Id
-
   override protected def isDeletedColumn(x: Webauthncredentials): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
@@ -73,7 +72,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND $accessQuery"
+        q"SELECT $columns FROM $existingCollectionName WHERE _multiUser = $multiUserId AND $accessQuery"
           .as[WebauthncredentialsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -83,7 +82,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND credentialId = $credentialId AND $accessQuery"
+        q"SELECT $columns FROM $existingCollectionName WHERE _multiUser = $multiUserId AND credentialId = $credentialId AND $accessQuery"
           .as[WebauthncredentialsRow])
       parsed <- parseFirst(r, multiUserId)
     } yield parsed
@@ -95,7 +94,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val credentialId = c.credentialRecord.getAttestedCredentialData.getCredentialId
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, credentialId, name, serializedAttestedCredential, serializedExtensions, signatureCount)
+        q"""INSERT INTO $existingCollectionName (_id, _multiUser, credentialId, name, serializedAttestedCredential, serializedExtensions, signatureCount)
                        VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${serializedAttestedCredential},
                               ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate)
     } yield ()
@@ -105,13 +104,13 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val signatureCount = c.credentialRecord.getCounter
     for {
       _ <- run(
-        q"""UPDATE webknossos.webauthncredentials SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
+        q"""UPDATE $existingCollectionName SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
     } yield ()
   }
 
   def removeById(id: ObjectId, multiUser: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"""DELETE FROM webknossos.webauthncredentials WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate)
+      _ <- run(q"""UPDATE $existingCollectionName SET isDeleted = true WHERE _id = ${id} AND _multiUser=${multiUser}""".asUpdate)
     } yield ()
 
 }

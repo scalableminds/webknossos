@@ -1115,12 +1115,14 @@ export function NeuronSegmentationForm() {
         }
         if (userAndTaskBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBox.id) == null) {
           Toast.error(
-            "To use the split/merger evaluation, please select a bounding box that is not the full layer bounding box.",
+            "To use the split/merger evaluation, please select either a user-defined bounding box or a task bounding box.",
           );
           return;
         }
         if (skeletonAnnotation == null || skeletonAnnotation?.trees.size() === 0) {
-          Toast.error("Please ensure that the skeleton annotation has at least one tree.");
+          Toast.error(
+            "Please ensure that a skeleton tree exists within the selected bounding box.",
+          );
           return;
         }
         if (hasEmptyTrees(skeletonAnnotation.trees)) {

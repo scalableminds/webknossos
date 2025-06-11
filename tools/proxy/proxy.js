@@ -29,7 +29,11 @@ function makeEnv(port, host) {
   return env;
 }
 
-const webpack_tls_args = ["--server-type", "https", "--server-options-key", "./target/dev.key.pem", , "--server-options-cert", "./target/dev.cert.pem"];
+const webpack_tls_args = [
+  "--server-type", "https",
+  "--server-options-key", "./target/dev.key.pem",
+  "--server-options-cert", "./target/dev.cert.pem"
+];
 const webpack_args = process.argv.includes("--tls") ? webpack_tls_args : [];
 
 const processes = {

@@ -727,11 +727,11 @@ class AuthenticationController @Inject()(
     }
   }
 
-  def webauthnRemoveKey: Action[WebAuthnKeyDescriptor] = sil.SecuredAction.async(validateJson[WebAuthnKeyDescriptor]) {
+  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       {
         for {
-          _ <- webAuthnCredentialDAO.removeById(request.body.id, request.identity._multiUser)
+          _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser)
         } yield Ok(Json.obj())
       }
   }

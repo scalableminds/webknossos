@@ -66,7 +66,7 @@ function ChangePasswordView({ history }: Props) {
 
   function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): () => Promise<void> {
     return async function () {
-      await removeWebAuthnKey(passkey);
+      await removeWebAuthnKey(passkey.id);
       setUpdateCounter((c) => c + 1);
     };
   }

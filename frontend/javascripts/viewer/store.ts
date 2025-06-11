@@ -594,10 +594,10 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
-);
+) as Reducer;
 
 const store = createStore<WebknossosState, Action, unknown, unknown>(
-  enableBatching(combinedReducer),
+  enableBatching(combinedReducer as any),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );

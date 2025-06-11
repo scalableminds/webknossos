@@ -24,21 +24,6 @@ const DEFAULT_STYLE = {
   maxWidth: 500,
 };
 
-function webauthnLogin(onLoggedIn?: () => unknown): () => Promise<void> {
-  return async function () {
-    try {
-      const [user, organization] = await doWebAuthnLogin();
-      Store.dispatch(setActiveUserAction(user));
-      Store.dispatch(setActiveOrganizationAction(organization));
-      if (onLoggedIn) {
-        onLoggedIn();
-      }
-    } catch (error) {
-      console.error("WebAuthn login failed", error);
-    }
-  };
-}
-
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
   const linkStyle =
@@ -59,6 +44,19 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
     }
   };
   const { openIdConnectEnabled } = features();
+
+  const webauthnLogin = async () => {
+    try {
+      const [user, organization] = await doWebAuthnLogin();
+      Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
+      if (onLoggedIn) {
+        onLoggedIn();
+      }
+    } catch (error) {
+      console.error("WebAuthn login failed", error);
+    }
+  };
 
   const iframeWarning = getIsInIframe() ? (
     <Alert
@@ -157,7 +155,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
           <FormItem style={{ flexGrow: 1 }}>
-            <Button style={{ width: "100%" }} onClick={webauthnLogin(onLoggedIn)}>
+            <Button style={{ width: "100%" }} onClick={webauthnLogin}>
               Log in with Passkey
             </Button>
           </FormItem>

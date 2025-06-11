@@ -1070,7 +1070,7 @@ export function NeuronSegmentationForm() {
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
-  const userAndTaskBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const userAndTaskBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state)); // Includes task bounding boxes
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}

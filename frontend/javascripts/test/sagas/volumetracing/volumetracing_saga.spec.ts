@@ -104,14 +104,14 @@ describe("VolumeTracingSaga", () => {
 
     it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
       await Model.ensureSavedState();
-      expect(context.receivedDataPerRequest.length).toBe(0);
+      expect(context.receivedDataPerSaveRequest.length).toBe(0);
     });
 
     it("should do something if changed (saga test)", async (context: WebknossosTestContext) => {
       Store.dispatch(setActiveCellAction);
       await Model.ensureSavedState();
-      expect(context.receivedDataPerRequest.length).toBe(1);
-      const requestBatches = context.receivedDataPerRequest[0];
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      const requestBatches = context.receivedDataPerSaveRequest[0];
       expect(requestBatches.length).toBe(1);
       const updateBatch = requestBatches[0];
       expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateVolumeTracing"]);

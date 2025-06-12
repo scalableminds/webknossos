@@ -52,7 +52,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
   tearDownPullQueues: () => void;
-  receivedDataPerRequest: Array<SaveQueueEntry[]>;
+  receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
 }
 
 // Create mock objects
@@ -72,12 +72,12 @@ vi.mock("libs/request", () => ({
 vi.mock("admin/rest_api.ts", async () => {
   const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
 
-  const receivedDataPerRequest: Array<SaveQueueEntry[]> = [];
+  const receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
   const mockedSendRequestWithToken = vi.fn((_, payload) => {
-    receivedDataPerRequest.push(payload.data);
+    receivedDataPerSaveRequest.push(payload.data);
     return Promise.resolve();
   });
-  (mockedSendRequestWithToken as any).receivedDataPerRequest = receivedDataPerRequest;
+  (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
   return {
     ...actual,
     sendSaveRequestWithToken: mockedSendRequestWithToken,
@@ -209,7 +209,9 @@ export async function setupWebknossosForTesting(
     Model.getAllLayers().map((layer) => {
       layer.pullQueue.destroy();
     });
-  testContext.receivedDataPerRequest = (sendSaveRequestWithToken as any).receivedDataPerRequest;
+  testContext.receivedDataPerSaveRequest = (
+    sendSaveRequestWithToken as any
+  ).receivedDataPerSaveRequest;
 
   const webknossos = new WebknossosApi(Model);
   const annotationFixture = modelData[mode].annotation;

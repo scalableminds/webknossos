@@ -1,20 +1,20 @@
-import { doWithToken, getNewestVersionForAnnotation } from "admin/rest_api";
+import { getNewestVersionForAnnotation, sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
-import type { RequestOptionsWithData } from "libs/request";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import { buffers } from "redux-saga";
+import { actionChannel, call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
+  type EnsureTracingsWereDiffedToSaveQueueAction,
   pushSaveQueueTransaction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
@@ -56,6 +56,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
+import type { Action } from "../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
@@ -125,12 +126,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     yield* put(setSaveBusyAction(false));
   }
 }
-export function sendRequestWithToken(
-  urlWithoutToken: string,
-  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
-): Promise<any> {
-  return doWithToken((token) => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
-}
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
@@ -184,7 +179,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
     try {
       const startTime = Date.now();
       yield* call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -436,20 +431,49 @@ export function* setupSavingForTracingType(
     old and new state.
     The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
-  const saveQueueType =
+  const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;
 
   yield* call(ensureWkReady);
 
+  const actionBuffer = buffers.expanding<Action>();
+  const tracingActionChannel = yield* actionChannel(
+    tracingType === "skeleton"
+      ? [
+          ...SkeletonTracingSaveRelevantActions,
+          // SET_SKELETON_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
+          // should not create its own Undo/Redo stack entry
+          "SET_SKELETON_TRACING",
+        ]
+      : VolumeTracingSaveRelevantActions,
+    actionBuffer,
+  );
+
+  // See Model.ensureSavedState for an explanation of this action channel.
+  const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
+    "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+  );
+
   while (true) {
-    if (saveQueueType === "skeleton") {
-      yield* take([...SkeletonTracingSaveRelevantActions, "SET_SKELETON_TRACING"]);
+    // Prioritize consumption of tracingActionChannel since we don't want to
+    // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
+    // are unprocessed user actions.
+    if (!actionBuffer.isEmpty()) {
+      yield* take(tracingActionChannel);
     } else {
-      yield* take(VolumeTracingSaveRelevantActions);
+      // Wait for either a user action or the "ensureAction".
+      const { ensureAction } = yield* race({
+        _tracingAction: take(tracingActionChannel),
+        ensureAction: take(ensureDiffedChannel),
+      });
+      if (ensureAction != null) {
+        ensureAction.callback(tracingId);
+        continue;
+      }
     }
 
     // The allowUpdate setting could have changed in the meantime
@@ -458,7 +482,7 @@ export function* setupSavingForTracingType(
         state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;
 

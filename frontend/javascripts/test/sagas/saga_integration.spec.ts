@@ -1,15 +1,11 @@
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
-import "test/sagas/saga_integration.mock";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/save_saga_constants";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import Store from "viewer/store";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { omit } from "lodash";
 
@@ -28,16 +24,7 @@ import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup Webknossos
-    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-    Store.dispatch(restartSagaAction());
-    Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(setActiveUserAction(dummyUser));
-
     await setupWebknossosForTesting(context, "task");
-
-    // Dispatch the wkReadyAction, so the sagas are started
-    Store.dispatch(wkReadyAction());
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

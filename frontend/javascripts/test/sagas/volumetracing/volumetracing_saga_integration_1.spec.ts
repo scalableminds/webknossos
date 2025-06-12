@@ -3,7 +3,6 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import "test/sagas/saga_integration.mock";
 import _ from "lodash";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
@@ -13,11 +12,8 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
-import dummyUser from "test/fixtures/dummy_user";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
@@ -38,19 +34,7 @@ import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup Webknossos
-    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-    Store.dispatch(restartSagaAction());
-    Store.dispatch(resetStoreAction());
-    Store.dispatch(setActiveUserAction(dummyUser));
-
     await setupWebknossosForTesting(context, "volume");
-
-    // Ensure the slow compression is disabled by default. Tests may change
-    // this individually.
-    context.setSlowCompression(false);
-    // Dispatch the wkReadyAction, so the sagas are started
-    Store.dispatch(wkReadyAction());
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

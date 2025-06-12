@@ -1,36 +1,30 @@
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import Store from "viewer/store";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+
 import { chainReduce } from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { describe, it, expect, vi } from "vitest";
 import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "viewer/constants";
-import type { ServerSkeletonTracing } from "types/api_types";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
-import { setupSavingForTracingType } from "viewer/model/sagas/save_saga";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
-import { put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
-import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
+import { Model } from "viewer/singletons";
 
 const actionTracingId = "tracingId";
-
-vi.mock("viewer/model/sagas/root_saga", () => ({
-  default: function* () {
-    yield;
-  },
-}));
 
 function testDiffing(prevAnnotation: StoreAnnotation, nextAnnotation: StoreAnnotation) {
   return withoutUpdateTracing(
@@ -94,30 +88,6 @@ const skeletonTracing: SkeletonTracing = {
   additionalAxes: [],
 };
 
-const serverSkeletonTracing: ServerSkeletonTracing = {
-  ...skeletonTracing,
-  id: skeletonTracing.tracingId,
-  activeNodeId: undefined,
-  additionalAxes: [],
-  userBoundingBoxes: [],
-  typ: "Skeleton",
-  boundingBox: undefined,
-  trees: [],
-  userStates: [],
-  editPosition: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  zoomLevel: 2,
-};
-
 const initialState = update(defaultState, {
   annotation: {
     restrictions: {
@@ -155,38 +125,37 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
 const applyActions = chainReduce(SkeletonTracingReducer);
 
 describe("SkeletonTracingSaga", () => {
-  it("shouldn't do anything if unchanged (saga test)", () => {
-    const saga = setupSavingForTracingType(
-      SkeletonTracingActions.initializeSkeletonTracingAction(serverSkeletonTracing),
-    );
+  describe("With Saga Middleware", () => {
+    beforeEach<WebknossosTestContext>(async (context) => {
+      await setupWebknossosForTesting(context, "skeleton");
+    });
 
-    saga.next();
-    saga.next(initialState.annotation.skeleton);
-    saga.next();
-    saga.next();
-    saga.next(true);
+    afterEach<WebknossosTestContext>(async (context) => {
+      context.tearDownPullQueues();
+      // Saving after each test and checking that the root saga didn't crash,
+      // ensures that each test is cleanly exited. Without it weird output can
+      // occur (e.g., a promise gets resolved which interferes with the next test).
+      expect(hasRootSagaCrashed()).toBe(false);
+    });
 
-    // only updateTracing
-    const items = execCall(expect, saga.next(initialState.annotation.skeleton));
-    expect(withoutUpdateTracing(items).length).toBe(0);
-  });
+    it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
+      await Model.ensureSavedState();
+      expect(context.receivedDataPerSaveRequest.length).toBe(0);
+    });
 
-  it("should do something if changed (saga test)", () => {
-    const newState = SkeletonTracingReducer(initialState, createNodeAction);
-    const saga = setupSavingForTracingType(
-      SkeletonTracingActions.initializeSkeletonTracingAction(serverSkeletonTracing),
-    );
-
-    saga.next();
-    saga.next(initialState.annotation.skeleton);
-    saga.next();
-    saga.next();
-    saga.next(true);
-
-    const items = execCall(expect, saga.next(newState.annotation.skeleton));
-
-    expect(withoutUpdateTracing(items).length).toBeGreaterThan(0);
-    expectValueDeepEqual(expect, saga.next(items), put(pushSaveQueueTransaction(items)));
+    it("should do something if changed (saga test)", async (context: WebknossosTestContext) => {
+      Store.dispatch(createNodeAction);
+      await Model.ensureSavedState();
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      const requestBatches = context.receivedDataPerSaveRequest[0];
+      expect(requestBatches.length).toBe(1);
+      const updateBatch = requestBatches[0];
+      expect(updateBatch.actions.map((action) => action.name)).toEqual([
+        "createNode",
+        "createEdge",
+        "updateSkeletonTracing",
+      ]);
+    });
   });
 
   it("should emit createNode update actions", () => {

@@ -1360,3 +1360,11 @@ export function mapEntriesToMap<K extends string | number | symbol, V>(
   }
   return dict;
 }
+
+export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
+  if (setA.size !== setB.size) return false;
+  for (const val of setA) {
+    if (!setB.has(val)) return false;
+  }
+  return true;
+}

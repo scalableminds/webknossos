@@ -16,9 +16,9 @@ import {
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-  sendRequestWithToken,
 } from "viewer/model/sagas/save_saga";
 import { TIMESTAMP } from "test/global_mocks";
+import { sendSaveRequestWithToken } from "admin/rest_api";
 
 vi.mock("viewer/model/sagas/root_saga", () => {
   return {
@@ -144,7 +144,7 @@ describe("Save Saga", () => {
       expect,
       saga.next(TRACINGSTORE_URL),
       call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -167,7 +167,7 @@ describe("Save Saga", () => {
     const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
     expect(versionIncrement).toBe(2);
     const requestWithTokenCall = call(
-      sendRequestWithToken,
+      sendSaveRequestWithToken,
       `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
       {
         method: "POST",
@@ -215,7 +215,7 @@ describe("Save Saga", () => {
       expect,
       saga.next(TRACINGSTORE_URL),
       call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",

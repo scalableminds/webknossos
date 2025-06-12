@@ -6,7 +6,7 @@ exports[`NML > NML serializer should escape special characters and multilines 1`
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
   <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
-  <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
+  <meta name="taskId" content="taskId-5b1fd1cb97000027049c67ec" />
   <parameters>
     <experiment datasetId="dummy-dataset-id" name="Loading" description="Multiline dataset&#xa;description&#xa;with special &amp;&apos;&lt;&gt;&quot; chars." organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />
@@ -65,7 +65,7 @@ exports[`NML > NML serializer should produce correct NMLs 1`] = `
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
   <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
-  <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
+  <meta name="taskId" content="taskId-5b1fd1cb97000027049c67ec" />
   <parameters>
     <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />
@@ -123,7 +123,7 @@ exports[`NML > NML serializer should produce correct NMLs with additional coordi
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
   <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
-  <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
+  <meta name="taskId" content="taskId-5b1fd1cb97000027049c67ec" />
   <parameters>
     <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />

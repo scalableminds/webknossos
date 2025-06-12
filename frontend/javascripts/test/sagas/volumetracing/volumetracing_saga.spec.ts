@@ -21,6 +21,7 @@ import {
 import VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model, Store } from "viewer/singletons";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
 const serverVolumeTracing: ServerVolumeTracing = {
   typ: "Volume",
@@ -84,8 +85,11 @@ describe("VolumeTracingSaga", () => {
 
     afterEach<WebknossosTestContext>(async (context) => {
       context.tearDownPullQueues();
-
       // Saving after each test and checking that the root saga didn't crash,
+      expect(hasRootSagaCrashed()).toBe(false);
+    });
+
+    it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
       await Model.ensureSavedState();
       expect(context.receivedDataPerSaveRequest.length).toBe(0);
     });

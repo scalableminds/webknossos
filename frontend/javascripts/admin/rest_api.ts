@@ -1804,7 +1804,7 @@ export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Prom
 export function getBuildInfo(): Promise<APIBuildInfoWk> {
   return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
-    // mode: "cors",
+    mode: "cors",
   });
 }
 
@@ -1814,7 +1814,7 @@ export function getDataOrTracingStoreBuildInfo(
 ): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
   return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
     doNotInvestigate: true,
-    // mode: "cors",
+    mode: "cors",
   });
 }
 

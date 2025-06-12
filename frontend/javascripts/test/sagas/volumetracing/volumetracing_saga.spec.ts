@@ -104,11 +104,11 @@ describe("VolumeTracingSaga", () => {
       const requestBatches = context.receivedDataPerSaveRequest[0];
       expect(requestBatches.length).toBe(1);
       const updateBatch = requestBatches[0];
-      expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateVolumeTracing"]);
+      expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateActiveSegmentId"]);
       const action = updateBatch.actions[0];
 
       expect(action).toMatchObject({
-        name: "updateVolumeTracing",
+        name: "updateActiveSegmentId",
         value: {
           actionTracingId: "volumeTracingId-1234",
           activeSegmentId: 5,

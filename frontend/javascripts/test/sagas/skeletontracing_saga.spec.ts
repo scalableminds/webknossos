@@ -153,7 +153,7 @@ describe("SkeletonTracingSaga", () => {
       expect(updateBatch.actions.map((action) => action.name)).toEqual([
         "createNode",
         "createEdge",
-        "updateSkeletonTracing",
+        "updateActiveNode",
       ]);
     });
   });

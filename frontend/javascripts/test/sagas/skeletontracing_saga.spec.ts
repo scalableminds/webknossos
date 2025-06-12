@@ -25,6 +25,7 @@ import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reduce
 import { TIMESTAMP } from "test/global_mocks";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
 const actionTracingId = "tracingId";
 
@@ -137,6 +138,10 @@ describe("SkeletonTracingSaga", () => {
       context.tearDownPullQueues();
       // Saving after each test and checking that the root saga didn't crash,
       // ensures that each test is cleanly exited. Without it weird output can
+      expect(hasRootSagaCrashed()).toBe(false);
+    });
+
+    it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
       await Model.ensureSavedState();
       expect(context.receivedDataPerSaveRequest.length).toBe(0);
     });

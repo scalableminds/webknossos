@@ -55,8 +55,8 @@ const sampleSegmentationLayer: APISegmentationLayer = {
 
 export const sampleTracingLayer: APISegmentationLayer = {
   ...sampleSegmentationLayer,
-  name: "tracingId",
-  tracingId: "tracingId",
+  name: "volumeTracingId",
+  tracingId: "volumeTracingId",
 };
 
 function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>): APIDataset {

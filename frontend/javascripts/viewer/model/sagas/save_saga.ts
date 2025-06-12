@@ -1,7 +1,7 @@
 import {
   getNewestVersionForAnnotation,
-  sendSaveRequestWithToken,
   getUpdateActionLog,
+  sendSaveRequestWithToken,
 } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";

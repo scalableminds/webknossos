@@ -1,10 +1,18 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.scalableminds.webknossos.datastore.storage.Hdf5FileCache
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Float
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import jakarta.inject.Inject
-import net.liftweb.common.{Box, Full, Empty}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Empty, Full}
+import play.api.i18n.{Messages, MessagesProvider}
 
-class Hdf5MeshFileService @Inject()() {
+import java.nio.file.Path
+import scala.concurrent.ExecutionContext
+
+class Hdf5MeshFileService @Inject()() extends NeuroglancerMeshHelper with FoxImplicits {
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
@@ -31,5 +39,127 @@ class Hdf5MeshFileService @Inject()() {
       val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", "transform")
       (encoding, lodScaleMultiplier, transform)
     }
+
+  private def listMeshChunksForSegments(meshFileKey: MeshFileKey,
+                                        segmentIds: Seq[Long],
+                                        lodScaleMultiplier: Double,
+                                        transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
+    meshFileCache
+      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile: CachedHdf5File =>
+        segmentIds.toList.flatMap(segmentId =>
+          listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
+      }
+      .toOption
+      .getOrElse(List.empty)
+
+  private def listMeshChunksForSegment(cachedMeshFile: CachedHdf5File,
+                                       segmentId: Long,
+                                       lodScaleMultiplier: Double,
+                                       transform: Array[Array[Double]]): Box[List[MeshLodInfo]] =
+    tryo {
+      val (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =
+        getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile)
+
+      val manifestBytes = cachedMeshFile.uint8Reader.readArrayBlockWithOffset(
+        "/neuroglancer",
+        (neuroglancerSegmentManifestEnd - neuroglancerSegmentManifestStart).toInt,
+        neuroglancerSegmentManifestStart)
+      val segmentManifest = NeuroglancerSegmentManifest.fromBytes(manifestBytes)
+      enrichSegmentInfo(segmentManifest, lodScaleMultiplier, transform, neuroglancerSegmentManifestStart, segmentId)
+    }
+
+  private def getNeuroglancerSegmentManifestOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
+    val bucketIndex = cachedMeshFile.hashFunction(segmentId) % cachedMeshFile.nBuckets
+    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
+    val bucketStart = bucketOffsets(0)
+    val bucketEnd = bucketOffsets(1)
+
+    if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
+
+    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset("buckets",
+                                                                        (bucketEnd - bucketStart + 1).toInt,
+                                                                        3,
+                                                                        bucketStart,
+                                                                        0)
+
+    val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+    if (bucketLocalOffset < 0) throw new Exception(s"SegmentId $segmentId not in bucket list")
+    val neuroglancerStart = buckets(bucketLocalOffset)(1)
+    val neuroglancerEnd = buckets(bucketLocalOffset)(2)
+
+    (neuroglancerStart, neuroglancerEnd)
+  }
+
+  // TODO null vs None?
+  private def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Box[String] = {
+    val attributeName = if (meshFileVersion == 0) "metadata/mapping_name" else "mapping_name"
+    meshFileCache.withCachedHdf5(meshFilePath) { cachedMeshFile =>
+      cachedMeshFile.stringReader.getAttr("/", attributeName)
+    }
+  }
+
+  override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
+                                     lod: Int,
+                                     lodScaleMultiplier: Double,
+                                     currentChunk: Int): Vec3Float =
+    segmentInfo.gridOrigin + segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float * segmentInfo.chunkShape * Math
+      .pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
+
+  override def getLodTransform(segmentInfo: NeuroglancerSegmentManifest,
+                               lodScaleMultiplier: Double,
+                               transform: Array[Array[Double]],
+                               lod: Int): Array[Array[Double]] = transform
+
+  private def versionForMeshFile(meshFilePath: Path): Long =
+    meshFileCache
+      .withCachedHdf5(meshFilePath) { cachedMeshFile =>
+        cachedMeshFile.int64Reader.getAttr("/", "artifact_schema_version")
+      }
+      .toOption
+      .getOrElse(0)
+
+  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: MeshChunkDataRequestList) =
+    for {
+      resultBox <- meshFileCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+        readMeshChunkFromCachedMeshfile(cachedMeshFile, meshChunkDataRequests)
+      }
+      (output, encoding) <- resultBox
+    } yield (output, encoding)
+
+  private def readMeshChunkFromCachedMeshfile(
+      cachedMeshFile: CachedHdf5File,
+      meshChunkDataRequests: MeshChunkDataRequestList): Box[(Array[Byte], String)] = {
+    val meshFormat = cachedMeshFile.meshFormat
+    // Sort the requests by byte offset to optimize for spinning disk access
+    val requestsReordered =
+      meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
+    val data: List[(Array[Byte], Int)] = requestsReordered.map { requestAndIndex =>
+      val meshChunkDataRequest = requestAndIndex._1
+      val data =
+        cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
+                                                            meshChunkDataRequest.byteSize,
+                                                            meshChunkDataRequest.byteOffset)
+      (data, requestAndIndex._2)
+    }
+    val dataSorted = data.sortBy(d => d._2)
+    Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
+  }
+
+  def readMeshChunksForSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext,
+      m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+    for {
+      (encoding, lodScaleMultiplier, transform) <- readMeshfileMetadata(meshFileKey).toFox
+      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] = listMeshChunksForSegments(meshFileKey,
+                                                                                         segmentIds,
+                                                                                         lodScaleMultiplier,
+                                                                                         transform)
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
+        "mesh.file.listChunks.failed",
+        segmentIds.mkString(","),
+        meshFileKey.attachment.name)
+      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding).toFox
+    } yield wkChunkInfos
 
 }

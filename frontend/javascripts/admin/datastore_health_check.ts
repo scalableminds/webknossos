@@ -1,22 +1,19 @@
 import * as RestAPI from "admin/rest_api";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
+import type { APIBuildInfoDatastore, APIBuildInfoWk } from "types/api_types";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'func' implicitly has an 'any' type.
-const memoizedThrottle = (func, wait = 0, options = {}): ((...args: Array<any>) => any) => {
+const memoizedThrottle = <F extends (...args: Array<any>) => any>(func: F, wait = 0): F => {
   // Memoize the creation of a throttling function
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolver' does not exist on type '{}'.
-  const mem = _.memoize(() => _.throttle(func, wait, options), options.resolver);
+  const mem = _.memoize((..._args: any[]) => _.throttle(func, wait));
 
-  return (...args: Array<any>) => {
+  return ((...args: Parameters<F>) => {
     // look up (or create) the throttling function and invoke it
-    // @ts-expect-error ts-migrate(2556) FIXME: Expected 0 arguments, but got 1 or more.
-    mem(...args)(...args);
-  };
+    return mem(...args)(...args);
+  }) as F;
 };
 
 // Do not call this function directly, but call pingMentionedDataStores instead
@@ -34,10 +31,10 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     return;
   }
 
-  const stores = [
+  const stores: Array<{ url: string; path: "tracings" | "data" }> = [
     { ...tracingstore, path: "tracings" },
-    ...datastores.map((datastore) => ({ ...datastore, path: "data" })),
-  ];
+    ...datastores.map((datastore) => ({ ...datastore, path: "data" as const })),
+  ] as const;
 
   if (isInMaintenance) {
     Toast.warning(messages.planned_maintenance);
@@ -46,13 +43,12 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
 
     if (usedStore != null) {
       const { url, path } = usedStore;
-      const healthEndpoint = `${url}/${path}/health`;
-      Request.triggerRequest(healthEndpoint, {
-        doNotInvestigate: true,
-        mode: "cors",
-        timeout: 5000,
-      }).then(
-        () => checkVersionMismatch(url),
+      RestAPI.pingHealthEndpoint(url, path).then(
+        () => {
+          if (usedStore.path === "data") {
+            checkVersionMismatchInDataStore(url);
+          }
+        },
         () =>
           Toast.warning(
             messages["datastore.health"]({
@@ -64,15 +60,13 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
   }
 }, 5000);
 
-async function checkVersionMismatch(url: string) {
-  const [buildinfoWebknossos, buildinfoDatastore] = await Promise.all([
+async function checkVersionMismatchInDataStore(datastoreUrl: string) {
+  const [buildinfoWebknossos, buildinfoDatastore] = (await Promise.all([
     RestAPI.getBuildInfo(),
-    RestAPI.getDataStoreBuildInfo(url),
-  ]);
+    RestAPI.getDataOrTracingStoreBuildInfo(datastoreUrl),
+  ])) as [APIBuildInfoWk, APIBuildInfoDatastore];
   const expectedDatastoreApiVersion = buildinfoWebknossos.webknossos.datastoreApiVersion;
-  const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore
-    ? buildinfoDatastore.webknossosDatastore
-    : buildinfoDatastore.webknossos;
+  const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore;
   const suppliedDatastoreApiVersion = buildInfoWebknossosDatastore.datastoreApiVersion;
 
   if (
@@ -83,7 +77,7 @@ async function checkVersionMismatch(url: string) {
       messages["datastore.version.too_new"]({
         expectedDatastoreApiVersion,
         suppliedDatastoreApiVersion,
-        url,
+        datastoreUrl,
       }),
     );
   } else if (
@@ -94,7 +88,7 @@ async function checkVersionMismatch(url: string) {
       messages["datastore.version.too_old"]({
         expectedDatastoreApiVersion,
         suppliedDatastoreApiVersion,
-        url,
+        datastoreUrl,
       }),
     );
   }

@@ -1,4 +1,3 @@
-import { pingMentionedDataStores } from "admin/datastore_health_check";
 import handleStatus from "libs/handle_http_status";
 import Toast from "libs/toast";
 import _ from "lodash";
@@ -286,16 +285,17 @@ class Request {
       setTimeout(() => resolve("timeout"), timeout);
     });
 
-  handleError = (
+  handleError = async (
     requestedUrl: string,
     showErrorToast: boolean,
     doInvestigate: boolean,
     error: Response | Error,
   ): Promise<void> => {
     if (doInvestigate) {
+      // Avoid circular imports via dynamic import
+      const { pingMentionedDataStores } = await import("admin/datastore_health_check");
       // Check whether this request failed due to a problematic datastore
       pingMentionedDataStores(requestedUrl);
-
       if (error instanceof Response) {
         return error.text().then(
           (text) => {

@@ -1,6 +1,5 @@
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import Store from "viewer/store";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
@@ -20,14 +19,10 @@ import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
-import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import { TIMESTAMP } from "test/global_mocks";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
-
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import dummyUser from "test/fixtures/dummy_user";
 
 const actionTracingId = "tracingId";
 
@@ -139,15 +134,7 @@ const applyActions = chainReduce(SkeletonTracingReducer);
 describe("SkeletonTracingSaga", () => {
   describe("With Saga Middleware", () => {
     beforeEach<WebknossosTestContext>(async (context) => {
-      // Setup Webknossos
-      // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-      Store.dispatch(restartSagaAction());
-      Store.dispatch(discardSaveQueuesAction());
-      Store.dispatch(setActiveUserAction(dummyUser));
       await setupWebknossosForTesting(context, "skeleton");
-
-      // Dispatch the wkReadyAction, so the sagas are started
-      Store.dispatch(wkReadyAction());
     });
 
     afterEach<WebknossosTestContext>(async (context) => {

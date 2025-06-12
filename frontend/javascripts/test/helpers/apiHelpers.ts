@@ -38,6 +38,9 @@ import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
 import { sendSaveRequestWithToken } from "admin/rest_api";
+import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -193,8 +196,15 @@ startSaga(rootSaga);
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
-  apiVersion?: number,
+  options?: { dontDispatchWkReady?: boolean },
 ): Promise<void> {
+  /*
+   * This will execute model.fetch(...) and initialize the store with the tracing, etc.
+   */
+  Store.dispatch(restartSagaAction());
+  Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
+
   Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
@@ -241,8 +251,16 @@ export async function setupWebknossosForTesting(
     // Trigger the event ourselves, as the webKnossosController is not instantiated
     app.vent.emit("webknossos:ready");
 
-    const api = await webknossos.apiReady(apiVersion);
+    const api = await webknossos.apiReady();
     testContext.api = api;
+
+    // Ensure the slow compression is disabled by default. Tests may change
+    // this individually.
+    testContext.setSlowCompression(false);
+    if (!options?.dontDispatchWkReady) {
+      // Dispatch the wkReadyAction, so the sagas are started
+      Store.dispatch(wkReadyAction());
+    }
   } catch (error) {
     console.error("model.fetch() failed", error);
     if (error instanceof Error) {

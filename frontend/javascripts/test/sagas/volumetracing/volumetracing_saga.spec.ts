@@ -9,7 +9,6 @@ import {
   OverwriteModeEnum,
   MappingStatusEnum,
 } from "viewer/constants";
-import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
 import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import type { ActiveMappingInfo } from "viewer/store";
@@ -22,9 +21,6 @@ import {
 import VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model, Store } from "viewer/singletons";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
 const serverVolumeTracing: ServerVolumeTracing = {
@@ -83,15 +79,7 @@ const finishEditingAction = VolumeTracingActions.finishEditingAction();
 describe("VolumeTracingSaga", () => {
   describe("With Saga Middleware", () => {
     beforeEach<WebknossosTestContext>(async (context) => {
-      // Setup Webknossos
-      // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-      Store.dispatch(restartSagaAction());
-      Store.dispatch(discardSaveQueuesAction());
-      Store.dispatch(setActiveUserAction(dummyUser));
       await setupWebknossosForTesting(context, "volume");
-
-      // Dispatch the wkReadyAction, so the sagas are started
-      Store.dispatch(wkReadyAction());
     });
 
     afterEach<WebknossosTestContext>(async (context) => {

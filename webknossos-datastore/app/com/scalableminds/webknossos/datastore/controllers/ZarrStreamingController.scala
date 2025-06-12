@@ -83,7 +83,7 @@ class ZarrStreamingController @Inject()(
                                                                       dataSource.scale,
                                                                       dataLayer.sortedMags,
                                                                       dataLayer.additionalAxes)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV0_5))
+        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV0_5), None)
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }
@@ -132,7 +132,7 @@ class ZarrStreamingController @Inject()(
                                                                                 dataSource.scale,
                                                                                 dataLayer.sortedMags,
                                                                                 dataLayer.additionalAxes)
-            zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
+            zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader), None)
           } yield Ok(Json.toJson(zarr3GroupHeader))
       )
     }

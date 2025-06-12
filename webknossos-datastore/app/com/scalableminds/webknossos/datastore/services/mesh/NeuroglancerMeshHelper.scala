@@ -125,6 +125,7 @@ object WebknossosSegmentInfo {
   }
 
 }
+
 trait NeuroglancerMeshHelper {
 
   def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,

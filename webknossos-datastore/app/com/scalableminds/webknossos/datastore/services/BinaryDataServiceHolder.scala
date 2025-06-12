@@ -1,13 +1,9 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.cache.AlfuCache
-
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Full}
-import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -22,25 +18,13 @@ import scala.concurrent.ExecutionContext
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         datasetErrorLoggingService: DSDatasetErrorLoggingService,
+                                        chunkCacheService: ChunkCacheService,
                                         dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
-    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
-
-    val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
-
-    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
-      arrayBox match {
-        case Full(array) =>
-          (array.getSizeBytes / 1000L).toInt
-        case _ => 0
-      }
-
-    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
-  }
-
-  val zarrAgglomerateService = new ZarrAgglomerateService(config, dataVaultService, sharedChunkContentsCache)
+  // TODO make them injectable again
+  val zarrAgglomerateService =
+    new ZarrAgglomerateService(config, dataVaultService, chunkCacheService.sharedChunkContentsCache)
   val hdf5AgglomerateService = new Hdf5AgglomerateService(config)
 
   val agglomerateService = new AgglomerateService(
@@ -54,7 +38,7 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
     Paths.get(config.Datastore.baseDirectory),
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
-    Some(sharedChunkContentsCache),
+    Some(chunkCacheService.sharedChunkContentsCache),
     datasetErrorLoggingService
   )
 

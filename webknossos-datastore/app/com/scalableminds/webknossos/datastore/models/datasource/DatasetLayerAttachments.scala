@@ -24,7 +24,7 @@ object DatasetLayerAttachments {
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
-  val hdf5, json, zarr3 = Value
+  val hdf5, json, zarr3, neuroglancerPrecomputed = Value
 }
 
 object LayerAttachmentType extends ExtendedEnumeration {

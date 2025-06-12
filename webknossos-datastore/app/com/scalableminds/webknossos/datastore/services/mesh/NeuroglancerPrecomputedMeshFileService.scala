@@ -125,10 +125,10 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
     )
   }
 
-  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: Seq[Long])(
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
-      meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"
+      meshFilePath <- meshFileKey.attachment.path // TODO
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))

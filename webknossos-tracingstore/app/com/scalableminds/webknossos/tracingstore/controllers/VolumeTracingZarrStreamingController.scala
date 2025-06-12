@@ -257,7 +257,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                                   dataSourceVoxelSize = dataSource.scale,
                                                                   mags = sortedExistingMags,
                                                                   additionalAxes = dataSource.additionalAxesUnion)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
+        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader), None)
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }

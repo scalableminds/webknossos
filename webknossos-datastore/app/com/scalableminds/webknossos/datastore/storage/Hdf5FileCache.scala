@@ -11,6 +11,7 @@ import ch.systemsx.cisd.hdf5.{
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import net.liftweb.common.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.typesafe.scalalogging.LazyLogging
@@ -89,4 +90,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
+
+  def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
+    withCachedHdf5(Path.of(attachment.path))(block)
 }

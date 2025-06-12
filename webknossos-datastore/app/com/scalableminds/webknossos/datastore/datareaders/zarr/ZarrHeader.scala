@@ -21,7 +21,7 @@ import play.api.libs.json._
 
 case class ZarrHeader(
     zarr_format: Int, // format version number
-    shape: Array[Int], // shape of the entire array
+    shape: Array[Long], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
     compressor: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
@@ -31,7 +31,7 @@ case class ZarrHeader(
     override val order: ArrayOrder
 ) extends DatasetHeader {
 
-  override lazy val datasetShape: Option[Array[Int]] = Some(shape)
+  override lazy val datasetShape: Option[Array[Long]] = Some(shape)
   override lazy val chunkShape: Array[Int] = chunks
 
   override lazy val byteOrder: ByteOrder =
@@ -77,7 +77,7 @@ object ZarrHeader extends JsonImplicits {
     val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
     ZarrHeader(zarr_format = 2,
-               shape = shape,
+               shape = shape.map(_.toLong),
                chunks = chunks,
                compressor = compressor,
                dtype = dtype,

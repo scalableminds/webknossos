@@ -352,12 +352,12 @@ export class WebKnossosModel {
     // have seen the newest tracings. These sagas are responsible for diffing
     // old vs. new tracings to fill the save queue with update actions.
     // waitForDifferResponses dispatches a special action which the diffing sagas
-    // will respond to be calling the callback that is attached to the action.
+    // will respond to by calling the callback that is attached to the action.
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
       const { annotation } = Store.getState();
-      // All skeleton and volume tracings should respond to the dispatched again.
+      // All skeleton and volume tracings should respond to the dispatched action.
       const tracingIds = new Set(
         _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
       );

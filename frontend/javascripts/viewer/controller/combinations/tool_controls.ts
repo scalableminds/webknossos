@@ -293,7 +293,6 @@ export class SkeletonToolController {
 
           if (plane) {
             const globalPosition = calculateGlobalPos(Store.getState(), pos);
-            // SkeletonHandlers.handleCreateNodeFromEvent(pos, false);
             api.tracing.createNode(globalPosition, { center: false });
           }
         } else {

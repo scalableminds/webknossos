@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
+import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -31,6 +31,7 @@ import type {
 } from "viewer/model/actions/volumetracing_actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
+  applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -60,6 +61,7 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
@@ -262,11 +264,25 @@ function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction
   return setSegmentGroups(state, layerName, getNewGroups());
 }
 
-export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
+export function serverVolumeToClientVolumeTracing(
+  tracing: ServerVolumeTracing,
+  activeUser: APIUserBase | null | undefined,
+  owner: APIUserBase | null | undefined,
+): VolumeTracing {
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
-  const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
+  const userState = getUserStateForTracing(tracing, activeUser, owner);
+
+  const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+    tracing.userBoundingBoxes,
+    userState,
+  );
+  const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
+  const segmentVisibilityMap: Record<number, boolean> = userState
+    ? Utils.mapEntriesToMap(userState.segmentVisibilities)
+    : {};
+
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
     type: "volume" as const,
@@ -280,13 +296,13 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
             : undefined,
           someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-          isVisible: segment.isVisible ?? true,
+          isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
         };
         return [segment.segmentId, clientSegment];
       }),
     ),
-    segmentGroups: tracing.segmentGroups || [],
-    activeCellId: tracing.activeSegmentId ?? 0,
+    segmentGroups,
+    activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
@@ -406,7 +422,11 @@ function VolumeTracingReducer(
 ): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
-      const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
+      const volumeTracing = serverVolumeToClientVolumeTracing(
+        action.tracing,
+        state.activeUser,
+        state.annotation.owner,
+      );
       const newVolumes = state.annotation.volumes.filter(
         (tracing) => tracing.tracingId !== volumeTracing.tracingId,
       );

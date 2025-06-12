@@ -38,9 +38,13 @@ const serverVolumeTracing: ServerVolumeTracing = {
     height: 10,
     depth: 10,
   },
-  zoomLevel: 0,
   segments: [],
   segmentGroups: [],
+  additionalAxes: [],
+  userBoundingBoxes: [],
+  largestSegmentId: 0,
+  userStates: [],
+  zoomLevel: 0,
   editPosition: {
     x: 0,
     y: 0,
@@ -52,12 +56,9 @@ const serverVolumeTracing: ServerVolumeTracing = {
     y: 0,
     z: 0,
   },
-  additionalAxes: [],
-  userBoundingBoxes: [],
-  largestSegmentId: 0,
 };
 
-const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
@@ -84,6 +85,7 @@ describe("VolumeTracingSaga", () => {
 
     afterEach<WebknossosTestContext>(async (context) => {
       context.tearDownPullQueues();
+
       // Saving after each test and checking that the root saga didn't crash,
       // ensures that each test is cleanly exited. Without it weird output can
       // occur (e.g., a promise gets resolved which interferes with the next test).
@@ -102,11 +104,11 @@ describe("VolumeTracingSaga", () => {
       const requestBatches = context.receivedDataPerSaveRequest[0];
       expect(requestBatches.length).toBe(1);
       const updateBatch = requestBatches[0];
-      expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateVolumeTracing"]);
+      expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateActiveSegmentId"]);
       const action = updateBatch.actions[0];
 
       expect(action).toMatchObject({
-        name: "updateVolumeTracing",
+        name: "updateActiveSegmentId",
         value: {
           actionTracingId: "volumeTracingId-1234",
           activeSegmentId: 5,

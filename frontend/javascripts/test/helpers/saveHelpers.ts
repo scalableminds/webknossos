@@ -25,7 +25,11 @@ export function withoutUpdateTracing(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter(
-    (item) => item.name !== "updateSkeletonTracing" && item.name !== "updateVolumeTracing",
+    (item) =>
+      item.name !== "updateSkeletonTracing" &&
+      item.name !== "updateVolumeTracing" &&
+      item.name !== "updateActiveNode" &&
+      item.name !== "updateActiveSegmentId",
   );
 }
 

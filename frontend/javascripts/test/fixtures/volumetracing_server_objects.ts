@@ -71,6 +71,7 @@ export const tracing: ServerVolumeTracing = {
       z: 32,
     },
   ],
+  userStates: [],
 };
 export const annotation: APIAnnotation = {
   datasetId: "66f3c82966010034942e9740",
@@ -135,4 +136,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Volume,
     },
   ],
+  userStates: [],
 };

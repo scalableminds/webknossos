@@ -387,7 +387,17 @@ function _ShareModalView(props: Props) {
             lineHeight: "28px",
           }}
         >
-          Who can view this annotation?
+          <div>Who can view this annotation?</div>
+          <p
+            style={{
+              fontSize: 12,
+              color: "var(--ant-color-text-secondary)",
+              lineHeight: "var(--ant-line-height)",
+              marginRight: 8,
+            }}
+          >
+            Users with access will also be able to see who else has modified the annotation.
+          </p>
         </Col>
         <Col span={18}>
           <RadioGroup

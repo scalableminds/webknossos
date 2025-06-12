@@ -41,6 +41,7 @@ describe("Volume Tracing", () => {
     // occur (e.g., a promise gets resolved which interferes with the next test).
     await context.api.tracing.save();
     expect(hasRootSagaCrashed()).toBe(false);
+    context.tearDownPullQueues();
   });
 
   it<WebknossosTestContext>("Executing a floodfill in mag 1", async ({ api, mocks }) => {

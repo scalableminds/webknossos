@@ -51,7 +51,8 @@ export const tracing: ServerSkeletonTracing = {
   treeGroups: [],
   createdTimestamp: 1528811983951,
   userBoundingBoxes: [],
-  activeNodeId: 1,
+  additionalAxes: [],
+  userStates: [],
   editPosition: {
     x: 0,
     y: 0,
@@ -63,7 +64,6 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
-  additionalAxes: [],
   zoomLevel: 2,
   id: TRACING_ID,
 };
@@ -193,4 +193,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  userStates: [],
 };

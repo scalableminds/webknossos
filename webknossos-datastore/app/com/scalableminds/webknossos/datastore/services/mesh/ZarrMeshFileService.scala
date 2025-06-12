@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, Hdf5HashedArrayUtils}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
+import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -74,16 +75,19 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService)
       bucketRange <- bucketOffsetsArray.readAsMultiArray(offset = bucketIndex, shape = 2)
       bucketStart <- tryo(bucketRange.getLong(0)).toFox
       bucketEnd <- tryo(bucketRange.getLong(1)).toFox
-      _ <- Fox.fromBool(bucketEnd - bucketStart > 0) ?~> s"No entry for segment $segmentId"
+      bucketSize = (bucketEnd - bucketStart).toInt
+      _ <- Fox.fromBool(bucketSize > 0) ?~> s"No entry for segment $segmentId"
       bucketsArray <- openZarrArray(meshFilePath, keyBuckets)
-      buckets <- bucketsArray.readAsMultiArray(offset = Array(bucketStart, 0),
-                                               shape = Array((bucketEnd - bucketStart + 1).toInt, 3))
-      bucketLocalOffset = 0 // TODO buckets.map(_(0)).indexOf(segmentId)
+      bucket <- bucketsArray.readAsMultiArray(offset = Array(bucketStart, 0), shape = Array(bucketSize + 1, 3))
+      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox
       _ <- Fox.fromBool(bucketLocalOffset >= 0) ?~> s"SegmentId $segmentId not in bucket list"
-      neuroglancerStart = buckets.getLong(buckets.getIndex.set(Array(bucketLocalOffset, 1)))
-      neuroglancerEnd = buckets.getLong(buckets.getIndex.set(Array(bucketLocalOffset, 2)))
+      neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))
+      neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))
     } yield (neuroglancerStart, neuroglancerEnd)
   }
+
+  private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
+    (0 until (bucket.getShape()(0))).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
 
   private def openZarrArray(meshFilePath: VaultPath, zarrArrayName: String)(implicit ec: ExecutionContext,
                                                                             tc: TokenContext): Fox[DatasetArray] = {

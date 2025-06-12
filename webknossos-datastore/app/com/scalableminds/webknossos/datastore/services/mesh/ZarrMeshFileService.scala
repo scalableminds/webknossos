@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3Array, Zar
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, Hdf5HashedArrayUtils}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
@@ -20,7 +21,8 @@ case class MeshfileAttributes(
     lod_scale_multiplier: Double,
     transform: Array[Array[Double]],
     hash_function: String,
-    n_buckets: Int // TODO camelCase + custom format?
+    n_buckets: Int, // TODO camelCase + custom format?
+    mapping_name: Option[String] // TODO double-check
 ) extends Hdf5HashedArrayUtils {
   lazy val applyHashFunction: Long => Long = getHashFunction(hash_function)
 }
@@ -29,7 +31,7 @@ object MeshfileAttributes {
   implicit val jsonFormat: OFormat[MeshfileAttributes] = Json.format[MeshfileAttributes]
 }
 
-class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService)
+class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVaultService: DataVaultService)
     extends FoxImplicits
     with NeuroglancerMeshHelper {
 
@@ -44,6 +46,18 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService)
       groupHeader <- JsonHelper.parseAs[Zarr3GroupHeader](groupHeaderBytes).toFox ?~> "Could not parse array header"
       meshfileAttributes <- groupHeader.meshfileAttributes.toFox ?~> "Could not parse meshfile attributes from zarr group file"
     } yield (meshfileAttributes.mesh_format, meshfileAttributes.lod_scale_multiplier, meshfileAttributes.transform)
+
+  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] =
+    for {
+      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
+      groupHeaderBytes <- (groupVaultPath / Zarr3GroupHeader.FILENAME_ZARR_JSON).readBytes()
+      groupHeader <- JsonHelper.parseAs[Zarr3GroupHeader](groupHeaderBytes).toFox ?~> "Could not parse array header"
+      meshfileAttributes <- groupHeader.meshfileAttributes.toFox ?~> "Could not parse meshfile attributes from zarr group file"
+      mappingNameOrEmpty <- meshfileAttributes.mapping_name match { // TODO Does Fox have a shortcut for this?
+        case Some(mappingName) => Fox.successful(mappingName)
+        case None              => Fox.empty
+      }
+    } yield mappingNameOrEmpty
 
   def listMeshChunksForSegment(meshFilePath: VaultPath, segmentId: Long, meshfileAttributes: MeshfileAttributes)(
       implicit ec: ExecutionContext,

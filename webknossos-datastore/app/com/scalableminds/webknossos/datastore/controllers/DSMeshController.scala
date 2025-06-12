@@ -62,14 +62,11 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          _ <- Fox.successful(())
-          mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-                                                                          datasetDirectoryName,
-                                                                          dataLayerName,
-                                                                          request.body.meshFile.name)
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
+          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFile.name)
+          mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey).shiftBox
           segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             dataSource.id,
             dataLayer,
@@ -80,7 +77,7 @@ class DSMeshController @Inject()(
             omitMissing = false
           )
           chunkInfos <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
-            neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFile.path, segmentIds)
+
           } else {
             meshFileService.listMeshChunksForSegmentsMerged(organizationId,
                                                             datasetDirectoryName,

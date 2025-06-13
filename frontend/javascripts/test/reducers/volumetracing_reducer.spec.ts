@@ -6,7 +6,7 @@ import * as UiActions from "viewer/model/actions/ui_actions";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import { describe, it, expect } from "vitest";
-import { initialState } from "test/fixtures/volumetracing_object";
+import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 
@@ -113,7 +113,7 @@ describe("VolumeTracing", () => {
         LARGEST_SEGMENT_ID,
       );
     const finishAnnotationStrokeAction =
-      VolumeTracingActions.finishAnnotationStrokeAction("tracingId");
+      VolumeTracingActions.finishAnnotationStrokeAction(VOLUME_TRACING_ID);
     const alteredState = update(initialState, {
       annotation: {
         volumes: {
@@ -160,7 +160,7 @@ describe("VolumeTracing", () => {
       },
     });
 
-    expect(getActiveMagIndexForLayer(alteredState, "tracingId") > 1).toBe(true);
+    expect(getActiveMagIndexForLayer(alteredState, VOLUME_TRACING_ID) > 1).toBe(true);
 
     // Try to change tool to Trace
     const newState = UiReducer(alteredState, setToolAction);
@@ -230,7 +230,7 @@ describe("VolumeTracing", () => {
         },
       },
     });
-    expect(getActiveMagIndexForLayer(alteredState, "tracingId") > 1).toBe(true);
+    expect(getActiveMagIndexForLayer(alteredState, VOLUME_TRACING_ID) > 1).toBe(true);
 
     const { newState, contourList } = prepareContourListTest(alteredState);
     expect(newState).not.toBe(initialState);

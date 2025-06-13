@@ -1,9 +1,10 @@
-import { App, Button } from "antd";
+import { App, Button, ConfigProvider } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
+import { ColorWKBlueZircon } from "theme";
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
@@ -20,16 +21,18 @@ function showWelcomeToast(notification: NotificationInstance) {
         </p>
         <p>Try out the annotation features and upload your own data with a free account.</p>
         <div>
-          <Button type="default" href="/auth/signup" target="_blank" rel="noopener noreferrer">
-            Create a free account
-          </Button>
+          <ConfigProvider theme={{ token: { colorPrimary: ColorWKBlueZircon } }}>
+            <Button type="primary" href="/auth/signup" target="_blank" rel="noopener noreferrer">
+              Create a free account
+            </Button>
+          </ConfigProvider>
           <span className="drawing-welcome-guy">
             <Button
-              ghost
-              type="default"
               href="https://webknossos.org/features"
               target="_blank"
               rel="noopener noreferrer"
+              color="default"
+              variant="solid"
               style={{
                 marginLeft: 12,
               }}

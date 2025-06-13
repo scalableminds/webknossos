@@ -61,6 +61,10 @@ function rotateOnAxisWithDistance(
   return M4x4.translate(distanceVecPositive, matrix, []);
 }
 
+function keepRotationInBounds(rotation: Vector3): Vector3 {
+  return Utils.map3((v) => Utils.mod(Math.round(v), 360), rotation);
+}
+
 function rotateReducer(
   state: WebknossosState,
   angle: number,
@@ -89,7 +93,7 @@ function rotateReducer(
         $set: updatedMatrix,
       },
       rotation: {
-        $set: updatedRotation,
+        $set: keepRotationInBounds(updatedRotation),
       },
     },
   });
@@ -184,7 +188,7 @@ export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
           $set: matrix,
         },
         rotation: {
-          $set: rotation,
+          $set: keepRotationInBounds(rotation),
         },
       },
     });

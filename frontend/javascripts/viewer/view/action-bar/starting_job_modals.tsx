@@ -47,6 +47,7 @@ import {
   rgbToHex,
 } from "libs/utils";
 import _ from "lodash";
+import messages from "messages";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_types";
@@ -57,7 +58,10 @@ import {
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
-import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
+import {
+  getTaskBoundingBoxes,
+  getUserBoundingBoxesFromState,
+} from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
@@ -1070,7 +1074,7 @@ export function NeuronSegmentationForm() {
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
-  const userAndTaskBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state)); // Includes task bounding boxes
+
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -1113,13 +1117,23 @@ export function NeuronSegmentationForm() {
             doSplitMergerEvaluation,
           );
         }
-        if (userAndTaskBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBox.id) == null) {
-          Toast.error(
-            "To use the split/merger evaluation, please select either a user-defined bounding box or a task bounding box.",
-          );
+
+        const state = Store.getState();
+        const userBoundingBoxCount = getUserBoundingBoxesFromState(state).length;
+
+        if (userBoundingBoxCount > 1) {
+          Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
           return;
         }
-        if (skeletonAnnotation == null || skeletonAnnotation?.trees.size() === 0) {
+
+        const taskBoundingBox = getTaskBoundingBoxes(state.annotation);
+        const taskBoundingBoxCount = state.task != null ? Object.values(taskBoundingBox).length : 0;
+        if (taskBoundingBoxCount + userBoundingBoxCount !== 1) {
+          Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
+          return;
+        }
+
+        if (skeletonAnnotation == null || skeletonAnnotation.trees.size() === 0) {
           Toast.error(
             "Please ensure that a skeleton tree exists within the selected bounding box.",
           );

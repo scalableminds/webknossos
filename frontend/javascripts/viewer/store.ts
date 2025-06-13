@@ -603,7 +603,7 @@ const store = createStore<WebknossosState, Action, unknown, unknown>(
 );
 
 export function startSaga(saga: Saga<any[]>) {
-  sagaMiddleware.run(saga);
+  return sagaMiddleware.run(saga);
 }
 export type StoreType = typeof store;
 

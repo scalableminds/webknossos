@@ -65,7 +65,7 @@ const initialTreeTwo: Tree = {
 export const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
-  tracingId: "tracingId",
+  tracingId: "skeletonTracingId",
   trees: new TreeMap([
     [1, initialTreeOne],
     [2, initialTreeTwo],

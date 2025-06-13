@@ -25,7 +25,7 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
 const serverVolumeTracing: ServerVolumeTracing = {
   typ: "Volume",
-  id: "tracingId",
+  id: "volumeTracingId",
   elementClass: "uint32",
   createdTimestamp: 0,
   boundingBox: {
@@ -107,7 +107,7 @@ describe("VolumeTracingSaga", () => {
       expect(action).toMatchObject({
         name: "updateActiveSegmentId",
         value: {
-          actionTracingId: "volumeTracingId-1234",
+          actionTracingId: volumeTracing.tracingId,
           activeSegmentId: 5,
         },
       });

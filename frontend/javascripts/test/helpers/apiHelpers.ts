@@ -20,7 +20,7 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
+import DATASET, { apiDatasetForVolumeTracing } from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "viewer/api/api_latest";
 import type { ModelType } from "viewer/model";
 
@@ -40,6 +40,12 @@ import app from "app";
 import { sendSaveRequestWithToken } from "admin/rest_api";
 import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import {
+  tracings as HYBRID_TRACINGS,
+  annotation as HYBRID_ANNOTATION,
+  annotationProto as HYBRID_ANNOTATION_PROTO,
+} from "test/fixtures/hybridtracing_server_objects";
+import { ServerTracing } from "types/api_types";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -117,6 +123,8 @@ function receiveJSONMockImplementation(
   }
 
   if (url === `/api/datasets/${annotationFixture.datasetId}`) {
+    // todop
+    // return Promise.resolve(_.cloneDeep(apiDatasetForVolumeTracing));
     return Promise.resolve(_.cloneDeep(DATASET));
   }
 
@@ -171,17 +179,22 @@ vi.mock("libs/keyboard", () => ({
 
 const modelData = {
   skeleton: {
-    tracing: SKELETON_TRACING,
+    tracings: [SKELETON_TRACING],
     annotation: SKELETON_ANNOTATION,
     annotationProto: SKELETON_ANNOTATION_PROTO,
   },
   volume: {
-    tracing: VOLUME_TRACING,
+    tracings: [VOLUME_TRACING],
     annotation: VOLUME_ANNOTATION,
     annotationProto: VOLUME_ANNOTATION_PROTO,
   },
+  hybrid: {
+    tracings: HYBRID_TRACINGS,
+    annotation: HYBRID_ANNOTATION,
+    annotationProto: HYBRID_ANNOTATION_PROTO,
+  },
   task: {
-    tracing: TASK_TRACING,
+    tracings: [TASK_TRACING],
     annotation: TASK_ANNOTATION,
     annotationProto: TASK_ANNOTATION_PROTO,
   },
@@ -229,7 +242,16 @@ export async function setupWebknossosForTesting(
     receiveJSONMockImplementation(url, options, annotationFixture),
   );
 
-  vi.mocked(parseProtoTracing).mockReturnValue(_.cloneDeep(modelData[mode].tracing));
+  vi.mocked(parseProtoTracing).mockImplementation(
+    (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
+      const { tracings } = modelData[mode];
+      const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
+      if (tracing == null) {
+        throw new Error(`Could not find tracing for ${annotationType}.`);
+      }
+      return tracing;
+    },
+  );
   vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
 
   setSceneController({

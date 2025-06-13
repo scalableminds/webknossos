@@ -33,7 +33,6 @@ import type {
   TracingType,
 } from "types/api_types";
 import type {
-  BoundingBoxType,
   ContourMode,
   ControlMode,
   FillMode,
@@ -61,6 +60,7 @@ import type {
   TreeMap,
 } from "./model/types/tree_types";
 
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 // Value imports
 import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
@@ -82,27 +82,23 @@ import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
-export type BoundingBoxObject = {
-  readonly topLeft: Vector3;
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
-};
-export type UserBoundingBoxToServer = {
+export type { BoundingBoxObject } from "types/bounding_box";
+
+export type UserBoundingBoxForServer = {
   boundingBox: BoundingBoxObject;
   id: number;
-  name?: string;
-  color?: Vector3;
+  name: string;
+  color: Vector3;
   isVisible?: boolean;
 };
 export type UserBoundingBoxWithoutIdMaybe = {
-  boundingBox?: BoundingBoxType;
+  boundingBox?: BoundingBoxMinMaxType;
   name?: string;
   color?: Vector3;
   isVisible?: boolean;
 };
 export type UserBoundingBoxWithoutId = {
-  boundingBox: BoundingBoxType;
+  boundingBox: BoundingBoxMinMaxType;
   name: string;
   color: Vector3;
   isVisible: boolean;
@@ -154,7 +150,7 @@ export type Annotation = {
 type TracingBase = {
   readonly createdTimestamp: number;
   readonly tracingId: string;
-  readonly boundingBox: BoundingBoxType | null | undefined;
+  readonly boundingBox: BoundingBoxMinMaxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
   readonly additionalAxes: AdditionalAxis[];
 };
@@ -583,7 +579,7 @@ export type WebknossosState = {
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
-const combinedReducers = reduceReducers(
+export const combinedReducer = reduceReducers(
   SettingsReducer,
   DatasetReducer,
   SkeletonTracingReducer,
@@ -598,16 +594,16 @@ const combinedReducers = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
-);
+) as Reducer;
 
 const store = createStore<WebknossosState, Action, unknown, unknown>(
-  enableBatching(combinedReducers),
+  enableBatching(combinedReducer as any),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
 export function startSaga(saga: Saga<any[]>) {
-  sagaMiddleware.run(saga);
+  return sagaMiddleware.run(saga);
 }
 export type StoreType = typeof store;
 

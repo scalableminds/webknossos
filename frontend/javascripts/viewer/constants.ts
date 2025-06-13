@@ -1,4 +1,4 @@
-import type { AdditionalCoordinate } from "types/api_types";
+export type AdditionalCoordinate = { name: string; value: number };
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
@@ -37,10 +37,6 @@ export type ColorObject = {
   g: number;
   b: number;
   a: number;
-};
-export type BoundingBoxType = {
-  min: Vector3;
-  max: Vector3;
 };
 export type Rect = {
   top: number;

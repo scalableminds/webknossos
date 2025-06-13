@@ -3,16 +3,9 @@ import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
-import type {
-  BoundingBoxType,
-  ColorObject,
-  Point3,
-  TypedArray,
-  Vector3,
-  Vector4,
-  Vector6,
-} from "viewer/constants";
+import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
 
@@ -276,7 +269,7 @@ export function getRandomColor(): Vector3 {
   return randomColor as any as Vector3;
 }
 
-export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {
   const [x, y, z, width, height, depth] = bb;
   return {
     min: [x, y, z],
@@ -284,11 +277,15 @@ export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   };
 }
 
-export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
+export function computeBoundingBoxFromBoundingBoxObject(
+  bb: BoundingBoxObject,
+): BoundingBoxMinMaxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
 }
 
-export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
+export function computeBoundingBoxObjectFromBoundingBox(
+  bb: BoundingBoxMinMaxType,
+): BoundingBoxObject {
   const boundingBoxArray = computeArrayFromBoundingBox(bb);
   return {
     topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],
@@ -298,7 +295,7 @@ export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): Bo
   };
 }
 
-export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
+export function computeArrayFromBoundingBox(bb: BoundingBoxMinMaxType): Vector6 {
   return [
     bb.min[0],
     bb.min[1],
@@ -309,11 +306,13 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
   ];
 }
 
-export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 {
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
-export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+export function aggregateBoundingBox(
+  boundingBoxes: Array<BoundingBoxObject>,
+): BoundingBoxMinMaxType {
   if (boundingBoxes.length === 0) {
     return {
       min: [0, 0, 0],
@@ -344,8 +343,8 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
 }
 
 export function areBoundingBoxesOverlappingOrTouching(
-  firstBB: BoundingBoxType,
-  secondBB: BoundingBoxType,
+  firstBB: BoundingBoxMinMaxType,
+  secondBB: BoundingBoxMinMaxType,
 ) {
   let areOverlapping = true;
 
@@ -423,10 +422,6 @@ export function stringToNumberArray(s: string): Array<number> {
   }
 
   return result;
-}
-
-export function concatVector3(a: Vector3, b: Vector3): Vector6 {
-  return [a[0], a[1], a[2], b[0], b[1], b[2]];
 }
 
 export function numberArrayToVector3(array: Array<number>): Vector3 {

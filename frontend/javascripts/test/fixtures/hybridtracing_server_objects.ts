@@ -1,78 +1,41 @@
 import {
-  type ServerVolumeTracing,
   type APIAnnotation,
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_types";
+import { tracing as skeletonTracing } from "./skeletontracing_server_objects";
+import { tracing as volumeTracing } from "./volumetracing_server_objects";
 
-const TRACING_ID = "volumeTracingId";
-
-// this is a uint16 segmentation layer
-export const tracing: ServerVolumeTracing = {
-  typ: "Volume",
-  activeSegmentId: 10000,
-  boundingBox: {
-    topLeft: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-    width: 10240,
-    height: 10240,
-    depth: 10240,
-  },
-  userBoundingBoxes: [],
-  segments: [],
-  segmentGroups: [],
-  createdTimestamp: 1529066010230,
-  editPosition: {
-    x: 3904,
-    y: 4282,
-    z: 2496,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  additionalAxes: [],
-  elementClass: "uint16",
-  id: "segmentation",
-  largestSegmentId: 21890,
-  zoomLevel: 0,
-  mags: [
-    { x: 1, y: 1, z: 1 },
-    { x: 2, y: 2, z: 2 },
-    { x: 4, y: 4, z: 4 },
-    { x: 8, y: 8, z: 8 },
-    { x: 16, y: 16, z: 16 },
-    { x: 32, y: 32, z: 32 },
-  ],
-  userStates: [],
-};
+export const tracings = [skeletonTracing, volumeTracing];
 
 export const annotation: APIAnnotation = {
-  datasetId: "66f3c82966010034942e9740",
   description: "",
+  datasetId: "66f3c82966010034942e9740",
   state: "Active",
   id: "598b52293c00009906f043e7",
   visibility: "Internal",
   modified: 1529066010230,
   name: "",
-  typ: "Explorational",
   teams: [],
+  typ: "Explorational",
   task: null,
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
     allowFinish: true,
     allowDownload: true,
+    allowSave: true,
   },
   annotationLayers: [
     {
-      name: "some volume name",
-      tracingId: TRACING_ID,
+      name: AnnotationLayerEnum.Skeleton,
+      tracingId: skeletonTracing.id,
+      typ: AnnotationLayerEnum.Skeleton,
+      stats: {},
+    },
+    {
+      name: AnnotationLayerEnum.Volume,
+      tracingId: volumeTracing.id,
       typ: AnnotationLayerEnum.Volume,
       stats: {},
     },
@@ -91,14 +54,14 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
   },
   settings: {
-    allowedModes: ["orthogonal"],
+    allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
     magRestrictions: {},
   },
-  tags: ["ROI2017_wkw", "volume"],
+  tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
@@ -106,13 +69,18 @@ export const annotation: APIAnnotation = {
 };
 
 export const annotationProto: APITracingStoreAnnotation = {
-  description: "volume-annotation-description",
+  description: "hybrid-annotation-description",
   version: 1,
   earliestAccessibleVersion: 0,
   annotationLayers: [
     {
-      tracingId: TRACING_ID,
-      name: "some volume name",
+      tracingId: skeletonTracing.id,
+      name: "skeleton layer name",
+      typ: AnnotationLayerEnum.Skeleton,
+    },
+    {
+      tracingId: volumeTracing.id,
+      name: "volume layer name",
       typ: AnnotationLayerEnum.Volume,
     },
   ],

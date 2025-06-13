@@ -108,7 +108,6 @@ import {
   createTreeAction,
   deleteBranchpointByIdAction,
   deleteEdgeAction,
-  deleteNodeAsUserAction,
   expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -138,6 +137,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {

@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Before starting a neuron segmentation with `Evaluation Settings` enabled, it is checked that a useful bounding box was selected and that some skeletons exist within the annotation, preventing the job from failing. [#8678](https://github.com/scalableminds/webknossos/pull/8678)
-- Before starting a neuron segmentation with `Evaluation Settings` enabled, it is checked that a useful bounding box was selected and that some skeletons exist within the annotation, preventing the job 
+
 ### Fixed
 - Improved efficiency of saving bounding box related changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)
 - When deleting a dataset, its caches are cleared, so that if a new dataset by the same name is uploaded afterwards, only new data is loaded. [#8638](https://github.com/scalableminds/webknossos/pull/8638)

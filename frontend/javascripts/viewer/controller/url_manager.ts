@@ -12,7 +12,7 @@ import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { ViewModeValues, MappingStatusEnum } from "viewer/constants";
-import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -289,10 +289,7 @@ class UrlManager {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
-    const flycamRotation = Utils.map3(
-      (e) => Utils.roundTo(e, 2),
-      getRotationInDegrees(state.flycam),
-    );
+    const flycamRotation = Utils.map3((e) => Utils.roundTo(e, 2), state.flycam.rotation);
     const rotation = {
       // Keep rotation state empty if no rotation is active to have shorter url hashes.
       rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,

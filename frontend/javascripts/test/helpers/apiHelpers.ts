@@ -20,7 +20,7 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET, { apiDatasetForVolumeTracing } from "../fixtures/dataset_server_object";
+import DATASET from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "viewer/api/api_latest";
 import type { ModelType } from "viewer/model";
 
@@ -37,7 +37,7 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
-import { sendSaveRequestWithToken } from "admin/rest_api";
+import { getDataset, sendSaveRequestWithToken } from "admin/rest_api";
 import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
@@ -45,7 +45,7 @@ import {
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
 } from "test/fixtures/hybridtracing_server_objects";
-import { ServerTracing } from "types/api_types";
+import type { ServerTracing } from "types/api_types";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -88,6 +88,7 @@ vi.mock("admin/rest_api.ts", async () => {
   (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
   return {
     ...actual,
+    getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
   };
 });
@@ -120,12 +121,6 @@ function receiveJSONMockImplementation(
     `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`
   ) {
     return Promise.resolve({});
-  }
-
-  if (url === `/api/datasets/${annotationFixture.datasetId}`) {
-    // todop
-    // return Promise.resolve(_.cloneDeep(apiDatasetForVolumeTracing));
-    return Promise.resolve(_.cloneDeep(DATASET));
   }
 
   if (url === "/api/userToken/generate" && options && options.method === "POST") {
@@ -179,21 +174,25 @@ vi.mock("libs/keyboard", () => ({
 
 const modelData = {
   skeleton: {
+    dataset: DATASET,
     tracings: [SKELETON_TRACING],
     annotation: SKELETON_ANNOTATION,
     annotationProto: SKELETON_ANNOTATION_PROTO,
   },
   volume: {
+    dataset: DATASET,
     tracings: [VOLUME_TRACING],
     annotation: VOLUME_ANNOTATION,
     annotationProto: VOLUME_ANNOTATION_PROTO,
   },
   hybrid: {
+    dataset: DATASET,
     tracings: HYBRID_TRACINGS,
     annotation: HYBRID_ANNOTATION,
     annotationProto: HYBRID_ANNOTATION_PROTO,
   },
   task: {
+    dataset: DATASET,
     tracings: [TASK_TRACING],
     annotation: TASK_ANNOTATION,
     annotationProto: TASK_ANNOTATION_PROTO,
@@ -236,15 +235,24 @@ export async function setupWebknossosForTesting(
   ).receivedDataPerSaveRequest;
 
   const webknossos = new WebknossosApi(Model);
-  const annotationFixture = modelData[mode].annotation;
+  const { tracings, annotationProto, dataset, annotation } = modelData[mode];
 
   vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
-    receiveJSONMockImplementation(url, options, annotationFixture),
+    receiveJSONMockImplementation(url, options, annotation),
+  );
+
+  vi.mocked(getDataset).mockImplementation(
+    async (
+      _datasetId: string,
+      _sharingToken?: string | null | undefined,
+      _options: RequestOptions = {},
+    ) => {
+      return _.cloneDeep(dataset);
+    },
   );
 
   vi.mocked(parseProtoTracing).mockImplementation(
     (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
-      const { tracings } = modelData[mode];
       const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
       if (tracing == null) {
         throw new Error(`Could not find tracing for ${annotationType}.`);
@@ -252,7 +260,7 @@ export async function setupWebknossosForTesting(
       return tracing;
     },
   );
-  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
+  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",

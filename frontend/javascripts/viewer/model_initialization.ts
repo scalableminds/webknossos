@@ -215,7 +215,8 @@ export async function initialize(
 
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
-  initializeDataset(initialFetch, dataset, serverTracings);
+  preprocessDataset(dataset, serverTracings);
+  initializeDataset(initialFetch, dataset);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     serverVolumeTracingIds,
@@ -447,11 +448,20 @@ function setInitialTool() {
   }
 }
 
-function initializeDataset(
-  initialFetch: boolean,
-  dataset: APIDataset,
-  serverTracings: Array<ServerTracing>,
-): void {
+export function preprocessDataset(dataset: APIDataset, serverTracings: Array<ServerTracing>) {
+  const mutableDataset = dataset as any as MutableAPIDataset;
+  const volumeTracings = getServerVolumeTracings(serverTracings);
+
+  if (volumeTracings.length > 0) {
+    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
+    mutableDataset.dataSource.dataLayers = newDataLayers;
+    validateVolumeLayers(volumeTracings, newDataLayers);
+  }
+
+  return mutableDataset;
+}
+
+function initializeDataset(initialFetch: boolean, dataset: APIDataset): void {
   let error;
 
   if (!dataset) {
@@ -477,21 +487,13 @@ function initializeDataset(
     datasetName: dataset.name,
     datasetId: dataset.id,
   });
-  const mutableDataset = dataset as any as MutableAPIDataset;
-  const volumeTracings = getServerVolumeTracings(serverTracings);
 
-  if (volumeTracings.length > 0) {
-    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
-    mutableDataset.dataSource.dataLayers = newDataLayers;
-    validateVolumeLayers(volumeTracings, newDataLayers);
-  }
-
-  Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
-  initializeAdditionalCoordinates(mutableDataset);
+  Store.dispatch(setDatasetAction(dataset));
+  initializeAdditionalCoordinates(dataset);
 }
 
-function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
-  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
+function initializeAdditionalCoordinates(dataset: APIDataset) {
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
     ({ name, bounds }) => ({
       name,

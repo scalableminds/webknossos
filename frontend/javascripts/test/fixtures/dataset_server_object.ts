@@ -56,6 +56,10 @@ const sampleSegmentationLayer: APISegmentationLayer = {
   additionalAxes: [],
 };
 
+// This is a segmentation layer object that could be directly
+// inserted into the store. Do not use this object if it's intended
+// to go through the normal model initialization because it does not
+// have a fallback property.
 export const sampleTracingLayer: APISegmentationLayer = {
   ...sampleSegmentationLayer,
   name: "volumeTracingId",
@@ -116,6 +120,6 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
 
 const apiDataset = createDataset([sampleColorLayer, sampleSegmentationLayer]);
 
-export const apiDatasetForVolumeTracing = createDataset([sampleTracingLayer]);
+export const apiDatasetForVolumeTracing = createDataset([sampleSegmentationLayer]);
 
 export default apiDataset;

@@ -5,12 +5,13 @@ import { combinedReducer } from "viewer/store";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
 import { apiDatasetForVolumeTracing } from "./dataset_server_object";
-import { tracing } from "./volumetracing_server_objects";
+import { tracing as serverVolumeTracing } from "./volumetracing_server_objects";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
+import { preprocessDataset } from "viewer/model_initialization";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
-const volumeTracing = serverVolumeToClientVolumeTracing(tracing, null, null);
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
 const notEmptyViewportRect = {
   top: 0,
@@ -113,5 +114,5 @@ const stateWithoutDatasetInitialization = update(defaultState, {
 
 export const initialState = combinedReducer(
   stateWithoutDatasetInitialization,
-  setDatasetAction(apiDatasetForVolumeTracing),
+  setDatasetAction(preprocessDataset(apiDatasetForVolumeTracing, [serverVolumeTracing])),
 );

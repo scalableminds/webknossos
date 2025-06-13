@@ -27,7 +27,7 @@ import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 
-const actionTracingId = "tracingId";
+const actionTracingId = "skeletonTracingId";
 
 function testDiffing(prevAnnotation: StoreAnnotation, nextAnnotation: StoreAnnotation) {
   return withoutUpdateActiveItemTracing(
@@ -75,7 +75,7 @@ const skeletonTreeOne: Tree = {
 const skeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
-  tracingId: "tracingId",
+  tracingId: "skeletonTracingId",
   trees: new TreeMap([[1, skeletonTreeOne]]),
   treeGroups: [],
   activeGroupId: null,

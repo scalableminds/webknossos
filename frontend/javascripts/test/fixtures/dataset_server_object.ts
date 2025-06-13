@@ -22,6 +22,8 @@ const sampleColorLayer: APIColorLayer = {
   additionalAxes: [],
 };
 
+export const sampleHdf5AgglomerateName = "sampleHdf5Mapping";
+// this is a uint32 segmentation layer
 const sampleSegmentationLayer: APISegmentationLayer = {
   name: "segmentation",
   category: "segmentation",
@@ -49,6 +51,7 @@ const sampleSegmentationLayer: APISegmentationLayer = {
     "mitochondria",
     "astrocyte-full",
   ],
+  agglomerates: [sampleHdf5AgglomerateName],
   tracingId: undefined,
   additionalAxes: [],
 };

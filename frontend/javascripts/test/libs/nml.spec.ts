@@ -31,7 +31,7 @@ const createDummyNode = (id: number): Node => ({
 const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
-  tracingId: "tracingId",
+  tracingId: "skeletonTracingId",
   cachedMaxNodeId: 7,
   trees: new DiffableMap([
     [

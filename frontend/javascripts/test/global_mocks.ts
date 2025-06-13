@@ -123,6 +123,7 @@ vi.mock("antd", () => {
     Dropdown: {},
     message: {
       hide: vi.fn(),
+      destroy: vi.fn(),
       // These return a "hide function"
       show: vi.fn(() => () => {}),
       loading: vi.fn(() => () => {}),

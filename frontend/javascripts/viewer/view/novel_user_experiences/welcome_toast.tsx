@@ -4,11 +4,12 @@ import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import { ColorWKBlueZircon, getAntdTheme } from "theme";
+import { ColorWKBlue, ColorWKBlueZircon, getAntdTheme } from "theme";
 
 const lightThemaWithCyanButton = {
   ...getAntdTheme("light"),
   token: { colorPrimary: ColorWKBlueZircon },
+  components: { Button: { primaryColor: ColorWKBlue } },
 };
 
 function showWelcomeToast(notification: NotificationInstance) {
@@ -35,7 +36,8 @@ function showWelcomeToast(notification: NotificationInstance) {
                 href="https://webknossos.org/features"
                 target="_blank"
                 rel="noopener noreferrer"
-                type="default"
+                type="primary"
+                ghost
                 style={{
                   marginLeft: 12,
                 }}

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import type { APIUser } from "types/api_types";
 import type { Theme } from "viewer/store";
 
-const ColorWKBlue = "#5660ff"; // WK ~blue/purple
+export const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
 export const ColorWKBlueZircon = "#59f8e8"; // WK Cyan

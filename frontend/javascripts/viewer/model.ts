@@ -370,8 +370,10 @@ export class WebKnossosModel {
         }
       }
 
-      Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
-      await deferred.promise();
+      if (tracingIds.size > 0) {
+        Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
+        await deferred.promise();
+      }
       return true;
     }
 

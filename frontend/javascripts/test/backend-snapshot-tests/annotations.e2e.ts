@@ -11,7 +11,7 @@ import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracin
 import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
-import { sendRequestWithToken, addVersionNumbers } from "viewer/model/sagas/save_saga";
+import { addVersionNumbers } from "viewer/model/sagas/save_saga";
 import * as UpdateActions from "viewer/model/sagas/update_actions";
 import * as api from "admin/rest_api";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
@@ -174,7 +174,7 @@ describe("Annotation API (E2E)", () => {
   });
 
   async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
-    return sendRequestWithToken(
+    return api.sendSaveRequestWithToken(
       `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
       {
         method: "POST",

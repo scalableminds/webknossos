@@ -642,13 +642,14 @@ function CollapsibleSplitMergerEvaluationSettings({
             <Row>
               <Col style={{ width: "100%" }}>
                 <div style={{ marginBottom: 24 }}>
-                  You can use the selected bounding box to evaluate the splits/mergers.
+                  You can evaluate splits/mergers on a given bounding box. <br />
+                  By default this is the user defined bounding box or the bounding box of a task.{" "}
                   <br />
-                  The selected bounding box should
+                  Thus your annotation should contain
                   <ul>
-                    <li>be either user-defined or the bounding box of a task</li>
+                    <li> either one user defined bounding box or the bounding box of a task</li>
                     <li>
-                      contain at least one neuron (sparse) or all neurons (dense) annotated as
+                      with at least one neuron (sparse) or all neurons (dense) annotated as
                       skeletons.
                     </li>
                   </ul>

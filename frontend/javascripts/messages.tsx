@@ -503,4 +503,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
   "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
     `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
+  "jobs.wrongNumberOfBoundingBoxes":
+    "To use the split/merger evaluation, make sure to have exactly one bounding box, either user-defined or from a task.",
 };

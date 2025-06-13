@@ -22,20 +22,9 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import {
-  Button,
-  Card,
-  Col,
-  Input,
-  Modal,
-  Row,
-  Spin,
-  Table,
-  type TableProps,
-  Tag,
-  Tooltip,
-} from "antd";
+import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
 import type { SearchProps } from "antd/lib/input";
+import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import TextWithDescription from "components/text_with_description";
@@ -653,7 +642,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     const disabledColor = { color: "var(--ant-color-text-disabled)" };
-    const columns: TableProps["columns"] = [
+    const columns: ColumnType<APIAnnotationInfo>[] = [
       {
         title: "ID",
         dataIndex: "id",

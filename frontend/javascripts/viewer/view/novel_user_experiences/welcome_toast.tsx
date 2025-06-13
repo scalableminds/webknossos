@@ -1,9 +1,16 @@
-import { App, Button } from "antd";
+import { App, Button, ConfigProvider } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
+import { ColorWKBlue, ColorWKBlueZircon, getAntdTheme } from "theme";
+
+const lightThemaWithCyanButton = {
+  ...getAntdTheme("light"),
+  token: { colorPrimary: ColorWKBlueZircon },
+  components: { Button: { primaryColor: ColorWKBlue } },
+};
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
@@ -20,23 +27,25 @@ function showWelcomeToast(notification: NotificationInstance) {
         </p>
         <p>Try out the annotation features and upload your own data with a free account.</p>
         <div>
-          <Button type="default" href="/auth/signup" target="_blank" rel="noopener noreferrer">
-            Create a free account
-          </Button>
-          <span className="drawing-welcome-guy">
-            <Button
-              ghost
-              type="default"
-              href="https://webknossos.org/features"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                marginLeft: 12,
-              }}
-            >
-              Learn More
+          <ConfigProvider theme={lightThemaWithCyanButton}>
+            <Button type="primary" href="/auth/signup" target="_blank" rel="noopener noreferrer">
+              Create a free account
             </Button>
-          </span>
+            <span className="drawing-welcome-guy">
+              <Button
+                href="https://webknossos.org/features"
+                target="_blank"
+                rel="noopener noreferrer"
+                type="primary"
+                ghost
+                style={{
+                  marginLeft: 12,
+                }}
+              >
+                Learn More
+              </Button>
+            </span>
+          </ConfigProvider>
         </div>
       </div>
     ),

@@ -23,6 +23,7 @@ import {
   updateDatasetDefaultConfiguration,
 } from "admin/rest_api";
 import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
+import type { SwitchChangeEventHandler } from "antd/es/switch";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
@@ -564,10 +565,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return isOnlyGivenLayerVisible;
   };
 
-  getEnableDisableLayerSwitch = (
-    isDisabled: boolean,
-    onChange: (arg0: boolean, arg1: React.MouseEvent<HTMLButtonElement>) => void,
-  ) => (
+  getEnableDisableLayerSwitch = (isDisabled: boolean, onChange: SwitchChangeEventHandler) => (
     <FastTooltip title={isDisabled ? "Show" : "Hide"} placement="top">
       {/* This div is necessary for the tooltip to be displayed */}
       <div
@@ -637,7 +635,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
 
-    const onChange = (value: boolean, event: React.MouseEvent<HTMLButtonElement>) => {
+    const onChange = (
+      value: boolean,
+      event: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>,
+    ) => {
       if (!event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
         setSingleLayerVisibility(value);
         return;

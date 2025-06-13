@@ -15,9 +15,10 @@ export const warningColors: React.CSSProperties = {
   borderColor: "rgb(241, 122, 39)",
 };
 
+// TODO: write tests for reproducable
+
 const PopoverContent: React.FC<EmptyObject> = () => {
   const rotation = useWkSelector((state) => state.flycam.rotation);
-
   const handleChangeRotation = useCallback((rotation: Vector3) => {
     Store.dispatch(setRotationAction(rotation));
   }, []);

@@ -1,10 +1,15 @@
 import { V3 } from "libs/mjs";
-import { values } from "libs/utils";
+import { map3, values } from "libs/utils";
 import _ from "lodash";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
-import { OrthoViews, OrthoViewToNumber, OrthoBaseRotations } from "viewer/constants";
+import {
+  OrthoViews,
+  OrthoViewToNumber,
+  OrthoBaseRotations,
+  NumberToOrthoView,
+} from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
@@ -301,6 +306,30 @@ export function getOptionsForCreateSkeletonNode(
     state.flycam,
     initialViewportRotation,
   );
+
+  // TODOM: delete me
+  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, rotationInDegree);
+  const nodeRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(...nodeRotationRadian, "ZYX"),
+  );
+  const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport],
+  );
+  // Invert the rotation of the viewport to get the rotation configured during node creation.
+  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
+  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
+    inverseViewportRotationQuaternion,
+  );
+  const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
+  const flycamOnlyRotationInDegree = map3(
+    Math.round,
+    map3(THREE.MathUtils.radToDeg, [
+      flycamOnlyRotation.x,
+      flycamOnlyRotation.y,
+      flycamOnlyRotation.z,
+    ]),
+  );
+  console.log("calculated the following rotation back of the node", flycamOnlyRotationInDegree);
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;

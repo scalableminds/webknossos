@@ -352,7 +352,7 @@ export function getFlycamRotationWithAppendedRotation(
   // prependedRotation must be in ZYX order.
   rotationToAppend: THREE.Euler,
 ): Vector3 {
-  const flycamRotation = getRotationInRadian(flycam);
+  const flycamRotation = map3(THREE.MathUtils.degToRad, flycam.rotation);
   flycamRotationEuler.set(...flycamRotation, "ZYX");
   additionalRotationQuaternion.setFromEuler(rotationToAppend);
   totalRotationQuaternion.setFromEuler(flycamRotationEuler).multiply(additionalRotationQuaternion);
@@ -362,6 +362,14 @@ export function getFlycamRotationWithAppendedRotation(
     rotationEuler.y,
     rotationEuler.z,
   ]);
+  console.log(
+    "flycam rotation",
+    flycamRotation,
+    "viewport rotation",
+    rotationToAppend,
+    "resulting rotation",
+    rotationInDegree,
+  );
   return rotationInDegree;
 }
 

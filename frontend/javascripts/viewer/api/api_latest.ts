@@ -53,11 +53,12 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import * as THREE from "three";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getPosition,
-  getRotationInDegrees,
+  getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
@@ -1413,30 +1414,33 @@ class TracingApi {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;
     const curPosition = getPosition(flycam);
-    const curRotation = getRotationInDegrees(flycam);
+    const curRotation = getRotationInRadian(flycam); //Utils.map3(THREE.MathUtils.degToRad, flycam.rotation);
+    const startQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...curRotation, "ZYX"),
+    );
     const isNotRotated = V3.equals(curRotation, [0, 0, 0]);
     const dimensionToSkip =
       skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
-    if (!Array.isArray(rotation)) rotation = curRotation;
+    if (!Array.isArray(rotation)) {
+      rotation = curRotation;
+    } else {
+      rotation = Utils.map3(THREE.MathUtils.degToRad, rotation);
+    }
+    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation, "ZYX"));
     rotation = this.getShortestRotation(curRotation, rotation);
+    console.log(startQuaternion, endQuaternion, rotation);
 
     type Tweener = {
       positionX: number;
       positionY: number;
       positionZ: number;
-      rotationX: number;
-      rotationY: number;
-      rotationZ: number;
     };
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
       positionZ: curPosition[2],
-      rotationX: curRotation[0],
-      rotationY: curRotation[1],
-      rotationZ: curRotation[2],
     });
     tween
       .to(
@@ -1444,18 +1448,30 @@ class TracingApi {
           positionX: position[0],
           positionY: position[1],
           positionZ: position[2],
-          rotationX: rotation[0],
-          rotationY: rotation[1],
-          rotationZ: rotation[2],
         },
         200,
       )
-      .onUpdate(function (this: Tweener) {
+      .onUpdate(function (this: Tweener, t: number) {
         // needs to be a normal (non-bound) function
         Store.dispatch(
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
-        Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
+        // Interpolating rotation via quaternions to get shortest rotation.
+        const interpolatedQuaternion = new THREE.Quaternion().slerpQuaternions(
+          startQuaternion,
+          endQuaternion,
+          t,
+        );
+        const interpolatedEuler = new THREE.Euler().setFromQuaternion(
+          interpolatedQuaternion,
+          "ZYX",
+        );
+        const interpolatedEulerInDegree = Utils.map3(THREE.MathUtils.radToDeg, [
+          interpolatedEuler.x,
+          interpolatedEuler.y,
+          interpolatedEuler.z,
+        ]);
+        Store.dispatch(setRotationAction(interpolatedEulerInDegree));
       })
       .start();
   }

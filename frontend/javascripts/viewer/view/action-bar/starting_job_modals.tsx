@@ -1126,9 +1126,8 @@ export function NeuronSegmentationForm() {
           return;
         }
 
-        const taskBoundingBox = getTaskBoundingBoxes(state.annotation);
-        const taskBoundingBoxCount = state.task != null ? Object.values(taskBoundingBox).length : 0;
-        if (taskBoundingBoxCount + userBoundingBoxCount !== 1) {
+        const taskBoundingBoxes = getTaskBoundingBoxes(state);
+        if (Object.values(taskBoundingBoxes).length + userBoundingBoxCount !== 1) {
           Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
           return;
         }

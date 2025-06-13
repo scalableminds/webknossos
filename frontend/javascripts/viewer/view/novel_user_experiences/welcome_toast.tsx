@@ -4,7 +4,12 @@ import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import { ColorWKBlueZircon } from "theme";
+import { ColorWKBlueZircon, getAntdTheme } from "theme";
+
+const lightThemaWithCyanButton = {
+  ...getAntdTheme("light"),
+  token: { colorPrimary: ColorWKBlueZircon },
+};
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
@@ -21,25 +26,24 @@ function showWelcomeToast(notification: NotificationInstance) {
         </p>
         <p>Try out the annotation features and upload your own data with a free account.</p>
         <div>
-          <ConfigProvider theme={{ token: { colorPrimary: ColorWKBlueZircon } }}>
+          <ConfigProvider theme={lightThemaWithCyanButton}>
             <Button type="primary" href="/auth/signup" target="_blank" rel="noopener noreferrer">
               Create a free account
             </Button>
+            <span className="drawing-welcome-guy">
+              <Button
+                href="https://webknossos.org/features"
+                target="_blank"
+                rel="noopener noreferrer"
+                type="default"
+                style={{
+                  marginLeft: 12,
+                }}
+              >
+                Learn More
+              </Button>
+            </span>
           </ConfigProvider>
-          <span className="drawing-welcome-guy">
-            <Button
-              href="https://webknossos.org/features"
-              target="_blank"
-              rel="noopener noreferrer"
-              color="default"
-              variant="solid"
-              style={{
-                marginLeft: 12,
-              }}
-            >
-              Learn More
-            </Button>
-          </span>
         </div>
       </div>
     ),

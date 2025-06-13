@@ -4,17 +4,13 @@ import _ from "lodash";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
-import {
-  OrthoViews,
-  OrthoViewToNumber,
-  RelativeViewportRotationToXYViewport,
-} from "viewer/constants";
+import { OrthoViews, OrthoViewToNumber, OrthoBaseRotations } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
-  getFlycamRotationWithPrependedRotation,
+  getFlycamRotationWithAppendedRotation,
   getPosition,
   getRotationInRadian,
   isMagRestrictionViolated,
@@ -300,8 +296,8 @@ export function getOptionsForCreateSkeletonNode(
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
   const initialViewportRotation =
-    RelativeViewportRotationToXYViewport[activeViewport || state.viewModeData.plane.activeViewport];
-  const rotationInDegree = getFlycamRotationWithPrependedRotation(
+    OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport];
+  const rotationInDegree = getFlycamRotationWithAppendedRotation(
     state.flycam,
     initialViewportRotation,
   );

@@ -342,23 +342,21 @@ function _isRotated(flycam: Flycam): boolean {
 
 // Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
 const flycamRotationEuler = new THREE.Euler(0, 0, 0);
-const flycamRotationQuaternion = new THREE.Quaternion();
+const additionalRotationQuaternion = new THREE.Quaternion();
 const totalRotationQuaternion = new THREE.Quaternion();
-const initialViewportRotationEuler = new THREE.Euler();
+const totalRotationEuler = new THREE.Euler();
 
 // Memoizing this function makes no sense as its result will always be used to change the flycam rotation.
-export function getFlycamRotationWithPrependedRotation(
+export function getFlycamRotationWithAppendedRotation(
   flycam: Flycam,
   // prependedRotation must be in ZYX order.
-  prependedRotation: THREE.Euler,
+  rotationToAppend: THREE.Euler,
 ): Vector3 {
   const flycamRotation = getRotationInRadian(flycam);
-  flycamRotationQuaternion.setFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
-  totalRotationQuaternion.setFromEuler(prependedRotation).multiply(flycamRotationQuaternion);
-  const rotationEuler = initialViewportRotationEuler.setFromQuaternion(
-    totalRotationQuaternion,
-    "ZYX",
-  );
+  flycamRotationEuler.set(...flycamRotation, "ZYX");
+  additionalRotationQuaternion.setFromEuler(rotationToAppend);
+  totalRotationQuaternion.setFromEuler(flycamRotationEuler).multiply(additionalRotationQuaternion);
+  const rotationEuler = totalRotationEuler.setFromQuaternion(totalRotationQuaternion, "ZYX");
   const rotationInDegree = map3(THREE.MathUtils.radToDeg, [
     rotationEuler.x,
     rotationEuler.y,

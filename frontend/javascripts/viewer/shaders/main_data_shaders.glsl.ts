@@ -492,8 +492,8 @@ void main() {
   float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
-  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., PLANE_WIDTH/2., 0., 1.)).xyz);
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
@@ -523,7 +523,7 @@ void main() {
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-  if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 1.) {
+  // TODOM: ask why this special case calculation is needed anyway.
     transWorldCoord.x =
       (
         // Left border of left-most bucket (probably outside of visible plane)
@@ -533,9 +533,7 @@ void main() {
       ) * voxelSizeFactorUVW.x;
 
     transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
-  }
 
-  if (index.y >= 1. && index.y <= PLANE_SUBDIVISION - 1.) {
     transWorldCoord.y =
       (
         // Top border of top-most bucket (probably outside of visible plane)
@@ -544,7 +542,6 @@ void main() {
         + index.y * d.y
       ) * voxelSizeFactorUVW.y;
     transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
-  }
 
   worldCoord = vec4(transDim(transWorldCoord), 1.);
 

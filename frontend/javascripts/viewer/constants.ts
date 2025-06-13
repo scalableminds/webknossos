@@ -132,17 +132,32 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0, "ZYX"),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0, "ZYX"),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler(Math.PI / 2, 0, 0, "ZYX"),
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
-export const RelativeViewportRotationToXYViewport = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0, "ZYX"),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (1 / 2) * Math.PI, 0, "ZYX"),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler((3 / 2) * Math.PI, 0, 0, "ZYX"),
-  [OrthoViews.TDView]: new THREE.Euler(0, 0, 0, "ZYX"),
+function correctCameraViewingDirection(baseEuler: THREE.Euler): THREE.Euler {
+  const cameraCorrectionEuler = new THREE.Euler(Math.PI, 0, 0, "ZYX");
+  const correctedEuler = new THREE.Euler();
+  correctedEuler.setFromRotationMatrix(
+    new THREE.Matrix4()
+      .makeRotationFromEuler(baseEuler)
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
+    "ZYX",
+  );
+
+  return correctedEuler;
+}
+
+// The orthographic cameras point towards negative z direction per default. To make it look into positive direction of the z axis,
+// an additional rotation around x axis by 180° is needed. Th
+export const OrthoCamerasBaseRotations = {
+  [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
+  [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),
+  [OrthoViews.PLANE_XZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XZ]),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
 export type BorderTabType = {

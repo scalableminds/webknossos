@@ -5,7 +5,11 @@ import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
-import { OrthoBaseRotations, OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import {
+  OrthoCamerasBaseRotations,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+} from "viewer/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -181,7 +185,7 @@ class CameraController extends React.PureComponent<Props> {
     this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
     this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
     for (const viewport of OrthoViewValuesWithoutTDView) {
-      this.baseRotationMatrix.makeRotationFromEuler(OrthoBaseRotations[viewport]);
+      this.baseRotationMatrix.makeRotationFromEuler(OrthoCamerasBaseRotations[viewport]);
       this.props.cameras[viewport].setRotationFromMatrix(
         this.totalRotationMatrix
           .identity()

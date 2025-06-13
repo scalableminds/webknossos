@@ -25,7 +25,7 @@ import {
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import {
   NumberToOrthoView,
-  RelativeViewportRotationToXYViewport,
+  OrthoBaseRotations,
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
@@ -104,7 +104,7 @@ function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>):
     new THREE.Euler(...nodeRotationRadian, "ZYX"),
   );
   const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    RelativeViewportRotationToXYViewport[NumberToOrthoView[activeNode.viewport]],
+    OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
   );
   const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
   // Invert the rotation of the viewport to get the rotation configured during node creation.

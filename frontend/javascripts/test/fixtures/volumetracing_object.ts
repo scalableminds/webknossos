@@ -1,31 +1,16 @@
 import update from "immutability-helper";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { combinedReducer, type VolumeTracing } from "viewer/store";
-import DiffableMap from "libs/diffable_map";
+import { combinedReducer } from "viewer/store";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
 import { apiDatasetForVolumeTracing } from "./dataset_server_object";
+import { tracing } from "./volumetracing_server_objects";
+import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
-const volumeTracing: VolumeTracing = {
-  type: "volume",
-  segments: new DiffableMap(),
-  segmentGroups: [],
-  hasSegmentIndex: true,
-  contourTracingMode: "DRAW",
-  hideUnregisteredSegments: false,
-  activeCellId: 0,
-  largestSegmentId: 0,
-  contourList: [],
-  lastLabelActions: [],
-  tracingId: VOLUME_TRACING_ID,
-  createdTimestamp: 1234,
-  boundingBox: { min: [0, 1, 2], max: [10, 11, 12] },
-  userBoundingBoxes: [],
-  additionalAxes: [],
-} as const;
+const volumeTracing = serverVolumeToClientVolumeTracing(tracing, null, null);
 
 const notEmptyViewportRect = {
   top: 0,

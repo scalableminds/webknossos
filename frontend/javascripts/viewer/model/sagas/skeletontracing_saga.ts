@@ -106,10 +106,11 @@ function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>):
   const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
     OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
   );
-  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
   // Invert the rotation of the viewport to get the rotation configured during node creation.
-  const rotationWithoutQuaternion =
-    inverseViewportRotationQuaternion.multiply(nodeRotationQuaternion);
+  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
+  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
+    inverseViewportRotationQuaternion,
+  );
   const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
   const flycamOnlyRotationInDegree = map3(
     Math.round,

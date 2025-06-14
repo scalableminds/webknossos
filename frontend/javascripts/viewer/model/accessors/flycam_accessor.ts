@@ -309,7 +309,6 @@ function _getRotationInRadianFromMatrix(flycamMatrix: Matrix4x4, invertZ: boolea
   const object = new THREE.Object3D();
   flycamMatrixObject.fromArray(flycamMatrix).transpose();
   object.applyMatrix4(flycamMatrixObject);
-  // Must be used with zyx euler order when using for rotation calculation.
   return [
     mod(object.rotation.x, Math.PI * 2),
     mod(object.rotation.y, Math.PI * 2),

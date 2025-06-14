@@ -12,16 +12,18 @@ function ChangeEmailView() {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
 
-  async function changeEmail(newEmail: string) {
+  async function changeEmail(newEmail: string, password: string) {
     const newUser = Object.assign({}, activeUser, {
       email: newEmail,
+      password,
     });
     return updateUser(newUser);
   }
 
   function onFinish() {
     const newEmail = form.getFieldValue("newEmail");
-    changeEmail(newEmail)
+    const password = form.getFieldValue("password");
+    changeEmail(newEmail, password)
       .then(() => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
@@ -33,9 +35,9 @@ function ChangeEmailView() {
         window.location.href = "/auth/login";
       })
       .catch((error) => {
-        Toast.error(
-          "An unexpected error occurred while changing the email address: " + error.message,
-        );
+        const errorMsg = "An unexpected error occurred while changing the email address.";
+        Toast.error(errorMsg);
+        console.error(errorMsg, error);
       });
   }
 

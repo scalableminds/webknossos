@@ -3,7 +3,6 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
@@ -16,6 +15,10 @@ import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import models.user.Theme.Theme
+import net.liftweb.common.{Box, Failure, Full}
+import play.silhouette.api.exceptions.ProviderException
+import play.silhouette.api.util.Credentials
+import play.silhouette.impl.providers.CredentialsProvider
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
@@ -23,6 +26,7 @@ import scala.concurrent.ExecutionContext
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
+                               credentialsProvider: CredentialsProvider,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
                                teamMembershipService: TeamMembershipService,
@@ -175,6 +179,7 @@ class UserController @Inject()(userService: UserService,
     ((__ \ "firstName").readNullable[String] and
       (__ \ "lastName").readNullable[String] and
       (__ \ "email").readNullable[String] and
+      (__ \ "password").readNullable[String] and
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
@@ -204,14 +209,48 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(true)
     else userService.isEditableBy(user, issuingUser)
 
+  private def checkPasswordIfEmailChangedByNonAdmin(
+      user: User,
+      passwordOpt: Option[String],
+      oldEmail: String,
+      email: String)(issuingUser: User)(implicit m: MessagesProvider): Fox[Unit] = {
+
+    val isAdminAndNotSameUser = issuingUser.isAdminOf(user) && user._id != issuingUser._id
+
+    if (oldEmail == email || isAdminAndNotSameUser) {
+      Fox.successful(())
+    } else if (user._id == issuingUser._id) {
+      passwordOpt match {
+        case Some(password) =>
+          val credentials = Credentials(user._id.id, password)
+          Fox.fromFutureBox(
+            credentialsProvider
+              .authenticate(credentials)
+              .flatMap { loginInfo =>
+                userService.retrieve(loginInfo).map {
+                  case Some(user) => {
+                    println("found user", user)
+                    Full(())
+                  }
+                  case None => Failure(Messages("error.noUser"))
+                }
+              }
+              .recover {
+                case _: ProviderException =>
+                  Failure(Messages("error.invalidCredentials"))
+              })
+        case None => Fox.failure(Messages("error.passwordsDontMatch"))
+      }
+    } else {
+      Fox.failure(Messages("notAllowed"))
+    }
+  }
+
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
       issuingUser: User): Boolean =
     if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
-
-  private def checkAdminOrSelfUpdates(user: User, oldEmail: String, email: String)(issuingUser: User): Boolean =
-    if (oldEmail == email) true else issuingUser.isAdminOf(user) || issuingUser._id == user._id
 
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
@@ -265,6 +304,7 @@ class UserController @Inject()(userService: UserService,
       case (firstNameOpt,
             lastNameOpt,
             emailOpt,
+            passwordOpt,
             isActiveOpt,
             isAdminOpt,
             isDatasetManagerOpt,
@@ -295,7 +335,7 @@ class UserController @Inject()(userService: UserService,
                                            oldAssignedMemberships)(issuingUser) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox
             .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- Fox.fromBool(checkAdminOrSelfUpdates(user, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- checkPasswordIfEmailChangedByNonAdmin(user, passwordOpt, oldEmail, email)(issuingUser)
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)

@@ -71,6 +71,11 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map -= id
     }
 
+  def pop(id: K): Option[V] =
+    map.synchronized {
+      map remove id
+    }
+
   private def removeMultiple(ids: Seq[K]): map.type =
     map.synchronized {
       map --= ids

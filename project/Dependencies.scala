@@ -105,12 +105,15 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.5"
+    "org.postgresql" % "postgresql" % "42.7.5",
+    /// WebAuthn Dependencies
+    "com.webauthn4j" % "webauthn4j-core" % "0.29.2.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
     // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
-    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0"
+    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0",
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
   )
 
 }

@@ -795,7 +795,7 @@ class AnnotationService @Inject()(
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
       tracingStore <- tracingStoreDAO.findFirst
       annotationSource = AnnotationSource(
-        id = annotation.id,
+        id = annotation._id,
         annotationLayers = annotation.annotationLayers,
         datasetDirectoryName = dataset.directoryName,
         organizationId = organization._id,

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -37,10 +38,10 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
   private def temporaryTracingIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
-  private def temporaryAnnotationIdKey(tracingId: String) =
-    s"temporaryTracingId___$tracingId"
+  private def temporaryAnnotationIdKey(annotationId: ObjectId) =
+    s"temporaryAnnotationId___$annotationId"
 
-  def getAnnotation(annotationId: String): Fox[AnnotationProto] = annotationStore.get(annotationId).toFox
+  def getAnnotation(annotationId: ObjectId): Fox[AnnotationProto] = annotationStore.get(annotationId.toString).toFox
 
   def getVolume(tracingId: String): Fox[VolumeTracing] = volumeStore.get(tracingId).toFox
 
@@ -80,8 +81,8 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
     Fox.successful(())
   }
 
-  def saveAnnotationProto(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] = {
-    annotationStore.insert(annotationId, annotationProto, Some(temporaryStoreTimeout))
+  def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
+    annotationStore.insert(annotationId.toString, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
     Fox.successful(())
   }
@@ -93,7 +94,7 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
     Fox.successful(())
   }
 
-  def isTemporaryAnnotation(annotationId: String): Fox[Boolean] =
+  def isTemporaryAnnotation(annotationId: ObjectId): Fox[Boolean] =
     temporaryTracingIdStore.contains(temporaryAnnotationIdKey(annotationId))
 
   def isTemporaryTracing(tracingId: String): Fox[Boolean] =
@@ -107,7 +108,7 @@ class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[Ske
   private def registerTracingId(tracingId: String) =
     temporaryTracingIdStore.insertKey(temporaryTracingIdKey(tracingId), Some(temporaryIdStoreTimeout))
 
-  private def registerAnnotationId(annotationId: String) =
+  private def registerAnnotationId(annotationId: ObjectId) =
     temporaryTracingIdStore.insertKey(temporaryAnnotationIdKey(annotationId), Some(temporaryIdStoreTimeout))
 
 }

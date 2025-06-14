@@ -1,7 +1,7 @@
 import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import * as Utils from "libs/utils";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
 import type { Vector3, Vector4 } from "viewer/constants";
@@ -36,6 +36,12 @@ const ThrottledColorPicker = ({
 }) => {
   const [value, localSetValue] = useState(color);
   const throttledSetValue = useThrottledCallback(onChange, [onChange], 20);
+
+  // Sync local state when external color prop changes
+  useEffect(() => {
+    localSetValue(color);
+  }, [color]);
+
   const setValue = (newValue: string) => {
     localSetValue(newValue);
     throttledSetValue(newValue);
@@ -43,7 +49,7 @@ const ThrottledColorPicker = ({
   return (
     <div style={{ marginRight: 10 }}>
       <HexColorPicker color={value} onChange={setValue} />
-      <HexColorInput color={color} onChange={setValue} style={inputStyle} />
+      <HexColorInput color={value} onChange={setValue} style={inputStyle} />
     </div>
   );
 };
@@ -90,6 +96,12 @@ const ThrottledRGBAColorPicker = ({
 }) => {
   const [value, localSetValue] = useState(color);
   const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor, value], 20);
+
+  // Sync local state when external color prop changes
+  useEffect(() => {
+    localSetValue(color);
+  }, [color]);
+
   const setValue = (newValue: RgbaColor) => {
     localSetValue(newValue);
     throttledSetValue(newValue);

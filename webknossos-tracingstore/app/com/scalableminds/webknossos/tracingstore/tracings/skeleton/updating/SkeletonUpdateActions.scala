@@ -168,15 +168,17 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
+  private lazy val nodeIdsSet = nodeIds.toSet
+
   // this should only move a whole component,
   // that is disjoint from the rest of the tree
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val sourceTree = treeById(tracing, sourceId)
     val targetTree = treeById(tracing, targetId)
 
-    val (movedNodes, remainingNodes) = sourceTree.nodes.partition(nodeIds contains _.id)
+    val (movedNodes, remainingNodes) = sourceTree.nodes.partition(n => nodeIdsSet.contains(n.id))
     val (movedEdges, remainingEdges) =
-      sourceTree.edges.partition(e => nodeIds.contains(e.source) && nodeIds.contains(e.target))
+      sourceTree.edges.partition(e => nodeIdsSet.contains(e.source) && nodeIdsSet.contains(e.target))
     val updatedSource = sourceTree.copy(nodes = remainingNodes, edges = remainingEdges)
     val updatedTarget =
       targetTree.copy(nodes = targetTree.nodes.concat(movedNodes), edges = targetTree.edges.concat(movedEdges))

@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { FlycamMatrixWithDefaultRotation } from "./hybridtracing_object";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
@@ -105,6 +106,13 @@ export const initialState = update(defaultState, {
       $set: {
         inputCatcherRect: notEmptyViewportRect,
       },
+    },
+  },
+  flycam: {
+    currentMatrix: {
+      // Apply the default 180 z axis rotation to get correct result in ortho related tests.
+      // This ensures the calculated flycam rotation is [0, 0, 0]. Otherwise it would be  [0, 0, 180].
+      $set: FlycamMatrixWithDefaultRotation,
     },
   },
 });

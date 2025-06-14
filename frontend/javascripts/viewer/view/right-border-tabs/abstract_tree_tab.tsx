@@ -1,115 +1,93 @@
 import { Button } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
-import React, { Component } from "react";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import type { EmptyObject } from "types/globals";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
-import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import type { NodeListItem } from "viewer/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "viewer/view/right-border-tabs/abstract_tree_renderer";
 
-type StateProps = {
-  dispatch: Dispatch<any>;
-  skeletonTracing: SkeletonTracing | null | undefined;
-};
-type Props = StateProps;
-type State = {
-  visible: boolean;
-};
+const AbstractTreeTab: React.FC<EmptyObject> = () => {
+  const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const nodeListRef = useRef<Array<NodeListItem>>([]);
+  const dispatch = useDispatch();
 
-class AbstractTreeTab extends Component<Props, State> {
-  canvas: HTMLCanvasElement | null | undefined;
-  nodeList: Array<NodeListItem> = [];
-  state: State = {
-    visible: false,
-  };
+  const drawTree = _.throttle(
+    useCallback(() => {
+      if (!skeletonTracing || !isVisible) {
+        return;
+      }
 
-  componentDidMount() {
-    window.addEventListener("resize", this.drawTree, false);
-    this.drawTree();
-  }
+      const { activeTreeId, activeNodeId, trees } = skeletonTracing;
+      const canvas = canvasRef.current;
 
-  componentDidUpdate() {
-    this.drawTree();
-  }
+      if (canvas) {
+        nodeListRef.current = AbstractTreeRenderer.drawTree(
+          canvas,
+          activeTreeId != null ? trees.getNullable(activeTreeId) : null,
+          activeNodeId,
+          [canvas.offsetWidth, canvas.offsetHeight],
+        );
+      }
+    }, [skeletonTracing, isVisible]),
+    1000,
+  );
 
-  componentWillUnmount() {
-    window.removeEventListener("resize", this.drawTree, false);
-  }
+  useEffect(() => {
+    window.addEventListener("resize", drawTree, false);
+    drawTree();
 
-  drawTree = _.throttle(() => {
-    if (!this.props.skeletonTracing || !this.state.visible) {
-      return;
-    }
+    return () => {
+      window.removeEventListener("resize", drawTree, false);
+    };
+  }, [drawTree]);
 
-    const { activeTreeId, activeNodeId, trees } = this.props.skeletonTracing;
-    const { canvas } = this;
+  useEffect(() => {
+    drawTree();
+  }, [drawTree]);
 
-    if (canvas != null) {
-      this.nodeList = AbstractTreeRenderer.drawTree(
-        canvas,
-        activeTreeId != null ? trees.getNullable(activeTreeId) : null,
-        activeNodeId,
-        [canvas.offsetWidth, canvas.offsetHeight],
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const id = AbstractTreeRenderer.getIdFromPos(
+        event.nativeEvent.offsetX,
+        event.nativeEvent.offsetY,
+        nodeListRef.current,
       );
-    }
-  }, 1000);
 
-  handleClick = (event: React.MouseEvent<any>) => {
-    const id = AbstractTreeRenderer.getIdFromPos(
-      event.nativeEvent.offsetX,
-      event.nativeEvent.offsetY,
-      this.nodeList,
-    );
+      if (id != null) {
+        dispatch(setActiveNodeAction(id));
+      }
+    },
+    [dispatch],
+  );
 
-    if (id != null) {
-      this.props.dispatch(setActiveNodeAction(id));
-    }
-  };
+  const onClickShow = () => setIsVisible(true);
 
-  onClickShow = () => {
-    this.setState({
-      visible: true,
-    });
-  };
-
-  render() {
-    return (
-      <div className="flex-center">
-        {this.state.visible ? (
-          <canvas
-            id="abstract-tree-canvas"
-            ref={(canvas) => {
-              this.canvas = canvas;
+  return (
+    <div className="flex-center">
+      {isVisible ? (
+        <canvas id="abstract-tree-canvas" ref={canvasRef} onClick={handleClick} />
+      ) : (
+        <React.Fragment>
+          <Button type="primary" onClick={onClickShow}>
+            Show Abstract Tree
+          </Button>
+          <span
+            style={{
+              color: "gray",
+              marginTop: 6,
             }}
-            onClick={this.handleClick}
-          />
-        ) : (
-          <React.Fragment>
-            <Button type="primary" onClick={this.onClickShow}>
-              Show Abstract Tree
-            </Button>
-            <span
-              style={{
-                color: "gray",
-                marginTop: 6,
-              }}
-            >
-              This may be slow for very large tracings.
-            </span>
-          </React.Fragment>
-        )}
-      </div>
-    );
-  }
-}
+          >
+            This may be slow for very large tracings.
+          </span>
+        </React.Fragment>
+      )}
+    </div>
+  );
+};
 
-function mapStateToProps(state: WebknossosState): Partial<Props> {
-  return {
-    skeletonTracing: state.annotation.skeleton,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(AbstractTreeTab);
+export default AbstractTreeTab;

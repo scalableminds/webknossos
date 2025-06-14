@@ -70,6 +70,7 @@ const defaultState: WebknossosState = {
     newNodeNewTree: false,
     continuousNodeCreation: false,
     centerNewNode: true,
+    applyNodeRotationOnActivation: false,
     overrideNodeRadius: true,
     particleSize: 5,
     presetBrushSizes: null,
@@ -197,6 +198,7 @@ const defaultState: WebknossosState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+    rotation: [0, 0, 0],
   },
   flycamInfoCache: {
     maximumZoomForAllMags: {},

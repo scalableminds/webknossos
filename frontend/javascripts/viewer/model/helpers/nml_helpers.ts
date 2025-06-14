@@ -16,7 +16,7 @@ import {
   type Vector3,
 } from "viewer/constants";
 import Constants from "viewer/constants";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
   getMaximumGroupId,
@@ -249,7 +249,7 @@ function serializeParameters(
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
   const { additionalAxes } = skeletonTracing;
 
-  const editRotation = getRotation(state.flycam);
+  const editRotation = getRotationInDegrees(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
 

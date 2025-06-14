@@ -15,10 +15,10 @@ const PG_CONFIG = (() => {
   const url = new URL(rawUrl);
   url.username = url.username
     ? url.username
-    : process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres";
+    : (process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres");
   url.password = url.password
     ? url.password
-    : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
+    : (process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres");
   url.port = url.port ? url.port : 5432;
 
   const urlWithDefaultDatabase = new URL(url);

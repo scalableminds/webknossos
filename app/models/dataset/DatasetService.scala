@@ -34,6 +34,7 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
@@ -212,7 +213,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                     dataSource.hashCode,
                                                     dataSource,
                                                     dataSource.isUsable)
-        _ <- notifyDSOnUpdate(foundDataset._id)
+        _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(
@@ -234,7 +235,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                       dataSource.hashCode,
                                                       dataSource,
                                                       dataSource.isUsable)(GlobalAccessContext)
-          _ <- notifyDSOnUpdate(foundDataset._id)
+          _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
         logger.info(
@@ -308,181 +309,183 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
       _ <- Fox.fromBool(!layers.flatMap(_.dataFormatOpt).contains(DataFormat.wkw)) ?~> "WKW data format not supported in this context, only datasets with MagLocators are supported"
       layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
-      layersWithMags = layers.map { layer =>
-        val mags = layerNamesAndMags.filter(_._1 == layer.name).map(_._2).toList
-        layer match {
-          case AbstractDataLayer(name,
-                                 category,
-                                 boundingBox,
-                                 _,
-                                 elementClass,
-                                 defaultViewConfiguration,
-                                 adminViewConfiguration,
-                                 coordinateTransformations,
-                                 additionalAxes,
-                                 attachmentsOpt,
-                                 _,
-                                 numChannels,
-                                 dataFormat,
-                                 _) =>
-            dataFormat match {
-              case Some(df) =>
-                df match {
-                  case DataFormat.wkw =>
-                    throw new NotImplementedError(
-                      "WKW data format not supported in this context, only datasets with MagLocators are supported")
-                  case DataFormat.neuroglancerPrecomputed =>
-                    PrecomputedDataLayer(
-                      name,
-                      boundingBox,
-                      category,
-                      elementClass,
-                      mags,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt
-                    )
-                  case DataFormat.n5 =>
-                    N5DataLayer(
-                      name,
-                      category,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt
-                    )
-                  case DataFormat.zarr =>
-                    ZarrDataLayer(
-                      name,
-                      category,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt,
-                      df
-                    )
-                  case DataFormat.zarr3 =>
-                    Zarr3DataLayer(
-                      name,
-                      category,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt,
-                    )
-                }
-              case None => ???
-            }
-          case AbstractSegmentationLayer(name,
-                                         _,
-                                         boundingBox,
-                                         _,
-                                         elementClass,
-                                         largestSegmentId,
-                                         mappings,
-                                         defaultViewConfiguration,
-                                         adminViewConfiguration,
-                                         coordinateTransformations,
-                                         additionalAxes,
-                                         attachmentsOpt,
-                                         _,
-                                         numChannels,
-                                         dataFormat,
-                                         _) =>
-            dataFormat match {
-              case Some(df) =>
-                df match {
-                  case DataFormat.wkw =>
-                    throw new NotImplementedError(
-                      "WKW data format not supported in this context, only datasets with MagLocators are supported")
-                  case DataFormat.neuroglancerPrecomputed =>
-                    PrecomputedSegmentationLayer(
-                      name,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      largestSegmentId,
-                      mappings,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt
-                    )
-                  case DataFormat.n5 =>
-                    N5SegmentationLayer(
-                      name,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      largestSegmentId,
-                      mappings,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt
-                    )
-                  case DataFormat.zarr =>
-                    ZarrSegmentationLayer(
-                      name,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      largestSegmentId,
-                      mappings,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt,
-                      df
-                    )
-                  case DataFormat.zarr3 =>
-                    Zarr3SegmentationLayer(
-                      name,
-                      boundingBox,
-                      elementClass,
-                      mags,
-                      largestSegmentId,
-                      mappings,
-                      defaultViewConfiguration,
-                      adminViewConfiguration,
-                      coordinateTransformations,
-                      numChannels,
-                      additionalAxes,
-                      attachmentsOpt
-                    )
-                }
-              case None => ???
-            }
-          case _ => throw new NotImplementedError("DataLayer type mismatch (unreachable)")
-        }
+      layersWithMags <- Fox.serialCombined(layers) { layer =>
+        tryo {
+          val mags = layerNamesAndMags.filter(_._1 == layer.name).map(_._2).toList
+          layer match {
+            case AbstractDataLayer(name,
+                                   category,
+                                   boundingBox,
+                                   _,
+                                   elementClass,
+                                   defaultViewConfiguration,
+                                   adminViewConfiguration,
+                                   coordinateTransformations,
+                                   additionalAxes,
+                                   attachmentsOpt,
+                                   _,
+                                   numChannels,
+                                   dataFormat,
+                                   _) =>
+              dataFormat match {
+                case Some(df) =>
+                  df match {
+                    case DataFormat.wkw =>
+                      throw new NotImplementedError(
+                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                    case DataFormat.neuroglancerPrecomputed =>
+                      PrecomputedDataLayer(
+                        name,
+                        boundingBox,
+                        category,
+                        elementClass,
+                        mags,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
+                    case DataFormat.n5 =>
+                      N5DataLayer(
+                        name,
+                        category,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
+                    case DataFormat.zarr =>
+                      ZarrDataLayer(
+                        name,
+                        category,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt,
+                        df
+                      )
+                    case DataFormat.zarr3 =>
+                      Zarr3DataLayer(
+                        name,
+                        category,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt,
+                      )
+                  }
+                case None => ???
+              }
+            case AbstractSegmentationLayer(name,
+                                           _,
+                                           boundingBox,
+                                           _,
+                                           elementClass,
+                                           largestSegmentId,
+                                           mappings,
+                                           defaultViewConfiguration,
+                                           adminViewConfiguration,
+                                           coordinateTransformations,
+                                           additionalAxes,
+                                           attachmentsOpt,
+                                           _,
+                                           numChannels,
+                                           dataFormat,
+                                           _) =>
+              dataFormat match {
+                case Some(df) =>
+                  df match {
+                    case DataFormat.wkw =>
+                      throw new NotImplementedError(
+                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                    case DataFormat.neuroglancerPrecomputed =>
+                      PrecomputedSegmentationLayer(
+                        name,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        largestSegmentId,
+                        mappings,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
+                    case DataFormat.n5 =>
+                      N5SegmentationLayer(
+                        name,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        largestSegmentId,
+                        mappings,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
+                    case DataFormat.zarr =>
+                      ZarrSegmentationLayer(
+                        name,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        largestSegmentId,
+                        mappings,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt,
+                        df
+                      )
+                    case DataFormat.zarr3 =>
+                      Zarr3SegmentationLayer(
+                        name,
+                        boundingBox,
+                        elementClass,
+                        mags,
+                        largestSegmentId,
+                        mappings,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        numChannels,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
+                  }
+                case None => ???
+              }
+            case _ => throw new NotImplementedError("DataLayer type mismatch (unreachable)")
+          }
+        }.toFox
       }
     } yield layersWithMags
 
-  def notifyDSOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
+  private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
       dataSource <- fullDataSourceFor(dataset)

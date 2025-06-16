@@ -259,7 +259,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getDataset(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+  def getDatasource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {

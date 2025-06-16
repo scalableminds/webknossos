@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
-import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize, datasource}
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
@@ -20,15 +20,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
   DataFormat,
-  DatasetLayerAttachments => AttachmentWrapper,
   DataSourceId,
   ElementClass,
   LayerAttachment,
   LayerAttachmentDataFormat,
   LayerAttachmentType,
-  SegmentationLayerLike,
   ThinPlateSplineCorrespondences,
-  DataLayerLike => DataLayer
+  DataLayerLike => DataLayer,
+  DatasetLayerAttachments => AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
@@ -36,6 +35,7 @@ import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO
@@ -1060,7 +1060,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataFormat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      uri = new URI(row.path)
+      uri <- tryo(new URI(row.path)).toFox
     } yield LayerAttachment(row.name, uri, dataFormat)
 
   def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =

@@ -30,13 +30,32 @@ type Props = {
   setTargetAndFixPosition: () => void;
 };
 
-function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector3) {
+function getQuaternionFromCamera(
+  _up: Vector3,
+  position: Vector3,
+  center: Vector3,
+  rotation?: Vector3, // flycamRotation in radians
+) {
   const up = V3.normalize(_up);
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
+
+  // Create a basis matrix
   const rotationMatrix = new THREE.Matrix4();
-  // biome-ignore format: don't format
-  rotationMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
+  rotationMatrix.makeBasis(
+    new THREE.Vector3(...right),
+    new THREE.Vector3(...up),
+    new THREE.Vector3(...forward),
+  );
+
+  // If there's an additional rotation, apply it to the basis matrix
+  if (rotation) {
+    const additionalRotation = new THREE.Matrix4();
+    additionalRotation.makeRotationFromEuler(new THREE.Euler(...rotation, "ZYX")); // You mentioned ZYX
+    rotationMatrix.premultiply(additionalRotation); // Apply flycamRotation before
+  }
+
+  // Convert to quaternion
   const quat = new THREE.Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
   return quat;
@@ -257,6 +276,7 @@ export function rotate3DViewTo(
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
   const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
+  const flycamRotation = getRotationInRadian(state.flycam);
   const datasetExtent = getDatasetExtentInUnit(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
@@ -331,7 +351,7 @@ export function rotate3DViewTo(
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
   const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
-  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos);
+  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos, flycamRotation);
   const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
   const to: TweenState = {
     left: -width / 2,

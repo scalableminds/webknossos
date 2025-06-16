@@ -555,7 +555,9 @@ describe("NML", () => {
   });
 
   it("Serialized nml should be correctly named", async () => {
-    expect(getNmlName(initialState)).toBe("Test Dataset__5b1fd1cb97000027049c67ec____tionId.nml");
+    expect(getNmlName(initialState)).toBe(
+      "Test Dataset__taskId-5b1fd1cb97000027049c67ec____tionId.nml",
+    );
 
     const stateWithoutTask = { ...initialState, task: null };
 

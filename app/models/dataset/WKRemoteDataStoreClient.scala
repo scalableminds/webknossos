@@ -17,7 +17,6 @@ import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt

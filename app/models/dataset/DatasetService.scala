@@ -391,7 +391,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                         attachmentsOpt,
                       )
                   }
-                case None => ???
+                case None => throw new IllegalStateException(s"Data layer ${layer.name} has no data format defined.")
               }
             case AbstractSegmentationLayer(name,
                                            _,
@@ -477,7 +477,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                         attachmentsOpt
                       )
                   }
-                case None => ???
+                case None =>
+                  throw new IllegalStateException(s"Data layer ${layer.name} has no data format defined.")
               }
             case _ => throw new NotImplementedError("DataLayer type mismatch (unreachable)")
           }

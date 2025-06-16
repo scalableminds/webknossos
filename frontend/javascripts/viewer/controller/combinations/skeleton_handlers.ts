@@ -1,18 +1,25 @@
 import { V3 } from "libs/mjs";
-import { values } from "libs/utils";
+import { map3, values } from "libs/utils";
 import _ from "lodash";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { OrthoView, OrthoViewMap, Point2, Vector3, Viewport } from "viewer/constants";
-import { OrthoViews } from "viewer/constants";
+import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
+import {
+  OrthoViews,
+  OrthoViewToNumber,
+  OrthoBaseRotations,
+  NumberToOrthoView,
+} from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
+  getFlycamRotationWithAppendedRotation,
   getPosition,
-  getRotationOrtho,
+  getRotationInRadian,
   isMagRestrictionViolated,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
@@ -24,6 +31,7 @@ import {
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
+  type PositionWithRounding,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
@@ -48,12 +56,7 @@ import Store from "viewer/store";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";
-const OrthoViewToNumber: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0,
-  [OrthoViews.PLANE_YZ]: 1,
-  [OrthoViews.PLANE_XZ]: 2,
-  [OrthoViews.TDView]: 3,
-};
+
 export function handleMergeTrees(
   view: PlaneView | ArbitraryView,
   position: Point2,
@@ -160,7 +163,7 @@ export function handleOpenContextMenu(
           event.pageY,
           nodeId,
           clickedBoundingBoxId,
-          globalPosition,
+          globalPosition?.rounded,
           activeViewport,
           meshId,
           meshIntersectionPosition,
@@ -170,6 +173,12 @@ export function handleOpenContextMenu(
     0,
   );
 }
+
+// Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
+const flycamRotationEuler = new THREE.Euler();
+const flycamRotationMatrix = new THREE.Matrix4();
+const movementVector = new THREE.Vector3();
+
 export function moveNode(
   dx: number,
   dy: number,
@@ -181,7 +190,8 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
   const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
@@ -189,14 +199,19 @@ export function moveNode(
 
   const [activeTree, activeNode] = treeAndNode;
 
-  const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const isFlycamRotated = isRotated(state.flycam);
+
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
+
   const zoomFactor = state.flycam.zoomStep;
   const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
   const op = (val: number) => {
-    if (useFloat) {
+    if (useFloat || isFlycamRotated) {
       return val;
     }
     // Zero diffs should stay zero.
@@ -212,9 +227,9 @@ export function moveNode(
   };
 
   const delta = [
-    op(vector[0] * zoomFactor * scaleFactor[0]),
-    op(vector[1] * zoomFactor * scaleFactor[1]),
-    op(vector[2] * zoomFactor * scaleFactor[2]),
+    op(vectorRotated.x * zoomFactor * scaleFactor[0]),
+    op(vectorRotated.y * zoomFactor * scaleFactor[1]),
+    op(vectorRotated.z * zoomFactor * scaleFactor[2]),
   ];
   const [x, y, z] = getNodePosition(activeNode, state);
 
@@ -246,7 +261,7 @@ export function finishNodeMovement(nodeId: number) {
 }
 
 export function handleCreateNodeFromGlobalPosition(
-  position: Vector3,
+  nodePosition: PositionWithRounding,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
@@ -267,7 +282,7 @@ export function handleCreateNodeFromGlobalPosition(
     skipCenteringAnimationInThirdDimension,
   } = getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
   createSkeletonNode(
-    position,
+    nodePosition,
     additionalCoordinates,
     rotation,
     center,
@@ -285,7 +300,36 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
+  const initialViewportRotation =
+    OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport];
+  const rotationInDegree = getFlycamRotationWithAppendedRotation(
+    state.flycam,
+    initialViewportRotation,
+  );
+
+  // TODOM: delete me
+  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, rotationInDegree);
+  const nodeRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(...nodeRotationRadian, "ZYX"),
+  );
+  const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport],
+  );
+  // Invert the rotation of the viewport to get the rotation configured during node creation.
+  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
+  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
+    inverseViewportRotationQuaternion,
+  );
+  const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
+  const flycamOnlyRotationInDegree = map3(
+    Math.round,
+    map3(THREE.MathUtils.radToDeg, [
+      flycamOnlyRotation.x,
+      flycamOnlyRotation.y,
+      flycamOnlyRotation.z,
+    ]),
+  );
+  console.log("calculated the following rotation back of the node", flycamOnlyRotationInDegree);
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
@@ -299,10 +343,9 @@ export function getOptionsForCreateSkeletonNode(
   const activate = !ctrlIsPressed || activeNode == null;
 
   const skipCenteringAnimationInThirdDimension = true;
-
   return {
     additionalCoordinates,
-    rotation,
+    rotation: rotationInDegree,
     center,
     branchpoint,
     activate,
@@ -311,7 +354,7 @@ export function getOptionsForCreateSkeletonNode(
 }
 
 export function createSkeletonNode(
-  position: Vector3,
+  position: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   center: boolean,
@@ -319,7 +362,7 @@ export function createSkeletonNode(
   activate: boolean,
   skipCenteringAnimationInThirdDimension: boolean,
 ): void {
-  updateTraceDirection(position);
+  updateTraceDirection(position.rounded);
 
   let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
@@ -333,7 +376,7 @@ export function createSkeletonNode(
 
   Store.dispatch(
     createNodeAction(
-      untransformNodePosition(position, state),
+      untransformNodePosition(position.floating, state),
       additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
@@ -358,12 +401,7 @@ export function createSkeletonNode(
     const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
     if (!treeAndNode) return;
 
-    const [_activeTree, newNode] = treeAndNode;
-
-    api.tracing.centerPositionAnimated(
-      getNodePosition(newNode, state),
-      skipCenteringAnimationInThirdDimension,
-    );
+    api.tracing.centerPositionAnimated(position.floating, skipCenteringAnimationInThirdDimension);
   }
 
   if (branchpoint) {
@@ -480,7 +518,9 @@ export function toSubsequentNode(): void {
     isValidList
   ) {
     // navigate to subsequent node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(
+      setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1], false, false),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree

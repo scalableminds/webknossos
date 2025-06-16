@@ -1,5 +1,6 @@
 import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/rest_api";
 import { Modal } from "antd";
+import * as THREE from "three";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
@@ -22,9 +23,14 @@ import {
   throttle,
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
-import { TreeTypeEnum } from "viewer/constants";
+import {
+  NumberToOrthoView,
+  OrthoBaseRotations,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -85,9 +91,37 @@ import { api } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { Flycam, SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+
+const map3 = Utils.map3;
+
+function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
+  // In orthogonal view mode, we need to subtract the
+  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
+  const nodeRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(...nodeRotationRadian, "ZYX"),
+  );
+  const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
+    OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
+  );
+  // Invert the rotation of the viewport to get the rotation configured during node creation.
+  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
+  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
+    inverseViewportRotationQuaternion,
+  );
+  const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
+  const flycamOnlyRotationInDegree = map3(
+    Math.round,
+    map3(THREE.MathUtils.radToDeg, [
+      flycamOnlyRotation.x,
+      flycamOnlyRotation.y,
+      flycamOnlyRotation.z,
+    ]),
+  );
+  return flycamOnlyRotationInDegree;
+}
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -107,16 +141,32 @@ function* centerActiveNode(action: Action): Saga<void> {
   const activeNode = getActiveNode(
     yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
+  const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const userApplyRotation = yield* select(
+    (state: WebknossosState) => state.userConfiguration.applyNodeRotationOnActivation,
+  );
+  const applyRotation =
+    ("suppressRotation" in action && !action.suppressRotation) ?? userApplyRotation;
 
   if (activeNode != null) {
+    let nodeRotation = activeNode.rotation;
+    if (applyRotation && viewMode === "orthogonal") {
+      nodeRotation = yield* call(getNodeRotationWithoutPlaneRotation, activeNode);
+    }
     const activeNodePosition = yield* select((state: WebknossosState) =>
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
       Store.dispatch(setPositionAction(activeNodePosition));
-      Store.dispatch(setRotationAction(activeNode.rotation));
+      if (applyRotation) {
+        Store.dispatch(setRotationAction(nodeRotation));
+      }
     } else {
-      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+      api.tracing.centerPositionAnimated(
+        activeNodePosition,
+        false,
+        applyRotation ? nodeRotation : undefined,
+      );
     }
     if (activeNode.additionalCoordinates) {
       Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
@@ -692,7 +742,7 @@ export function* diffSkeletonTracing(
       skeletonTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
-      getRotation(flycam),
+      getRotationInDegrees(flycam),
       flycam.zoomStep,
     );
   }

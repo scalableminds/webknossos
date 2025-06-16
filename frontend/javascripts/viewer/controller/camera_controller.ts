@@ -5,9 +5,13 @@ import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import {
+  OrthoCamerasBaseRotations,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+} from "viewer/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -66,6 +70,11 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
 class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  // Properties are only created here to avoid creating new objects for each update call.
+  flycamRotationEuler = new THREE.Euler();
+  flycamRotationMatrix = new THREE.Matrix4();
+  baseRotationMatrix = new THREE.Matrix4();
+  totalRotationMatrix = new THREE.Matrix4();
 
   componentDidMount() {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
@@ -153,12 +162,38 @@ class CameraController extends React.PureComponent<Props> {
 
   update(): void {
     const state = Store.getState();
-    const gPos = getPosition(state.flycam);
+    const globalPosition = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cPos = voxelToUnit(state.dataset.dataSource.scale, gPos);
-    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
+    const cameraPosition = voxelToUnit(state.dataset.dataSource.scale, globalPosition);
+    this.props.cameras[OrthoViews.PLANE_XY].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
+    this.props.cameras[OrthoViews.PLANE_YZ].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
+    this.props.cameras[OrthoViews.PLANE_XZ].position.set(
+      cameraPosition[0],
+      cameraPosition[1],
+      cameraPosition[2],
+    );
+    // Now set rotation for all cameras respecting the base rotation of each camera.
+    const globalRotation = getRotationInRadian(state.flycam);
+    this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
+    this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
+    for (const viewport of OrthoViewValuesWithoutTDView) {
+      this.baseRotationMatrix.makeRotationFromEuler(OrthoCamerasBaseRotations[viewport]);
+      this.props.cameras[viewport].setRotationFromMatrix(
+        this.totalRotationMatrix
+          .identity()
+          .multiply(this.flycamRotationMatrix)
+          .multiply(this.baseRotationMatrix),
+      );
+      this.props.cameras[viewport].updateProjectionMatrix();
+    }
   }
 
   bindToEvents() {
@@ -192,7 +227,7 @@ class CameraController extends React.PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    tdCamera.position.set(...cameraData.position);
+    tdCamera.position.set(...(cameraData.position as Vector3));
     tdCamera.left = cameraData.left;
     tdCamera.right = cameraData.right;
     tdCamera.top = cameraData.top;

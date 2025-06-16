@@ -15,7 +15,7 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient,
                              @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  lazy val cache = AlfuCache[ObjectId, DataSource](
+  lazy val cache: AlfuCache[ObjectId, DataSource] = AlfuCache[ObjectId, DataSource](
     timeToLive = 1 day // Cache for a longer time, since we invalidate the cache manually
   )
 

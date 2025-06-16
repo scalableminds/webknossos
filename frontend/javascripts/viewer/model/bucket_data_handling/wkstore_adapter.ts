@@ -103,7 +103,7 @@ export async function requestWithFallback(
   const tracingStoreHost = state.annotation.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/wkDatasets/683d9643f600008d0e26a0a3/layers/${
+    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 

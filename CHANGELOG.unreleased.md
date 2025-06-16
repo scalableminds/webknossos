@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
+- Updated the UI for the organizations settings page. [#8679](https://github.com/scalableminds/webknossos/pull/8679)
 
 ### Fixed
 - Improved efficiency of saving bounding box related changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)

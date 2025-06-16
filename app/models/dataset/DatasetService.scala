@@ -488,9 +488,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
-      dataSource <- fullDataSourceFor(dataset)
       dataStoreClient <- clientFor(dataset)
-      _ <- dataStoreClient.updateDatasetInDSCache(dataset._id.toString, dataSource)
+      _ <- dataStoreClient.updateDatasetInDSCache(dataset._id.toString)
     } yield ()
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =

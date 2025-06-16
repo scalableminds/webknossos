@@ -1,7 +1,8 @@
 import { MailOutlined, SaveOutlined } from "@ant-design/icons";
-import { AccountSettingsTitle } from "admin/account/account_profile_view";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { updateOrganization } from "admin/rest_api";
-import { Button, Form, Input } from "antd";
+import { Button, Col, Form, Input, Row } from "antd";
 import Toast from "libs/toast";
 import type { APIOrganization } from "types/api_types";
 
@@ -22,19 +23,18 @@ export function OrganizationNotificationsView({ organization }: { organization: 
 
   const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
 
-  return (
-    <>
-      <AccountSettingsTitle title="Settings" description="Manage your organization settings." />
+  function getNewUserNotificationsSettings() {
+    return (
       <Form
         form={form}
         onFinish={onFinish}
-        layout="vertical"
+        style={{ marginTop: 10 }}
+        layout="inline"
         initialValues={{
           newUserMailingList: organization.newUserMailingList,
         }}
       >
         <FormItem
-          label="Email Address for New-User Notifications"
           name="newUserMailingList"
           rules={[
             {
@@ -52,13 +52,46 @@ export function OrganizationNotificationsView({ organization }: { organization: 
                 }}
               />
             }
-            placeholder="mail@example.com"
+            placeholder="email@example.com"
+            style={{ minWidth: 250 }}
           />
         </FormItem>
         <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
           Save
         </Button>
       </Form>
+    );
+  }
+
+  return (
+    <>
+      <SettingsTitle
+        title="Notification Settings"
+        description="Manage your organization's email notification settings."
+      />
+      <Row gutter={[16, 16]}>
+        <Col span={12}>
+          <SettingsCard
+            title="WEBKNOSSOS Plan & Subscription"
+            explanation="Get notified when your WK subscription is about to expire or reach user and storage limits."
+            description={organization.ownerName}
+          />
+        </Col>
+        <Col span={12}>
+          <SettingsCard
+            title="AI Job Completion"
+            explanation="Get notified when a background conversion or AI job is completed."
+            description="Users are notified individually."
+          />
+        </Col>
+        <Col span={12}>
+          <SettingsCard
+            title="New User Signup"
+            explanation="Get notified when a new user signs up to your organization."
+            description={getNewUserNotificationsSettings()}
+          />
+        </Col>
+      </Row>
     </>
   );
 }

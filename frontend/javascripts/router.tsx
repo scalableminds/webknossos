@@ -57,11 +57,11 @@ import type { WebknossosState } from "viewer/store";
 import HelpButton from "viewer/view/help_modal";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 
+import AccountSettingsView from "admin/account/account_settings_view";
 import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
-import AccountSettingsView from "admin/account/account_settings_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";

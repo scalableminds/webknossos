@@ -1,4 +1,5 @@
-import { AccountSettingsTitle } from "admin/account/account_profile_view";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/rest_api";
 import { Button, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -42,14 +43,24 @@ export function OrganizationDangerZoneView({ organization }: { organization: API
   }
   return (
     <>
-      <AccountSettingsTitle
+      <SettingsTitle
         title="Delete Organization"
         description="Delete this organization including all annotations, uploaded datasets, and associated
             user accounts. Careful, this action can NOT be undone."
       />
-      <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
-        Delete Organization
-      </Button>
+      <SettingsCard
+        title="Danger Zone"
+        description={
+          <Button
+            danger
+            loading={isDeleting}
+            onClick={handleDeleteButtonClicked}
+            style={{ marginTop: 10 }}
+          >
+            Delete Organization
+          </Button>
+        }
+      />
     </>
   );
 }

@@ -1,15 +1,15 @@
-import { DeleteOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
+import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
+import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { connect } from "react-redux";
-import { Route, useHistory, useLocation, Switch } from "react-router-dom";
+import { Route, Switch, useHistory, useLocation } from "react-router-dom";
+import { Redirect } from "react-router-dom";
 import type { APIOrganization } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
 import { OrganizationDangerZoneView } from "./organization_dangerzone_view";
-import { OrganizationProfileView } from "./organization_profile";
-import { OrganizationNotificationsView } from "./organization_settings";
-import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Redirect } from "react-router-dom";
+import { OrganizationNotificationsView } from "./organization_notifications_view";
+import { OrganizationOverviewView } from "./organization_overview_view";
 
 const { Sider, Content } = Layout;
 
@@ -18,15 +18,15 @@ type Props = {
 };
 
 const BREADCRUMB_LABELS = {
-  profile: "Profile",
-  settings: "Settings",
-  delete: "Delete",
+  overview: "Overview",
+  notifications: "Notification Settings",
+  delete: "Delete Organization",
 };
 
 const OrganizationView = ({ organization }: Props) => {
   const location = useLocation();
   const history = useHistory();
-  const selectedKey = location.pathname.split("/").pop() || "profile";
+  const selectedKey = location.pathname.split("/").pop() || "overview";
 
   const menuItems: MenuItemGroupType[] = [
     {
@@ -34,14 +34,14 @@ const OrganizationView = ({ organization }: Props) => {
       type: "group",
       children: [
         {
-          key: "profile",
+          key: "overview",
           icon: <UserOutlined />,
-          label: "Profile",
+          label: "Overview",
         },
         {
-          key: "settings",
-          icon: <SettingOutlined />,
-          label: "Settings",
+          key: "notifications",
+          icon: <MailOutlined />,
+          label: "Notifications",
         },
         {
           key: "delete",
@@ -77,22 +77,22 @@ const OrganizationView = ({ organization }: Props) => {
           onClick={({ key }) => history.push(`/organization/${key}`)}
         />
       </Sider>
-      <Content style={{ padding: "24px", minHeight: 280, maxWidth: 1000 }}>
-        <Breadcrumb style={{ marginBottom: "16px", padding: "8px 0" }} items={breadcrumbItems} />
+      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
+        <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
         <Switch>
           <Route
-            path="/organization/profile"
-            render={() => <OrganizationProfileView organization={organization} />}
+            path="/organization/overview"
+            render={() => <OrganizationOverviewView organization={organization} />}
           />
           <Route
-            path="/organization/settings"
+            path="/organization/notifications"
             render={() => <OrganizationNotificationsView organization={organization} />}
           />
           <Route
             path="/organization/delete"
             render={() => <OrganizationDangerZoneView organization={organization} />}
           />
-          <Route path="/organization" render={() => <Redirect to="/organization/profile" />} />
+          <Route path="/organization" render={() => <Redirect to="/organization/overview" />} />
         </Switch>
       </Content>
     </Layout>

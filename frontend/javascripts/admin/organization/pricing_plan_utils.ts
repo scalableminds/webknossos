@@ -18,12 +18,21 @@ export const teamPlanFeatures = [
   "Priority Email Support",
   "Everything from Basic plan",
 ];
+
 export const powerPlanFeatures = [
   "Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
   "Everything from Team and Basic plans",
+];
+
+export const customPlanFeatures = [
+  "Single Sign-On with your existing institute user accounts (OpenID Connect)",
+  "Custom Domain Name (https://webknossos.your-university.org)",
+  "On-premise or dedicated hosting solutions available",
+  "Integration with your HPC and storage servers",
+  "Everything from Power, Team and Basic plans",
 ];
 
 export const maxInludedUsersInBasicPlan = 3;

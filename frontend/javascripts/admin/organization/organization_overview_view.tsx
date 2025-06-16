@@ -1,22 +1,19 @@
+import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { getPricingPlanStatus, getUsers } from "admin/rest_api";
+import { Col, Row, Spin } from "antd";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { useEffect, useState } from "react";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
+import { SettingsCard } from "../account/helpers/settings_card";
 import {
   PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { useEffect, useState } from "react";
-import { getPricingPlanStatus, getUsers } from "admin/rest_api";
-import {
-  getActiveUserCount,
-  hasPricingPlanExceededStorage,
-  hasPricingPlanExceededUsers,
-} from "./pricing_plan_utils";
-import { Card, Row, Col, Spin, Typography } from "antd";
-import { AccountSettingsTitle } from "admin/account/account_profile_view";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { getActiveUserCount } from "./pricing_plan_utils";
 
-export function OrganizationProfileView({ organization }: { organization: APIOrganization }) {
+export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
   const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
@@ -33,9 +30,6 @@ export function OrganizationProfileView({ organization }: { organization: APIOrg
     setActiveUsersCount(getActiveUserCount(users));
     setIsFetchingData(false);
   }
-
-  const hasExceededUserLimit = hasPricingPlanExceededUsers(organization, activeUsersCount);
-  const hasExceededStorageLimit = hasPricingPlanExceededStorage(organization);
 
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
@@ -81,7 +75,7 @@ export function OrganizationProfileView({ organization }: { organization: APIOrg
 
   return (
     <>
-      <AccountSettingsTitle title={organization.name} description="Manage your organization." />
+      <SettingsTitle title={organization.name} description="Manage your organization." />
       {pricingPlanStatus?.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
       {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
         <PlanAboutToExceedAlert organization={organization} />
@@ -90,30 +84,20 @@ export function OrganizationProfileView({ organization }: { organization: APIOrg
         <Row gutter={16} style={{ marginBottom: 24 }}>
           {firstRowStats.map((stat) => (
             <Col span={8} key={stat.key}>
-              <Card>
-                <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-                  {stat.title}
-                </Typography.Text>
-                <div style={{ fontSize: 16, marginTop: 4 }}>{stat.value}</div>
-              </Card>
+              <SettingsCard title={stat.title} description={stat.value} />
             </Col>
           ))}
         </Row>
-        <Row gutter={16} style={{ marginBottom: 36 }}>
+        <Row gutter={16} style={{ marginBottom: 24 }}>
           {secondRowStats.map((stat) => (
             <Col span={8} key={stat.key}>
-              <Card>
-                <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-                  {stat.title}
-                </Typography.Text>
-                <div style={{ fontSize: 16, marginTop: 4 }}>{stat.value}</div>
-              </Card>
+              <SettingsCard title={stat.title} description={stat.value} />
             </Col>
           ))}
         </Row>
       </Spin>
       <PlanExpirationCard organization={organization} />
-      <AccountSettingsTitle
+      <SettingsTitle
         title="Unlock more features"
         description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
       />

@@ -365,7 +365,7 @@ function* loadPrecomputedMeshesInChunksForLod(
           dataset,
           getBaseSegmentationName(segmentationLayer),
           {
-            meshFile.name,
+            meshFileName: meshFile.name,
             // Only extract the relevant properties
             requests: chunks.map(({ byteOffset, byteSize }) => ({
               byteOffset,

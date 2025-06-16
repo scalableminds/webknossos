@@ -52,7 +52,7 @@ export function getMeshfileChunksForSegment(
       params.append("editableMappingTracingId", editableMappingTracingId);
     }
     const payload: ListMeshChunksRequest = {
-      meshFile.name,
+      meshFileName: meshFile.name,
       segmentId,
     };
     return Request.sendJSONReceiveJSON(

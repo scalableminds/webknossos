@@ -166,10 +166,6 @@ describe("Update Action Application for VolumeTracing", () => {
           const updateActionsBeforeCompaction = Array.from(
             diffVolumeTracing(volumeTracing2, volumeTracing3),
           );
-          console.log(
-            "updateActionsBeforeCompaction",
-            updateActionsBeforeCompaction.map((el) => el.name),
-          );
           const maybeCompact = withCompaction
             ? compactUpdateActions
             : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;

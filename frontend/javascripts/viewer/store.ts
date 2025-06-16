@@ -556,11 +556,20 @@ export type LocalSegmentationData = {
   readonly hideUnregisteredSegments: boolean;
 };
 
+export type StoreDataset = APIDataset & {
+  // The backend servers an APIDataset object. The frontend
+  // adds/merges volume tracing objects into that dataset. The
+  // StoreDataset reflects this on a type level. For example,
+  // one cannot accidentally use the APIDataset during store
+  // initialization (which would be incorrect).
+  areLayersPreprocessed: true;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
-  readonly dataset: APIDataset;
+  readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;
   readonly task: Task | null | undefined;
   readonly save: SaveState;

@@ -13,7 +13,7 @@ const sampleColorLayer: APIColorLayer = {
   resolutions: [
     [1, 1, 1],
     [2, 2, 2],
-    [32, 32, 32],
+    [32, 32, 32], // unsorted on purpose
     [4, 4, 4],
     [8, 8, 8],
     [16, 16, 16],
@@ -36,7 +36,7 @@ const sampleSegmentationLayer: APISegmentationLayer = {
   resolutions: [
     [1, 1, 1],
     [2, 2, 2],
-    [32, 32, 32],
+    [32, 32, 32], // unsorted on purpose
     [4, 4, 4],
     [8, 8, 8],
     [16, 16, 16],

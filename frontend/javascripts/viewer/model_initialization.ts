@@ -110,6 +110,7 @@ import DataLayer from "viewer/model/data_layer";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
+  StoreDataset,
   TraceOrViewCommand,
   UserConfiguration,
 } from "viewer/store";
@@ -206,16 +207,16 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
+  const [apiDataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
     version,
   );
-  maybeFixDatasetNameInURL(dataset, initialCommandType);
+  maybeFixDatasetNameInURL(apiDataset, initialCommandType);
 
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
-  preprocessDataset(dataset, serverTracings);
+  const dataset = preprocessDataset(apiDataset, serverTracings);
   initializeDataset(initialFetch, dataset);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
@@ -326,7 +327,7 @@ async function fetchEditableMappings(
   return Promise.all(promises);
 }
 
-function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): any {
+function validateSpecsForLayers(dataset: StoreDataset, requiredBucketCapacity: number): any {
   const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
@@ -448,7 +449,10 @@ function setInitialTool() {
   }
 }
 
-export function preprocessDataset(dataset: APIDataset, serverTracings: Array<ServerTracing>) {
+export function preprocessDataset(
+  dataset: APIDataset,
+  serverTracings: Array<ServerTracing>,
+): StoreDataset {
   const mutableDataset = dataset as any as MutableAPIDataset;
   const volumeTracings = getServerVolumeTracings(serverTracings);
 
@@ -458,10 +462,12 @@ export function preprocessDataset(dataset: APIDataset, serverTracings: Array<Ser
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
-  return mutableDataset;
+  (mutableDataset as StoreDataset).areLayersPreprocessed = true;
+
+  return mutableDataset as StoreDataset;
 }
 
-function initializeDataset(initialFetch: boolean, dataset: APIDataset): void {
+function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
   let error;
 
   if (!dataset) {
@@ -957,7 +963,7 @@ function enforcePricingRestrictionsOnUserConfiguration(
 
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
-  dataset: APIDataset,
+  dataset: StoreDataset,
   originalDatasetSettings: DatasetConfiguration,
 ): DatasetConfiguration {
   /**

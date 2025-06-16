@@ -186,7 +186,7 @@ class TSAnnotationController @Inject()(
                                                                       volumeTracings,
                                                                       newVolumeId,
                                                                       newVersion = newTargetVersion,
-                                                                      toTemporaryStore)
+                                                                      toTemporaryStore) ?~> "mergeVolumeData.failed"
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)

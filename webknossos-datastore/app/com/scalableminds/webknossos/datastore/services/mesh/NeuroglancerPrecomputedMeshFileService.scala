@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataFormat,
   DataLayer,
   DataLayerWithMagLocators,
+  DataSourceId,
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
@@ -128,8 +129,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
-      meshFilePath <- meshFileKey.attachment.path // TODO
-      vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
+      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
       meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
@@ -155,11 +155,10 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
                                           segmentId)
     } yield meshSegmentInfo
 
-  def readMeshChunk(meshFilePathOpt: Option[String], meshChunkDataRequests: Seq[MeshChunkDataRequest])(
+  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
-      meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
-      vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
+      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
       segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
       _ <- Fox.fromBool(meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1) ?~> "All requests must have the same segment id"
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
@@ -170,11 +169,13 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
       output = chunks.flatten.toArray
     } yield (output, NeuroglancerMesh.meshEncoding)
 
-  def getVertexQuantizationBits(meshFilePathOpt: Option[String])(implicit tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit tc: TokenContext): Fox[Int] =
     for {
-      meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
-      vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
+      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
     } yield mesh.meshInfo.vertex_quantization_bits
 
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =
+    // TODO
+    0
 }

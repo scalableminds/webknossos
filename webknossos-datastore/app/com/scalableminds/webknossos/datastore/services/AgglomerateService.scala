@@ -58,18 +58,19 @@ class AgglomerateService(config: DataStoreConfig,
     attachedAgglomerates ++ exploredAgglomerates
   }
 
-  def clearCaches(dataSourceId: DataSourceId, layerName: Option[String]): Int = {
+  def clearCaches(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
     agglomerateKeyCache.clear {
-      case (keyDataSourceId, keyLayerName, _) => dataSourceId == keyDataSourceId && layerName.forall(_ == keyLayerName)
+      case (keyDataSourceId, keyLayerName, _) =>
+        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
     val clearedHdf5Count = hdf5AgglomerateService.clearCache { agglomerateFileKey =>
-      agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+      agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
     }
 
     val clearedZarrCount = zarrAgglomerateService.clearCache {
       case (agglomerateFileKey, _) =>
-        agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+        agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
     }
 
     clearedHdf5Count + clearedZarrCount

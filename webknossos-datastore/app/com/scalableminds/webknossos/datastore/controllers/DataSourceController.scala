@@ -450,7 +450,8 @@ class DataSourceController @Inject()(
                                       layerName: Option[String]): InboxDataSource = {
     val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
       binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
-    val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetDirectoryName, layerName)
+    val closedMeshFileHandleCount =
+      meshFileService.clearCache(DataSourceId(organizationId, datasetDirectoryName), layerName)
     val reloadedDataSource: InboxDataSource = dataSourceService.dataSourceFromDir(
       dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
       organizationId)

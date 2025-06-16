@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -88,13 +87,11 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
-            neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFile.path, request.body.requests)
-          } else {
-            meshFileService
-              .readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body)
-              .toFox ?~> "mesh.file.loadChunk.failed"
-          }
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFileName)
+          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

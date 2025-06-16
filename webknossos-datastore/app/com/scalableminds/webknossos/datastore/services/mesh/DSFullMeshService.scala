@@ -60,13 +60,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
               fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
                                                 m: MessagesProvider,
                                                 tc: TokenContext): Fox[Array[Byte]] =
-    fullMeshRequest.meshFileName match {
-      case Some(_) if fullMeshRequest.meshFilePath.isDefined =>
-        loadFullMeshFromRemoteNeuroglancerMeshFile(fullMeshRequest)
-      case Some(_) =>
-        loadFullMeshFromMeshfile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
-      case None => loadFullMeshFromAdHoc(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
-    }
+    if (fullMeshRequest.meshFileName.isDefined)
+      loadFullMeshFromMeshfile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
+    else
+      loadFullMeshFromAdHoc(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
 
   private def loadFullMeshFromAdHoc(organizationId: String,
                                     datasetName: String,
@@ -124,70 +121,59 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield allVertices
   }
 
+  // TODO make sure this also works for the remote neuroglancer variant. if so, delete other implementation
   private def loadFullMeshFromMeshfile(organizationId: String,
                                        datasetDirectoryName: String,
-                                       layerName: String,
+                                       dataLayerName: String,
                                        fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
                                                                          m: MessagesProvider,
                                                                          tc: TokenContext): Fox[Array[Byte]] =
     for {
-      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
-      before = Instant.now
-      mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-                                                                      datasetDirectoryName,
-                                                                      layerName,
-                                                                      meshFileName)
+      before <- Instant.nowFox
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
-                                                                                layerName)
+                                                                                dataLayerName)
+      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.required"
+      meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, meshFileName)
+      mappingNameForMeshFileBox <- meshFileService.mappingNameForMeshFile(meshFileKey).shiftBox
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
         dataSource.id,
         dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,
-        mappingNameForMeshFile,
+        mappingNameForMeshFileBox,
         omitMissing = false
       )
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                                           datasetDirectoryName,
-                                                                                           layerName,
-                                                                                           meshFileName,
-                                                                                           segmentIds)
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods.head.chunks
       transform = chunkInfos.lods.head.transform
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
-        readMeshChunkAsStl(organizationId, datasetDirectoryName, layerName, meshFileName, chunkRange, transform)
+        readMeshChunkAsStl(meshFileKey, chunkRange, transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
       _ = logMeshingDuration(before, "meshfile", stlOutput.length)
     } yield stlOutput
 
-  private def readMeshChunkAsStl(organizationId: String,
-                                 datasetDirectoryName: String,
-                                 layerName: String,
-                                 meshFileName: String,
-                                 chunkInfo: MeshChunk,
-                                 transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readMeshChunkAsStl(meshFileKey: MeshFileKey, chunkInfo: MeshChunk, transform: Array[Array[Double]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (dracoMeshChunkBytes, encoding) <- meshFileService
-        .readMeshChunk(
-          organizationId,
-          datasetDirectoryName,
-          layerName,
-          MeshChunkDataRequestList(MeshFileInfo(meshFileName, None, None, None, 7),
-                                   List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
-        )
-        .toFox ?~> "mesh.file.loadChunk.failed"
+      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
+        meshFileKey,
+        List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None))
+      ) ?~> "mesh.file.loadChunk.failed"
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes)
     } yield stlEncodedChunk
 
-  private def loadFullMeshFromRemoteNeuroglancerMeshFile(
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  // TODO delete if above works also for neuroglancer
+  private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshFileKey, fullMeshRequest: FullMeshRequest)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Array[Byte]] =
     for {
       chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
-        fullMeshRequest.meshFilePath,
+        meshFileKey,
         List(fullMeshRequest.segmentId)
       )
       _ <- Fox.fromBool(fullMeshRequest.mappingName.isEmpty) ?~> "Mapping is not supported for remote neuroglancer mesh files"
@@ -201,13 +187,12 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         Array(0, lodTransform(1)(1), 0),
         Array(0, 0, lodTransform(2)(2))
       )
-      vertexQuantizationBits <- neuroglancerPrecomputedMeshService.getVertexQuantizationBits(
-        fullMeshRequest.meshFilePath)
+      vertexQuantizationBits <- neuroglancerPrecomputedMeshService.getVertexQuantizationBits(meshFileKey)
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readNeuroglancerPrecomputedMeshChunkAsStl(
+          meshFileKey,
           chunkRange,
           transform,
-          fullMeshRequest.meshFilePath,
           Some(fullMeshRequest.segmentId),
           vertexQuantizationBits
         )
@@ -216,14 +201,14 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield stlOutput
 
   private def readNeuroglancerPrecomputedMeshChunkAsStl(
+      meshFileKey: MeshFileKey,
       chunkInfo: MeshChunk,
       transform: Array[Array[Double]],
-      meshFilePath: Option[String],
       segmentId: Option[Long],
       vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (dracoMeshChunkBytes, encoding) <- neuroglancerPrecomputedMeshService.readMeshChunk(
-        meshFilePath,
+      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
+        meshFileKey,
         Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
       ) ?~> "mesh.file.loadChunk.failed"
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"

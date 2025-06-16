@@ -13,16 +13,16 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
-import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
 
 import java.net.URI
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,7 +42,7 @@ case class MeshChunkDataRequest(
 )
 
 case class MeshChunkDataRequestList(
-    meshFile: MeshFileInfo,
+    meshFileName: String,
     requests: Seq[MeshChunkDataRequest]
 )
 
@@ -186,12 +186,12 @@ class MeshFileService @Inject()(
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
       case LayerAttachmentDataformat.zarr3 =>
-        zarrMeshFileService.listMeshChunksForMultipleSegments()
+        zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
       case LayerAttachmentDataformat.hdf5 =>
-        hdf5MeshFileService.listMeshChunksForMultipleSegments()
+        hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
     }
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: MeshChunkDataRequestList,
+  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
@@ -200,10 +200,19 @@ class MeshFileService @Inject()(
         neuroglancerPrecomputedMeshService.readMeshChunk(meshFileKey, meshChunkDataRequests)
     }
 
-  def clearCache(organizationId: String, datasetDirectoryName: String, layerNameOpt: Option[String]): Int = {
-    val datasetPath = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
-    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
-    meshFileCache.clear(key => key.startsWith(relevantPath.toString))
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    meshFileKeyCache.clear {
+      case (keyDataSourceId, keyLayerName, _) =>
+        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    }
+
+    val clearedHdf5Count = hdf5MeshFileService.clearCache(dataSourceId, layerNameOpt)
+
+    val clearedZarrCount = zarrMeshFileService.clearCache(dataSourceId, layerNameOpt)
+
+    val clearedNeuroglancerCount = neuroglancerPrecomputedMeshService.clearCache(dataSourceId, layerNameOpt)
+
+    clearedHdf5Count + clearedZarrCount + clearedNeuroglancerCount
   }
 
 }

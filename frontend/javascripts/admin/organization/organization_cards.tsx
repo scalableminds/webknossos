@@ -31,7 +31,7 @@ function CustomPlanUpgradeCard() {
           </ul>
         </Col>
         <Col span={6}>
-          <Button type="primary" href="mailto:hello@webknossos.org" icon={<MailOutlined />}>
+          <Button type="primary" href="mailto:sales@webknossos.org" icon={<MailOutlined />}>
             Contact Support
           </Button>
         </Col>
@@ -40,7 +40,7 @@ function CustomPlanUpgradeCard() {
   );
 }
 
-function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
+export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
   return (
     <Card
       title={`${PricingPlanEnum.Team} Plan`}
@@ -60,7 +60,7 @@ function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () 
   );
 }
 
-function PowerPlanUpgradeCard({
+export function PowerPlanUpgradeCard({
   powerUpgradeCallback,
   description,
 }: {

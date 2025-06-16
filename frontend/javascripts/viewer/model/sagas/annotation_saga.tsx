@@ -311,6 +311,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
           onMutexStateChanged(canEdit, blockedByUser);
         }
       } catch (error) {
+        if (process.env.IS_TESTING) {
+          // In unit tests, that explicitly control this generator function,
+          // the console.error after the next yield won't be printed, because
+          // test assertions on the yield will already throw.
+          // Therefore, we also print the error in the test context.
+          console.error("Error while trying to acquire mutex:", error);
+        }
         const wasCanceled = yield* cancelled();
         if (!wasCanceled) {
           console.error("Error while trying to acquire mutex.", error);

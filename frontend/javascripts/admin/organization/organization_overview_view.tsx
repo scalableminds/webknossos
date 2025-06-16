@@ -2,8 +2,11 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
 import { Col, Row, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
+import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
 import { SettingsCard } from "../account/helpers/settings_card";
 import {
   PlanAboutToExceedAlert,
@@ -12,9 +15,6 @@ import {
   PlanUpgradeCard,
 } from "./organization_cards";
 import { getActiveUserCount } from "./pricing_plan_utils";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { Store } from "viewer/singletons";
-import Toast from "libs/toast";
 
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(false);

@@ -10,7 +10,6 @@ import type { WebknossosState } from "viewer/store";
 import { OrganizationDangerZoneView } from "./organization_dangerzone_view";
 import { OrganizationNotificationsView } from "./organization_notifications_view";
 import { OrganizationOverviewView } from "./organization_overview_view";
-import { Store } from "viewer/singletons";
 
 const { Sider, Content } = Layout;
 

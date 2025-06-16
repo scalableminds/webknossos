@@ -1303,3 +1303,11 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
     .join(" ");
 }
+
+export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
+  if (setA.size !== setB.size) return false;
+  for (const val of setA) {
+    if (!setB.has(val)) return false;
+  }
+  return true;
+}

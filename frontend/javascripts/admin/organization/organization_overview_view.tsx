@@ -1,6 +1,6 @@
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { getPricingPlanStatus, getUsers } from "admin/rest_api";
-import { Col, Row, Spin } from "antd";
+import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
+import { Col, Row, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { useEffect, useState } from "react";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
@@ -12,6 +12,9 @@ import {
   PlanUpgradeCard,
 } from "./organization_cards";
 import { getActiveUserCount } from "./pricing_plan_utils";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
+import Toast from "libs/toast";
 
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(false);
@@ -31,6 +34,24 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     setIsFetchingData(false);
   }
 
+  async function setOrganizationName(newOrgaName: string) {
+    const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
+
+    if (!OrgaNameRegexPattern.test(newOrgaName)) {
+      Toast.error(
+        "Organization name can only contain letters, numbers, spaces, and the following special characters: - _ . ß",
+      );
+      return;
+    }
+
+    const updatedOrganization = await updateOrganization(
+      organization.id,
+      newOrgaName,
+      organization.newUserMailingList,
+    );
+    Store.dispatch(setActiveOrganizationAction(updatedOrganization));
+  }
+
   const maxUsersCountLabel =
     organization.includedUsers === Number.POSITIVE_INFINITY ? "∞" : organization.includedUsers;
 
@@ -41,7 +62,20 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
 
-  const firstRowStats = [
+  const orgaStats = [
+    {
+      key: "name",
+      title: "Name",
+      value: (
+        <Typography.Text
+          editable={{
+            onChange: setOrganizationName,
+          }}
+        >
+          {organization.name}
+        </Typography.Text>
+      ),
+    },
     {
       key: "owner",
       title: "Owner",
@@ -52,9 +86,6 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
       title: "Current Plan",
       value: "Basic",
     },
-  ];
-
-  const secondRowStats = [
     {
       key: "users",
       title: "Users",
@@ -81,15 +112,8 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
         <PlanAboutToExceedAlert organization={organization} />
       ) : null}
       <Spin spinning={isFetchingData}>
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          {firstRowStats.map((stat) => (
-            <Col span={8} key={stat.key}>
-              <SettingsCard title={stat.title} description={stat.value} />
-            </Col>
-          ))}
-        </Row>
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          {secondRowStats.map((stat) => (
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+          {orgaStats.map((stat) => (
             <Col span={8} key={stat.key}>
               <SettingsCard title={stat.title} description={stat.value} />
             </Col>

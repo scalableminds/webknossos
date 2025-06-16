@@ -5,6 +5,8 @@ import { updateOrganization } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
 import Toast from "libs/toast";
 import type { APIOrganization } from "types/api_types";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
 
 const FormItem = Form.Item;
 
@@ -17,11 +19,14 @@ export function OrganizationNotificationsView({ organization }: { organization: 
   const [form] = Form.useForm<FormValues>();
 
   async function onFinish(formValues: FormValues) {
-    await updateOrganization(organization.id, organization.name, formValues.newUserMailingList);
+    const updatedOrganization = await updateOrganization(
+      organization.id,
+      organization.name,
+      formValues.newUserMailingList,
+    );
+    Store.dispatch(setActiveOrganizationAction(updatedOrganization));
     Toast.success("Notification settings were saved successfully.");
   }
-
-  const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
 
   function getNewUserNotificationsSettings() {
     return (

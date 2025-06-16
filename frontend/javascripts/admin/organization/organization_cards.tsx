@@ -1,4 +1,4 @@
-import { FieldTimeOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { FieldTimeOutlined, MailOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
@@ -18,15 +18,24 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 function CustomPlanUpgradeCard() {
   return (
     <Card styles={{ body: { minHeight: 220 } }}>
-      <p> Contact our support team to upgrade Webknossos to match your organization. </p>
-      <ul>
-        {customPlanFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
-      <Button type="primary" href="mailto:hello@webknossos.org">
-        Contact Support
-      </Button>
+      <Row>
+        <Col span={18}>
+          <p>
+            Contact our support team to upgrade Webknossos to match your organization and customized
+            your experience.
+          </p>
+          <ul>
+            {customPlanFeatures.map((feature) => (
+              <li key={feature.slice(0, 10)}>{feature}</li>
+            ))}
+          </ul>
+        </Col>
+        <Col span={6}>
+          <Button type="primary" href="mailto:hello@webknossos.org" icon={<MailOutlined />}>
+            Contact Support
+          </Button>
+        </Col>
+      </Row>
     </Card>
   );
 }
@@ -84,11 +93,13 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
     organization.pricingPlan === PricingPlanEnum.PowerTrial ||
     organization.pricingPlan === PricingPlanEnum.Custom
   )
-    <Row gutter={24}>
-      <Col span={24}>
-        <CustomPlanUpgradeCard />
-      </Col>
-    </Row>;
+    return (
+      <Row gutter={24}>
+        <Col span={24}>
+          <CustomPlanUpgradeCard />
+        </Col>
+      </Row>
+    );
 
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||

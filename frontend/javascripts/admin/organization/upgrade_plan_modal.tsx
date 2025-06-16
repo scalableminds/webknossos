@@ -11,7 +11,7 @@ import {
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/rest_api";
-import { App, Button, Col, Col, ConfigProvider, Divider, InputNumber, Modal, Row } from "antd";
+import { Button, Col, ConfigProvider, Divider, InputNumber, Modal, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import features from "features";
@@ -22,11 +22,11 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 import type { APIOrganization } from "types/api_types";
-import { TeamPlanUpgradeCard, PowerPlanUpgradeCard } from "./organization_cards";
+import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
-import { getAntdTheme, getSystemColorTheme } from "theme";
 
 const ModalInformationFooter = (
   <>
@@ -73,10 +73,12 @@ export function extendPricingPlan(organization: APIOrganization) {
 }
 
 export function upgradeUserQuota() {
-  
-  renderIndependently((destroyCallback) => 
-    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}> …<UpgradeUserQuotaModal destroy={destroyCallback} />
-    </ConfigProvider>);
+  renderIndependently((destroyCallback) => (
+    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
+      {" "}
+      …<UpgradeUserQuotaModal destroy={destroyCallback} />
+    </ConfigProvider>
+  ));
 }
 
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
@@ -121,7 +123,11 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 }
 
 export function upgradeStorageQuota() {
-  renderIndependently((destroyCallback) =>  <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}><UpgradeStorageQuotaModal destroy={destroyCallback} /></ConfigProvider>);
+  renderIndependently((destroyCallback) => (
+    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
+      <UpgradeStorageQuotaModal destroy={destroyCallback} />
+    </ConfigProvider>
+  ));
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   const storageInputRef = useRef<HTMLInputElement | null>(null);
@@ -229,30 +235,35 @@ function upgradePricingPlan(
       modalBody = (
         <Row gutter={16}>
           <Col span={12}>
-          <TeamPlanUpgradeCard teamUpgradeCallback={() => {
-            sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
-            Toast.success(messages["organization.plan.upgrage_request_sent"]);
-            destroyCallback();
-          }}/>
+            <TeamPlanUpgradeCard
+              teamUpgradeCallback={() => {
+                sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+                Toast.success(messages["organization.plan.upgrage_request_sent"]);
+                destroyCallback();
+              }}
+            />
           </Col>
           <Col span={12}>
-          <PowerPlanUpgradeCard powerUpgradeCallback={() => {
-            sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
-            Toast.success(messages["organization.plan.upgrage_request_sent"]);
-            destroyCallback();
-          }} /></Col>
-        </Row>          
+            <PowerPlanUpgradeCard
+              powerUpgradeCallback={() => {
+                sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+                Toast.success(messages["organization.plan.upgrage_request_sent"]);
+                destroyCallback();
+              }}
+            />
+          </Col>
+        </Row>
       );
     }
 
     return (
       <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-      <UpgradePricingPlanModal
-        title={title}
-        modalBody={modalBody}
-        okButtonCallback={okButtonCallback}
-        destroy={destroyCallback}
-      />
+        <UpgradePricingPlanModal
+          title={title}
+          modalBody={modalBody}
+          okButtonCallback={okButtonCallback}
+          destroy={destroyCallback}
+        />
       </ConfigProvider>
     );
   });
@@ -273,7 +284,6 @@ export function UpgradePricingPlanModal({
     "Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user and storage quotas.";
 
   return (
-
     <Modal
       open
       title={
@@ -311,10 +321,9 @@ export function UpgradePricingPlanModal({
 }
 
 export function orderWebknossosCredits() {
-  
   renderIndependently((destroyCallback) => (
     <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-    <OrderWebknossosCreditsModal destroy={destroyCallback} />
+      <OrderWebknossosCreditsModal destroy={destroyCallback} />
     </ConfigProvider>
   ));
 }

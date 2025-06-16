@@ -1,6 +1,7 @@
+import { PlusOutlined } from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
-import { Col, Row, Spin, Typography } from "antd";
+import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
@@ -14,7 +15,8 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { getActiveUserCount } from "./pricing_plan_utils";
+import { PricingPlanEnum, getActiveUserCount } from "./pricing_plan_utils";
+import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(false);
@@ -62,6 +64,69 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
 
+  let upgradeUsersAction: React.ReactNode = null;
+  let upgradeStorageAction: React.ReactNode = null;
+  let upgradePlanAction: React.ReactNode = null;
+
+  if (
+    organization.pricingPlan === PricingPlanEnum.Basic ||
+    organization.pricingPlan === PricingPlanEnum.Team ||
+    organization.pricingPlan === PricingPlanEnum.TeamTrial
+  ) {
+    upgradeUsersAction = (
+      <Button
+        shape="circle"
+        size="small"
+        key="upgradeUsersAction"
+        icon={<PlusOutlined />}
+        onClick={
+          organization.pricingPlan === PricingPlanEnum.Basic
+            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
+            : UpgradePricingPlanModal.upgradeUserQuota
+        }
+      />
+    );
+
+    upgradeStorageAction = (
+      <Button
+        shape="circle"
+        size="small"
+        key="upgradeStorageAction"
+        icon={<PlusOutlined />}
+        onClick={
+          organization.pricingPlan === PricingPlanEnum.Basic
+            ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
+            : UpgradePricingPlanModal.upgradeStorageQuota
+        }
+      />
+    );
+
+    upgradePlanAction = (
+      <Button
+        shape="circle"
+        size="small"
+        key="comparePlanAction"
+        icon={<PlusOutlined />}
+        href="https://webknossos.org/pricing"
+        target="_blank"
+        rel="noopener noreferrer"
+      />
+    );
+  }
+  const buyMoreCreditsAction = (
+    <Tooltip title="Disabled during testing phase" key="buyMoreCreditsAction">
+      <Button
+        type="default"
+        shape="circle"
+        icon={<PlusOutlined />}
+        size="small"
+        key="buyMoreCreditsAction"
+        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+        disabled
+      />
+    </Tooltip>
+  );
+
   const orgaStats = [
     {
       key: "name",
@@ -85,22 +150,26 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
       key: "plan",
       title: "Current Plan",
       value: "Basic",
+      action: upgradePlanAction,
     },
     {
       key: "users",
       title: "Users",
       value: `${activeUsersCount}/${maxUsersCountLabel}`,
+      action: upgradeUsersAction,
     },
     {
       key: "storage",
       title: "Storage",
       value: `${usedStorageLabel} / ${includedStorageLabel}`,
+      action: upgradeStorageAction,
     },
 
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
       value: "2",
+      action: buyMoreCreditsAction,
     },
   ];
 
@@ -115,7 +184,7 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           {orgaStats.map((stat) => (
             <Col span={8} key={stat.key}>
-              <SettingsCard title={stat.title} description={stat.value} />
+              <SettingsCard title={stat.title} description={stat.value} action={stat.action} />
             </Col>
           ))}
         </Row>

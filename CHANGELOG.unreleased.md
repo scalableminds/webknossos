@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the contrast of the WelcomeToast buttons. Updated `antd` to version `5.22`.[#8688](https://github.com/scalableminds/webknossos/pull/8688)
 - Fixed a race condition when starting proofreading with a split action. [#8676](https://github.com/scalableminds/webknossos/pull/8676)
 - Fixed that activating a mapping got stuck when a dataset was opened in "view" mode. [#8687](https://github.com/scalableminds/webknossos/pull/8687)
+- Fixed a regression that led to incorrect behavior when trying to jump to the last branchpoint even though no branchpoint existed. [#8695](https://github.com/scalableminds/webknossos/pull/8695)
 
 ### Removed
 

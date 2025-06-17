@@ -6,7 +6,7 @@ WEBKNOSSOS works with a wide range of modern bio-imaging formats and image stack
 - [Multi layer file sequence](#multi-layer-image-file-sequence) containing multiple folders with image sequences that are interpreted as separate layers
 - [Single-file images](#single-file-images) (OME-TIFF, TIFF, PNG, czi, raw, etc)
 
-Image stacks need to be converted to [WKW](./wkw.md) for WEBKNOSSOS. This happens automatically when using the web upload on [webknossos.org](https://webknossos.org) or can be done manually (see below).
+Image stacks need to be converted to [Zarr](./zarr.md) or [WKW](./wkw.md) datasets for WEBKNOSSOS. This happens automatically when using the web upload on [webknossos.org](https://webknossos.org) or can be done manually (see below).
 
 ## Single-Layer Image File Sequence
 When uploading multiple image files, these files are sorted numerically, and each one is interpreted as single section/slice within a 3D dataset.
@@ -60,7 +60,7 @@ You can manually convert image stacks through:
 ### Conversion with CLI
 You can easily convert image stacks manually with the WEBKNOSSOS CLI.
 The CLI tool expects all image files in a single folder with numbered file names.
-After installing, you can convert image stacks to WKW datasets with the following command:
+After installing, you can convert image stacks to Zarr3 datasets with the following command:
 
 ```shell
 pip install webknossos
@@ -71,7 +71,7 @@ webknossos convert \
   data/source data/target
 ```
 
-This snippet converts an image stack that is located in directory called `data/source` into a WKW dataset which will be located at `data/target`.
+This snippet converts an image stack that is located in directory called `data/source` into a Zarr3 dataset which will be located at `data/target`.
 It will create a so called `color` layer containing your raw greyscale/color image.
 The supplied `--voxel-size` is specified in nanometers.
 
@@ -79,7 +79,7 @@ Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli)
 
 ### Conversion with Python
 
-You can use the free [WEBKNOSSSO Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to WKW or integrate the conversion as part of an existing workflow. 
+You can use the free [WEBKNOSSSO Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr3 or integrate the conversion as part of an existing workflow. 
 
 ```python
 import webknossos as wk

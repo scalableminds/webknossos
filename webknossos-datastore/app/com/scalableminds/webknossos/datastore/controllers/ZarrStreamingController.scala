@@ -169,9 +169,9 @@ class ZarrStreamingController @Inject()(
           s.boundingBox,
           s.elementClass,
           mags = s.sortedMags.map(
-            x =>
-              MagLocator(x,
-                         Some(s.name + "/" + x.toMagLiteral(allowScalar = true)),
+            m =>
+              MagLocator(m,
+                         Some(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,
@@ -193,9 +193,9 @@ class ZarrStreamingController @Inject()(
           d.boundingBox,
           d.elementClass,
           mags = d.sortedMags.map(
-            x =>
-              MagLocator(x,
-                         Some(d.name + "/" + x.toMagLiteral(allowScalar = true)),
+            m =>
+              MagLocator(m,
+                         Some(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,

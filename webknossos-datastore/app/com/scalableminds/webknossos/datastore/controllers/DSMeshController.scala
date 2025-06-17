@@ -46,10 +46,10 @@ class DSMeshController @Inject()(
   def listMeshChunksForSegment(organizationId: String,
                                datasetDirectoryName: String,
                                dataLayerName: String,
-                               /* If targetMappingName is set, assume that meshfile contains meshes for
+                               /* If targetMappingName is set, assume that meshFile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                             belonging to the supplied agglomerate id.
-                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
+                                            If it is not set, use meshFile as is, assume passed id is present in meshFile
                                    Note: in case of an editable mapping, targetMappingName is its baseMapping name.
                                 */
                                targetMappingName: Option[String],

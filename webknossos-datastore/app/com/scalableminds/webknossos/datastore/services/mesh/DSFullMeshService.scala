@@ -60,7 +60,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                 m: MessagesProvider,
                                                 tc: TokenContext): Fox[Array[Byte]] =
     if (fullMeshRequest.meshFileName.isDefined)
-      loadFullMeshFromMeshfile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
+      loadFullMeshFromMeshFile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
     else
       loadFullMeshFromAdHoc(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
 
@@ -121,7 +121,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   // TODO make sure this also works for the remote neuroglancer variant. if so, delete other implementation
-  private def loadFullMeshFromMeshfile(organizationId: String,
+  private def loadFullMeshFromMeshFile(organizationId: String,
                                        datasetDirectoryName: String,
                                        dataLayerName: String,
                                        fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
@@ -151,10 +151,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         readMeshChunkAsStl(meshFileKey, chunkRange, transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
-      _ = logMeshingDuration(before, "meshfile", stlOutput.length)
+      _ = logMeshingDuration(before, "meshFile", stlOutput.length)
     } yield stlOutput
 
-  private def readMeshChunkAsStl(meshFileKey: MeshfileKey, chunkInfo: MeshChunk, transform: Array[Array[Double]])(
+  private def readMeshChunkAsStl(meshFileKey: MeshFileKey, chunkInfo: MeshChunk, transform: Array[Array[Double]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -168,7 +168,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
 
   /*
   // TODO delete if above works also for neuroglancer
-  private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshfileKey, fullMeshRequest: FullMeshRequest)(
+  private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshFileKey, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -201,7 +201,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield stlOutput
 
   private def readNeuroglancerPrecomputedMeshChunkAsStl(
-                                                         meshFileKey: MeshfileKey,
+                                                         meshFileKey: MeshFileKey,
                                                          chunkInfo: MeshChunk,
                                                          transform: Array[Array[Double]],
                                                          segmentId: Option[Long],
@@ -224,7 +224,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       dracoBytes: Array[Byte],
       vertexQuantizationBits: Int = 0)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from meshfile transform attribute"
+      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from mesh file transform attribute"
       stlEncodedChunk <- tryo(
         dracoToStlConverter.dracoToStl(dracoBytes,
                                        chunkInfo.position.x,

@@ -2,37 +2,24 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
-import com.typesafe.scalalogging.LazyLogging
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 /*
- * The BinaryDataService needs to be instantiated as singleton to provide a shared DataCubeCache.
+ * The BinaryDataService needs to be instantiated as singleton to provide a shared bucketProviderCache.
  * There is, however an additional instance for volume tracings in the TracingStore
  * The TracingStore one (for VolumeTracings) already is a singleton, since the surrounding VolumeTracingService is a singleton.
  * The DataStore one is singleton-ized via this holder.
+ * Also, this allows giving the datastore-only sharedChunkContentsCache to the datastore one, while passing None to the tracingstore one.
  */
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         datasetErrorLoggingService: DSDatasetErrorLoggingService,
                                         chunkCacheService: ChunkCacheService,
-                                        dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
-    extends LazyLogging {
-
-  // TODO make them injectable again
-  val zarrAgglomerateService =
-    new ZarrAgglomerateService(config, dataVaultService, chunkCacheService.sharedChunkContentsCache)
-  val hdf5AgglomerateService = new Hdf5AgglomerateService(config)
-
-  val agglomerateService = new AgglomerateService(
-    config,
-    zarrAgglomerateService,
-    hdf5AgglomerateService,
-    remoteSourceDescriptorService
-  )
+                                        agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseDirectory),

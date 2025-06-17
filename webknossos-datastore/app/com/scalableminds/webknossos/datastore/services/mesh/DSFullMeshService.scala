@@ -37,7 +37,6 @@ object FullMeshRequest {
 
 class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   meshFileService: MeshFileService,
-                                  neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
                                   val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -167,6 +166,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes)
     } yield stlEncodedChunk
 
+  /*
   // TODO delete if above works also for neuroglancer
   private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshfileKey, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
@@ -214,6 +214,9 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)
     } yield stlEncodedChunk
+
+
+   */
 
   private def getStlEncodedChunkFromDraco(
       chunkInfo: MeshChunk,

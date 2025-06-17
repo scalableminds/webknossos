@@ -69,9 +69,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private val keyBuckets = "buckets"
   private val keyNeuroglancer = "neuroglancer"
 
-  // TODO rename meshFile to meshfile?
-
-  private lazy val openArraysCache = AlfuCache[(MeshfileKey, String), DatasetArray]()
+    private lazy val openArraysCache = AlfuCache[(MeshfileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshfileKey, MeshfileAttributes]()
 
   private def readMeshFileAttributesImpl(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,

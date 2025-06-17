@@ -24,13 +24,14 @@ import org.apache.commons.io.FilenameUtils
 
 import java.net.URI
 import java.nio.file.Paths
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService(config: DataStoreConfig,
-                         zarrAgglomerateService: ZarrAgglomerateService,
-                         hdf5AgglomerateService: Hdf5AgglomerateService,
-                         remoteSourceDescriptorService: RemoteSourceDescriptorService)
+class AgglomerateService @Inject()(config: DataStoreConfig,
+                                   zarrAgglomerateService: ZarrAgglomerateService,
+                                   hdf5AgglomerateService: Hdf5AgglomerateService,
+                                   remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends LazyLogging
     with FoxImplicits {
   private val agglomerateDir = "agglomerates"

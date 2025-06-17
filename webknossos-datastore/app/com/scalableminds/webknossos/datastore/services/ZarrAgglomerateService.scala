@@ -18,12 +18,13 @@ import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
+import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.ExecutionContext
 
-class ZarrAgglomerateService(config: DataStoreConfig,
-                             dataVaultService: DataVaultService,
-                             sharedChunkContentsCache: AlfuCache[String, MultiArray])
+class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
+                                       dataVaultService: DataVaultService,
+                                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
     extends DataConverter
     with LazyLogging {
 

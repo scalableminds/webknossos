@@ -119,6 +119,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
                 newTracingId: String,
+                ownerId: ObjectId,
+                requestingUserId: ObjectId,
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =
@@ -137,6 +139,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newTracingId = newTracingId,
+                ownerId = ownerId,
+                requestingUserId = requestingUserId,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

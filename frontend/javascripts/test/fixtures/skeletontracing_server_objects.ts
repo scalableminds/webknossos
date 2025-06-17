@@ -5,11 +5,11 @@ import {
   type APITracingStoreAnnotation,
 } from "types/api_types";
 
-const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
+const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
 
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
-  id: "47e37793-d0be-4240-a371-87ce68561a13",
+  id: TRACING_ID,
   trees: [
     {
       treeId: 2,
@@ -160,8 +160,9 @@ export const tracing: ServerSkeletonTracing = {
     y: 73.99999869555745,
     z: 4.908922051072295e-7,
   },
-  additionalAxes: [],
   zoomLevel: 2,
+  additionalAxes: [],
+  userStates: [],
 };
 
 export const annotation: APIAnnotation = {
@@ -229,4 +230,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  userStates: [],
 };

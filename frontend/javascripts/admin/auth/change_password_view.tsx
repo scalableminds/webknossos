@@ -34,9 +34,10 @@ function ChangePasswordView({ history }: Props) {
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
 
-  const [passkeys, setPasskeys] = useState([]);
+  const [passkeys, setPasskeys] = useState<WebAuthnKeyDescriptor[]>([]);
   async function fetchPasskeys(): Promise<void> {
-    listWebAuthnKeys().then((passkeys) => setPasskeys(passkeys));
+    const passkeys = await listWebAuthnKeys();
+    setPasskeys(passkeys);
   }
   useEffect(() => {
     if (!isMounted) {

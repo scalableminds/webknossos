@@ -43,18 +43,14 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
-  const { openIdConnectEnabled } = features();
+  const { openIdConnectEnabled, passkeysEnabled } = features();
 
   const webauthnLogin = async () => {
-    try {
-      const [user, organization] = await doWebAuthnLogin();
-      Store.dispatch(setActiveUserAction(user));
-      Store.dispatch(setActiveOrganizationAction(organization));
-      if (onLoggedIn) {
-        onLoggedIn();
-      }
-    } catch (error) {
-      console.error("WebAuthn login failed", error);
+    const [user, organization] = await doWebAuthnLogin();
+    Store.dispatch(setActiveUserAction(user));
+    Store.dispatch(setActiveOrganizationAction(organization));
+    if (onLoggedIn) {
+      onLoggedIn();
     }
   };
 
@@ -153,13 +149,15 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
-        <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
-          <FormItem style={{ flexGrow: 1 }}>
-            <Button style={{ width: "100%" }} onClick={webauthnLogin}>
-              Log in with Passkey
-            </Button>
-          </FormItem>
-        </div>
+        {passkeysEnabled && (
+          <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+            <FormItem style={{ flexGrow: 1 }}>
+              <Button style={{ width: "100%" }} onClick={webauthnLogin}>
+                Log in with Passkey
+              </Button>
+            </FormItem>
+          </div>
+        )}
         {hideFooter ? null : (
           <FormItem
             style={{

@@ -582,29 +582,32 @@ class AuthenticationController @Inject()(
     }
   }
 
-  def webauthnAuthStart(): Action[AnyContent] = Action {
-    val sessionId = UUID.randomUUID().toString
-    val cookie = Cookie("webauthn-session",
-                        sessionId,
-                        maxAge = Some(webauthnTimeout.toSeconds.toInt),
-                        httpOnly = true,
-                        secure = true)
-    val challenge = new Array[Byte](32) // Minimum required length are 16 bytes.
-    secureRandom.nextBytes(challenge)
-    val assertion = WebAuthnPublicKeyCredentialRequestOptions(
-      challenge = Base64.encodeBase64URLSafeString(challenge),
-      timeout = Some(webauthnTimeout.toMillis.toInt),
-      rpId = Some(origin.getHost),
-      userVerification = Some("preferred"),
-      hints = None
-    )
-    temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
-    Ok(Json.toJson(assertion)).withCookies(cookie)
+  def webauthnAuthStart(): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+      sessionId = UUID.randomUUID().toString
+      cookie = Cookie("webauthn-session",
+                      sessionId,
+                      maxAge = Some(webauthnTimeout.toSeconds.toInt),
+                      httpOnly = true,
+                      secure = true)
+      challenge = new Array[Byte](32)
+      _ = secureRandom.nextBytes(challenge)
+      assertion = WebAuthnPublicKeyCredentialRequestOptions(
+        challenge = Base64.encodeBase64URLSafeString(challenge),
+        timeout = Some(webauthnTimeout.toMillis.toInt),
+        rpId = Some(origin.getHost),
+        userVerification = Some("preferred"),
+        hints = None
+      )
+      _ = temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
+    } yield Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
       for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
@@ -639,6 +642,7 @@ class AuthenticationController @Inject()(
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
@@ -682,6 +686,7 @@ class AuthenticationController @Inject()(
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
     sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
       for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
@@ -721,19 +726,20 @@ class AuthenticationController @Inject()(
   def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
         keys <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
         reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
       } yield Ok(Json.toJson(reducedKeys))
     }
   }
 
-  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      {
-        for {
-          _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser)
-        } yield Ok(Json.obj())
-      }
+  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+        _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser)
+      } yield Ok(Json.obj())
+    }
   }
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"

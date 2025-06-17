@@ -13,6 +13,7 @@ import {
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
+import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 
 function buildPermutation(sequenceLength: number, primitiveRoot: number) {
   return {
@@ -29,7 +30,14 @@ const permutations = {
 };
 
 export const convertCellIdToRGB: ShaderModule = {
-  requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
+  requirements: [
+    hsvToRgb,
+    getElementOfPermutation,
+    aaStep,
+    colormapJet,
+    hashCombine,
+    getUnrotatedWorldCoordUVW,
+  ],
   code: `
     highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
@@ -214,7 +222,7 @@ export const convertCellIdToRGB: ShaderModule = {
       // Round the zoomValue so that the pattern frequency only changes at distinct steps. Otherwise, zooming out
       // wouldn't change the pattern at all, which would feel weird.
       float zoomAdaption = ceil(zoomValue);
-      vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
+      vec3 worldCoordUVW = coordScaling * getUnrotatedWorldCoordUVW()  / zoomAdaption;
 
       float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
       vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;

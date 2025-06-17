@@ -29,6 +29,7 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
+  getRotationInRadian,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
   isRotated,
@@ -251,6 +252,7 @@ class PlaneMaterialFactory {
       },
       blendMode: { value: 1.0 },
       isFlycamRotated: { value: false },
+      inverseFlycamRotationMatrix: { value: new THREE.Matrix4() },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -591,6 +593,17 @@ class PlaneMaterialFactory {
         (storeState) => isRotated(storeState.flycam),
         (isRotated) => {
           this.uniforms.isFlycamRotated.value = isRotated;
+        },
+      ),
+      listenToStoreProperty(
+        // TODOM: Fix rotating pattern. Rotation around z is also not fixed
+        // TODOM: Fix rotation direction. Seems to be in different direction than actual rotation.
+        (storeState) => getRotationInRadian(storeState.flycam, false),
+        (rotation) => {
+          const inverseFlycamRotationMatrix = new THREE.Matrix4()
+            .makeRotationFromEuler(new THREE.Euler(...rotation, "ZYX"))
+            .invert();
+          this.uniforms.inverseFlycamRotationMatrix.value = inverseFlycamRotationMatrix;
         },
       ),
     );

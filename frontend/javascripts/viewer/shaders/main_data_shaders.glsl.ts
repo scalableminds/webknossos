@@ -71,6 +71,7 @@ uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
 uniform bool isFlycamRotated;
+uniform mat4 inverseFlycamRotationMatrix;
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];

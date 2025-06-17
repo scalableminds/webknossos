@@ -38,8 +38,7 @@ import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
 import { sendSaveRequestWithToken } from "admin/rest_api";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
-import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
 const TOKEN = "secure-token";
@@ -202,7 +201,7 @@ export async function setupWebknossosForTesting(
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.
    */
   Store.dispatch(restartSagaAction());
-  Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(resetStoreAction());
   Store.dispatch(setActiveUserAction(dummyUser));
 
   Store.dispatch(setActiveOrganizationAction(dummyOrga));

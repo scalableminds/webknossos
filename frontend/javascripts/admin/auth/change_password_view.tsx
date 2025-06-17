@@ -28,7 +28,6 @@ function ChangePasswordView({ history }: Props) {
   const [form] = Form.useForm();
 
   const { passkeysEnabled } = features();
-  const [isMounted, setIsMounted] = useState(false);
 
   /// Passkeys
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
@@ -39,14 +38,13 @@ function ChangePasswordView({ history }: Props) {
     const passkeys = await listWebAuthnKeys();
     setPasskeys(passkeys);
   }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run once
   useEffect(() => {
-    if (!isMounted) {
-      setIsMounted(true);
-      if (passkeysEnabled) {
-        fetchPasskeys();
-      }
+    if (passkeysEnabled) {
+      fetchPasskeys();
     }
-  });
+  }, []);
 
   function onFinish(formValues: Record<string, any>) {
     Request.sendJSONReceiveJSON("/api/auth/changePassword", {

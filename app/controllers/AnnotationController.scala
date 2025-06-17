@@ -420,6 +420,8 @@ class AnnotationController @Inject()(
       newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotation._id,
         newAnnotationId,
+        annotation._user,
+        user._id,
         version = None,
         isFromTask = annotation._task.isDefined,
         datasetBoundingBox = dataSource.map(_.boundingBox)

@@ -6,7 +6,7 @@ import {
   TagsOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
-import { App, List, type MenuProps, Checkbox } from "antd";
+import { App, Checkbox, List, type MenuProps } from "antd";
 import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 import { useDispatch } from "react-redux";

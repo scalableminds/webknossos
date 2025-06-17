@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -8,10 +7,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import jakarta.inject.Inject
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 
 class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends NeuroglancerMeshHelper with FoxImplicits {
@@ -20,20 +19,15 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey): Box[String] = {
-    val asOption = meshFileCache
+  def mappingNameForMeshFile(meshFileKey: MeshFileKey): Box[Option[String]] = tryo {
+    meshFileCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
-        cachedMeshFile.stringReader.getAttr("/", "mapping_name")
+        cachedMeshFile.mappingName
       }
       .toOption
       .flatMap { value =>
         Option(value) // catch null
       }
-
-    asOption match {
-      case Some(mappingName) => Full(mappingName)
-      case None              => Empty
-    }
   }
 
   private def readMeshfileMetadata(meshFileKey: MeshFileKey): Box[(String, Double, Array[Array[Double]])] =
@@ -93,14 +87,6 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
     (neuroglancerStart, neuroglancerEnd)
   }
 
-  // TODO null vs None?
-  private def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Box[String] = {
-    val attributeName = if (meshFileVersion == 0) "metadata/mapping_name" else "mapping_name"
-    meshFileCache.withCachedHdf5(meshFilePath) { cachedMeshFile =>
-      cachedMeshFile.stringReader.getAttr("/", attributeName)
-    }
-  }
-
   override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
                                      lod: Int,
                                      lodScaleMultiplier: Double,
@@ -113,11 +99,10 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
                                transform: Array[Array[Double]],
                                lod: Int): Array[Array[Double]] = transform
 
-  // TODO should we give the version field to the frontend?
-  private def versionForMeshFile(meshFilePath: Path): Long =
+  def versionForMeshFile(meshFileKey: MeshFileKey): Long =
     meshFileCache
-      .withCachedHdf5(meshFilePath) { cachedMeshFile =>
-        cachedMeshFile.int64Reader.getAttr("/", "artifact_schema_version")
+      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+        cachedMeshFile.artifactSchemaVersion
       }
       .toOption
       .getOrElse(0)
@@ -152,7 +137,6 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
       (meshFormat, lodScaleMultiplier, transform) <- readMeshfileMetadata(meshFileKey).toFox

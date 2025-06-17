@@ -2,9 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -14,20 +13,19 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
-import play.api.i18n.MessagesProvider
-import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
 import java.nio.file.Paths
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
-    meshFile: MeshFileInfo,
+    meshFileName: String,
     segmentId: Long
 )
 
@@ -57,43 +55,24 @@ object MeshChunkDataRequestList {
 // TODO should this become a generic AttachmentKey?
 case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
-object MeshFileType extends ExtendedEnumeration {
-  type MeshFileType = Value
-  val local, neuroglancerPrecomputed = Value
-
-  implicit object MeshFileTypeFormat extends Format[MeshFileType] {
-    def reads(json: JsValue): JsResult[MeshFileType] =
-      json.validate[String].map(MeshFileType.withName)
-
-    def writes(meshFileType: MeshFileType): JsValue = JsString(meshFileType.toString)
-  }
-}
-
+// Sent to wk frontend
 case class MeshFileInfo(
     name: String,
-    path: Option[String],
-    fileType: Option[MeshFileType.MeshFileType],
     mappingName: Option[String],
     formatVersion: Long
-) {
-  def isNeuroglancerPrecomputed: Boolean =
-    fileType.contains(MeshFileType.neuroglancerPrecomputed)
-}
+)
 
 object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
 }
 
-class MeshFileService @Inject()(
-    config: DataStoreConfig,
-    hdf5MeshFileService: Hdf5MeshFileService,
-    zarrMeshFileService: ZarrMeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService)(implicit ec: ExecutionContext)
+class MeshFileService @Inject()(config: DataStoreConfig,
+                                hdf5MeshFileService: Hdf5MeshFileService,
+                                zarrMeshFileService: ZarrMeshFileService,
+                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
+                                remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
-    with LazyLogging
-    with Hdf5HashedArrayUtils
-    with ByteUtils {
+    with Hdf5HashedArrayUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val meshesDir = "meshes"
@@ -134,48 +113,56 @@ class MeshFileService @Inject()(
       )
   }
 
-  def exploreMeshFiles(organizationId: String,
-                       datasetDirectoryName: String,
-                       dataLayerName: String): Future[Set[MeshFileInfo]] = {
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
-    val meshFileNames = PathUtils
+  def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+                                                                      tc: TokenContext,
+                                                                      m: MessagesProvider): Fox[Seq[MeshFileInfo]] = {
+    val attachedMeshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name).toSet
+
+    val layerDir =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
+    val scannedMeshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
       .toOption
       .getOrElse(Nil)
+      .toSet
 
-    val meshFileVersions = meshFileNames.map { fileName =>
-      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$hdf5FileExtension")
-      versionForMeshFile(meshFilePath)
+    val allMeshFileNames = attachedMeshFileNames ++ scannedMeshFileNames
+
+    // TODO skip failures
+    Fox.serialCombined(allMeshFileNames) { meshFileName =>
+      for {
+        meshFileKey <- lookUpMeshFile(dataSourceId, dataLayer, meshFileName) ?~> Messages("mesh.file.lookup.failed",
+                                                                                          meshFileName)
+        formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
+        mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
+                                                                        meshFileName)
+      } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
     }
-
-    val mappingNameFoxes = meshFileNames.lazyZip(meshFileVersions).map { (fileName, fileVersion) =>
-      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$hdf5FileExtension")
-      mappingNameForMeshFile(meshFilePath, fileVersion)
-    }
-
-    for {
-      mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
-      mappingNameOptions = mappingNameBoxes.map(_.toOption)
-      zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
-    } yield
-      zipped
-        .map({
-          case (fileName, mappingName, fileVersion) =>
-            MeshFileInfo(fileName, None, Some(MeshFileType.local), mappingName, fileVersion)
-        })
-        .toSet
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] =
+  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+                                                       tc: TokenContext): Fox[Option[String]] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.mappingNameForMeshFile(meshFileKey)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5MeshFileService.mappingNameForMeshFile(meshFileKey).toFox
+      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
+        Fox.successful(None)
+    }
+
+  private def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    meshFileKey.attachment.dataFormat match {
+      case LayerAttachmentDataformat.zarr3 =>
+        zarrMeshFileService.versionForMeshFile(meshFileKey)
+      case LayerAttachmentDataformat.hdf5 =>
+        Fox.successful(hdf5MeshFileService.versionForMeshFile(meshFileKey))
+      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
+        Fox.successful(NeuroglancerMesh.meshInfoVersion)
     }
 
   def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
@@ -183,19 +170,19 @@ class MeshFileService @Inject()(
       tc: TokenContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
-      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
-        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
       case LayerAttachmentDataformat.hdf5 =>
         hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
+        neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
     }
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
     meshFileKey.attachment.dataFormat match {
-      case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
       case LayerAttachmentDataformat.zarr3 => zarrMeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests)
+      case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.readMeshChunk(meshFileKey, meshChunkDataRequests)
     }

@@ -9,8 +9,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   ListMeshChunksRequest,
   MeshChunkDataRequestList,
   MeshFileService,
-  MeshMappingHelper,
-  NeuroglancerPrecomputedMeshFileService
+  MeshMappingHelper
 }
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -20,7 +19,6 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     fullMeshService: DSFullMeshService,
     dataSourceRepository: DataSourceRepository,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
@@ -37,12 +35,11 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshFiles(organizationId,
-                                                                                       datasetDirectoryName,
-                                                                                       dataLayerName)
-          allMeshFiles = meshFiles ++ neuroglancerMeshFiles
-        } yield Ok(Json.toJson(allMeshFiles))
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileInfos <- meshFileService.listMeshFiles(dataSource.id, dataLayer)
+        } yield Ok(Json.toJson(meshFileInfos))
       }
     }
 
@@ -64,8 +61,8 @@ class DSMeshController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
-          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFile.name)
-          mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey).shiftBox
+          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFileName)
+          mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
           segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             dataSource.id,
             dataLayer,

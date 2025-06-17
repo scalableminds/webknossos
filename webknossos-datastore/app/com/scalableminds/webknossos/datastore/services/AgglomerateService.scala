@@ -40,11 +40,12 @@ class AgglomerateService(config: DataStoreConfig,
   private val agglomerateKeyCache
     : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey
 
-  def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayer: DataLayer): Set[String] = {
+  def listAgglomeratesFiles(dataSourceId: DataSourceId, dataLayer: DataLayer): Set[String] = {
     val attachedAgglomerates = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
 
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayer.name)
-    val exploredAgglomerates = PathUtils
+    val layerDir =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
+    val scannedAgglomerates = PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
                  PathUtils.fileExtensionFilter(agglomerateFileExtension))
@@ -55,7 +56,7 @@ class AgglomerateService(config: DataStoreConfig,
       .getOrElse(Nil)
       .toSet
 
-    attachedAgglomerates ++ exploredAgglomerates
+    attachedAgglomerates ++ scannedAgglomerates
   }
 
   def clearCaches(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {

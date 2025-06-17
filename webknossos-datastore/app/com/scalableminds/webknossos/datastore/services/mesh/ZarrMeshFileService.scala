@@ -22,7 +22,8 @@ case class MeshfileAttributes(
     transform: Array[Array[Double]],
     hash_function: String,
     n_buckets: Int, // TODO camelCase + custom format?
-    mapping_name: Option[String]
+    mapping_name: Option[String],
+    artifact_schema_version: Long
 ) extends Hdf5HashedArrayUtils {
   lazy val applyHashFunction: Long => Long = getHashFunction(hash_function)
 }
@@ -39,8 +40,11 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private val keyBuckets = "buckets"
   private val keyNeuroglancer = "neuroglancer"
 
-  def readMeshfileAttributes(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
-                                                       tc: TokenContext): Fox[MeshfileAttributes] =
+  // TODO rename meshFile to meshfile?
+
+  // TODO cache?
+  private def readMeshFileAttributes(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+                                                               tc: TokenContext): Fox[MeshfileAttributes] =
     for {
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
       groupHeaderBytes <- (groupVaultPath / Zarr3GroupHeader.FILENAME_ZARR_JSON).readBytes()
@@ -51,20 +55,19 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   def readMeshfileMetadata(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
                                                      tc: TokenContext): Fox[(String, Double, Array[Array[Double]])] =
     for {
-      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
     } yield (meshfileAttributes.mesh_format, meshfileAttributes.lod_scale_multiplier, meshfileAttributes.transform)
 
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[String] =
+  def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
-      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
-      groupHeaderBytes <- (groupVaultPath / Zarr3GroupHeader.FILENAME_ZARR_JSON).readBytes()
-      groupHeader <- JsonHelper.parseAs[Zarr3GroupHeader](groupHeaderBytes).toFox ?~> "Could not parse array header"
-      meshfileAttributes <- groupHeader.meshfileAttributes.toFox ?~> "Could not parse meshfile attributes from zarr group file"
-      mappingNameOrEmpty <- meshfileAttributes.mapping_name match { // TODO Does Fox have a shortcut for this?
-        case Some(mappingName) => Fox.successful(mappingName)
-        case None              => Fox.empty
-      }
-    } yield mappingNameOrEmpty
+      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+    } yield meshfileAttributes.artifact_schema_version
+
+  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+                                                       tc: TokenContext): Fox[Option[String]] =
+    for {
+      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+    } yield meshfileAttributes.mapping_name
 
   def listMeshChunksForSegment(meshFileKey: MeshFileKey, segmentId: Long, meshfileAttributes: MeshfileAttributes)(
       implicit ec: ExecutionContext,
@@ -140,7 +143,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
       tc: TokenContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
-      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
       meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(meshFileKey,
                                                                                                 segmentIds,
                                                                                                 meshfileAttributes)
@@ -166,7 +169,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
-      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
 
       // TODO skip sorting in zarr case? use parallel requests instead?
       // Sort the requests by byte offset to optimize for spinning disk access

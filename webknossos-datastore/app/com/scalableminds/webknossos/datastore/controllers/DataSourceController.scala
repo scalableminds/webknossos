@@ -265,7 +265,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateList = agglomerateService.exploreAgglomerates(organizationId, datasetDirectoryName, dataLayer)
+        agglomerateList = agglomerateService.listAgglomeratesFiles(dataSource.id, dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }

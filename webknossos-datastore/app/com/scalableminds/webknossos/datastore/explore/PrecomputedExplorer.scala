@@ -13,7 +13,14 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  Category,
+  DatasetLayerAttachments,
+  ElementClass,
+  LayerAttachment,
+  LayerAttachmentDataformat
+}
+import com.scalableminds.webknossos.datastore.services.mesh.{NeuroglancerMesh, NeuroglancerPrecomputedMeshInfo}
 
 import scala.concurrent.ExecutionContext
 
@@ -29,9 +36,10 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       layerAndVoxelSize <- layerFromPrecomputedHeader(precomputedHeader, remotePath, credentialId)
     } yield List(layerAndVoxelSize)
 
-  private def layerFromPrecomputedHeader(precomputedHeader: PrecomputedHeader,
-                                         remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(PrecomputedLayer, VoxelSize)] =
+  private def layerFromPrecomputedHeader(
+      precomputedHeader: PrecomputedHeader,
+      remotePath: VaultPath,
+      credentialId: Option[String])(implicit tc: TokenContext): Fox[(PrecomputedLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
@@ -43,9 +51,13 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
         getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox)
+      meshAttachments <- exploreMeshesForLayer(remotePath / precomputedHeader.meshPath)
+      attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DatasetLayerAttachments(meshes = meshAttachments))
+      else None
       layer = if (precomputedHeader.describesSegmentationLayer) {
         PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
-      } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
+      } else
+        PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags, attachments = attachmentsGrouped)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Option[ElementClass.Value] =
@@ -72,4 +84,14 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       axisOrder = AxisOrder.xyz(0, 1, 2)
     } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
+
+  private def exploreMeshesForLayer(meshPath: VaultPath)(implicit tc: TokenContext): Fox[Seq[LayerAttachment]] =
+    (for {
+      meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)
+        .parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
+      _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
+    } yield
+      Seq(
+        LayerAttachment(NeuroglancerMesh.meshName, meshPath.toUri, LayerAttachmentDataformat.neuroglancerPrecomputed)))
+      .orElse(Fox.successful(Seq.empty))
 }

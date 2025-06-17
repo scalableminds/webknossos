@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext
 
@@ -24,7 +24,7 @@ trait MeshMappingHelper extends FoxImplicits {
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
-      mappingNameForMeshFile: Box[String],
+      mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {

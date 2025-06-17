@@ -39,9 +39,12 @@ class CachedHdf5File(reader: IHDF5Reader)
   // For Meshfile
   lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
   lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
+  lazy val mappingName: String = stringReader.getAttr("/", "mapping_name")
 
   // For Meshfile and SegmentIndexFile
   lazy val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
+
+  lazy val artifactSchemaVersion: Long = int64Reader.getAttr("/", "artifact_schema_version")
 }
 
 object CachedHdf5File {

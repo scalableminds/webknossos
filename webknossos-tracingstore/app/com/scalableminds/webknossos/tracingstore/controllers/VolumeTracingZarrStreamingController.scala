@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   TransposeCodecConfiguration,
   TransposeSetting,
   Zarr3ArrayHeader,
-  Zarr3GroupHeader
+  NgffZarr3GroupHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -257,7 +257,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                                   dataSourceVoxelSize = dataSource.scale,
                                                                   mags = sortedExistingMags,
                                                                   additionalAxes = dataSource.additionalAxesUnion)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader), None)
+        zarr3GroupHeader = NgffZarr3GroupHeader(3, "group", omeNgffHeader)
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }

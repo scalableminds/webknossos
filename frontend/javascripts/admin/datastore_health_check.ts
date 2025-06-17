@@ -1,4 +1,4 @@
-import * as RestAPI from "admin/admin_rest_api";
+import * as RestAPI from "admin/rest_api";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import _ from "lodash";

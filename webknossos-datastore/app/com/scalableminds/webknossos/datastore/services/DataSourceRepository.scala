@@ -25,7 +25,7 @@ class DataSourceRepository @Inject()(
     for {
       dataSource <- findUsable(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
         "dataSource.notFound")
-      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
+      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield (dataSource, dataLayer)
 
   def findUsable(id: DataSourceId): Option[DataSource] =
@@ -46,13 +46,7 @@ class DataSourceRepository @Inject()(
       _ <- remoteWebknossosClient.reportDataSources(dataSources)
     } yield ()
 
-  def publishRealPaths(infos: List[DataSourcePathInfo]): Fox[Unit] =
-    for {
-      _ <- Fox.successful(())
-      _ <- remoteWebknossosClient.reportRealPaths(infos)
-    } yield ()
-
-  def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
+  def removeDataSource(dataSourceId: DataSourceId): Fox[Unit] =
     for {
       _ <- Fox.successful(remove(dataSourceId))
       _ <- remoteWebknossosClient.deleteDataSource(dataSourceId)

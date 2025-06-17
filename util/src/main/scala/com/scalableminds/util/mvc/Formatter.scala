@@ -88,8 +88,12 @@ trait Formatter {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {
-        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
-        case _                                     => ""
+        case Full(exception) =>
+          if (includeStackTraces)
+            s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+          else
+            s" ${exception.toString}"
+        case _ => ""
       }
 
     def formatNextChain(chainBox: Box[Failure]): String = chainBox match {

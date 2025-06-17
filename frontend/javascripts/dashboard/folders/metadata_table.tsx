@@ -24,7 +24,6 @@ import {
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
@@ -33,7 +32,8 @@ import {
   type APIMetadataEntry,
   APIMetadataEnum,
   type Folder,
-} from "types/api_flow_types";
+} from "types/api_types";
+import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
 
 export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 

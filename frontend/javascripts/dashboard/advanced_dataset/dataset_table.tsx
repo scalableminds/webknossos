@@ -1,7 +1,12 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import type { DatasetUpdater } from "admin/admin_rest_api";
-import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
-import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
+import type { DatasetUpdater } from "admin/rest_api";
+import { Dropdown, type MenuProps, Tag, Tooltip } from "antd";
+import type {
+  ColumnType,
+  FilterValue,
+  SorterResult,
+  TablePaginationConfig,
+} from "antd/lib/table/interface";
 import classNames from "classnames";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
@@ -18,30 +23,25 @@ import {
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToColor } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { Unicode } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import * as React from "react";
+import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { Link } from "react-router-dom";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
+import type { EmptyObject } from "types/globals";
+import { Unicode } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import CategorizationLabel from "viewer/view/components/categorization_label";
+import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
-} from "oxalis/view/context_menu";
-import * as React from "react";
-import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import type {
-  APIDatasetCompact,
-  APIMaybeUnimportedDataset,
-  FolderItem,
-} from "types/api_flow_types";
-import type { EmptyObject } from "types/globals";
+} from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -236,7 +236,7 @@ const DraggableDatasetRow = ({
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useWkSelector((state) => state.uiInformation.theme);
   // @ts-ignore
 
   const datasetId = restProps["data-row-key"];
@@ -287,16 +287,17 @@ class DatasetRenderer {
     return DatasetRenderer.getRowKey(this.data);
   }
 
-  renderTypeColumn() {
+  renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
-  renderNameColumn() {
+  renderNameColumn(): React.ReactNode {
     const selectedLayerName: string | null =
       this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
+
     return (
       <>
         <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
@@ -327,7 +328,7 @@ class DatasetRenderer {
       </>
     );
   }
-  renderTags() {
+  renderTags(): React.ReactNode {
     return this.data.isActive ? (
       <DatasetTags
         dataset={this.data}
@@ -344,10 +345,10 @@ class DatasetRenderer {
       </Tooltip>
     );
   }
-  renderCreationDateColumn() {
+  renderCreationDateColumn(): React.ReactNode {
     return <FormattedDate timestamp={this.data.created} />;
   }
-  renderActionsColumn() {
+  renderActionsColumn(): React.ReactNode {
     return (
       <DatasetActionView
         dataset={this.data}
@@ -371,7 +372,7 @@ class FolderRenderer {
   getRowKey() {
     return FolderRenderer.getRowKey(this.data);
   }
-  renderNameColumn() {
+  renderNameColumn(): React.ReactNode {
     return (
       <>
         <img
@@ -386,10 +387,10 @@ class FolderRenderer {
       </>
     );
   }
-  renderCreationDateColumn() {
+  renderCreationDateColumn(): React.ReactNode {
     return null;
   }
-  renderActionsColumn() {
+  renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
   }
 }
@@ -468,7 +469,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
 
-  renderEmptyText() {
+  renderEmptyText(): React.ReactNode {
     const maybeWarning =
       this.props.datasetFilteringMode !== "showAllDatasets" ? (
         <p>
@@ -506,7 +507,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     setFolderIdForEditModal(folder.key);
   }
 
-  getFolderSettingsActions(folder: FolderItemWithName) {
+  getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
     const folderTreeContextMenuItems = generateSettingsForFolder(
       folder,
@@ -582,14 +583,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
       selectedRowKeys = [FolderRenderer.getRowKey(context.selectedFolder as FolderItemWithName)];
     }
 
-    const columns: TableProps["columns"] = [
+    const columns: ColumnType<RowRenderer>[] = [
       {
         title: "Name",
         dataIndex: "name",
         key: "name",
         sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
         sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
-        render: (_name: string, rowRenderer: RowRenderer) => rowRenderer.renderNameColumn(),
+        render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
       {
         width: 180,

@@ -9,6 +9,6 @@
 // i.e. the ::path::to::definition:: prefixes need to be removed
 // and "additionalProperties: false," needs to be added to the objects
 // to make the object types exact and forbid superfluous properties.
-import type { UrlManagerState } from "oxalis/controller/url_manager";
+import type { UrlManagerState } from "viewer/controller/url_manager";
 
 export type { UrlManagerState };

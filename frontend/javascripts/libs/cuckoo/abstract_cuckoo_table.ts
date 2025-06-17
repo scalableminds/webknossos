@@ -1,7 +1,7 @@
 import type UpdatableTexture from "libs/UpdatableTexture";
-import { getRenderer } from "oxalis/controller/renderer";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import * as THREE from "three";
+import { getRenderer } from "viewer/controller/renderer";
+import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -13,7 +13,8 @@ let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
-  protected table!: Uint32Array;
+  entryCount: number = 0;
+  protected table!: Uint32Array<ArrayBuffer>;
   protected seeds!: number[];
   protected seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
@@ -32,7 +33,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return THREE.UnsignedIntType;
   }
 
-  static getTextureFormat() {
+  static getTextureFormat(): THREE.PixelFormat {
     return THREE.RGBAIntegerFormat;
   }
 
@@ -61,6 +62,10 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
         this.getClass().getElementsPerEntry(),
     );
 
+    this.clear();
+  }
+
+  clear() {
     this.initializeTableArray();
     // Initialize the texture once to avoid undefined behavior
     this.flushTableToTexture();
@@ -100,6 +105,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   private initializeTableArray() {
+    this.entryCount = 0;
     this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
       EMPTY_KEY_VALUE,
     );
@@ -204,6 +210,10 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       return null;
     }
 
+    // The key does not exist yet, therefore already increment the entry count (if the
+    // internalSet does not succeed, a rehash will happen that resets entryCount to 0).
+    this.entryCount++;
+
     let seedIndex = Math.floor(Math.random() * this.seeds.length);
     while (iterationCounter++ < this.entryCapacity) {
       const seed = this.seeds[seedIndex];
@@ -243,6 +253,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
           hashedAddress,
           !this.autoTextureUpdate,
         );
+        this.entryCount--;
         return;
       }
     }

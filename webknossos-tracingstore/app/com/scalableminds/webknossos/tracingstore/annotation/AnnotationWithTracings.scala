@@ -1,11 +1,16 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationProto,
+  AnnotationUserStateProto
+}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
@@ -23,7 +28,9 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits
+    with ProtoGeometryImplicits {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -123,6 +130,34 @@ case class AnnotationWithTracings(
       this.copy(annotation = annotation.copy(description = newDescription))
     }.getOrElse(this)
 
+  def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings =
+    a.actionAuthorId match {
+      case None => this
+      case Some(actionUserId) =>
+        val userStateAlreadyPresent = annotation.userStates.exists(state => actionUserId == state.userId)
+        if (userStateAlreadyPresent) {
+          this.copy(annotation = annotation.copy(userStates = annotation.userStates.map { userState =>
+            if (actionUserId == userState.userId)
+              userState.copy(
+                userId = actionUserId,
+                editPosition = a.editPosition,
+                editRotation = a.editRotation,
+                zoomLevel = a.zoomLevel,
+                editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+              )
+            else userState
+          }))
+        } else
+          this.copy(
+            annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
+              userId = actionUserId,
+              editPosition = a.editPosition,
+              editRotation = a.editRotation,
+              zoomLevel = a.zoomLevel,
+              editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+            )))
+    }
+
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {
       case Left(t: SkeletonTracingWithUpdatedTreeIds) =>
@@ -150,7 +185,7 @@ case class AnnotationWithTracings(
     this.copy(editableMappingsByTracingId =
       editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater)))
 
-  def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applySkeletonAction(a: SkeletonUpdateAction): Box[AnnotationWithTracings] =
     for {
       skeletonTracing <- getSkeleton(a.actionTracingId)
       previousUpdatedTreeIds <- getUpdatedTreeBodyIdsForSkeleton(a.actionTracingId)
@@ -161,7 +196,7 @@ case class AnnotationWithTracings(
         tracingsById =
           tracingsById.updated(a.actionTracingId, Left(SkeletonTracingWithUpdatedTreeIds(updated, newUpdatedTreeIds))))
 
-  def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applyVolumeAction(a: ApplyableVolumeUpdateAction): Box[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId)
       updated = a.applyOn(volumeTracing)

@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   LegacyDataVaultCredential,
   RemoteSourceDescriptor,
@@ -47,7 +46,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
                   uri: URI,
                   ws: WSClient,
                   implicit val ec: ExecutionContext)
-    extends DataVault {
+    extends DataVault
+    with FoxImplicits {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -78,7 +78,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    resultFuture.transformWith {
+    Fox.fromFutureBox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         val box = exception match {
@@ -93,32 +93,32 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
             BoxFailure(e.getMessage, Full(e), Empty)
         }
         Future.successful(box)
-    }
+    })
 
   private def notFoundToFailure[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    resultFuture.transformWith {
+    Fox.fromFutureBox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
-    }
+    })
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
-      objectKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
+      objectKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
       request = range match {
         case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
         case Complete()      => getRequest(bucketName, objectKey)
       }
       (bytes, encodingString) <- performGetObjectRequest(request)
-      encoding <- Encoding.fromRfc7231String(encodingString)
+      encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding)
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
+      prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
       vaultPaths <- tryo(
         s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
@@ -221,7 +221,7 @@ object S3DataVault {
       case TryFailure(_) => Future.successful("http")
     })
     for {
-      protocol <- protocolFuture.toFox
+      protocol <- Fox.fromFuture(protocolFuture)
     } yield protocol
   }
 
@@ -235,7 +235,7 @@ object S3DataVault {
       } yield
         basic
           .forcePathStyle(true)
-          .endpointOverride(new URI(s"${protocol}://${uri.getAuthority}"))
+          .endpointOverride(new URI(s"$protocol://${uri.getAuthority}"))
           .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
           .build()
     } else Fox.successful(basic.region(Region.US_EAST_1).build())

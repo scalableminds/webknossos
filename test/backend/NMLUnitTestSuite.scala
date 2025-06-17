@@ -2,6 +2,8 @@ package backend
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 
 import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -10,17 +12,21 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
+import models.user.User
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
+import play.silhouette.api.LoginInfo
+import play.silhouette.impl.providers.CredentialsProvider
 
 import javax.inject.Inject
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
+  private val handleFoxJustification = "Handling Fox in Unit Test Context"
+
   implicit val messagesProvider: MessagesProvider = new MessagesProvider {
     val m = new DefaultMessagesApi()
     override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
@@ -35,6 +41,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
     val nmlFunctionStream =
       new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream(
         "",
+        AnnotationProto("", 0L, Seq.empty, 0L),
         annotationLayers,
         None,
         None,
@@ -43,14 +50,30 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
         "http://wk.test",
         "dummy_dataset",
         ObjectId.dummyId,
+        User(
+          ObjectId.dummyId,
+          ObjectId.dummyId,
+          "testOrganization",
+          "Sample",
+          "User",
+          Instant.zero,
+          Json.obj(),
+          LoginInfo(CredentialsProvider.ID, ObjectId.dummyId.toString),
+          isAdmin = true,
+          isOrganizationOwner = true,
+          isDatasetManager = true,
+          isUnlisted = false,
+          isDeactivated = false,
+          lastTaskTypeId = None
+        ),
         None,
-        None,
-        volumeDataZipFormat = VolumeDataZipFormat.wkw
+        volumeDataZipFormat = VolumeDataZipFormat.wkw,
+        requestingUser = None
       )
     val os = new ByteArrayOutputStream()
-    Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
+    nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global).await(handleFoxJustification)
     val array = os.toByteArray
-    val parsed = Await.result(
+    val parsed =
       nmlParser
         .parse(
           "",
@@ -61,9 +84,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
                                   isTaskUpload = true),
           basePath = None
         )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext)
-        .futureBox,
-      Duration.Inf
-    )
+        .await(handleFoxJustification)
     parsed
   }
 

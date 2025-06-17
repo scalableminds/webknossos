@@ -58,7 +58,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         100
       else
         1000
-    bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
+    Fox.fromBool(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
   }
 
   // Used in create (without files) in case of base annotation
@@ -68,11 +68,14 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParametersList: List[TaskParameters],
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
-    Fox.serialCombined(taskParametersList)(params =>
-      Fox
-        .runOptional(params.baseAnnotation)(createTracingsFromBaseAnnotation(_, params, taskType, dataset, dataSource))
-        .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
+    Fox.serialCombined(taskParametersList)(
+      params =>
+        Fox
+          .runOptional(params.baseAnnotation)(
+            createTracingsFromBaseAnnotation(_, params, taskType, dataset, dataSource, requestingUserId))
+          .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
 
   // Used in create (without files) in case of base annotation
   private def createTracingsFromBaseAnnotation(
@@ -80,20 +83,24 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParameters: TaskParameters,
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ <- Fox.runOptional(taskParameters.newSkeletonTracingId)(_ =>
-        duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient))
+        duplicateOrCreateSkeletonBase(annotation, taskParameters, tracingStoreClient, requestingUserId))
       _ <- Fox.runOptional(taskParameters.newVolumeTracingId)(
         _ =>
-          duplicateOrCreateVolumeBase(annotation,
-                                      taskParameters,
-                                      tracingStoreClient,
-                                      taskType.settings.magRestrictions,
-                                      dataSource))
+          duplicateOrCreateVolumeBase(
+            annotation,
+            taskParameters,
+            tracingStoreClient,
+            taskType.settings.magRestrictions,
+            dataSource,
+            requestingUserId
+        ))
     } yield
       BaseAnnotation(baseAnnotationIdValidated.id,
                      taskParameters.newSkeletonTracingId,
@@ -101,15 +108,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
 
   // Used in create (without files) in case of base annotation
   private def resolveBaseAnnotationId(annotationOrTaskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    annotationDAO
-      .findOne(annotationOrTaskId)
-      .futureBox
-      .map {
-        case Full(value) => Fox.successful(value)
-        case _           => resolveBaseTaskId(annotationOrTaskId)
-      }
-      .toFox
-      .flatten
+    annotationDAO.findOne(annotationOrTaskId).shiftBox.flatMap {
+      case Full(value) => Fox.successful(value)
+      case _           => resolveBaseTaskId(annotationOrTaskId)
+    }
 
   // Used in create (without files) in case of base annotation
   @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTaskAnnotations are empty before so head always works
@@ -129,7 +131,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   // Used in create (without files) in case of base annotation
   private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
                                             params: TaskParameters,
-                                            tracingStoreClient: WKRemoteTracingStoreClient): Fox[Unit] =
+                                            tracingStoreClient: WKRemoteTracingStoreClient,
+                                            requestingUserId: ObjectId): Fox[Unit] =
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newAnnotationId <- params.newAnnotationId.toFox
@@ -142,7 +145,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
             newSkeletonId,
             editPosition = Some(params.editPosition),
             editRotation = Some(params.editRotation),
-            boundingBox = params.boundingBox
+            boundingBox = params.boundingBox,
+            ownerId = baseAnnotation._user,
+            requestingUserId = requestingUserId
           )
         case None =>
           val skeleton = annotationService.createSkeletonTracingBase(
@@ -160,7 +165,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
       magRestrictions: MagRestrictions,
-      dataSource: DataSourceLike)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+      dataSource: DataSourceLike,
+      requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- params.newVolumeTracingId.toFox
@@ -171,6 +177,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
             id,
             newAnnotationId,
             newVolumeTracingId,
+            ownerId = baseAnnotation._user,
+            requestingUserId = requestingUserId,
             editPosition = Some(params.editPosition),
             editRotation = Some(params.editRotation),
             magRestrictions = magRestrictions,
@@ -256,7 +264,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     if (volume.tracing.boundingBox.isEmpty) {
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
       } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
     } else Fox.successful(volume)
 
@@ -408,9 +416,11 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       Fox.successful(TaskCreationResult.fromBoxResults(requestedTasks.map(_.map(_ => Json.obj())), List.empty[String]))
     } else {
       for {
-        datasetId <- SequenceUtils.findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId)) ?~> "task.create.notOnSameDataset"
+        datasetId <- SequenceUtils
+          .findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId))
+          .toFox ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
         _ <- assertEachHasEitherSkeletonOrVolume(flattenedRequestedTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         _ = if (flattenedRequestedTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(
@@ -425,9 +435,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
           )
         )
         // Note that volume tracings are saved sequentially to reduce server load
-        volumeSaveResults: List[Box[Unit]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        volumeSaveResults: List[Box[Unit]] <- Fox.fromFuture(Fox.serialSequence(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient, taskType, dataSource)
-        }
+        })
         requestedTasksWithTracingSaveResults = requestedTasks
           .lazyZip(skeletonSaveResults)
           .lazyZip(volumeSaveResults)
@@ -449,7 +459,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         warnings <- warnIfTeamHasNoAccess(flattenedRequestedTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
-        result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
+        result <- Fox.fromFuture(TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings))
       } yield result
     }
   }
@@ -457,7 +467,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   private def assertEachHasEitherSkeletonOrVolume(
       requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])
     : Fox[Unit] =
-    bool2Fox(
+    Fox.fromBool(
       requestedTasks.forall(tuple => tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined))
 
   private def saveVolumeTracingIfPresent(
@@ -479,7 +489,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                                              magRestrictions = taskType.settings.magRestrictions,
                                                              dataSource)
         } yield saveResult
-      case f: Failure => box2Fox(f)
+      case f: Failure => f.toFox
       case _          => Fox.empty
     }
 
@@ -514,7 +524,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
-      _ <- bool2Fox(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       _ <- Fox.runIf(params.newSkeletonTracingId.isDefined && !params.baseAnnotation.exists(_.skeletonId.isDefined))(
         skeletonSaveResult.toFox) ?~> "task.create.saveSkeleton.failed"
       _ <- Fox.runIf(params.newVolumeTracingId.isDefined && !params.baseAnnotation.exists(_.volumeId.isDefined))(

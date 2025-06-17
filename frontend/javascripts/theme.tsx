@@ -1,17 +1,18 @@
 import { App, ConfigProvider, type ThemeConfig, theme } from "antd";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
-import type { OxalisState, Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
+import type { Theme } from "viewer/store";
 
-const ColorWKBlue = "#5660ff"; // WK ~blue/purple
+export const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
+export const ColorWKBlueZircon = "#59f8e8"; // WK Cyan
 const ColorWhite = "white";
 const ColorBlack = "black";
 const ColorDarkBg = "#383d48";
@@ -121,7 +122,7 @@ export default function GlobalThemeProvider({
   children,
   isMainProvider = true,
 }: { children?: React.ReactNode; isMainProvider?: boolean }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";

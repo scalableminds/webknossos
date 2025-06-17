@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -15,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.{
   VoxelSize,
   WebknossosAdHocMeshRequest
 }
-import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -34,6 +33,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     extends FallbackDataHelper
     with ProtoGeometryImplicits
     with FullMeshHelper
+    with FoxImplicits
     with LazyLogging {
 
   def loadFor(annotationId: String, tracingId: String, fullMeshRequest: FullMeshRequest)(
@@ -69,7 +69,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      _ <- bool2Fox(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
       before = Instant.now
       voxelSize <- remoteDatastoreClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))

@@ -1,6 +1,7 @@
 #include "com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner.h"
 
 #include "jniutils.h"
+#include <array>
 #include <iostream>
 #include <vector>
 #include <stdexcept>
@@ -129,7 +130,12 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
+        if (elementCount != bucketLength * bucketLength * bucketLength) {
+            throw std::invalid_argument("elementCount must match exactly one bucket.");
+        }
+
         std::array<int, 6> bbox = {existingBBoxTopLeftX, existingBBoxTopLeftY, existingBBoxTopLeftZ, existingBBoxBottomRightX, existingBBoxBottomRightY, existingBBoxBottomRightZ};
+
         int index = 0;
         for (int z = 0; z < bucketLength; z++) {
             for (int y = 0; y < bucketLength; y++) {

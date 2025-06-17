@@ -6,10 +6,9 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...HEAD)
 
- - New FossilDB version `0.1.37` (`master__525:` on dockerhub) is required. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- The default thread pool size was increased from 5 to 10 times the number of available CPUs (capped at 1000). Note that wk may need slightly more memory because of this. [#8686](https://github.com/scalableminds/webknossos/pull/8686)
 
 ### Postgres Evolutions:
-- [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
-- [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
+- [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)

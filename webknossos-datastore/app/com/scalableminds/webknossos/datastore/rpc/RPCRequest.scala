@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Failure, Full, Empty}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -16,13 +16,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with Formatter
     with MimeTypes {
 
   var request: WSRequest = wsClient.url(url)
   private var verbose: Boolean = true
+  private var logOnFailure: Boolean = true
   private var slowRequestLoggingThreshold = 2 minutes
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
@@ -63,6 +63,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
 
   def silent: RPCRequest = {
     verbose = false
+    this
+  }
+
+  def silentEvenOnFailure: RPCRequest = {
+    verbose = false
+    logOnFailure = false
     this
   }
 
@@ -197,14 +203,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
-  private def performRequest: Fox[WSResponse] = {
+  private def performRequest: Fox[WSResponse] = Fox.fromFutureBox {
     val before = Instant.now
     if (verbose) {
       logger.debug(s"Sending $debugInfo, RequestBody: '$requestBodyPreview'")
     }
     request
       .execute()
-      .map { result =>
+      .map { result: WSResponse =>
         val duration = Instant.since(before)
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
@@ -218,17 +224,17 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
               s" Status: ${result.status}.$durationLabel" +
               s" RequestBody: '$requestBodyPreview'" +
               s" ResponseBody: '$responseBodyPreview'"
-          logger.error(verboseErrorMsg)
+          if (logOnFailure) logger.error(verboseErrorMsg)
           val compactErrorMsg =
             s"Failed $debugInfo. Response: ${result.status} '$responseBodyPreview'"
-          Failure(compactErrorMsg)
+          Failure(compactErrorMsg) ~> result.status
         }
       }
       .recover {
         case e =>
           val errorMsg = s"Error sending $debugInfo: " +
             s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          logger.error(errorMsg)
+          if (logOnFailure) logger.error(errorMsg)
           Failure(errorMsg)
       }
   }
@@ -247,13 +253,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       if (verbose) {
         logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body.take(100)}'")
       }
-      Json.parse(response.body).validate[T] match {
-        case JsSuccess(value, _) =>
-          Full(value)
-        case JsError(e) =>
-          val errorMsg = s"$debugInfo returned invalid JSON: $e"
+      JsonHelper.parseAs[T](response.body) match {
+        case Full(value) =>
+          Fox.successful(value)
+        case Empty => Fox.empty
+        case f: Failure =>
+          val errorMsg = s"$debugInfo returned invalid JSON: $f"
           logger.error(errorMsg)
-          Failure(errorMsg)
+          Fox.failure(errorMsg)
       }
     }
 
@@ -263,12 +270,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
       try {
-        Full(companion.parseFrom(response.bodyAsBytes.toArray))
+        Fox.successful(companion.parseFrom(response.bodyAsBytes.toArray))
       } catch {
         case e: Exception =>
           val errorMsg = s"$debugInfo returned invalid Protocol Buffer Data: $e"
           logger.error(errorMsg)
-          Failure(errorMsg)
+          Fox.failure(errorMsg)
       }
     }
 

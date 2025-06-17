@@ -8,9 +8,9 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getJobs } from "admin/admin_rest_api";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getJobs } from "admin/rest_api";
 import {
   Alert,
   Badge,
@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
@@ -33,13 +34,13 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
-import { Unicode } from "oxalis/constants";
-import { CategorizationSearch } from "oxalis/view/components/categorization_label";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import type { MenuProps } from "rc-menu";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
+import { Unicode } from "viewer/constants";
+import { CategorizationSearch } from "viewer/view/components/categorization_label";
+import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -302,7 +303,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const showLoadingIndicator = context.isLoading || context.isChecking;
 
   return (
-    <Tooltip
+    <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
       <Dropdown.Button
@@ -313,7 +314,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       >
         {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
       </Dropdown.Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
   WKWDataLayer,
+  WKWResolution,
   WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
@@ -32,14 +33,6 @@ object DataFormat extends ExtendedEnumeration {
 
 object Category extends ExtendedEnumeration {
   val color, segmentation = Value
-
-  def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
-    elementClass match {
-      case ElementClass.uint16 => segmentation
-      case ElementClass.uint32 => segmentation
-      case ElementClass.uint64 => segmentation
-      case _                   => color
-    }
 }
 
 object ElementClass extends ExtendedEnumeration {
@@ -186,6 +179,20 @@ object ElementClass extends ExtendedEnumeration {
     case ArrayDataType.i8 => Some(ElementClass.int64)
     case _                => None
   }
+
+  def toArrayDataTypeAndChannel(elementClass: ElementClass.Value): (ArrayDataType, Int) = elementClass match {
+    case ElementClass.uint8  => (ArrayDataType.u1, 1)
+    case ElementClass.uint16 => (ArrayDataType.u2, 1)
+    case ElementClass.uint24 => (ArrayDataType.u1, 3)
+    case ElementClass.uint32 => (ArrayDataType.u4, 1)
+    case ElementClass.uint64 => (ArrayDataType.u8, 1)
+    case ElementClass.float  => (ArrayDataType.f4, 1)
+    case ElementClass.double => (ArrayDataType.f8, 1)
+    case ElementClass.int8   => (ArrayDataType.i1, 1)
+    case ElementClass.int16  => (ArrayDataType.i2, 1)
+    case ElementClass.int32  => (ArrayDataType.i4, 1)
+    case ElementClass.int64  => (ArrayDataType.i8, 1)
+  }
 }
 
 object LayerViewConfiguration {
@@ -220,6 +227,53 @@ trait DataLayerLike {
 
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
+
+  def attachments: Option[DatasetLayerAttachments]
+
+  // Datasets that are not in the WKW format use mags
+  def magsOpt: Option[List[MagLocator]] = this match {
+    case layer: AbstractDataLayer         => layer.mags
+    case layer: AbstractSegmentationLayer => layer.mags
+    case layer: DataLayerWithMagLocators  => Some(layer.getMags)
+    case _                                => None
+  }
+
+  def dataFormatOpt: Option[DataFormat.Value] = this match {
+    case layer: WKWDataLayer                 => Some(layer.dataFormat)
+    case layer: WKWSegmentationLayer         => Some(layer.dataFormat)
+    case layer: ZarrDataLayer                => Some(layer.dataFormat)
+    case layer: ZarrSegmentationLayer        => Some(layer.dataFormat)
+    case layer: N5DataLayer                  => Some(layer.dataFormat)
+    case layer: N5SegmentationLayer          => Some(layer.dataFormat)
+    case layer: PrecomputedDataLayer         => Some(layer.dataFormat)
+    case layer: PrecomputedSegmentationLayer => Some(layer.dataFormat)
+    case layer: Zarr3DataLayer               => Some(layer.dataFormat)
+    case layer: Zarr3SegmentationLayer       => Some(layer.dataFormat)
+    // Abstract layers
+    case _ => None
+  }
+
+  def numChannelsOpt: Option[Int] = this match {
+    case layer: AbstractDataLayer            => layer.numChannels
+    case layer: AbstractSegmentationLayer    => layer.numChannels
+    case layer: ZarrDataLayer                => layer.numChannels
+    case layer: ZarrSegmentationLayer        => layer.numChannels
+    case layer: N5DataLayer                  => layer.numChannels
+    case layer: N5SegmentationLayer          => layer.numChannels
+    case layer: PrecomputedDataLayer         => layer.numChannels
+    case layer: PrecomputedSegmentationLayer => layer.numChannels
+    case layer: Zarr3DataLayer               => layer.numChannels
+    case layer: Zarr3SegmentationLayer       => layer.numChannels
+    case _                                   => None
+  }
+
+  def wkwResolutionsOpt: Option[List[WKWResolution]] = this match {
+    case layer: AbstractDataLayer         => layer.wkwResolutions
+    case layer: AbstractSegmentationLayer => layer.wkwResolutions
+    case layer: WKWDataLayer              => Some(layer.wkwResolutions)
+    case layer: WKWSegmentationLayer      => Some(layer.wkwResolutions)
+    case _                                => None
+  }
 
 }
 
@@ -272,6 +326,47 @@ trait DataLayer extends DataLayerLike {
     ElementClass.bytesPerElement(elementClass)
 
   def mags: List[MagLocator]
+
+  def withAttachments(attachments: DatasetLayerAttachments): DataLayer = {
+    def mergeAttachments(existingAttachmentsOpt: Option[DatasetLayerAttachments],
+                         newAttachments: DatasetLayerAttachments): Option[DatasetLayerAttachments] =
+      existingAttachmentsOpt match {
+        case None => Some(newAttachments)
+        case Some(existingFiles) =>
+          val segmentIndex = existingFiles.segmentIndex.orElse(newAttachments.segmentIndex)
+          val connectome =
+            if (existingFiles.connectomes.isEmpty) newAttachments.connectomes else existingFiles.connectomes
+          val agglomerateFiles =
+            if (existingFiles.agglomerates.isEmpty) newAttachments.agglomerates else existingFiles.agglomerates
+          val meshFiles =
+            if (existingFiles.meshes.isEmpty) newAttachments.meshes else existingFiles.meshes
+          val cumsumFile =
+            existingFiles.cumsum.orElse(newAttachments.cumsum)
+
+          Some(
+            DatasetLayerAttachments(
+              meshes = meshFiles,
+              agglomerates = agglomerateFiles,
+              segmentIndex = segmentIndex,
+              connectomes = connectome,
+              cumsum = cumsumFile
+            ))
+      }
+
+    this match {
+      case l: N5DataLayer                  => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: N5SegmentationLayer          => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: PrecomputedDataLayer         => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: PrecomputedSegmentationLayer => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: Zarr3DataLayer               => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: Zarr3SegmentationLayer       => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: ZarrDataLayer                => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: ZarrSegmentationLayer        => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: WKWDataLayer                 => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: WKWSegmentationLayer         => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case _                               => this
+    }
+  }
 }
 
 object DataLayer {
@@ -301,9 +396,7 @@ object DataLayer {
           case (DataFormat.`zarr3`, _)                     => json.validate[Zarr3DataLayer]
           case _                                           => json.validate[WKWDataLayer]
         }
-      } yield {
-        layer
-      }
+      } yield layer
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
@@ -400,6 +493,19 @@ trait DataLayerWithMagLocators extends DataLayer {
       case _ => throw new Exception("Encountered unsupported layer format")
     }
 
+  def getMags: List[MagLocator] =
+    this match {
+      case layer: N5DataLayer                  => layer.mags
+      case layer: N5SegmentationLayer          => layer.mags
+      case layer: PrecomputedDataLayer         => layer.mags
+      case layer: PrecomputedSegmentationLayer => layer.mags
+      case layer: ZarrDataLayer                => layer.mags
+      case layer: ZarrSegmentationLayer        => layer.mags
+      case layer: Zarr3DataLayer               => layer.mags
+      case layer: Zarr3SegmentationLayer       => layer.mags
+      case _                                   => throw new Exception("Encountered unsupported layer format")
+    }
+
 }
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
@@ -416,7 +522,12 @@ case class AbstractDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
+    mags: Option[List[MagLocator]] = None,
+    numChannels: Option[Int] = None,
+    dataFormat: Option[DataFormat.Value] = None,
+    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -431,7 +542,12 @@ object AbstractDataLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.attachments,
+      layer.magsOpt,
+      layer.numChannelsOpt,
+      layer.dataFormatOpt,
+      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -448,7 +564,12 @@ case class AbstractSegmentationLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
+    mags: Option[List[MagLocator]] = None,
+    numChannels: Option[Int] = None,
+    dataFormat: Option[DataFormat.Value] = None,
+    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -465,7 +586,12 @@ object AbstractSegmentationLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.attachments,
+      layer.magsOpt,
+      layer.numChannelsOpt,
+      layer.dataFormatOpt,
+      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

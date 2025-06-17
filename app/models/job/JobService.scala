@@ -10,7 +10,7 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
-import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
@@ -35,7 +35,6 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
-                           organizationService: OrganizationService,
                            creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
@@ -139,7 +138,7 @@ class JobService @Inject()(wkConf: WkConf,
               "Your animation of a WEBKNOSSOS dataset has been successfully created and is ready for download."
             ))
         case _ => None
-      }) ?~> "job.emailNotifactionsDisabled"
+      }).toFox ?~> "job.emailNotifactionsDisabled"
       // some jobs, e.g. "find largest segment ideas", do not require an email notification
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -175,7 +174,7 @@ class JobService @Inject()(wkConf: WkConf,
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       resultLink = job.resultLink(organization._id)
       ownerJson <- userService.compactWrites(owner)
-      creditTransactionOpt <- creditTransactionService.findTransactionOfJob(job._id)
+      creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield {
       Json.obj(
         "id" -> job._id.id,
@@ -191,7 +190,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-        "creditCost" -> creditTransactionOpt.map(t => (t.creditDelta * -1).toString)
+        "creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString)
       )
     }
 
@@ -199,7 +198,8 @@ class JobService @Inject()(wkConf: WkConf,
   def parameterWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
-      userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
+      userAuthToken <- Fox.fromFuture(
+        wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo))
     } yield {
       Json.obj(
         "job_id" -> job._id.id,
@@ -210,7 +210,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
-      _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastoreAndJob"
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
@@ -230,13 +230,13 @@ class JobService @Inject()(wkConf: WkConf,
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,
                                                                    creditTransactionComment)
-      job <- submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
+      job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _ =>
           creditTransactionService
             .refundTransactionWhenStartingJobFailed(creditTransaction)
             .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
-      }.toFox
+      }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
       js <- publicWrites(job)
     } yield js
@@ -254,9 +254,9 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag) ?~> "job.invalidBoundingBoxOrMag"
-      _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
-      _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
+      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag).toFox ?~> "job.invalidBoundingBoxOrMag"
+      _ <- Fox.fromBool(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
+      _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
   private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =

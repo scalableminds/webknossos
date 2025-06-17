@@ -21,21 +21,10 @@ import {
   getCompactAnnotationsForUser,
   getReadableAnnotations,
   reOpenAnnotation,
-} from "admin/admin_rest_api";
-import {
-  Button,
-  Card,
-  Col,
-  Input,
-  Modal,
-  Row,
-  Spin,
-  Table,
-  type TableProps,
-  Tag,
-  Tooltip,
-} from "antd";
+} from "admin/rest_api";
+import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
 import type { SearchProps } from "antd/lib/input";
+import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import TextWithDescription from "components/text_with_description";
@@ -47,16 +36,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { AnnotationContentTypes } from "oxalis/constants";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store from "oxalis/store";
-import CategorizationLabel, {
-  CategorizationSearch,
-} from "oxalis/view/components/categorization_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -64,7 +43,17 @@ import {
   type APIUser,
   type APIUserCompact,
   annotationToCompact,
-} from "types/api_flow_types";
+} from "types/api_types";
+import { AnnotationContentTypes } from "viewer/constants";
+import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
+import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import Store from "viewer/store";
+import CategorizationLabel, {
+  CategorizationSearch,
+} from "viewer/view/components/categorization_label";
+import EditableTextIcon from "viewer/view/components/editable_text_icon";
+import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Search } = Input;
@@ -653,7 +642,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     const disabledColor = { color: "var(--ant-color-text-disabled)" };
-    const columns: TableProps["columns"] = [
+    const columns: ColumnType<APIAnnotationInfo>[] = [
       {
         title: "ID",
         dataIndex: "id",

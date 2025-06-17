@@ -1,15 +1,17 @@
 package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalCoordinateProto,
   NamedBoundingBoxProto,
   Vec3DoubleProto,
   Vec3IntProto
 }
+import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -27,9 +29,10 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
+    userStateBoundingBoxVisibilities: Map[String, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
-trait AnnotationLayerPrecedence {
+trait AnnotationLayerPrecedence extends FoxImplicits {
 
   protected def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
                                                      fromFallbackLayer: Option[Option[Long]]): Option[Long] =
@@ -54,7 +57,8 @@ trait AnnotationLayerPrecedence {
         editRotation = p.editRotation,
         zoomLevel = p.zoomLevel,
         userBoundingBoxes = p.userBoundingBoxes,
-        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
+        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates,
+        userStates = adaptSkeletonUserStates(skeletonTracing.userStates, p)
       )
     }.getOrElse(skeletonTracing)
 
@@ -66,9 +70,60 @@ trait AnnotationLayerPrecedence {
         editRotation = p.editRotation,
         zoomLevel = p.zoomLevel,
         userBoundingBoxes = p.userBoundingBoxes,
-        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
+        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates,
+        userStates = adaptVolumeUserStates(volumeTracing.userStates, p)
       )
     }.getOrElse(volumeTracing)
+
+  private def adaptSkeletonUserStates(
+      userStates: Seq[SkeletonUserStateProto],
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = {
+    val adaptedExistingUserStates = userStates.map { userState =>
+      val userId = userState.userId
+      oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
+        case None => userState
+        case Some(precedenceBboxVisibilities) =>
+          userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
+      }
+    }
+    // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
+    val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
+      !userStates.exists(_.userId == tuple._1))
+    val newUserStates = newUserPrecedenceProperties.map {
+      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
+        SkeletonTracingDefaults
+          .emptyUserState(userId)
+          .copy(
+            boundingBoxVisibilities = boundingBoxVisibilities
+          )
+    }
+    adaptedExistingUserStates ++ newUserStates
+  }
+
+  private def adaptVolumeUserStates(
+      userStates: Seq[VolumeUserStateProto],
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = {
+    val adaptedExistingUserStates = userStates.map { userState =>
+      val userId = userState.userId
+      oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
+        case None => userState
+        case Some(precedenceBboxVisibilities) =>
+          userState.copy(boundingBoxVisibilities = precedenceBboxVisibilities)
+      }
+    }
+    // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
+    val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
+      !userStates.exists(_.userId == tuple._1))
+    val newUserStates = newUserPrecedenceProperties.map {
+      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
+        VolumeTracingDefaults
+          .emptyUserState(userId)
+          .copy(
+            boundingBoxVisibilities = boundingBoxVisibilities
+          )
+    }
+    adaptedExistingUserStates ++ newUserStates
+  }
 
   protected def getOldPrecedenceLayerProperties(existingAnnotationId: Option[ObjectId],
                                                 existingAnnotationLayers: List[AnnotationLayer],
@@ -138,7 +193,8 @@ trait AnnotationLayerPrecedence {
           s.zoomLevel,
           s.userBoundingBoxes ++ s.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-          s.editPositionAdditionalCoordinates
+          s.editPositionAdditionalCoordinates,
+          s.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
         )
       case Right(v) =>
         RedundantTracingProperties(
@@ -147,7 +203,8 @@ trait AnnotationLayerPrecedence {
           v.zoomLevel,
           v.userBoundingBoxes ++ v.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-          v.editPositionAdditionalCoordinates
+          v.editPositionAdditionalCoordinates,
+          v.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
         )
     }
 }

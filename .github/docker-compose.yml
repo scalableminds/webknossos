@@ -1,0 +1,117 @@
+# For CI only
+name: webknossos-ci
+
+services:
+  webknossos:
+    image: scalableminds/webknossos:${DOCKER_TAG}
+    pull_policy: never
+    ports:
+      - "9000:9000"
+    command:
+      - -Dconfig.file=conf/application.conf
+      - -Djava.net.preferIPv4Stack=true
+      - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
+      - -Ddatastore.redis.address=redis
+      - -DwebKnossos.sampleOrganization.enabled=false
+    volumes:
+      - ../binaryData:/webknossos/binaryData
+    environment:
+      - CERTIFICATE
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fossildb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  webknossos-datastore:
+    image: scalableminds/webknossos-datastore:${DOCKER_TAG}
+    pull_policy: never
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../binaryData:/webknossos-datastore/binaryData
+    command:
+      - -J-Xmx20G
+      - -J-Xms1G
+      - -Dconfig.file=conf/standalone-datastore.conf
+      - -Dhttp.port=9090
+      - -Dhttp.uri=http://webknossos-datastore:9090
+      - -Ddatastore.webKnossos.uri=webknossos:9000
+      - -Ddatastore.redis.address=redis
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  webknossos-tracingstore:
+    image: scalableminds/webknossos-tracingstore:${DOCKER_TAG}
+    pull_policy: never
+    ports:
+      - "9050:9050"
+    command:
+      - -J-Xmx20G
+      - -J-Xms1G
+      - -Dconfig.file=conf/standalone-tracingstore.conf
+      - -Dhttp.port=9050
+      - -Dhttp.uri=http://webknossos-tracingstore:9050
+      - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
+      - -Ddatastore.webknossos.uri=webknossos:9000
+    depends_on:
+      redis:
+        condition: service_healthy
+      fossildb:
+        condition: service_healthy
+
+  fossildb:
+    image: scalableminds/fossildb:master__510
+    command:
+      - fossildb
+      - -c
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+    ports:
+      - "7155:7155"
+    volumes:
+      - "../fossildb/data:/fossildb/data"
+      - "../fossildb/backup:/fossildb/backup"
+
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      - POSTGRES_DB=webknossos
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d webknossos -U ${POSTGRES_USER} -h 127.0.0.1 -p 5432"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:8
+    command:
+      - redis-server
+    ports:
+      - 6379:6379
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<> /dev/tcp/127.0.0.1/6379 && echo PING >&3 && head -1 <&3 | grep PONG"
+      timeout: 1s
+      interval: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+    external: false

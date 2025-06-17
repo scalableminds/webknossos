@@ -8,8 +8,9 @@ import scala.util.matching.Regex.Match
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
   type FunctionalGroupMapping = Function[Int, Int]
+  type TreeIdMap = Map[Int, Int]
 
-  val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
+  private val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
 
   private def minNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)
@@ -27,58 +28,76 @@ object TreeUtils {
       nodes.map(_.id).max
   }
 
-  private def maxTreeId(trees: Seq[Tree]) =
-    if (trees.isEmpty)
-      0
-    else
-      trees.map(_.treeId).max
+  def mergeTrees(treesA: Seq[Tree],
+                 treesB: Seq[Tree],
+                 treeIdMapA: Map[Int, Int],
+                 treeIdMapB: Map[Int, Int],
+                 nodeMappingA: FunctionalNodeMapping,
+                 groupMappingA: FunctionalGroupMapping): Seq[Tree] = {
+    val nodeIdsA: Set[Int] = treesA.flatMap(_.nodes.map(_.id)).toSet
 
-  def mergeTrees(sourceTrees: Seq[Tree],
-                 targetTrees: Seq[Tree],
-                 nodeMapping: FunctionalNodeMapping,
-                 groupMapping: FunctionalGroupMapping): Seq[Tree] = {
-    val treeMaxId = maxTreeId(targetTrees)
-
-    val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
-
-    val mappedSourceTrees = sourceTrees.map(
+    val mappedTreesA = treesA.map(
       tree =>
-        applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds)
-          .copy(groupId = tree.groupId.map(groupMapping(_))))
+        applyNodeMapping(tree.withTreeId(treeIdMapA(tree.treeId)), nodeMappingA, nodeIdsA)
+          .copy(groupId = tree.groupId.map(groupMappingA(_))))
 
-    targetTrees ++ mappedSourceTrees
+    val mappedTreesB = treesB.map(tree => tree.withTreeId(treeIdMapB(tree.treeId)))
+
+    mappedTreesB ++ mappedTreesA
   }
 
-  private def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) =
+  private def applyNodeMapping(tree: Tree, nodeMappingA: FunctionalNodeMapping, nodeIdsA: Set[Int]) =
     tree
-      .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
-      .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
-      .withComments(tree.comments.map(comment =>
-        comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f, sourceNodeIds))))
-      .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
+      .withNodes(tree.nodes.map(node => node.withId(nodeMappingA(node.id))))
+      .withEdges(tree.edges.map(edge =>
+        edge.withSource(nodeMappingA(edge.source)).withTarget(nodeMappingA(edge.target))))
+      .withComments(
+        tree.comments.map(
+          comment =>
+            comment
+              .withNodeId(nodeMappingA(comment.nodeId))
+              .withContent(updateNodeReferences(comment.content, nodeMappingA, nodeIdsA))))
+      .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(nodeMappingA(bp.nodeId))))
 
-  private def updateNodeReferences(comment: String, f: Int => Int, sourceNodeIds: Set[Int]) = {
+  private def updateNodeReferences(comment: String, nodeMappingA: FunctionalNodeMapping, nodeIdsA: Set[Int]) = {
     def replacer(m: Match) = {
       val oldId = m.toString.substring(1).toInt
-      val newId = if (sourceNodeIds.contains(oldId)) f(oldId) else oldId
+      val newId = if (nodeIdsA.contains(oldId)) nodeMappingA(oldId) else oldId
       "#" + newId
     }
     nodeIdReferenceRegex.replaceAllIn(comment, m => replacer(m))
   }
 
-  def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]): Int => Int = {
-    val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
+  def calculateNodeMapping(treesA: Seq[Tree], treesB: Seq[Tree]): Int => Int = {
+    val nodeIdOffset = calculateNodeOffset(treesA, treesB)
     (nodeId: Int) =>
       nodeId + nodeIdOffset
   }
 
-  private def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =
-    if (targetTrees.isEmpty)
+  def calculateTreeMappings(treesA: Seq[Tree], treesB: Seq[Tree]): (TreeIdMap, TreeIdMap) =
+    (calculateTreeMapping(treesA, treesB.length), calculateTreeMapping(treesB, 0))
+
+  // We’re densifying the tree ids to avoid sparse ids growing too fast
+  private def calculateTreeMapping(trees: Seq[Tree], offset: Int): Map[Int, Int] =
+    trees
+      .map(_.treeId)
+      .sorted
+      .zipWithIndex
+      .map {
+        case (treeId, index) => (treeId, index + 1 + offset)
+      }
+      .toMap
+
+  // When merging two skeletons, the node ids of skeleton A are remapped by adding this offset
+  // to keep everything unique.
+  // If the existing nodes of A don’t start at 0, their start is subtracted, densifying the ids.
+  private def calculateNodeOffset(treesA: Seq[Tree], treesB: Seq[Tree]) =
+    if (treesB.isEmpty)
       0
     else {
-      val targetNodeMaxId = maxNodeId(targetTrees)
-      val sourceNodeMinId = minNodeId(sourceTrees)
-      math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
+      val nodeMaxIdB = maxNodeId(treesB)
+      val nodeMinIdA = minNodeId(treesA)
+      math.max(nodeMaxIdB + 1 - nodeMinIdA, 0)
     }
 
 }

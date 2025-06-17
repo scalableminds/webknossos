@@ -107,7 +107,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
-            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
+            mergedTracing <- skeletonTracingService.merge(tracings.flatten, newVersion = 0L).toFox
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
             _ <- skeletonTracingService.saveSkeleton(newTracingId, processedTracing.version, processedTracing)
           } yield Ok
@@ -118,6 +118,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
                 newTracingId: String,
+                ownerId: String,
+                requestingUserId: String,
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =
@@ -127,15 +129,17 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
             for {
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              editPositionParsed <- Fox.runOptional(editPosition)(p => Vec3Int.fromUriLiteral(p).toFox)
+              editRotationParsed <- Fox.runOptional(editRotation)(r => Vec3Double.fromUriLiteral(r).toFox)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
               _ <- annotationService.duplicateSkeletonTracing(
                 annotationId,
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newTracingId = newTracingId,
+                ownerId = ownerId,
+                requestingUserId = requestingUserId,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

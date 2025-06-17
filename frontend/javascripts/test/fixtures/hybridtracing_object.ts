@@ -1,12 +1,13 @@
 import update from "immutability-helper";
-import type { SkeletonTracing } from "oxalis/store";
+import { TreeMap, type Tree } from "viewer/model/types/tree_types";
+import type { SkeletonTracing } from "viewer/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { TreeTypeEnum } from "oxalis/constants";
-import type { APIColorLayer } from "types/api_flow_types";
+import EdgeCollection from "viewer/model/edge_collection";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { TreeTypeEnum } from "viewer/constants";
+import type { APIColorLayer } from "types/api_types";
 
 const colorLayer: APIColorLayer = {
   name: "color",
@@ -29,26 +30,7 @@ const colorLayer: APIColorLayer = {
   additionalAxes: [],
 };
 
-export const initialSkeletonTracing: SkeletonTracing = {
-  type: "skeleton",
-  createdTimestamp: 0,
-  tracingId: "tracingId",
-  trees: {},
-  treeGroups: [],
-  activeGroupId: null,
-  activeTreeId: 1,
-  activeNodeId: null,
-  cachedMaxNodeId: 0,
-  boundingBox: null,
-  userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
-  additionalAxes: [],
-};
-initialSkeletonTracing.trees[1] = {
+export const initialTreeOne: Tree = {
   treeId: 1,
   name: "TestTree",
   nodes: new DiffableMap(),
@@ -63,7 +45,8 @@ initialSkeletonTracing.trees[1] = {
   edgesAreVisible: true,
   metadata: [],
 };
-initialSkeletonTracing.trees[2] = {
+
+const initialTreeTwo: Tree = {
   treeId: 2,
   name: "TestAgglomerateTree",
   nodes: new DiffableMap(),
@@ -77,6 +60,29 @@ initialSkeletonTracing.trees[2] = {
   type: TreeTypeEnum.AGGLOMERATE,
   edgesAreVisible: true,
   metadata: [],
+};
+
+export const initialSkeletonTracing: SkeletonTracing = {
+  type: "skeleton",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  trees: new TreeMap([
+    [1, initialTreeOne],
+    [2, initialTreeTwo],
+  ]),
+  treeGroups: [],
+  activeGroupId: null,
+  activeTreeId: 1,
+  activeNodeId: null,
+  cachedMaxNodeId: 0,
+  boundingBox: null,
+  userBoundingBoxes: [],
+  navigationList: {
+    list: [],
+    activeIndex: -1,
+  },
+  showSkeletons: true,
+  additionalAxes: [],
 };
 
 export const initialState = update(defaultState, {

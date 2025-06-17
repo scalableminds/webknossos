@@ -1,14 +1,17 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
+// Buffered writing to FossilDB.
+// Caution: Caller is responsible to call a final flush() after putting everything
+// Caution: Not thread safe! Make sure no concurrent access happens.
 class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = None, maxElements: Int = 100)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   private lazy val buffer: mutable.Map[(String, Long), Array[Byte]] =
     new mutable.HashMap[(String, Long), Array[Byte]]()
@@ -17,25 +20,23 @@ class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = 
     put(key, value, Some(version))
 
   def put(key: String, value: Array[Byte], version: Option[Long] = None)(implicit ec: ExecutionContext): Fox[Unit] =
-    this.synchronized {
-      for {
-        versionToPut <- version
-          .orElse(this.version)
-          .toFox ?~> "FossilDBPutBuffer put without version (needs to be passed to put or to buffer)"
-        _ = buffer.put((key, versionToPut), value)
-        result <- if (isFull) {
-          flush()
-        } else Fox.successful(())
-      } yield result
-    }
+    for {
+      versionToPut <- version
+        .orElse(this.version)
+        .toFox ?~> "FossilDBPutBuffer put without version (needs to be passed to put or to buffer)"
+      _ = buffer.put((key, versionToPut), value)
+      result <- if (isFull) {
+        flush()
+      } else Fox.successful(())
+    } yield result
 
-  private def isFull = this.synchronized { size >= maxElements }
+  private def isFull = size >= maxElements
 
-  private def isEmpty = this.synchronized { buffer.isEmpty }
+  private def isEmpty = buffer.isEmpty
 
-  private def size = this.synchronized { buffer.size }
+  private def size = buffer.size
 
-  def flush()(implicit ec: ExecutionContext): Fox[Unit] = this.synchronized {
+  def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     if (isEmpty) Fox.successful(())
     else {
       for {
@@ -43,6 +44,5 @@ class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = 
         _ = buffer.clear()
       } yield ()
     }
-  }
 
 }

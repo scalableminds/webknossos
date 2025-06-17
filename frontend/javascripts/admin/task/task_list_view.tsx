@@ -11,18 +11,19 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { downloadAnnotation as downloadAnnotationAPI } from "admin/admin_rest_api";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
   getTasks,
 } from "admin/api/tasks";
+import { downloadAnnotation as downloadAnnotationAPI } from "admin/rest_api";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Input, Modal, Spin, type TableProps, Tag } from "antd";
+import { Alert, App, Button, Card, Input, Modal, Spin, Tag } from "antd";
+import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
@@ -38,7 +39,7 @@ import messages from "messages";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APITask, APITaskType, TaskStatus } from "types/api_flow_types";
+import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
 
@@ -238,7 +239,7 @@ function TaskListView({ initialFieldValues }: Props) {
     marginRight: 20,
   };
 
-  const columns: TableProps["columns"] = [
+  const columns: ColumnType<APITask>[] = [
     {
       title: "ID",
       dataIndex: "id",

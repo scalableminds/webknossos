@@ -4,6 +4,7 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 import "MetadataEntry.proto";
+import "IdWithBool.proto";
 
 message Segment {
 	required int64 segmentId = 1;
@@ -14,6 +15,15 @@ message Segment {
   optional int32 groupId = 6;
   repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
   repeated MetadataEntryProto metadata = 11;
+  optional bool isVisible = 12;
+}
+
+message VolumeUserStateProto {
+  required string userId = 1;
+  optional int64 activeSegmentId = 2;
+  repeated Id32WithBool segmentGroupExpandedStates = 3;
+  repeated Id32WithBool boundingBoxVisibilities = 4;
+  repeated Id64WithBool segmentVisibilities = 5;
 }
 
 message VolumeTracing {
@@ -55,6 +65,8 @@ message VolumeTracing {
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
   optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
+  optional bool hideUnregisteredSegments = 25; // If true, segments that are not registered will be hidden.
+  repeated VolumeUserStateProto userStates = 26;
 }
 
 message SegmentGroup {

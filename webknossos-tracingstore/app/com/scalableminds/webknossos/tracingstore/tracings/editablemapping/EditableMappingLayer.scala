@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -17,7 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
   ElementClass,
-  SegmentationLayer
+  SegmentationLayer,
+  DatasetLayerAttachments
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -30,7 +30,8 @@ import scala.concurrent.ExecutionContext
 class EditableMappingBucketProvider(layer: EditableMappingLayer)
     extends BucketProvider
     with ProtoGeometryImplicits
-    with LazyLogging {
+    with LazyLogging
+    with FoxImplicits {
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] = {
@@ -42,7 +43,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
       // This is different from volumeTracingVersion, because we need a non-optional version here so the caching
       // in editableMappingService works properly.
       version = layer.version
-      _ <- bool2Fox(layer.doesContainBucket(bucket))
+      _ <- Fox.fromBool(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- editableMappingService.remoteFallbackLayerForVolumeTracing(layer.tracing,
                                                                                         layer.annotationId)
       // called here to ensure updates are applied
@@ -103,6 +104,8 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  override def attachments: Option[DatasetLayerAttachments] = None
 
   def version: Long = tracing.version
 

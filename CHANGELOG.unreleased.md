@@ -8,14 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.2...HEAD)
 
 ### Added
 
 ### Changed
 
 ### Fixed
-- Fixed a regression that led to incorrect behavior when trying to jump to the last branchpoint even though no branchpoint existed. [#8695](https://github.com/scalableminds/webknossos/pull/8695)
 
 ### Removed
 

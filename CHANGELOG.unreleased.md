@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added the ability to duplicate trees in skeleton annotations. Users can create a copy of any tree (including all nodes, edges, and properties) via the context menu in the skeleton tab. [#8662](https://github.com/scalableminds/webknossos/pull/8662)
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
+- Authentication with Passkeys. [#8393](https://github.com/scalableminds/webknossos/pull/8393)
 
 ### Changed
 

@@ -1,13 +1,23 @@
+import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
-import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
+import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
-import type { NumberLike, SegmentGroup, UserBoundingBox, VolumeTracing } from "viewer/store";
+import type {
+  NumberLike,
+  SegmentGroup,
+  UserBoundingBox,
+  UserBoundingBoxWithOptIsVisible,
+  VolumeTracing,
+} from "viewer/store";
 
 export type NodeWithTreeId = {
   treeId: number;
 } & Node;
+
+// This type is meant to contain only the properties that have changed
+type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
@@ -21,8 +31,11 @@ export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTree
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
-export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
-type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracingAction>;
+export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
+type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
+type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
+export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
+export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
@@ -33,21 +46,50 @@ export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
 >;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInSkeletonTracing
+export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInSkeletonTracing
 >;
-type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInVolumeTracing
+export type LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInVolumeTracing
+>;
+export type AddUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof addUserBoundingBoxInSkeletonTracing
+>;
+export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof addUserBoundingBoxInVolumeTracing
+>;
+export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInSkeletonTracing
+>;
+export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInVolumeTracing
+>;
+export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInSkeletonTracing
+>;
+export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInVolumeTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
+  typeof updateSegmentGroupsExpandedState
+>;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
+export type UpdateTreeGroupsExpandedStateAction = ReturnType<typeof updateTreeGroupsExpandedState>;
 
 export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 // This action is not dispatched by our code, anymore,
 // but we still need to keep it for backwards compatibility.
 export type RemoveFallbackLayerUpdateAction = ReturnType<typeof removeFallbackLayer>;
+export type UpdateCameraAnnotationAction = ReturnType<typeof updateCameraAnnotation>;
 export type UpdateTdCameraUpdateAction = ReturnType<typeof updateTdCamera>;
 export type UpdateMappingNameUpdateAction = ReturnType<typeof updateMappingName>;
 export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
@@ -76,10 +118,21 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteNodeUpdateAction
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
-  | UpdateSkeletonTracingUpdateAction
-  | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
-  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | LEGACY_UpdateSkeletonTracingUpdateAction
+  | LEGACY_UpdateVolumeTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | UpdateActiveNodeUpdateAction
+  | UpdateActiveSegmentIdUpdateAction
+  | UpdateLargestSegmentIdVolumeAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | UpdateSegmentVisibilityVolumeAction
@@ -90,9 +143,12 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
+  | UpdateTreeGroupsExpandedStateAction
   | RemoveFallbackLayerUpdateAction
+  | UpdateCameraAnnotationAction
   | UpdateTdCameraUpdateAction
   | UpdateMappingNameUpdateAction
   | DeleteAnnotationLayerUpdateAction
@@ -130,7 +186,7 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   };
 };
 
-type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
+export type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 
 // When the server delivers update actions (e.g., when requesting the version history
 // of an annotation), ServerUpdateActions are sent which include some additional information.
@@ -316,7 +372,10 @@ export function deleteNode(treeId: number, nodeId: number, actionTracingId: stri
     },
   } as const;
 }
-export function updateSkeletonTracing(
+
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
+function LEGACY_updateSkeletonTracing(
   tracing: {
     tracingId: string;
     activeNodeId: number | null | undefined;
@@ -338,6 +397,20 @@ export function updateSkeletonTracing(
     },
   } as const;
 }
+
+export function updateActiveNode(tracing: {
+  tracingId: string;
+  activeNodeId: number | null | undefined;
+}) {
+  return {
+    name: "updateActiveNode",
+    value: {
+      actionTracingId: tracing.tracingId,
+      activeNode: tracing.activeNodeId,
+    },
+  } as const;
+}
+
 export function moveTreeComponent(
   sourceTreeId: number,
   targetTreeId: number,
@@ -354,7 +427,10 @@ export function moveTreeComponent(
     },
   } as const;
 }
-export function updateVolumeTracingAction(
+
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
+export function LEGACY_updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
@@ -375,7 +451,24 @@ export function updateVolumeTracingAction(
     },
   } as const;
 }
-export function updateUserBoundingBoxesInSkeletonTracing(
+
+export function updateLargestSegmentId(largestSegmentId: number | null, actionTracingId: string) {
+  return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
+}
+
+export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: string) {
+  return {
+    name: "updateActiveSegmentId",
+    value: {
+      actionTracingId,
+      activeSegmentId,
+    },
+  } as const;
+}
+
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
+export function LEGACY_updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
 ) {
@@ -383,11 +476,16 @@ export function updateUserBoundingBoxesInSkeletonTracing(
     name: "updateUserBoundingBoxesInSkeletonTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
     },
   } as const;
 }
-export function updateUserBoundingBoxesInVolumeTracing(
+
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
+export function LEGACY_updateUserBoundingBoxesInVolumeTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
 ) {
@@ -395,10 +493,137 @@ export function updateUserBoundingBoxesInVolumeTracing(
     name: "updateUserBoundingBoxesInVolumeTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
     },
   } as const;
 }
+export function addUserBoundingBoxInSkeletonTracing(
+  boundingBox: UserBoundingBoxWithOptIsVisible,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxInSkeletonTracing",
+    value: {
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function addUserBoundingBoxInVolumeTracing(
+  boundingBox: UserBoundingBoxWithOptIsVisible,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxInVolumeTracing",
+    value: {
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxVisibilityInVolumeTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInVolumeTracing",
+    value: { boundingBoxId, isVisible, actionTracingId },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInSkeletonTracing(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInVolumeTracing(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInVolumeTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+function _updateUserBoundingBoxHelper(
+  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  const { boundingBox, ...rest } = updatedProps;
+  const updatedPropsForServer =
+    boundingBox != null
+      ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
+      : updatedProps;
+  return {
+    name: actionName,
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      ...updatedPropsForServer,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInVolumeTracing(
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  return _updateUserBoundingBoxHelper(
+    "updateUserBoundingBoxInVolumeTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxInSkeletonTracing(
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  return _updateUserBoundingBoxHelper(
+    "updateUserBoundingBoxInSkeletonTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxVisibilityInSkeletonTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
@@ -509,6 +734,36 @@ export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTr
   } as const;
 }
 
+export function updateSegmentGroupsExpandedState(
+  groupIds: number[],
+  areExpanded: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupsExpandedState",
+    value: {
+      actionTracingId,
+      groupIds,
+      areExpanded,
+    },
+  } as const;
+}
+
+export function updateTreeGroupsExpandedState(
+  groupIds: number[],
+  areExpanded: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateTreeGroupsExpandedState",
+    value: {
+      actionTracingId,
+      groupIds,
+      areExpanded,
+    },
+  } as const;
+}
+
 export function updateSegmentGroupVisibilityVolumeAction(
   groupId: number | null,
   isVisible: boolean,
@@ -549,6 +804,23 @@ export function removeFallbackLayer(actionTracingId: string) {
     },
   } as const;
 }
+export function updateCameraAnnotation(
+  editPosition: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  editRotation: Vector3,
+  zoomLevel: number,
+) {
+  return {
+    name: "updateCamera",
+    value: {
+      editPosition,
+      editRotation,
+      zoomLevel,
+      editPositionAdditionalCoordinates,
+    },
+  } as const;
+}
+
 export function updateTdCamera() {
   return {
     name: "updateTdCamera",

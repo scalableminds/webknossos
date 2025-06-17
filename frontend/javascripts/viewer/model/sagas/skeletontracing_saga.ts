@@ -2,7 +2,6 @@ import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/re
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
@@ -20,10 +19,9 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_types";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -65,17 +63,18 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
+  updateActiveNode,
   updateNode,
-  updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeGroupsExpandedState,
   updateTreeVisibility,
-  updateUserBoundingBoxesInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type { Flycam, SkeletonTracing, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
@@ -518,15 +517,6 @@ function* diffEdges(
   }
 }
 
-function updateTracingPredicate(
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
-): boolean {
-  return prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId || prevFlycam !== flycam;
-}
-
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     // branchPoints and comments are arrays and therefore checked for
@@ -599,39 +589,48 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (prevSkeletonTracing !== skeletonTracing) {
-    for (const action of cachedDiffTrees(
-      skeletonTracing.tracingId,
-      prevSkeletonTracing.trees,
-      skeletonTracing.trees,
-    )) {
-      yield action;
-    }
+  if (prevSkeletonTracing === skeletonTracing) {
+    return;
+  }
+  yield* cachedDiffTrees(
+    skeletonTracing.tracingId,
+    prevSkeletonTracing.trees,
+    skeletonTracing.trees,
+  );
 
-    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
-      yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
-    }
+  const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);
+
+  if (groupDiff.didContentChange) {
+    // The groups (without isExpanded) actually changed. Save them to the server.
+    yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
   }
 
-  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
-    yield updateSkeletonTracing(
-      skeletonTracing,
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
-    );
-  }
-
-  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
-      skeletonTracing.userBoundingBoxes,
+  if (groupDiff.newlyExpandedIds.length > 0) {
+    yield updateTreeGroupsExpandedState(
+      groupDiff.newlyExpandedIds,
+      true,
       skeletonTracing.tracingId,
     );
   }
+  if (groupDiff.newlyNotExpandedIds.length > 0) {
+    yield updateTreeGroupsExpandedState(
+      groupDiff.newlyNotExpandedIds,
+      false,
+      skeletonTracing.tracingId,
+    );
+  }
+
+  if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
+    yield updateActiveNode(skeletonTracing);
+  }
+
+  yield* diffBoundingBoxes(
+    prevSkeletonTracing.userBoundingBoxes,
+    skeletonTracing.userBoundingBoxes,
+    skeletonTracing.tracingId,
+    AnnotationLayerEnum.Skeleton,
+  );
 }
 export default [
   watchSkeletonTracingAsync,

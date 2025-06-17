@@ -557,6 +557,7 @@ export function addTreesAndGroups(
   skeletonTracing: SkeletonTracing,
   trees: MutableTreeMap,
   treeGroups: MutableTreeGroup[],
+  assignNewGroupId: boolean = true,
 ): [MutableTreeMap, TreeGroup[], number] | null {
   const hasInvalidTreeIds = trees
     .keys()
@@ -627,8 +628,11 @@ export function addTreesAndGroups(
       nodeId: idMap[bp.nodeId],
     }));
 
-    // Assign the new group id to the tree if the tree belongs to a group
-    tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
+    // Assign the new group id to the tree if the tree belongs to a group that was newly added
+    // or keep the old group id if the tree should be assigned to an existing group.
+    if (tree.groupId != null && assignNewGroupId) {
+      tree.groupId = groupIdMap[tree.groupId];
+    }
     tree.treeId = newTreeId;
 
     newTrees.mutableSet(newTreeId, tree);
@@ -877,37 +881,48 @@ function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBra
 
 export function createMutableTreeMapFromTreeArray(
   trees: ServerSkeletonTracingTree[],
+  applyUserStateToTreeFn?: (tree: Tree) => Tree,
 ): MutableTreeMap {
   const newTreeMap = new MutableTreeMap();
+  applyUserStateToTreeFn ||= (tree) => tree;
 
   for (const tree of trees) {
-    newTreeMap.mutableSet(tree.treeId, {
-      comments: tree.comments as any as MutableCommentType[],
-      edges: EdgeCollection.loadFromArray(tree.edges),
-      name: tree.name,
-      treeId: tree.treeId,
-      nodes: new DiffableMap(
-        tree.nodes.map(serverNodeToMutableNode).map((node) => [node.id, node]),
-      ),
-      color:
-        tree.color != null
-          ? Utils.colorObjectToRGBArray(tree.color)
-          : ColorGenerator.distinctColorForId(tree.treeId),
-      branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
-      isVisible: tree.isVisible != null ? tree.isVisible : true,
-      timestamp: tree.createdTimestamp,
-      groupId: tree.groupId,
-      type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
-      edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
-      metadata: tree.metadata,
-    });
+    newTreeMap.mutableSet(
+      tree.treeId,
+      applyUserStateToTreeFn({
+        comments: tree.comments as any as MutableCommentType[],
+        edges: EdgeCollection.loadFromArray(tree.edges),
+        name: tree.name,
+        treeId: tree.treeId,
+        nodes: new DiffableMap(
+          tree.nodes.map(serverNodeToMutableNode).map((node) => [node.id, node]),
+        ),
+        color:
+          tree.color != null
+            ? Utils.colorObjectToRGBArray(tree.color)
+            : ColorGenerator.distinctColorForId(tree.treeId),
+        branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
+        isVisible: tree.isVisible != null ? tree.isVisible : true,
+        timestamp: tree.createdTimestamp,
+        groupId: tree.groupId,
+        type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
+        metadata: tree.metadata,
+      }),
+    );
   }
 
   return newTreeMap;
 }
 
-export function createTreeMapFromTreeArray(trees: ServerSkeletonTracingTree[]): TreeMap {
-  return createMutableTreeMapFromTreeArray(trees) as any as TreeMap;
+export function createTreeMapFromTreeArray(
+  trees: ServerSkeletonTracingTree[],
+  applyUserStateToTreeFn?: (tree: Tree) => Tree,
+): TreeMap {
+  /*
+   * This function is the immutable sibling to createMutableTreeMapFromTreeArray.
+   */
+  return createMutableTreeMapFromTreeArray(trees, applyUserStateToTreeFn) as any as TreeMap;
 }
 
 export function removeMissingGroupsFromTrees(

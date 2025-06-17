@@ -1,5 +1,8 @@
+import type { meshApi } from "admin/rest_api";
+import { V3 } from "libs/mjs";
 import _ from "lodash";
 import type * as THREE from "three";
+import type { Vector3 } from "viewer/constants";
 
 export type BufferGeometryWithInfo = THREE.BufferGeometry & {
   vertexSegmentMapping?: VertexSegmentMapping;
@@ -22,7 +25,7 @@ export class VertexSegmentMapping {
    * E.g., one query allows to go from a vertex index ("position", named
    * like the BufferAttribute "position") to
    * the unmapped segment id of the geometry that belongs to the vertex.
-   * Similarily, one can obtain the range that covers all vertices
+   * Similarly, one can obtain the range that covers all vertices
    * that belong to a certain unmapped segment id.
    * Other queries allow a similar mapping between vertex index ("position")
    * and unmapped segment id.
@@ -77,4 +80,13 @@ export class VertexSegmentMapping {
   containsSegmentId(segmentId: number): boolean {
     return _.sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
   }
+}
+
+export function sortByDistanceTo(
+  availableChunks: Vector3[] | meshApi.MeshChunk[] | null | undefined,
+  seedPosition: Vector3,
+) {
+  return _.sortBy(availableChunks, (chunk: Vector3 | meshApi.MeshChunk) =>
+    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
+  ) as Array<Vector3> | Array<meshApi.MeshChunk>;
 }

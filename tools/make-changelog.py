@@ -8,21 +8,6 @@ GITHUB_REPO = "scalableminds/webknossos"
 UNRELEASED_CHANGES_DIR = "unreleased_changes"
 
 
-# "### Added",
-# "",
-# "### Changed",
-# "",
-# "### Fixed",
-# "",
-# "### Removed",
-# "",
-# "### Breaking Changes",
-# "",
-
-# ### Migration
-# ### Postgres Evolutions
-
-
 def get_current_version():
     assert len(sys.argv) >= 1, "Pass a version string like this: 22.03.1"
     this_version = sys.argv[1]

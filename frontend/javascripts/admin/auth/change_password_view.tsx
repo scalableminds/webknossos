@@ -27,7 +27,7 @@ function ChangePasswordView({ history }: Props) {
   // Password Form
   const [form] = Form.useForm();
 
-  const { passkeysEnabled } = features();
+  const { passkeysEnabled = false } = features();
 
   /// Passkeys
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);

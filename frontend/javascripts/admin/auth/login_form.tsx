@@ -43,7 +43,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
-  const { openIdConnectEnabled, passkeysEnabled } = features();
+  const { openIdConnectEnabled, passkeysEnabled = false } = features();
 
   const webauthnLogin = async () => {
     const [user, organization] = await doWebAuthnLogin();

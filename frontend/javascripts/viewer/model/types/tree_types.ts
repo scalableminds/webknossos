@@ -77,6 +77,8 @@ export type Tree = {
 export type TreeGroupTypeFlat = {
   readonly name: string;
   readonly groupId: number;
+  // Only needed for legacy groups. The expansion state for newer groups
+  // is stored within the userStates of a skeleton or volume tracing.
   readonly isExpanded?: boolean;
 };
 

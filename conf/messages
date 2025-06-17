@@ -370,10 +370,10 @@ folder.notFound=Could not find the requested folder
 folder.delete.root=Cannot delete the organization’s root folder
 folder.move.root=Cannot move the organization’s root folder
 folder.update.notAllowed=No write access on this folder
+folder.noWriteAccess=No write access in this folder
 folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
-folder.noWriteAccess=No write access in this folder
 folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.

@@ -55,9 +55,14 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DatasetLayerAttachments(meshes = meshAttachments))
       else None
       layer = if (precomputedHeader.describesSegmentationLayer) {
-        PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
+        PrecomputedSegmentationLayer(name,
+                                     boundingBox,
+                                     elementClass,
+                                     mags,
+                                     largestSegmentId = None,
+                                     attachments = attachmentsGrouped)
       } else
-        PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags, attachments = attachmentsGrouped)
+        PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Option[ElementClass.Value] =

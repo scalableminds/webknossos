@@ -37,11 +37,11 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
    * So that it itself can be merged again.
    * The earliestAccessibleVersion property ensures that the fully merged annotation is still the earliest accessible one.
    */
-  def mergeEditableMappings(annotationIds: List[String],
+  def mergeEditableMappings(annotationIds: Seq[String],
                             firstVolumeAnnotationIdOpt: Option[String],
                             newAnnotationId: String,
                             newVolumeTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
+                            tracingsWithIds: Seq[(VolumeTracing, String)],
                             toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
@@ -98,7 +98,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
       Fox.failure("Cannot merge annotations with and without editable mappings")
     }
 
-  private def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(
+  private def mergeEditableMappingUpdates(annotationIds: Seq[String], newTracingId: String)(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
     for {
       updatesByAnnotation <- Fox.serialCombined(annotationIds) { annotationId =>

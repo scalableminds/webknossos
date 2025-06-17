@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext
 
 class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                        dataVaultService: DataVaultService,
-                                       sharedChunkContentsCache: AlfuCache[String, MultiArray])
+                                       chunkCacheService: ChunkCacheService)
     extends DataConverter
     with LazyLogging {
 
@@ -65,7 +65,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                    None,
                                    None,
                                    None,
-                                   sharedChunkContentsCache)
+                                   chunkCacheService.sharedChunkContentsCache)
     } yield zarrArray
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(

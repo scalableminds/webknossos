@@ -155,7 +155,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       _ = logMeshingDuration(before, "meshfile", stlOutput.length)
     } yield stlOutput
 
-  private def readMeshChunkAsStl(meshFileKey: MeshFileKey, chunkInfo: MeshChunk, transform: Array[Array[Double]])(
+  private def readMeshChunkAsStl(meshFileKey: MeshfileKey, chunkInfo: MeshChunk, transform: Array[Array[Double]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -168,7 +168,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield stlEncodedChunk
 
   // TODO delete if above works also for neuroglancer
-  private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshFileKey, fullMeshRequest: FullMeshRequest)(
+  private def loadFullMeshFromRemoteNeuroglancerMeshFile(meshFileKey: MeshfileKey, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -201,11 +201,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield stlOutput
 
   private def readNeuroglancerPrecomputedMeshChunkAsStl(
-      meshFileKey: MeshFileKey,
-      chunkInfo: MeshChunk,
-      transform: Array[Array[Double]],
-      segmentId: Option[Long],
-      vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+                                                         meshFileKey: MeshfileKey,
+                                                         chunkInfo: MeshChunk,
+                                                         transform: Array[Array[Double]],
+                                                         segmentId: Option[Long],
+                                                         vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         meshFileKey,

@@ -19,7 +19,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey): Box[Option[String]] = tryo {
+  def mappingNameForMeshFile(meshFileKey: MeshfileKey): Box[Option[String]] = tryo {
     meshFileCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
         cachedMeshFile.mappingName
@@ -30,14 +30,14 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
       }
   }
 
-  private def readMeshfileMetadata(meshFileKey: MeshFileKey): Box[(String, Double, Array[Array[Double]])] =
+  private def readMeshfileMetadata(meshFileKey: MeshfileKey): Box[(String, Double, Array[Array[Double]])] =
     meshFileCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
       val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", "lod_scale_multiplier")
       val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", "transform")
       (cachedMeshFile.meshFormat, lodScaleMultiplier, transform)
     }
 
-  private def listMeshChunksForSegmentsNested(meshFileKey: MeshFileKey,
+  private def listMeshChunksForSegmentsNested(meshFileKey: MeshfileKey,
                                               segmentIds: Seq[Long],
                                               lodScaleMultiplier: Double,
                                               transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
@@ -99,7 +99,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
                                transform: Array[Array[Double]],
                                lod: Int): Array[Array[Double]] = transform
 
-  def versionForMeshFile(meshFileKey: MeshFileKey): Long =
+  def versionForMeshFile(meshFileKey: MeshfileKey): Long =
     meshFileCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
         cachedMeshFile.artifactSchemaVersion
@@ -107,7 +107,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
       .toOption
       .getOrElse(0)
 
-  def readMeshChunk(meshFileKey: MeshFileKey,
+  def readMeshChunk(meshFileKey: MeshfileKey,
                     meshChunkDataRequests: Seq[MeshChunkDataRequest]): Box[(Array[Byte], String)] =
     for {
       resultBox <- meshFileCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
@@ -135,7 +135,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
     Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
   }
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshfileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {

@@ -53,17 +53,17 @@ object MeshChunkDataRequestList {
 }
 
 // TODO should this become a generic AttachmentKey?
-case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+case class MeshfileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
 // Sent to wk frontend
-case class MeshFileInfo(
+case class MeshfileInfo(
     name: String,
     mappingName: Option[String],
     formatVersion: Long
 )
 
-object MeshFileInfo {
-  implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
+object MeshfileInfo {
+  implicit val jsonFormat: OFormat[MeshfileInfo] = Json.format[MeshfileInfo]
 }
 
 class MeshFileService @Inject()(config: DataStoreConfig,
@@ -78,16 +78,16 @@ class MeshFileService @Inject()(config: DataStoreConfig,
   private val meshesDir = "meshes"
 
   private val meshFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
+    : AlfuCache[(DataSourceId, String, String), MeshfileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
 
   def lookUpMeshFile(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
-      implicit ec: ExecutionContext): Fox[MeshFileKey] =
+      implicit ec: ExecutionContext): Fox[MeshfileKey] =
     meshFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, meshFileName),
                                _ => lookUpMeshFileImpl(dataSourceId, dataLayer, meshFileName).toFox)
 
   private def lookUpMeshFileImpl(dataSourceId: DataSourceId,
                                  dataLayer: DataLayer,
-                                 meshFileName: String): Box[MeshFileKey] = {
+                                 meshFileName: String): Box[MeshfileKey] = {
     val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
       case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
       case None              => None
@@ -100,7 +100,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatsetDir, dataLayer.name))
       })
     } yield
-      MeshFileKey(
+      MeshfileKey(
         dataSourceId,
         dataLayer.name,
         registeredAttachmentNormalized.getOrElse(
@@ -115,7 +115,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
                                                                       tc: TokenContext,
-                                                                      m: MessagesProvider): Fox[Seq[MeshFileInfo]] = {
+                                                                      m: MessagesProvider): Fox[Seq[MeshfileInfo]] = {
     val attachedMeshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name).toSet
 
     val layerDir =
@@ -139,12 +139,12 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
         mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
                                                                         meshFileName)
-      } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
+      } yield MeshfileInfo(meshFileName, mappingName, formatVersion)
     }
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+  def mappingNameForMeshFile(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[Option[String]] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -155,7 +155,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         Fox.successful(None)
     }
 
-  private def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  private def versionForMeshFile(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.versionForMeshFile(meshFileKey)
@@ -165,7 +165,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         Fox.successful(NeuroglancerMesh.meshInfoVersion)
     }
 
-  def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
+  def listMeshChunksForSegmentsMerged(meshFileKey: MeshfileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
@@ -178,7 +178,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
     }
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
+  def readMeshChunk(meshFileKey: MeshfileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrMeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests)

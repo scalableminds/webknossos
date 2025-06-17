@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
@@ -33,18 +34,19 @@ object MeshfileAttributes {
 
   implicit object MeshfileAttributesZarr3GroupHeaderReads extends Reads[MeshfileAttributes] {
     override def reads(json: JsValue): JsResult[MeshfileAttributes] = {
+      val keyAttributes = "attributes"
       val keyVx = "voxelytics"
       val keyFormatVersion = "artifact_schema_version"
       val keyArtifactAttrs = "artifact_attributes"
-      val meshfileAttrs = json \ keyVx \ keyArtifactAttrs
+      val meshfileAttrs = json \ keyAttributes \ keyVx \ keyArtifactAttrs
       for {
-        formatVersion <- (json \ keyVx \ keyFormatVersion).validate[Long]
+        formatVersion <- (json \ keyAttributes \ keyVx \ keyFormatVersion).validate[Long]
         meshFormat <- (meshfileAttrs \ "mesh_format").validate[String]
         lodScaleMultiplier <- (meshfileAttrs \ "lod_scale_multiplier").validate[Double]
         transform <- (meshfileAttrs \ "transform").validate[Array[Array[Double]]]
         hashFunction <- (meshfileAttrs \ "hash_function").validate[String]
         nBuckets <- (meshfileAttrs \ "n_buckets").validate[Int]
-        mappingName <- (meshfileAttrs \ "mappingName").validateOpt[String]
+        mappingName <- (meshfileAttrs \ "mapping_name").validateOpt[String]
       } yield
         MeshfileAttributes(
           formatVersion,
@@ -69,9 +71,11 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
 
   // TODO rename meshFile to meshfile?
 
-  // TODO cache?
-  private def readMeshFileAttributes(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
-                                                               tc: TokenContext): Fox[MeshfileAttributes] =
+  private lazy val openArraysCache = AlfuCache[(MeshfileKey, String), DatasetArray]()
+  private lazy val attributesCache = AlfuCache[MeshfileKey, MeshfileAttributes]()
+
+  private def readMeshFileAttributesImpl(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,
+                                                                   tc: TokenContext): Fox[MeshfileAttributes] =
     for {
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
       groupHeaderBytes <- (groupVaultPath / MeshfileAttributes.FILENAME_ZARR_JSON).readBytes()
@@ -80,24 +84,28 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
         .toFox ?~> "Could not parse meshfile attributes from zarr group file"
     } yield meshfileAttributes
 
-  def readMeshfileMetadata(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+  private def readMeshfileAttributes(meshfileKey: MeshfileKey)(implicit ec: ExecutionContext,
+                                                               tc: TokenContext): Fox[MeshfileAttributes] =
+    attributesCache.getOrLoad(meshfileKey, key => readMeshFileAttributesImpl(key))
+
+  def readMeshfileMetadata(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,
                                                      tc: TokenContext): Fox[(String, Double, Array[Array[Double]])] =
     for {
-      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
     } yield (meshfileAttributes.meshFormat, meshfileAttributes.lodScaleMultiplier, meshfileAttributes.transform)
 
-  def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  def versionForMeshFile(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
-      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
     } yield meshfileAttributes.formatVersion
 
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+  def mappingNameForMeshFile(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,
                                                        tc: TokenContext): Fox[Option[String]] =
     for {
-      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
     } yield meshfileAttributes.mappingName
 
-  def listMeshChunksForSegment(meshFileKey: MeshFileKey, segmentId: Long, meshfileAttributes: MeshfileAttributes)(
+  def listMeshChunksForSegment(meshFileKey: MeshfileKey, segmentId: Long, meshfileAttributes: MeshfileAttributes)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[MeshLodInfo]] =
     for {
@@ -118,7 +126,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
                         segmentId)
 
   private def getNeuroglancerSegmentManifestOffsets(
-      meshFileKey: MeshFileKey,
+      meshFileKey: MeshfileKey,
       meshfileAttributes: MeshfileAttributes,
       segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
     val bucketIndex = meshfileAttributes.applyHashFunction(segmentId) % meshfileAttributes.nBuckets
@@ -131,8 +139,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
       _ <- Fox.fromBool(bucketSize > 0) ?~> s"No entry for segment $segmentId"
       bucketsArray <- openZarrArray(meshFileKey, keyBuckets)
       bucket <- bucketsArray.readAsMultiArray(offset = Array(bucketStart, 0), shape = Array(bucketSize + 1, 3))
-      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox
-      _ <- Fox.fromBool(bucketLocalOffset >= 0) ?~> s"SegmentId $segmentId not in bucket list"
+      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox ?~> s"SegmentId $segmentId not in bucket list"
       neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))
       neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))
     } yield (neuroglancerStart, neuroglancerEnd)
@@ -141,8 +148,12 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
 
-  private def openZarrArray(meshFileKey: MeshFileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
+  private def openZarrArray(meshFileKey: MeshfileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
                                                                              tc: TokenContext): Fox[DatasetArray] =
+    openArraysCache.getOrLoad((meshFileKey, zarrArrayName), _ => openZarrArrayImpl(meshFileKey, zarrArrayName))
+
+  private def openZarrArrayImpl(meshFileKey: MeshfileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
+                                                                                 tc: TokenContext): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
       zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
@@ -166,12 +177,12 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
                                transform: Array[Array[Double]],
                                lod: Int): Array[Array[Double]] = transform
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshfileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
-      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
       meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(meshFileKey,
                                                                                                 segmentIds,
                                                                                                 meshfileAttributes)
@@ -184,7 +195,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
         .toFox
     } yield wkChunkInfos
 
-  private def listMeshChunksForSegmentsNested(meshFileKey: MeshFileKey,
+  private def listMeshChunksForSegmentsNested(meshFileKey: MeshfileKey,
                                               segmentIds: Seq[Long],
                                               meshfileAttributes: MeshfileAttributes)(
       implicit ec: ExecutionContext,
@@ -193,11 +204,11 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
       listMeshChunksForSegment(meshFileKey, segmentId, meshfileAttributes)
     }
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
+  def readMeshChunk(meshFileKey: MeshfileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
-      meshfileAttributes <- readMeshFileAttributes(meshFileKey)
+      meshfileAttributes <- readMeshfileAttributes(meshFileKey)
 
       // TODO skip sorting in zarr case? use parallel requests instead?
       // Sort the requests by byte offset to optimize for spinning disk access
@@ -216,7 +227,14 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
       dataSortedFlat = dataSorted.flatMap(d => d._1).toArray
     } yield (dataSortedFlat, meshfileAttributes.meshFormat)
 
-  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =
-    // TODO
-    0
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    attributesCache.clear { meshFileKey =>
+      meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    }
+
+    openArraysCache.clear {
+      case (meshFileKey, _) =>
+        meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    }
+  }
 }

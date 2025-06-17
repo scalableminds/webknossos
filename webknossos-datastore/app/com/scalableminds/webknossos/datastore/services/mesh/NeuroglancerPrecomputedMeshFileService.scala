@@ -28,12 +28,12 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
     extends FoxImplicits
     with NeuroglancerMeshHelper {
 
-  private lazy val meshInfoCache = AlfuCache[VaultPath, NeuroglancerMesh](100)
+  private lazy val meshInfoCache = AlfuCache[MeshfileKey, NeuroglancerMesh](100)
 
-  private def loadRemoteMeshInfo(meshPath: VaultPath)(implicit tc: TokenContext): Fox[NeuroglancerMesh] =
+  private def loadRemoteMeshInfo(meshfileKey: MeshfileKey)(implicit tc: TokenContext): Fox[NeuroglancerMesh] =
     for {
-      _ <- Fox.successful(())
-      meshInfoPath = meshPath / NeuroglancerMesh.FILENAME_INFO
+      vaultPath <- dataVaultService.getVaultPath(meshfileKey.attachment)
+      meshInfoPath = vaultPath / NeuroglancerMesh.FILENAME_INFO
       meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
       _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
     } yield NeuroglancerMesh(meshInfo)
@@ -72,11 +72,11 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
     )
   }
 
-  def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(
+  def listMeshChunksForMultipleSegments(meshFileKey: MeshfileKey, segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
-      mesh <- meshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+      mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
       meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
       segmentInfo <- WebknossosSegmentInfo
@@ -101,13 +101,13 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
                                           segmentId)
     } yield meshSegmentInfo
 
-  def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
+  def readMeshChunk(meshfileKey: MeshfileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
-      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
+      vaultPath <- dataVaultService.getVaultPath(meshfileKey.attachment)
       segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
       _ <- Fox.fromBool(meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1) ?~> "All requests must have the same segment id"
-      mesh <- meshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+      mesh <- meshInfoCache.getOrLoad(meshfileKey, loadRemoteMeshInfo)
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
@@ -115,13 +115,13 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
       output = chunks.flatten.toArray
     } yield (output, NeuroglancerMesh.meshEncoding)
 
-  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshfileKey: MeshfileKey)(implicit tc: TokenContext): Fox[Int] =
     for {
-      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
-      mesh <- meshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
-    } yield mesh.meshInfo.vertex_quantization_bits
+      meshInfo <- meshInfoCache.getOrLoad(meshfileKey, loadRemoteMeshInfo)
+    } yield meshInfo.meshInfo.vertex_quantization_bits
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =
-    // TODO
-    0
+    meshInfoCache.clear { meshFileKey =>
+      meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    }
 }

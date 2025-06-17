@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
-- The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`.
+- The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`. [#8518](https://github.com/scalableminds/webknossos/pull/8518)
 
 ### Fixed
 - Improved efficiency of saving bounding box related changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)

@@ -69,7 +69,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private val keyBuckets = "buckets"
   private val keyNeuroglancer = "neuroglancer"
 
-    private lazy val openArraysCache = AlfuCache[(MeshfileKey, String), DatasetArray]()
+  private lazy val openArraysCache = AlfuCache[(MeshfileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshfileKey, MeshfileAttributes]()
 
   private def readMeshFileAttributesImpl(meshFileKey: MeshfileKey)(implicit ec: ExecutionContext,
@@ -208,7 +208,6 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
     for {
       meshfileAttributes <- readMeshfileAttributes(meshFileKey)
 
-      // TODO skip sorting in zarr case? use parallel requests instead?
       // Sort the requests by byte offset to optimize for spinning disk access
       requestsReordered = meshChunkDataRequests.zipWithIndex
         .sortBy(requestAndIndex => requestAndIndex._1.byteOffset)

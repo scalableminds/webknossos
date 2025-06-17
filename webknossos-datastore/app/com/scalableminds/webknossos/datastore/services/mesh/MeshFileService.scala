@@ -52,7 +52,6 @@ object MeshChunkDataRequestList {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
 }
 
-// TODO should this become a generic AttachmentKey?
 case class MeshfileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
 // Sent to wk frontend
@@ -131,16 +130,19 @@ class MeshFileService @Inject()(config: DataStoreConfig,
 
     val allMeshFileNames = attachedMeshFileNames ++ scannedMeshFileNames
 
-    // TODO skip failures
-    Fox.serialCombined(allMeshFileNames) { meshFileName =>
-      for {
-        meshFileKey <- lookUpMeshFile(dataSourceId, dataLayer, meshFileName) ?~> Messages("mesh.file.lookup.failed",
-                                                                                          meshFileName)
-        formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
-        mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
-                                                                        meshFileName)
-      } yield MeshfileInfo(meshFileName, mappingName, formatVersion)
-    }
+    Fox.fromFuture(
+      Fox
+        .serialSequence(allMeshFileNames.toSeq) { meshFileName =>
+          for {
+            meshFileKey <- lookUpMeshFile(dataSourceId, dataLayer, meshFileName) ?~> Messages("mesh.file.lookup.failed",
+                                                                                              meshFileName)
+            formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
+            mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
+                                                                            meshFileName)
+          } yield MeshfileInfo(meshFileName, mappingName, formatVersion)
+        }
+        // Only return successes, we don’t want a malformed file breaking the list request.
+        .map(_.flatten))
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None

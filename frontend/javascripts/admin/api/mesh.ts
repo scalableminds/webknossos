@@ -22,7 +22,7 @@ type MeshSegmentInfo = {
 };
 
 type ListMeshChunksRequest = {
-  meshFile: APIMeshFileInfo;
+  meshFileName: string;
   segmentId: number;
 };
 

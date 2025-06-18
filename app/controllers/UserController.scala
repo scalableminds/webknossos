@@ -209,15 +209,12 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(true)
     else userService.isEditableBy(user, issuingUser)
 
-  private def checkPasswordIfEmailChangedByNonAdmin(
+  private def checkPasswordIfEmailChanged(
       user: User,
       passwordOpt: Option[String],
       oldEmail: String,
       email: String)(issuingUser: User)(implicit m: MessagesProvider): Fox[Unit] = {
-
-    val isAdminAndNotSameUser = issuingUser.isAdminOf(user) && user._id != issuingUser._id
-
-    if (oldEmail == email || isAdminAndNotSameUser) {
+    if (oldEmail == email) {
       Fox.successful(())
     } else if (user._id == issuingUser._id) {
       passwordOpt match {
@@ -335,7 +332,7 @@ class UserController @Inject()(userService: UserService,
                                            oldAssignedMemberships)(issuingUser) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox
             .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- checkPasswordIfEmailChangedByNonAdmin(user, passwordOpt, oldEmail, email)(issuingUser)
+          _ <- checkPasswordIfEmailChanged(user, passwordOpt, oldEmail, email)(issuingUser)
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)

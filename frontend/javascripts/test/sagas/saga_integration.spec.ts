@@ -1,15 +1,11 @@
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
-import "test/sagas/saga_integration.mock";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/save_saga_constants";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import Store from "viewer/store";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { omit } from "lodash";
 
@@ -28,16 +24,7 @@ import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup Webknossos
-    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-    Store.dispatch(restartSagaAction());
-    Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(setActiveUserAction(dummyUser));
-
     await setupWebknossosForTesting(context, "task");
-
-    // Dispatch the wkReadyAction, so the sagas are started
-    Store.dispatch(wkReadyAction());
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
@@ -57,18 +44,7 @@ describe("Saga Integration Tests", () => {
       name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
     };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [
-        [
-          UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId),
-          UpdateActions.updateSkeletonTracing(
-            enforceSkeletonTracing(Store.getState().annotation),
-            [1, 2, 3],
-            [],
-            [0, 0, 0],
-            2,
-          ),
-        ],
-      ],
+      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );
@@ -109,7 +85,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should be chunked after compacting (3/3)", () => {
-    const nodeCount = 20000;
+    const nodeCount = 20_000;
     // Test that a tree split is detected even when the involved node count is above the chunk limit
     const trees = generateDummyTrees(1, nodeCount);
 
@@ -122,9 +98,8 @@ describe("Saga Integration Tests", () => {
     Store.dispatch(deleteNodeAction(middleNodeId));
     const skeletonSaveQueue = Store.getState().save.queue;
 
-    // There should only be one chunk
-    expect(skeletonSaveQueue.length).toBe(1);
-    expect(skeletonSaveQueue[0].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
-    expect(skeletonSaveQueue[0].actions[1].name).toBe("moveTreeComponent");
+    expect(skeletonSaveQueue.length).toBe(2);
+    expect(skeletonSaveQueue[1].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
+    expect(skeletonSaveQueue[1].actions[1].name).toBe("moveTreeComponent");
   });
 });

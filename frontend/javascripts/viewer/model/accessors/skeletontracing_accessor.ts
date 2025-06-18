@@ -276,13 +276,16 @@ export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
   );
 }
 
-export function getBranchPoints(annotation: StoreAnnotation): IteratorObject<BranchPoint[]> | null {
+export function getBranchPoints(annotation: StoreAnnotation): BranchPoint[] | null {
   const skeletonTracing = getSkeletonTracing(annotation);
   if (skeletonTracing == null) {
     return null;
   }
 
-  return skeletonTracing.trees.values().map((tree) => tree.branchPoints);
+  return skeletonTracing.trees
+    .values()
+    .flatMap((tree) => tree.branchPoints)
+    .toArray();
 }
 
 export function getFlatTreeGroups(

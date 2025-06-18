@@ -96,7 +96,7 @@ import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
-  proofreadMerge,
+  proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   loadAdHocMeshAction,
@@ -449,7 +449,9 @@ function getMeshItems(
               // Should not happen due to the disabled property.
               return;
             }
-            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
+            return Store.dispatch(
+              proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId),
+            );
           },
           label: (
             <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
@@ -1136,7 +1138,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
+                onClick: () => Store.dispatch(proofreadMergeAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={

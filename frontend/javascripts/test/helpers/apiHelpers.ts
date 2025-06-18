@@ -1,7 +1,7 @@
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
@@ -37,7 +37,12 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
-import { getDataset, sendSaveRequestWithToken } from "admin/rest_api";
+import {
+  getDataset,
+  getEdgesForAgglomerateMinCut,
+  sendSaveRequestWithToken,
+  type MinCutTargetEdge,
+} from "admin/rest_api";
 import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
@@ -57,6 +62,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   mocks: {
     Request: typeof Request;
     getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
+    getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -104,6 +110,12 @@ vi.mock("admin/rest_api.ts", async () => {
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
       );
     }
+    ColoredLogger.logGreen(
+      "getAgglomeratesForSegmentsImpl returns",
+      entries,
+      "for requested",
+      segmentIds,
+    );
     return new Map(entries);
   };
   const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(
@@ -137,6 +149,15 @@ vi.mock("admin/rest_api.ts", async () => {
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
+    getEdgesForAgglomerateMinCut: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _segmentsInfo: unknown,
+      ): Promise<Array<MinCutTargetEdge>> => {
+        throw new Error("Not yet mocked.");
+      },
+    ),
   };
 });
 
@@ -295,6 +316,7 @@ export async function setupWebknossosForTesting(
   testContext.mocks = {
     Request: vi.mocked(Request),
     getCurrentMappingEntriesFromServer,
+    getEdgesForAgglomerateMinCut,
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>

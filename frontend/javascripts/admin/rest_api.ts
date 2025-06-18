@@ -2175,7 +2175,7 @@ export function getSynapseTypes(
   );
 }
 
-type MinCutTargetEdge = {
+export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
   segmentId1: number;

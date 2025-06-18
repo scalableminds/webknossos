@@ -12,7 +12,7 @@ import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { proofreadMerge } from "viewer/model/actions/proofread_actions";
+import { proofreadMergeAction, minCutAgglomerateWithPositionAction } from "viewer/model/actions/proofread_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
@@ -104,7 +104,7 @@ describe("Proofreading", () => {
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMerge([4, 4, 4], 1, 4));
+      yield put(proofreadMergeAction([4, 4, 4], 1, 4));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield select(
@@ -137,6 +137,149 @@ describe("Proofreading", () => {
           agglomerateId2: 11,
           segmentId1: 1,
           segmentId2: 4,
+          mag: [1, 1, 1]
+        }
+      }])
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
+    const { api, mocks } = context;
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(Uint16Array, 1, 5, [
+        { position: [0, 0, 0], value: 1337 },
+        { position: [1, 1, 1], value: 1 },
+        { position: [2, 2, 2], value: 2 },
+        { position: [3, 3, 3], value: 3 },
+        { position: [4, 4, 4], value: 4 },
+        { position: [5, 5, 5], value: 5 },
+        { position: [6, 6, 6], value: 6 },
+        { position: [7, 7, 7], value: 7 },
+      ]),
+    );
+
+    mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
+      [1, 10],
+      [2, 10],
+      [3, 10],
+      [4, 11],
+      [5, 11],
+      [6, 12],
+      [7, 12],
+      [8, 13],
+      [1337, 1337],
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      // Set up organization with power plan (necessary for proofreading)
+      // and zoom in so that buckets in mag 1, 1, 1 are loaded.
+      yield put(setActiveOrganizationAction(powerOrga));
+      yield put(setZoomStepAction(0.3));
+      const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+      expect(currentMag).toEqual([1, 1, 1]);
+
+      // Activate agglomerate mapping and wait for finished mapping initialization
+      // (unfortunately, that action is dispatched twice; once for the activation and once
+      // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
+      yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
+      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (1)");
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (1)");
+
+      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (2)");
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (2)");
+
+      // Activate the proofread tool. WK will reload the bucket data and apply the mapping
+      // locally (acknowledged by FINISH_MAPPING_INITIALIZATION).
+      yield put(setToolAction(AnnotationTool.PROOFREAD));
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
+      // is only maintained for loaded buckets).
+      const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
+      expect(valueAt444).toBe(4);
+      // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
+      // for the keys that are found in the newly loaded bucket.
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(
+        new Map([
+          [1, 10],
+          [2, 10],
+          [3, 10],
+          [4, 11],
+          [5, 11],
+          [6, 12],
+          [7, 12],
+          [1337, 1337]
+        ]),
+      );
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      // Prepare the server's reply for the upcoming split.
+      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(Promise.resolve([
+        {
+          position1: [1, 1, 1],
+          position2: [2, 2, 2],
+          segmentId1: 1,
+          segmentId2: 2,
+        },
+      ]))
+      // Already prepare the server's reply for mapping requests that will be sent
+      // after the split.
+      mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
+        [1, 9],
+        [2, 10],
+        [3, 10],
+      ]);
+
+      // Execute the split and wait for the finished mapping.
+      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 10));
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(
+        new Map([
+          [1, 9],
+          [2, 10],
+          [3, 10],
+          [4, 11],
+          [5, 11],
+          [6, 12],
+          [7, 12],
+          [1337, 1337]
+        ]),
+      );
+
+      yield call(() => api.tracing.save());
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([{
+        name: 'splitAgglomerate',
+        value: {
+          actionTracingId: 'volumeTracingId',
+          agglomerateId: 10,
+          segmentId1: 1,
+          segmentId2: 2,
           mag: [1, 1, 1]
         }
       }])

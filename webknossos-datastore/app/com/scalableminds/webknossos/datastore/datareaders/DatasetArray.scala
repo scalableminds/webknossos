@@ -191,7 +191,7 @@ class DatasetArray(vaultPath: VaultPath,
 
   def readAsMultiArray(offset: Array[Long], shape: Array[Int])(implicit ec: ExecutionContext,
                                                                tc: TokenContext): Fox[MultiArray] =
-    if (shape.product == 0) {
+    if (shape.contains(0)) {
       Fox.successful(MultiArrayUtils.createEmpty(rank))
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)

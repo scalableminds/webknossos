@@ -101,7 +101,7 @@ class AgglomerateService(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             mappingName,
-            dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
+            localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )

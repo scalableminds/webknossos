@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import sys
 
 TEMPLATE = """### Added
 - This is an example. You may delete a section if it would become empty.
@@ -52,7 +53,7 @@ def main():
 
     if not pr_number.isdigit():
         print("❌ Invalid PR number. Please use digits only.")
-        exit(1)
+        sys.exit(1)
 
     output_dir = "unreleased_changes"
     os.makedirs(output_dir, exist_ok=True)
@@ -60,7 +61,7 @@ def main():
     file_path = os.path.join(output_dir, f"{pr_number}.md")
     if os.path.exists(file_path):
         print(f"❌ File '{file_path}' already exists.")
-        exit(1)
+        sys.exit(1)
 
     with open(file_path, "w") as f:
         f.write(TEMPLATE)

@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import sys
+import subprocess
 
 VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}.[\d]{0,2}"
 GITHUB_REPO = "scalableminds/webknossos"
@@ -9,7 +10,8 @@ UNRELEASED_CHANGES_DIR = "unreleased_changes"
 
 
 def get_current_version():
-    assert len(sys.argv) >= 1, "Pass a version string like this: 22.03.1"
+    if len(sys.argv) < 2:
+        sys.exit("Usage: python make-changelog.py <version>, e.g. 22.03.1")
     this_version = sys.argv[1]
     if not re.match(VERSION_REGEX, this_version):
         raise ValueError("The version string should be specified like this: 22.03.1")
@@ -166,7 +168,8 @@ def update_migration_guides(version, today_str, migration_sections):
 def git_rm_unreleased_files():
     for file in os.listdir(UNRELEASED_CHANGES_DIR):
         if file.endswith(".md"):
-            os.system(f"git rm {os.path.join(UNRELEASED_CHANGES_DIR, file)}")
+            path = os.path.join(UNRELEASED_CHANGES_DIR, file)
+            subprocess.run(["git", "rm", path], check=True)
 
 
 if __name__ == "__main__":

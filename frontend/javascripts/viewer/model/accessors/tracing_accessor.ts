@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { ServerTracing, TracingType } from "types/api_types";
+import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
@@ -28,6 +28,7 @@ export function maybeGetSomeTracing(
 
   return null;
 }
+
 export function getSomeTracing(
   annotation: StoreAnnotation,
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
@@ -39,13 +40,7 @@ export function getSomeTracing(
 
   return maybeSomeTracing;
 }
-export function getSomeServerTracing(serverTracings: Array<ServerTracing>): ServerTracing {
-  if (serverTracings.length > 0) {
-    return serverTracings[0];
-  }
 
-  throw new Error("The active annotation does not contain skeletons nor volume data");
-}
 export function getTracingType(annotation: StoreAnnotation): TracingType {
   if (annotation.skeleton != null && annotation.volumes.length > 0) {
     return TracingTypeEnum.hybrid;

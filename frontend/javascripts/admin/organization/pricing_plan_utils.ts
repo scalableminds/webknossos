@@ -29,7 +29,7 @@ export const powerPlanFeatures = [
 
 export const customPlanFeatures = [
   "Single Sign-On with your existing institute user accounts (OpenID Connect)",
-  "Custom Domain Name (https://webknossos.your-university.org)",
+  "Custom Domain Name (https://webknossos.your-institute.org)",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
   "Everything from Power, Team and Basic plans",

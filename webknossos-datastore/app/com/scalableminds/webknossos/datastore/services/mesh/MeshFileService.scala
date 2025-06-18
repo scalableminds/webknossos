@@ -19,7 +19,6 @@ import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.net.URI
 import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -91,12 +90,12 @@ class MeshFileService @Inject()(config: DataStoreConfig,
       case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
       case None              => None
     }
-    val localDatsetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     for {
       registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
         attachment.copy(
           path =
-            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatsetDir, dataLayer.name))
+            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
     } yield
       MeshFileKey(
@@ -105,7 +104,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             meshFileName,
-            dataBaseDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
+            localDatasetDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )

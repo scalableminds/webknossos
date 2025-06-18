@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeUserStateProto
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.Vec3DoubleProto
 
@@ -14,4 +15,11 @@ object VolumeTracingDefaults {
 
   val zoomLevel = 1.0
 
+  def emptyUserState(userId: String): VolumeUserStateProto = VolumeUserStateProto(
+    userId = userId,
+    activeSegmentId = None,
+    segmentGroupExpandedStates = Seq.empty,
+    boundingBoxVisibilities = Seq.empty,
+    segmentVisibilities = Seq.empty
+  )
 }

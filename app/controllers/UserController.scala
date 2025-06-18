@@ -222,11 +222,8 @@ class UserController @Inject()(userService: UserService,
               .authenticate(credentials)
               .flatMap { loginInfo =>
                 userService.retrieve(loginInfo).map {
-                  case Some(user) => {
-                    println("found user", user)
-                    Full(())
-                  }
-                  case None => Failure(Messages("error.noUser"))
+                  case Some(user) => Full(())
+                  case None       => Failure(Messages("error.noUser"))
                 }
               }
               .recover {

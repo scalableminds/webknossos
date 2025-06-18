@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type {
   BoundingBoxType,
@@ -13,7 +13,8 @@ import type {
   Vector4,
   Vector6,
 } from "viewer/constants";
-import type { BoundingBoxObject, NumberLike } from "viewer/store";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -1107,6 +1108,32 @@ export function diffObjects<K extends string | number | symbol, V, Dict extends 
   return _.fromPairs(_.differenceWith(_.toPairs(b), _.toPairs(a), _.isEqual)) as Partial<Dict>;
 }
 
+export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  const intersection = new Set<T>();
+
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection.add(item);
+    } else {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of setB) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
 export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   /*
    * This function was designed for a special use case within the mapping saga,
@@ -1302,4 +1329,42 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .split(/(?=[A-Z])/)
     .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
     .join(" ");
+}
+
+export function mapGroupsDeep<Group extends TreeGroup | SegmentGroup, R>(
+  groups: Group[],
+  mapFn: (group: Group, mappedChildren: R[]) => R,
+): R[] {
+  return groups.map((group: Group) => {
+    const mappedChildren = mapGroupsDeep(group.children as Group[], mapFn);
+    return mapFn(group, mappedChildren);
+  });
+}
+
+export function safeZipObject<K extends string | number | symbol, V>(
+  keys: K[],
+  values: V[],
+): Record<K, V> {
+  if (keys.length !== values.length) {
+    throw new Error("Cannot construct objects because keys and values don't match in length.");
+  }
+  return _.zipObject(keys, values) as Record<K, V>;
+}
+
+export function mapEntriesToMap<K extends string | number | symbol, V>(
+  entries: MapEntries<K, V>,
+): Record<K, V> {
+  const dict = {} as Record<K, V>;
+  for (const entry of entries) {
+    dict[entry.id] = entry.value;
+  }
+  return dict;
+}
+
+export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
+  if (setA.size !== setB.size) return false;
+  for (const val of setA) {
+    if (!setB.has(val)) return false;
+  }
+  return true;
 }

@@ -29,7 +29,7 @@ import Model from "viewer/model";
 import UrlManager from "viewer/controller/url_manager";
 
 import WebknossosApi from "viewer/api/api_loader";
-import { default as Store, startSaga } from "viewer/store";
+import { type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setStore, setModel } from "viewer/singletons";
 import { setupApi } from "viewer/api/internal_api";
@@ -37,6 +37,9 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
+import { sendSaveRequestWithToken } from "admin/rest_api";
+import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -51,6 +54,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
   tearDownPullQueues: () => void;
+  receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
 }
 
 // Create mock objects
@@ -66,6 +70,21 @@ vi.mock("libs/request", () => ({
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
+
+vi.mock("admin/rest_api.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
+
+  const receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
+  const mockedSendRequestWithToken = vi.fn((_, payload) => {
+    receivedDataPerSaveRequest.push(payload.data);
+    return Promise.resolve();
+  });
+  (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
+  return {
+    ...actual,
+    sendSaveRequestWithToken: mockedSendRequestWithToken,
+  };
+});
 
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
@@ -176,8 +195,15 @@ startSaga(rootSaga);
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
-  apiVersion?: number,
+  options?: { dontDispatchWkReady?: boolean },
 ): Promise<void> {
+  /*
+   * This will execute model.fetch(...) and initialize the store with the tracing, etc.
+   */
+  Store.dispatch(restartSagaAction());
+  Store.dispatch(resetStoreAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
+
   Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
@@ -192,6 +218,9 @@ export async function setupWebknossosForTesting(
     Model.getAllLayers().map((layer) => {
       layer.pullQueue.destroy();
     });
+  testContext.receivedDataPerSaveRequest = (
+    sendSaveRequestWithToken as any
+  ).receivedDataPerSaveRequest;
 
   const webknossos = new WebknossosApi(Model);
   const annotationFixture = modelData[mode].annotation;
@@ -221,8 +250,16 @@ export async function setupWebknossosForTesting(
     // Trigger the event ourselves, as the webKnossosController is not instantiated
     app.vent.emit("webknossos:ready");
 
-    const api = await webknossos.apiReady(apiVersion);
+    const api = await webknossos.apiReady();
     testContext.api = api;
+
+    // Ensure the slow compression is disabled by default. Tests may change
+    // this individually.
+    testContext.setSlowCompression(false);
+    if (!options?.dontDispatchWkReady) {
+      // Dispatch the wkReadyAction, so the sagas are started
+      Store.dispatch(wkReadyAction());
+    }
   } catch (error) {
     console.error("model.fetch() failed", error);
     if (error instanceof Error) {

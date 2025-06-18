@@ -54,6 +54,7 @@ class VolumeTracingService @Inject()(
     with BoundingBoxMerger
     with VolumeDataZipHelper
     with ProtoGeometryImplicits
+    with AnnotationUserStateUtils
     with FoxImplicits
     with Formatter
     with LazyLogging {
@@ -523,21 +524,25 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 
-  def adaptVolumeForDuplicate(sourceAnnotationId: String,
-                              newTracingId: String,
-                              sourceTracing: VolumeTracing,
-                              isFromTask: Boolean,
-                              boundingBox: Option[BoundingBox],
-                              datasetBoundingBox: Option[BoundingBox],
-                              magRestrictions: MagRestrictions,
-                              editPosition: Option[Vec3Int],
-                              editRotation: Option[Vec3Double],
-                              newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+  def adaptVolumeForDuplicate(
+      sourceAnnotationId: String,
+      newTracingId: String,
+      sourceTracing: VolumeTracing,
+      isFromTask: Boolean,
+      boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      newVersion: Long,
+      ownerId: String,
+      requestingUserId: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
       fallbackLayer <- getFallbackLayer(sourceAnnotationId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
+      userStates = Seq(renderVolumeUserStateIntoUserState(tracingWithMagRestrictions, ownerId, requestingUserId))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
@@ -548,7 +553,8 @@ class VolumeTracingService @Inject()(
           else tracingWithMagRestrictions.mappingName,
         version = newVersion,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
-        hasSegmentIndex = Some(hasSegmentIndex)
+        hasSegmentIndex = Some(hasSegmentIndex),
+        userStates = userStates
       )
       _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
     } yield newTracing
@@ -729,28 +735,38 @@ class VolumeTracingService @Inject()(
 
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
-                       indexB: Int,
+                       indexB: Int, // Index of tracingB in the labelMaps of the mergedVolumeStats.
                        mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
-    val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
-    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
+    val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
+    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                     tracingB.userBoundingBox,
-                                                     tracingA.userBoundingBoxes,
-                                                     tracingB.userBoundingBoxes)
+    val segmentIdMapB =
+      if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
+    val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                                     tracingB.userBoundingBox,
+                                                                                     tracingA.userBoundingBoxes,
+                                                                                     tracingB.userBoundingBoxes)
+    val userStates =
+      mergeVolumeUserStates(tracingA.userStates,
+                            tracingB.userStates,
+                            groupMappingA,
+                            segmentIdMapB,
+                            bboxIdMapA,
+                            bboxIdMapB)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
-      tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+      tracingBSegments = if (segmentIdMapB.isEmpty) tracingB.segments
       else {
-        val labelMap = mergedVolumeStats.labelMaps(indexB)
         tracingB.segments.map { segment =>
           segment.copy(
-            segmentId = labelMap.getOrElse(segment.segmentId, segment.segmentId)
+            segmentId = segmentIdMapB.getOrElse(segment.segmentId, segment.segmentId)
           )
         }
       }
+      tracingASegments = tracingA.segments.map(s =>
+        s.groupId.map(groupId => s.copy(groupId = Some(groupMappingA(groupId)))).getOrElse(s))
     } yield
       tracingA.copy(
         largestSegmentId = largestSegmentId,
@@ -760,10 +776,11 @@ class VolumeTracingService @Inject()(
             0,
             0,
             0)), // should never be empty for volumes
-        userBoundingBoxes = userBoundingBoxes,
-        segments = tracingA.segments.toList ::: tracingBSegments.toList,
+        userBoundingBoxes = mergedUserBoundingBoxes,
+        segments = (tracingASegments ++ tracingBSegments).distinctBy(_.segmentId),
         segmentGroups = mergedGroups,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
       )
   }
 
@@ -778,7 +795,7 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(
       firstVolumeAnnotationIdOpt: Option[String],
       volumeTracingIds: Seq[String],
-      volumeTracings: List[VolumeTracing],
+      volumeTracings: Seq[VolumeTracing],
       newVolumeTracingId: String,
       newVersion: Long,
       toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {

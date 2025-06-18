@@ -8,10 +8,9 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import type { Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 
-// All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTesting(context, "skeleton");
+    await setupWebknossosForTesting(context, "skeleton", { dontDispatchWkReady: true });
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {

@@ -2,8 +2,10 @@ import { MailOutlined, SaveOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { updateOrganization } from "admin/rest_api";
+import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
 import Toast from "libs/toast";
+import { useEffect, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
@@ -17,6 +19,20 @@ type FormValues = {
 
 export function OrganizationNotificationsView({ organization }: { organization: APIOrganization }) {
   const [form] = Form.useForm<FormValues>();
+  const [ownerEmail, setOwnerEmail] = useState<string>("");
+
+  useEffect(() => {
+    async function fetchOwnerEmail() {
+      const users = await getUsers();
+      const owner = users.find(
+        (user) => user.isOrganizationOwner && user.organization === organization.id,
+      );
+      if (owner) {
+        setOwnerEmail(owner.email);
+      }
+    }
+    fetchOwnerEmail();
+  }, [organization.id]);
 
   async function onFinish(formValues: FormValues) {
     const updatedOrganization = await updateOrganization(
@@ -79,7 +95,7 @@ export function OrganizationNotificationsView({ organization }: { organization: 
           <SettingsCard
             title="WEBKNOSSOS Plan & Subscription"
             explanation="Get notified when your WK subscription is about to expire or reach user and storage limits."
-            description={organization.ownerName}
+            description={ownerEmail}
           />
         </Col>
         <Col span={12}>

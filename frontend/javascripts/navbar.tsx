@@ -632,10 +632,17 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
+            {
+              type: "divider",
+            },
+            {
+              key: "account",
+              label: <Link to="/account">Account Settings</Link>,
+            },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
-                  label: <Link to={"/organization/overview"}>Manage Organization</Link>,
+                  label: <Link to={"/organization/overview"}>Organization Settings</Link>,
                 }
               : null,
             isMultiMember
@@ -653,10 +660,6 @@ function LoggedInAvatar({
                   ],
                 }
               : null,
-            {
-              key: "account",
-              label: <Link to="/account">Account Settings</Link>,
-            },
             {
               key: "logout",
               label: (

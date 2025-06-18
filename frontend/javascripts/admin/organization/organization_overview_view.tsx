@@ -18,6 +18,8 @@ import {
 import { PricingPlanEnum, getActiveUserCount } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
+const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\\-_\\. ß]+$/;
+
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
@@ -37,9 +39,7 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
   }
 
   async function setOrganizationName(newOrgaName: string) {
-    const OrgaNameRegexPattern = /^[A-Za-z0-9\\-_\\. ß]+$/;
-
-    if (!OrgaNameRegexPattern.test(newOrgaName)) {
+    if (!ORGA_NAME_REGEX_PATTERN.test(newOrgaName)) {
       Toast.error(
         "Organization name can only contain letters, numbers, spaces, and the following special characters: - _ . ß",
       );
@@ -144,7 +144,7 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "owner",
       title: "Owner",
-      value: "John Doe",
+      value: organization.ownerName,
     },
     {
       key: "plan",

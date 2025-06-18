@@ -11,7 +11,7 @@ import {
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/rest_api";
-import { Button, Col, ConfigProvider, Divider, InputNumber, Modal, Row } from "antd";
+import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import features from "features";
@@ -22,7 +22,6 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { getAntdTheme, getSystemColorTheme } from "theme";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
@@ -73,12 +72,7 @@ export function extendPricingPlan(organization: APIOrganization) {
 }
 
 export function upgradeUserQuota() {
-  renderIndependently((destroyCallback) => (
-    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-      {" "}
-      …<UpgradeUserQuotaModal destroy={destroyCallback} />
-    </ConfigProvider>
-  ));
+  renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
 }
 
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
@@ -123,11 +117,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 }
 
 export function upgradeStorageQuota() {
-  renderIndependently((destroyCallback) => (
-    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-      <UpgradeStorageQuotaModal destroy={destroyCallback} />
-    </ConfigProvider>
-  ));
+  renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   const storageInputRef = useRef<HTMLInputElement | null>(null);
@@ -236,8 +226,8 @@ function upgradePricingPlan(
         <Row gutter={16}>
           <Col span={12}>
             <TeamPlanUpgradeCard
-              teamUpgradeCallback={() => {
-                sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+              teamUpgradeCallback={async () => {
+                await sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
                 Toast.success(messages["organization.plan.upgrage_request_sent"]);
                 destroyCallback();
               }}
@@ -245,8 +235,8 @@ function upgradePricingPlan(
           </Col>
           <Col span={12}>
             <PowerPlanUpgradeCard
-              powerUpgradeCallback={() => {
-                sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+              powerUpgradeCallback={async () => {
+                await sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
                 Toast.success(messages["organization.plan.upgrage_request_sent"]);
                 destroyCallback();
               }}
@@ -257,14 +247,12 @@ function upgradePricingPlan(
     }
 
     return (
-      <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-        <UpgradePricingPlanModal
-          title={title}
-          modalBody={modalBody}
-          okButtonCallback={okButtonCallback}
-          destroy={destroyCallback}
-        />
-      </ConfigProvider>
+      <UpgradePricingPlanModal
+        title={title}
+        modalBody={modalBody}
+        okButtonCallback={okButtonCallback}
+        destroy={destroyCallback}
+      />
     );
   });
 }
@@ -322,9 +310,7 @@ export function UpgradePricingPlanModal({
 
 export function orderWebknossosCredits() {
   renderIndependently((destroyCallback) => (
-    <ConfigProvider theme={getAntdTheme(getSystemColorTheme())}>
-      <OrderWebknossosCreditsModal destroy={destroyCallback} />
-    </ConfigProvider>
+    <OrderWebknossosCreditsModal destroy={destroyCallback} />
   ));
 }
 

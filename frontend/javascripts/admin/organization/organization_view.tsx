@@ -1,21 +1,16 @@
 import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { connect } from "react-redux";
+import { useWkSelector } from "libs/react_hooks";
 import { Route, Switch, useHistory, useLocation } from "react-router-dom";
 import { Redirect } from "react-router-dom";
-import type { APIOrganization } from "types/api_types";
+import constants from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import type { WebknossosState } from "viewer/store";
-import { OrganizationDangerZoneView } from "./organization_dangerzone_view";
+import { OrganizationDangerZoneView } from "./organization_danger_zone_view";
 import { OrganizationNotificationsView } from "./organization_notifications_view";
 import { OrganizationOverviewView } from "./organization_overview_view";
 
 const { Sider, Content } = Layout;
-
-type Props = {
-  organization: APIOrganization;
-};
 
 const BREADCRUMB_LABELS = {
   overview: "Overview",
@@ -23,34 +18,37 @@ const BREADCRUMB_LABELS = {
   delete: "Delete Organization",
 };
 
-const OrganizationView = ({ organization }: Props) => {
+const MENU_ITEMS: MenuItemGroupType[] = [
+  {
+    label: "Organization",
+    type: "group",
+    children: [
+      {
+        key: "overview",
+        icon: <UserOutlined />,
+        label: "Overview",
+      },
+      {
+        key: "notifications",
+        icon: <MailOutlined />,
+        label: "Notifications",
+      },
+      {
+        key: "delete",
+        icon: <DeleteOutlined />,
+        label: "Delete",
+      },
+    ],
+  },
+];
+
+const OrganizationView = () => {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const location = useLocation();
   const history = useHistory();
   const selectedKey = location.pathname.split("/").pop() || "overview";
-
-  const menuItems: MenuItemGroupType[] = [
-    {
-      label: "Organization",
-      type: "group",
-      children: [
-        {
-          key: "overview",
-          icon: <UserOutlined />,
-          label: "Overview",
-        },
-        {
-          key: "notifications",
-          icon: <MailOutlined />,
-          label: "Notifications",
-        },
-        {
-          key: "delete",
-          icon: <DeleteOutlined />,
-          label: "Delete",
-        },
-      ],
-    },
-  ];
 
   const breadcrumbItems = [
     {
@@ -64,7 +62,7 @@ const OrganizationView = ({ organization }: Props) => {
   return (
     <Layout
       style={{
-        minHeight: "calc(100vh - 64px)",
+        minHeight: `calc(100vh - ${constants.DEFAULT_NAVBAR_HEIGHT}px)`,
         backgroundColor: "var(--ant-layout-body-bg)",
       }}
     >
@@ -73,7 +71,7 @@ const OrganizationView = ({ organization }: Props) => {
           mode="inline"
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
-          items={menuItems}
+          items={MENU_ITEMS}
           onClick={({ key }) => history.push(`/organization/${key}`)}
         />
       </Sider>
@@ -99,7 +97,4 @@ const OrganizationView = ({ organization }: Props) => {
   );
 };
 
-const mapStateToProps = (state: WebknossosState): Props => ({
-  organization: enforceActiveOrganization(state.activeOrganization),
-});
-export default connect(mapStateToProps)(OrganizationView);
+export default OrganizationView;

@@ -4,7 +4,7 @@ import re
 import sys
 import subprocess
 
-VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}.[\d]{0,2}"
+VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}\.[\d]{0,2}"
 GITHUB_REPO = "scalableminds/webknossos"
 UNRELEASED_CHANGES_DIR = "unreleased_changes"
 

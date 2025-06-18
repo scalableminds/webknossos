@@ -29,6 +29,7 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
+  getPosition,
   getRotationInRadian,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
@@ -49,6 +50,7 @@ import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling
 import { getGlobalLayerIndexForLayerName } from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import shaderEditor from "viewer/model/helpers/shader_editor";
+import { voxelToUnit } from "viewer/model/scaleinfo";
 import getMainFragmentShader, {
   getMainVertexShader,
   type Params,
@@ -598,11 +600,27 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         // TODOM: Fix rotating pattern. Rotation around z is also not fixed
         // TODOM: Fix rotation direction. Seems to be in different direction than actual rotation.
-        (storeState) => getRotationInRadian(storeState.flycam, false),
+        (storeState) => getRotationInRadian(storeState.flycam),
         (rotation) => {
-          const inverseFlycamRotationMatrix = new THREE.Matrix4()
-            .makeRotationFromEuler(new THREE.Euler(...rotation, "ZYX"))
+          const state = Store.getState();
+          const position = getPosition(state.flycam);
+
+          const toOrigin = new THREE.Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
+          const backToFlycamCenter = new THREE.Matrix4().makeTranslation(...position);
+          const invertRotation = new THREE.Matrix4()
+            .makeRotationFromEuler(
+              // TODOM: Investigate why the + Math.PI solves the Streching error
+              new THREE.Euler(
+                rotation[0], // + Math.PI,
+                rotation[1], // + Math.PI,
+                rotation[2], // + Math.PI,
+                "ZYX",
+              ),
+            )
             .invert();
+          const inverseFlycamRotationMatrix = toOrigin
+            .multiply(invertRotation)
+            .multiply(backToFlycamCenter);
           this.uniforms.inverseFlycamRotationMatrix.value = inverseFlycamRotationMatrix;
         },
       ),

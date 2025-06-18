@@ -169,7 +169,10 @@ def git_rm_unreleased_files():
     for file in os.listdir(UNRELEASED_CHANGES_DIR):
         if file.endswith(".md"):
             path = os.path.join(UNRELEASED_CHANGES_DIR, file)
-            subprocess.run(["git", "rm", path], check=True)
+            try:
+                subprocess.run(["git", "rm", path], check=True)
+            except:
+                print(f"Warning: Could not git rm {path}. Was it added to git?")
 
 
 if __name__ == "__main__":

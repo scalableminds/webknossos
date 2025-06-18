@@ -1,5 +1,5 @@
 import { RollbackOutlined, SyncOutlined } from "@ant-design/icons";
-import { Button, Popover } from "antd";
+import { Button, Col, Popover, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
@@ -78,6 +78,20 @@ const PopoverContent: React.FC<EmptyObject> = () => {
             />
           }
         />
+      </div>
+      <div>
+        <Row>
+          <Col span={10} offset={13}>
+            <Button
+              type="text"
+              icon={<RollbackOutlined />}
+              iconPosition="end"
+              onClick={() => handleChangeRotation([0, 0, 0])}
+            >
+              Reset all
+            </Button>
+          </Col>
+        </Row>
       </div>
     </div>
   );

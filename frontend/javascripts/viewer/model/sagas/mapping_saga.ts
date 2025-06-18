@@ -8,7 +8,7 @@ import {
 import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { fastDiffSetAndMap, sleep } from "libs/utils";
+import { ColoredLogger, fastDiffSetAndMap, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
@@ -229,12 +229,19 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
+  // todop: remove again?
+  yield* call(handler);
+
   while (true) {
     yield take(bucketChannel);
     // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
-    yield* call(sleep, 500);
+
+    // todop
+    const throttleDelay = process.env.IS_TESTING ? 5 : 500;
+
+    yield* call(sleep, throttleDelay);
     yield flush(bucketChannel);
     // After flushing and while the handler below is running,
     // the bucketChannel might fill up again. This means, the
@@ -488,6 +495,11 @@ export function* updateLocalHdf5Mapping(
   });
 
   yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+  if (process.env.IS_TESTING) {
+    // in test context, the mapping.ts code is not executed (which is usually responsible
+    // for finishing the initialization).
+    yield put(finishMappingInitializationAction(layerName));
+  }
 }
 
 function* handleSetJsonMapping(

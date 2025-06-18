@@ -3,6 +3,7 @@ import { V3, V4 } from "libs/mjs";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import {
+  ColoredLogger,
   areBoundingBoxesOverlappingOrTouching,
   castForArrayType,
   isNumberMap,
@@ -501,6 +502,12 @@ class DataCube {
 
   getValueSetForAllBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
+
+    const loadedBuckets = this.buckets.filter((bucket) => bucket.state === "LOADED");
+    ColoredLogger.logGreen(
+      "loadedBuckets",
+      loadedBuckets.map((b) => b.zoomedAddress),
+    );
 
     // Theoretically, we could ignore coarser buckets for which we know that
     // finer buckets are already loaded. However, the current performance

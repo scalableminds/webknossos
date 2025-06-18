@@ -232,6 +232,7 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
 
   const disabledToolInfo = getDisabledInfoForTools(state);
   if (!isToolAvailable(state, disabledToolInfo, tool)) {
+    console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }
 

@@ -16,8 +16,8 @@ vi.mock("libs/keyboard", () => ({
 
 vi.mock("libs/toast", () => ({
   default: {
-    error: vi.fn(),
-    warning: vi.fn(),
+    error: vi.fn((msg) => console.error(msg)),
+    warning: vi.fn((msg) => console.warn(msg)),
     close: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),
@@ -128,6 +128,7 @@ vi.mock("antd", () => {
       show: vi.fn(() => () => {}),
       loading: vi.fn(() => () => {}),
       success: vi.fn(() => () => {}),
+      error: vi.fn(() => () => {}),
     },
     Modal: {
       confirm: vi.fn(),

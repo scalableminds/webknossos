@@ -1957,6 +1957,9 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
@@ -1987,6 +1990,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());

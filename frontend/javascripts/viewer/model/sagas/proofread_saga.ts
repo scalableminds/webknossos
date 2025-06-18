@@ -8,6 +8,7 @@ import {
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
+import window from "libs/window";
 import _ from "lodash";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -698,6 +699,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const idInfos = yield* call(gatherInfoForOperation, action, preparation);
 
   if (idInfos == null) {
+    console.warn("[Proofreading] Could not gather id infos.");
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
@@ -1110,7 +1112,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
   );
 
   if (activeMapping.mapping == null) {
-    Toast.error("Mapping is not available, cannot proofread.");
+    Toast.error("Active mapping is not available, cannot proofread.");
     return null;
   }
 
@@ -1375,13 +1377,22 @@ function* gatherInfoForOperation(
 }> | null> {
   const { volumeTracing } = preparation;
   const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
-  if (activeCellId === 0) return null;
+  if (activeCellId === 0) {
+    console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
+    return null;
+  }
 
   const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
   const activeSegment = segments.getNullable(activeCellId);
-  if (activeSegment == null) return null;
+  if (activeSegment == null) {
+    console.warn("[Proofreading] Cannot execute operation because no active segment item exists");
+    return null;
+  }
   const activeSegmentPositionFloat = activeSegment.somePosition;
-  if (activeSegmentPositionFloat == null) return null;
+  if (activeSegmentPositionFloat == null) {
+    console.warn("[Proofreading] Cannot execute operation because active segment has no position");
+    return null;
+  }
 
   const activeSegmentPosition = V3.floor(activeSegmentPositionFloat);
 
@@ -1405,6 +1416,9 @@ function* gatherInfoForOperation(
       targetPosition,
     ]);
     if (idInfos == null) {
+      console.warn(
+        "[Proofreading] Cannot execute operation because agglomerate infos couldn't be determined for source and target position.",
+      );
       return null;
     }
     const [idInfo1, idInfo2] = idInfos;

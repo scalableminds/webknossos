@@ -1,6 +1,6 @@
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
-import { ControlModeEnum } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
@@ -20,7 +20,7 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
+import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "viewer/api/api_latest";
 import type { ModelType } from "viewer/model";
 
@@ -29,7 +29,7 @@ import Model from "viewer/model";
 import UrlManager from "viewer/controller/url_manager";
 
 import WebknossosApi from "viewer/api/api_loader";
-import { type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setStore, setModel } from "viewer/singletons";
 import { setupApi } from "viewer/api/internal_api";
@@ -56,6 +56,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   model: ModelType;
   mocks: {
     Request: typeof Request;
+    getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -77,6 +78,10 @@ vi.mock("libs/request", () => ({
   },
 }));
 
+const getCurrentMappingEntriesFromServer = vi.fn((): Array<[number, number]> => {
+  return [];
+});
+
 vi.mock("admin/rest_api.ts", async () => {
   const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
 
@@ -86,10 +91,52 @@ vi.mock("admin/rest_api.ts", async () => {
     return Promise.resolve();
   });
   (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
+
+  const getAgglomeratesForSegmentsImpl = async (segmentIds: Array<NumberLike>) => {
+    const segmentIdSet = new Set(segmentIds);
+    const entries = getCurrentMappingEntriesFromServer().filter(([id]) =>
+      segmentIdSet.has(id),
+    ) as Vector2[];
+    if (entries.length < segmentIdSet.size) {
+      console.log("entries", entries);
+      console.log("segmentIdSet", segmentIdSet);
+      throw new Error(
+        "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
+      );
+    }
+    return new Map(entries);
+  };
+  const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(
+    (
+      _dataStoreUrl: string,
+      _dataSourceId: unknown,
+      _layerName: string,
+      _mappingId: string,
+      segmentIds: Array<NumberLike>,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds);
+    },
+  );
+
+  const getAgglomeratesForSegmentsFromTracingstoreMock = vi.fn(
+    (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      segmentIds: Array<NumberLike>,
+      _annotationId: string,
+      _version?: number | null | undefined,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds);
+    },
+  );
+
   return {
     ...actual,
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
+    getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
+    getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
+    getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
   };
 });
 
@@ -150,13 +197,36 @@ vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importO
   };
 });
 
-export function createBucketResponseFunction(TypedArrayClass: any, fillValue: number, delay = 0) {
+type Override = {
+  position: [number, number, number]; // [x, y, z]
+  value: number;
+};
+
+export function createBucketResponseFunction(
+  TypedArrayClass: any,
+  fillValue: number,
+  delay = 0,
+  overrides: Override[] = [],
+) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
-    const bucketCount = payload.data.length;
     await sleep(delay);
+    const bucketCount = payload.data.length;
+    const typedArray = new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue);
+
+    for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
+      for (const { position, value } of overrides) {
+        const [x, y, z] = position;
+        const indexInBucket =
+          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
+          z * Constants.BUCKET_WIDTH ** 2 +
+          y * Constants.BUCKET_WIDTH +
+          x;
+        typedArray[indexInBucket] = value;
+      }
+    }
+
     return {
-      buffer: new Uint8Array(new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue).buffer)
-        .buffer,
+      buffer: new Uint8Array(typedArray.buffer).buffer,
       headers: {
         "missing-buckets": "[]",
       },
@@ -223,7 +293,8 @@ export async function setupWebknossosForTesting(
 
   testContext.model = Model;
   testContext.mocks = {
-    Request,
+    Request: vi.mocked(Request),
+    getCurrentMappingEntriesFromServer,
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>

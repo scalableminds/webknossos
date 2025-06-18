@@ -1,3 +1,4 @@
+import { Chalk } from "chalk";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
@@ -1257,7 +1258,11 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 
 export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
-  return Boolean(value && typeof value[0] === "number");
+  if (value === undefined) {
+    // Let's assume a number map when the map is empty.
+    return true;
+  }
+  return Boolean(typeof value[0] === "number");
 }
 
 export function isBigInt(x: NumberLike): x is bigint {
@@ -1363,3 +1368,26 @@ export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
   }
   return true;
 }
+
+// ColoredLogger can be used to make certain log outputs easier to find (especially useful
+// when automatic logging of redux actions is enabled which makes the overall logging
+// very verbose).
+const chalk = new Chalk({ level: 3 });
+export const ColoredLogger = {
+  log: (...args: unknown[]) => {
+    // Simple wrapper to allow easy switching from colored to non-colored logs
+    console.log(...args);
+  },
+  logRed: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgRed(str), ...args);
+  },
+  logGreen: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgGreen(str), ...args);
+  },
+  logYellow: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgYellow(str), ...args);
+  },
+  logBlue: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgBlue(str), ...args);
+  },
+};

@@ -71,7 +71,7 @@ class DatasetArray(vaultPath: VaultPath,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
       shouldReadUint24: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (offsetArray, shapeArray) <- tryo(constructShapeAndOffsetArrays(
+      (offsetArray, shapeArray) <- tryo(constructOffsetAndShapeArrays(
         offsetXYZ,
         shapeXYZ,
         additionalCoordinatesOpt,
@@ -79,7 +79,7 @@ class DatasetArray(vaultPath: VaultPath,
       bytes <- readBytes(offsetArray, shapeArray)
     } yield bytes
 
-  private def constructShapeAndOffsetArrays(offsetXYZ: Vec3Int,
+  private def constructOffsetAndShapeArrays(offsetXYZ: Vec3Int,
                                             shapeXYZ: Vec3Int,
                                             additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
                                             shouldReadUint24: Boolean): (Array[Int], Array[Int]) = {
@@ -168,7 +168,7 @@ class DatasetArray(vaultPath: VaultPath,
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+      val copiedFox = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
         for {
           sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
           sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
@@ -181,7 +181,7 @@ class DatasetArray(vaultPath: VaultPath,
         } yield ()
       })
       for {
-        _ <- copiedFuture
+        _ <- copiedFox
       } yield targetMultiArray
     }
   }
@@ -294,7 +294,7 @@ class DatasetArray(vaultPath: VaultPath,
     util.Arrays.equals(bufferShape, chunkShape)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
-    util.Arrays.equals(offset, new Array[Int](offset.length))
+    offset.forall(_ == 0)
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>

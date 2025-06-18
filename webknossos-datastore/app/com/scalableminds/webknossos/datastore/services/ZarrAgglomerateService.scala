@@ -12,12 +12,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.storage.{
-  AgglomerateFileKey,
-  DataVaultService,
-  RemoteSourceDescriptor,
-  RemoteSourceDescriptorService
-}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -272,7 +267,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                              segmentId,
                                              agglomerateToSegments)
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
-      position <- agglomerateToPositions.readAsMultiArray(offset = Array(segmentIndex, 0), shape = Array(3, 1))
+      position <- agglomerateToPositions.readAsMultiArray(offset = Array(segmentIndex, 0), shape = Array(1, 3))
     } yield Vec3Int(position.getInt(0), position.getInt(1), position.getInt(2))
 
   private def binarySearchForSegment(

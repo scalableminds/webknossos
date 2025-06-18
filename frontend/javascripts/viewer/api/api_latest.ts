@@ -17,6 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -53,7 +54,6 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import * as THREE from "three";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,

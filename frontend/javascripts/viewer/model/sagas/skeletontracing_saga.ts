@@ -1,6 +1,5 @@
 import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/rest_api";
 import { Modal } from "antd";
-import * as THREE from "three";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
@@ -11,6 +10,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import * as THREE from "three";
 import {
   actionChannel,
   all,

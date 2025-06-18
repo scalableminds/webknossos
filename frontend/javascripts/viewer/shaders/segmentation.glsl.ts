@@ -10,10 +10,10 @@ import {
   jsGetElementOfPermutation,
   jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
+import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
-import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 
 function buildPermutation(sequenceLength: number, primitiveRoot: number) {
   return {

@@ -671,7 +671,8 @@ class AuthenticationController @Inject()(
                       sessionId,
                       maxAge = Some(webauthnTimeout.toSeconds.toInt),
                       httpOnly = true,
-                      secure = true)
+                      secure = true,
+                      sameSite = Some(Cookie.SameSite.Strict))
       _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
       options = WebAuthnPublicKeyCredentialCreationOptions(
         authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),

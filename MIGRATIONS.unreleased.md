@@ -12,4 +12,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - The default thread pool size was increased from 5 to 10 times the number of available CPUs (capped at 1000). Note that wk may need slightly more memory because of this. [#8686](https://github.com/scalableminds/webknossos/pull/8686)
 
 ### Postgres Evolutions:
+
 - [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)
+- [135-add-webauthn-credentials.sql](conf/evolutions/135-add-webauthn-credentials.sql)

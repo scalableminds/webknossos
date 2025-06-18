@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - In shared annotations with multiple authors, some changes are now stored per user. This means that other users won’t see all those changes if their own diverge. This includes the current position and zoom, visibilities of trees, bounding boxes, and segments (as specified with the checkboxes in the lists), as well as which groups are expanded in the lists. The annotation owner’s user state is used as a fallback for users who haven’t explicitly changed these values themselves. [#8542](https://github.com/scalableminds/webknossos/pull/8542)
 - Added the ability to duplicate trees in skeleton annotations. Users can create a copy of any tree (including all nodes, edges, and properties) via the context menu in the skeleton tab. [#8662](https://github.com/scalableminds/webknossos/pull/8662)
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
+- Authentication with Passkeys. [#8393](https://github.com/scalableminds/webknossos/pull/8393)
 
 ### Changed
 - The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`. [#8518](https://github.com/scalableminds/webknossos/pull/8518)

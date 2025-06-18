@@ -60,6 +60,33 @@ function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: st
   yield take("FINISH_MAPPING_INITIALIZATION");
 }
 
+function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
+  const { mocks } = context;
+  vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+    createBucketResponseFunction(Uint16Array, 1, 5, [
+      { position: [0, 0, 0], value: 1337 },
+      { position: [1, 1, 1], value: 1 },
+      { position: [2, 2, 2], value: 2 },
+      { position: [3, 3, 3], value: 3 },
+      { position: [4, 4, 4], value: 4 },
+      { position: [5, 5, 5], value: 5 },
+      { position: [6, 6, 6], value: 6 },
+      { position: [7, 7, 7], value: 7 },
+    ]),
+  );
+  mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
+    [1, 10],
+    [2, 10],
+    [3, 10],
+    [4, 11],
+    [5, 11],
+    [6, 12],
+    [7, 12],
+    [8, 13],
+    [1337, 1337],
+  ]);
+}
+
 describe("Proofreading", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -73,30 +100,7 @@ describe("Proofreading", () => {
 
   it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 1, 5, [
-        { position: [0, 0, 0], value: 1337 },
-        { position: [1, 1, 1], value: 1 },
-        { position: [2, 2, 2], value: 2 },
-        { position: [3, 3, 3], value: 3 },
-        { position: [4, 4, 4], value: 4 },
-        { position: [5, 5, 5], value: 5 },
-        { position: [6, 6, 6], value: 6 },
-        { position: [7, 7, 7], value: 7 },
-      ]),
-    );
-
-    mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
-      [1, 10],
-      [2, 10],
-      [3, 10],
-      [4, 11],
-      [5, 11],
-      [6, 12],
-      [7, 12],
-      [8, 13],
-      [1337, 1337],
-    ]);
+    mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -153,30 +157,7 @@ describe("Proofreading", () => {
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 1, 5, [
-        { position: [0, 0, 0], value: 1337 },
-        { position: [1, 1, 1], value: 1 },
-        { position: [2, 2, 2], value: 2 },
-        { position: [3, 3, 3], value: 3 },
-        { position: [4, 4, 4], value: 4 },
-        { position: [5, 5, 5], value: 5 },
-        { position: [6, 6, 6], value: 6 },
-        { position: [7, 7, 7], value: 7 },
-      ]),
-    );
-
-    mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
-      [1, 10],
-      [2, 10],
-      [3, 10],
-      [4, 11],
-      [5, 11],
-      [6, 12],
-      [7, 12],
-      [8, 13],
-      [1337, 1337],
-    ]);
+    mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

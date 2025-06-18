@@ -586,11 +586,12 @@ class AuthenticationController @Inject()(
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
       sessionId = UUID.randomUUID().toString
-      cookie = Cookie("webauthn-session",
-                      sessionId,
+      cookie = Cookie(name = "webauthn-session",
+                      value = sessionId,
                       maxAge = Some(webauthnTimeout.toSeconds.toInt),
                       httpOnly = true,
-                      secure = true)
+                      secure = true,
+                      sameSite = Some(Cookie.SameSite.Strict))
       challenge = new Array[Byte](32)
       _ = secureRandom.nextBytes(challenge)
       assertion = WebAuthnPublicKeyCredentialRequestOptions(

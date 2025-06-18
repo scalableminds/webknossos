@@ -1,4 +1,5 @@
 import { ColoredLogger } from "libs/utils";
+import { Saga } from "redux-saga";
 import { call, put, select, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
@@ -23,6 +24,41 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
+  const { api } = context;
+  // Set up organization with power plan (necessary for proofreading)
+  // and zoom in so that buckets in mag 1, 1, 1 are loaded.
+  yield put(setActiveOrganizationAction(powerOrga));
+  yield put(setZoomStepAction(0.3));
+  const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+  expect(currentMag).toEqual([1, 1, 1]);
+
+  // Activate agglomerate mapping and wait for finished mapping initialization
+  // (unfortunately, that action is dispatched twice; once for the activation and once
+  // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
+  yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
+  ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (1)");
+  yield take("FINISH_MAPPING_INITIALIZATION");
+  ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (1)");
+
+  ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (2)");
+  yield take("FINISH_MAPPING_INITIALIZATION");
+  ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (2)");
+
+  // Activate the proofread tool. WK will reload the bucket data and apply the mapping
+  // locally (acknowledged by FINISH_MAPPING_INITIALIZATION).
+  yield put(setToolAction(AnnotationTool.PROOFREAD));
+  yield take("FINISH_MAPPING_INITIALIZATION");
+
+  // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
+  // is only maintained for loaded buckets).
+  const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
+  expect(valueAt444).toBe(4);
+  // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
+  // for the keys that are found in the newly loaded bucket.
+  yield take("FINISH_MAPPING_INITIALIZATION");
+}
 
 describe("Proofreading", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -66,37 +102,7 @@ describe("Proofreading", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      // Set up organization with power plan (necessary for proofreading)
-      // and zoom in so that buckets in mag 1, 1, 1 are loaded.
-      yield put(setActiveOrganizationAction(powerOrga));
-      yield put(setZoomStepAction(0.3));
-      const currentMag = yield select((state) => getCurrentMag(state, tracingId));
-      expect(currentMag).toEqual([1, 1, 1]);
-
-      // Activate agglomerate mapping and wait for finished mapping initialization
-      // (unfortunately, that action is dispatched twice; once for the activation and once
-      // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
-      yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
-      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (1)");
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (1)");
-
-      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (2)");
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (2)");
-
-      // Activate the proofread tool. WK will reload the bucket data and apply the mapping
-      // locally (acknowledged by FINISH_MAPPING_INITIALIZATION).
-      yield put(setToolAction(AnnotationTool.PROOFREAD));
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
-      // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
-      // is only maintained for loaded buckets).
-      const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
-      expect(valueAt444).toBe(4);
-      // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
-      // for the keys that are found in the newly loaded bucket.
-      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield call(initializeMappingAndTool, context, tracingId);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -176,37 +182,7 @@ describe("Proofreading", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      // Set up organization with power plan (necessary for proofreading)
-      // and zoom in so that buckets in mag 1, 1, 1 are loaded.
-      yield put(setActiveOrganizationAction(powerOrga));
-      yield put(setZoomStepAction(0.3));
-      const currentMag = yield select((state) => getCurrentMag(state, tracingId));
-      expect(currentMag).toEqual([1, 1, 1]);
-
-      // Activate agglomerate mapping and wait for finished mapping initialization
-      // (unfortunately, that action is dispatched twice; once for the activation and once
-      // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
-      yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
-      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (1)");
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (1)");
-
-      ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (2)");
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (2)");
-
-      // Activate the proofread tool. WK will reload the bucket data and apply the mapping
-      // locally (acknowledged by FINISH_MAPPING_INITIALIZATION).
-      yield put(setToolAction(AnnotationTool.PROOFREAD));
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
-      // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
-      // is only maintained for loaded buckets).
-      const valueAt444 = yield call(() => api.data.getDataValue(tracingId, [4, 4, 4], 0));
-      expect(valueAt444).toBe(4);
-      // Once again, we wait for FINISH_MAPPING_INITIALIZATION because the mapping is updated
-      // for the keys that are found in the newly loaded bucket.
-      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield call(initializeMappingAndTool, context, tracingId);
 
       const mapping0 = yield select(
         (state) =>

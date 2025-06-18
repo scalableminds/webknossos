@@ -149,13 +149,13 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "plan",
       title: "Current Plan",
-      value: "Basic",
+      value: organization.pricingPlan,
       action: upgradePlanAction,
     },
     {
       key: "users",
       title: "Users",
-      value: `${activeUsersCount}/${maxUsersCountLabel}`,
+      value: `${activeUsersCount} / ${maxUsersCountLabel}`,
       action: upgradeUsersAction,
     },
     {

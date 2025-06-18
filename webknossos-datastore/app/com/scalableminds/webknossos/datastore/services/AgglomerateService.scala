@@ -22,7 +22,6 @@ import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
-import java.net.URI
 import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -34,20 +33,21 @@ class AgglomerateService(config: DataStoreConfig,
     extends LazyLogging
     with FoxImplicits {
   private val agglomerateDir = "agglomerates"
-  private val agglomerateFileExtension = "hdf5"
+  private val hdf5AgglomerateFileExtension = "hdf5"
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
-  private val agglomerateKeyCache
+  private val agglomerateFileKeyCache
     : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey
 
-  def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayer: DataLayer): Set[String] = {
+  def listAgglomerates(dataSourceId: DataSourceId, dataLayer: DataLayer): Set[String] = {
     val attachedAgglomerates = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
 
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayer.name)
+    val layerDir =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val exploredAgglomerates = PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
-                 PathUtils.fileExtensionFilter(agglomerateFileExtension))
+                 PathUtils.fileExtensionFilter(hdf5AgglomerateFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
@@ -59,7 +59,7 @@ class AgglomerateService(config: DataStoreConfig,
   }
 
   def clearCaches(dataSourceId: DataSourceId, layerName: Option[String]): Int = {
-    agglomerateKeyCache.clear {
+    agglomerateFileKeyCache.clear {
       case (keyDataSourceId, keyLayerName, _) => dataSourceId == keyDataSourceId && layerName.forall(_ == keyLayerName)
     }
 
@@ -77,8 +77,8 @@ class AgglomerateService(config: DataStoreConfig,
 
   def lookUpAgglomerateFile(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String)(
       implicit ec: ExecutionContext): Fox[AgglomerateFileKey] =
-    agglomerateKeyCache.getOrLoad((dataSourceId, dataLayer.name, mappingName),
-                                  _ => lookUpAgglomerateFileImpl(dataSourceId, dataLayer, mappingName).toFox)
+    agglomerateFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, mappingName),
+                                      _ => lookUpAgglomerateFileImpl(dataSourceId, dataLayer, mappingName).toFox)
 
   private def lookUpAgglomerateFileImpl(dataSourceId: DataSourceId,
                                         dataLayer: DataLayer,
@@ -87,12 +87,12 @@ class AgglomerateService(config: DataStoreConfig,
       case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
       case None              => None
     }
-    val localDatsetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     for {
       registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
         attachment.copy(
           path =
-            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatsetDir, dataLayer.name))
+            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
     } yield
       AgglomerateFileKey(
@@ -101,7 +101,7 @@ class AgglomerateService(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             mappingName,
-            new URI(dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toString),
+            dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )
@@ -117,7 +117,9 @@ class AgglomerateService(config: DataStoreConfig,
       data <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)
-        case _ => hdf5AgglomerateService.applyAgglomerate(agglomerateFileKey, request)(data).toFox
+        case LayerAttachmentDataformat.hdf5 =>
+          hdf5AgglomerateService.applyAgglomerate(agglomerateFileKey, request)(data).toFox
+        case _ => unsupportedDataFormat(agglomerateFileKey)
       }
     } yield data
 
@@ -128,7 +130,9 @@ class AgglomerateService(config: DataStoreConfig,
       skeleton <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId)
-        case _ => hdf5AgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId).toFox
+        case LayerAttachmentDataformat.hdf5 =>
+          hdf5AgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId).toFox
+        case _ => unsupportedDataFormat(agglomerateFileKey)
       }
       _ = if (Instant.since(before) > (100 milliseconds)) {
         Instant.logSince(
@@ -145,7 +149,8 @@ class AgglomerateService(config: DataStoreConfig,
                                                                    tc: TokenContext): Fox[Long] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrAgglomerateService.largestAgglomerateId(agglomerateFileKey)
-      case _                               => hdf5AgglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+      case LayerAttachmentDataformat.hdf5  => hdf5AgglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+      case _                               => unsupportedDataFormat(agglomerateFileKey)
     }
 
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey,
@@ -153,7 +158,9 @@ class AgglomerateService(config: DataStoreConfig,
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
-      case _ => hdf5AgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).toFox
+      case LayerAttachmentDataformat.hdf5 =>
+        hdf5AgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).toFox
+      case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
@@ -162,7 +169,9 @@ class AgglomerateService(config: DataStoreConfig,
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrAgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds)
-      case _ => hdf5AgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds).toFox
+      case LayerAttachmentDataformat.hdf5 =>
+        hdf5AgglomerateService.agglomerateIdsForSegmentIds(agglomerateFileKey, segmentIds).toFox
+      case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
@@ -170,7 +179,9 @@ class AgglomerateService(config: DataStoreConfig,
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrAgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId)
-      case _ => hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
+      case LayerAttachmentDataformat.hdf5 =>
+        hdf5AgglomerateService.positionForSegmentId(agglomerateFileKey, segmentId).toFox
+      case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
@@ -179,8 +190,12 @@ class AgglomerateService(config: DataStoreConfig,
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrAgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId)
-      case _ =>
+      case LayerAttachmentDataformat.hdf5 =>
         hdf5AgglomerateService.generateAgglomerateGraph(agglomerateFileKey, agglomerateId).toFox
+      case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
+  private def unsupportedDataFormat(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext) =
+    Fox.failure(
+      s"Trying to load agglomerate file with unsupported data format ${agglomerateFileKey.attachment.dataFormat}")
 }

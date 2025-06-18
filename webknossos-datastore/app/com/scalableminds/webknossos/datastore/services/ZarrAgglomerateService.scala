@@ -266,7 +266,7 @@ class ZarrAgglomerateService(config: DataStoreConfig,
                                              segmentId,
                                              agglomerateToSegments)
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
-      position <- agglomerateToPositions.readAsMultiArray(offset = Array(segmentIndex, 0), shape = Array(3, 1))
+      position <- agglomerateToPositions.readAsMultiArray(offset = Array(segmentIndex, 0), shape = Array(1, 3))
     } yield Vec3Int(position.getInt(0), position.getInt(1), position.getInt(2))
 
   private def binarySearchForSegment(

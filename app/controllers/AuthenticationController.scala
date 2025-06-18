@@ -600,7 +600,7 @@ class AuthenticationController @Inject()(
         userVerification = Some("preferred"),
         hints = None
       )
-      _ = temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
+      _ = temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
     } yield Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 

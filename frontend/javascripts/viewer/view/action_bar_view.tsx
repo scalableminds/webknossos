@@ -167,11 +167,14 @@ function CreateAnnotationButton() {
       maybeMappingName = mappingInfo.mappingName;
     }
 
-    createExplorational(dataset.id, "hybrid", false, fallbackLayerName, maybeMappingName).then(
-      (annotation) => {
-        history.push(`/annotations/${annotation.id}${location.hash}`);
-      },
+    const annotation = await createExplorational(
+      dataset.id,
+      "hybrid",
+      false,
+      fallbackLayerName,
+      maybeMappingName,
     );
+    history.push(`/annotations/${annotation.id}${location.hash}`);
   };
 
   const getFallbackLayerName = (segmentationLayer: APISegmentationLayer | null | undefined) => {

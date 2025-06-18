@@ -1,6 +1,6 @@
 import { CheckOutlined, DownOutlined } from "@ant-design/icons";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Descriptions, Divider, Dropdown, Typography } from "antd";
+import { Descriptions, Dropdown } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import { getSystemColorTheme } from "theme";
@@ -9,23 +9,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-
-const { Text } = Typography;
-
-export function AccountSettingsTitle({
-  title,
-  description,
-}: { title: string; description: string }) {
-  return (
-    <div>
-      <h2 style={{ marginBottom: 0 }}>{title}</h2>
-      <Text type="secondary" style={{ display: "block" }}>
-        {description}
-      </Text>
-      <Divider style={{ margin: "12px 0 32px 0" }} />
-    </div>
-  );
-}
+import { SettingsTitle } from "./helpers/settings_title";
 
 function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -100,7 +84,7 @@ function AccountProfileView() {
 
   return (
     <div>
-      <AccountSettingsTitle
+      <SettingsTitle
         title="Profile"
         description="Manage your personal information and preferences"
       />

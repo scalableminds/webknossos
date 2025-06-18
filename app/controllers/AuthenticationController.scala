@@ -630,10 +630,14 @@ class AuthenticationController @Inject()(
           false // User presence is not required.
         )
         _ <- tryo(webAuthnManager.verify(authData, params)).toFox ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        oldSignCount = credential.credentialRecord.getCounter
+        newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
         _ <- webAuthnCredentialDAO.updateSignCount(credential) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
 
-        // TODO: Validate
+        // Sign count is 0 if not used by the authenticator.
+        _ <- Fox
+          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
         result <- Fox.fromFuture(authenticateInner(loginInfo))

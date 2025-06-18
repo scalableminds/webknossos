@@ -209,11 +209,8 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(true)
     else userService.isEditableBy(user, issuingUser)
 
-  private def checkPasswordIfEmailChanged(
-      user: User,
-      passwordOpt: Option[String],
-      oldEmail: String,
-      email: String)(issuingUser: User)(implicit m: MessagesProvider): Fox[Unit] = {
+  private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
+      issuingUser: User)(implicit m: MessagesProvider): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else if (user._id == issuingUser._id) {
@@ -241,7 +238,6 @@ class UserController @Inject()(userService: UserService,
     } else {
       Fox.failure(Messages("notAllowed"))
     }
-  }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
       issuingUser: User): Boolean =

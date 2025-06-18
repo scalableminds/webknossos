@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
@@ -33,8 +33,23 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
   def removeVaultFromCache(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      remoteSource <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
-      _ = dataVaultService.removeVaultFromCache(remoteSource)
+      remoteSourceDescriptor <- remoteSourceDescriptorFor(baseDir, datasetId, layerName, magLocator)
+      _ = dataVaultService.removeVaultFromCache(remoteSourceDescriptor)
+    } yield ()
+
+  // Note that attachment paths are already resolved with baseDir in local case so we don’t need to do it here.
+  def vaultPathFor(attachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[VaultPath] =
+    for {
+      credentialBox <- credentialFor(attachment).shiftBox
+      remoteSourceDescriptor = RemoteSourceDescriptor(attachment.path, credentialBox.toOption)
+      vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor)
+    } yield vaultPath
+
+  def removeVaultFromCache(attachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      credentialBox <- credentialFor(attachment).shiftBox
+      remoteSourceDescriptor = RemoteSourceDescriptor(attachment.path, credentialBox.toOption)
+      _ = dataVaultService.removeVaultFromCache(remoteSourceDescriptor)
     } yield ()
 
   private def remoteSourceDescriptorFor(
@@ -111,8 +126,8 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     res
   }
 
-  private def findGlobalCredentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext) =
-    magLocator.path match {
+  private def findGlobalCredentialFor(pathOpt: Option[String])(implicit ec: ExecutionContext) =
+    pathOpt match {
       case Some(magPath) => globalCredentials.find(c => magPath.startsWith(c.name)).toFox
       case None          => Fox.empty
     }
@@ -124,7 +139,15 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)
-          case None             => findGlobalCredentialFor(magLocator)
+          case None             => findGlobalCredentialFor(magLocator.path)
         }
+    }
+
+  private def credentialFor(attachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
+    attachment.credentialId match {
+      case Some(credentialId) =>
+        dSRemoteWebknossosClient.getCredential(credentialId)
+      case None =>
+        findGlobalCredentialFor(Some(attachment.path.toString))
     }
 }

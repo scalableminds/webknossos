@@ -105,7 +105,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             meshFileName,
-            new URI(dataBaseDir.resolve(dataLayer.name).resolve(meshesDir).toString),
+            dataBaseDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )
@@ -165,6 +165,13 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         Fox.successful(hdf5MeshFileService.versionForMeshFile(meshFileKey))
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         Fox.successful(NeuroglancerMesh.meshInfoVersion)
+    }
+
+  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Int] =
+    meshFileKey.attachment.dataFormat match {
+      case LayerAttachmentDataformat.neuroglancerPrecomputed =>
+        neuroglancerPrecomputedMeshService.getVertexQuantizationBits(meshFileKey)
+      case _ => Fox.successful(0)
     }
 
   def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(

@@ -51,7 +51,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
         getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox)
-      meshAttachments <- exploreMeshesForLayer(remotePath / precomputedHeader.meshPath)
+      meshAttachments <- exploreMeshesForLayer(remotePath / precomputedHeader.meshPath, credentialId)
       attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DatasetLayerAttachments(meshes = meshAttachments))
       else None
       layer = if (precomputedHeader.describesSegmentationLayer) {
@@ -90,13 +90,16 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
     } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 
-  private def exploreMeshesForLayer(meshPath: VaultPath)(implicit tc: TokenContext): Fox[Seq[LayerAttachment]] =
+  private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[Seq[LayerAttachment]] =
     (for {
       meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)
         .parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
       _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
     } yield
       Seq(
-        LayerAttachment(NeuroglancerMesh.meshName, meshPath.toUri, LayerAttachmentDataformat.neuroglancerPrecomputed)))
-      .orElse(Fox.successful(Seq.empty))
+        LayerAttachment(NeuroglancerMesh.meshName,
+                        meshPath.toUri,
+                        LayerAttachmentDataformat.neuroglancerPrecomputed,
+                        credentialId))).orElse(Fox.successful(Seq.empty))
 }

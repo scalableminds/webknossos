@@ -79,16 +79,18 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
         jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
-        _ <- jobDAO.updateStatus(id, request.body)
+        _ <- jobDAO.updateStatus(id, request.body) ?~> "job.updateStatus.failed"
         jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
-          creditTransactionService.completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext)
+          creditTransactionService
+            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.failed"
         }
         _ <- Fox.runIf(
           jobAfterChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
-          creditTransactionService.refundTransactionForJob(jobAfterChange._id)(GlobalAccessContext)
+          creditTransactionService
+            .refundTransactionForJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
         }
       } yield Ok
   }

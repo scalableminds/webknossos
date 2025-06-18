@@ -12,7 +12,12 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{
+  AgglomerateFileKey,
+  DataVaultService,
+  RemoteSourceDescriptor,
+  RemoteSourceDescriptorService
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
@@ -23,7 +28,7 @@ import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.ExecutionContext
 
 class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
-                                       dataVaultService: DataVaultService,
+                                       remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                        chunkCacheService: ChunkCacheService)
     extends DataConverter
     with LazyLogging {
@@ -57,7 +62,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
   private def openZarrArray(agglomerateFileKey: AgglomerateFileKey,
                             zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(agglomerateFileKey.attachment.path, None))
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(agglomerateFileKey.attachment)
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
                                    DataSourceId("dummy", "unused"),

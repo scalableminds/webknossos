@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, Hdf5HashedArrayUtils}
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
@@ -61,7 +61,8 @@ object MeshFileAttributes {
   }
 }
 
-class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVaultService: DataVaultService)
+class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
+                                    remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
     with NeuroglancerMeshHelper {
 
@@ -75,7 +76,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private def readMeshFileAttributesImpl(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
                                                                    tc: TokenContext): Fox[MeshFileAttributes] =
     for {
-      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON).readBytes()
       meshFileAttributes <- JsonHelper
         .parseAs[MeshFileAttributes](groupHeaderBytes)
@@ -153,7 +154,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVa
   private def openZarrArrayImpl(meshFileKey: MeshFileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
                                                                                  tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(meshFileKey.attachment.path, None))
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
       zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
                                    DataSourceId("dummy", "unused"),
                                    "layer",

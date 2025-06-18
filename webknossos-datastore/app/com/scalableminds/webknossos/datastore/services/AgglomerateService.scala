@@ -22,7 +22,6 @@ import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
-import java.net.URI
 import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -104,7 +103,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             mappingName,
-            new URI(dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toString),
+            dataBaseDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )

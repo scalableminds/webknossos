@@ -11,7 +11,7 @@ object DependencyResolvers {
       Resolver.sonatypeOssRepos("snapshots") ++
       Seq(
         Resolver.typesafeRepo("releases"),
-        sciJava,
+        // sciJava,
         ucar,
         atlassian,
         senbox

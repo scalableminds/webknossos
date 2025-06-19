@@ -128,7 +128,7 @@ webknossos compress --jobs 4 output.zarr
 webknossos downsample --jobs 4 output.zarr
 ```
 
-This example will create a sharded Zarr v3 dataset with a voxel size of (4,4,4) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
+This example will create a sharded Zarr v3 dataset with a voxel size of (11.24, 11.24, 25) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
 A maximum of 4 parallel jobs will be used to parallelize the conversion, compression and downsampling.
 Using the `--data-format zarr` argument will produce unsharded Zarr v2 datasets.
 

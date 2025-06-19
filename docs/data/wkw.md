@@ -3,26 +3,8 @@
 [webknossos-wrap (WKW)](https://github.com/scalableminds/webknossos-wrap) is a format optimized for large datasets of 3D voxel imagery and supports compression, efficient cutouts, multi-channel, and several base datatypes.
 It works well for large datasets and is built with modern file systems in mind and drives a lot of WEBKNOSSOS datasets.
 
-WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Segmentation, RGB, as well as a range of data types (e.g., `uint8`,  `uint16`, `float32`).
+WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Segmentation, RGB, as well as a range of data types (e.g., `uint8`, `uint16`, `float32`).
 Additionally, WKW supports compression for disk space efficiency.
-
-The following table shows an overview of supported `dtypes` per layer:
-
-|   dtype    | Color Layers  |       Segmentation Layers   |
-|------------|------------|------------|
-|   uint8    |       ✓     |   ✓                       |
-|   uint16   |       ✓     |   ✓                       |
-|   uint24  rgb  |       ✓   |   does not apply        |
-|   uint32   |       ✓     |   ✓                       |
-|   uint64   |       ✗     |   (✓)  [(til 2⁵³−1)](https://github.com/scalableminds/webknossos/issues/6921)          |
-|   |  |  |  |
-|    int8    |       ✓     |        ✓                   |
-|    int16   |       ✓     |        ✓                   |
-|    int32   |       ✓     |        ✓                   |
-|    int64   |       ✗     |        ✓                   |
-|   |  |  |  |
-|    float   |       ✓     |        ✗                   |
-|    double  |       ✗     |        ✗                   |
 
 ## Examples
 

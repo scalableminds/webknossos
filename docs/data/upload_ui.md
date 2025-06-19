@@ -34,4 +34,22 @@ In particular, the following file formats are supported for uploading (and conve
 - [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
 - [N5 datasets](./n5.md)
 
+We support a variety of data types for the uploaded data. To make sure that your data can be uploaded to WEBKNOSSOS take a look into this table of supported data types for color and segmentation layers:
+
+|   dtype    | Color Layers  |       Segmentation Layers   |
+|------------|------------|------------|
+|   uint8    |       ✓     |   ✓                       |
+|   uint16   |       ✓     |   ✓                       |
+|   uint24  rgb  |       ✓   |   does not apply        |
+|   uint32   |       ✓     |   ✓                       |
+|   uint64   |       ✗     |   (✓)  [(til 2⁵³−1)](https://github.com/scalableminds/webknossos/issues/6921)          |
+|   |  |  |  |
+|    int8    |       ✓     |        ✓                   |
+|    int16   |       ✓     |        ✓                   |
+|    int32   |       ✓     |        ✓                   |
+|    int64   |       ✗     |        ✓                   |
+|   |  |  |  |
+|    float   |       ✓     |        ✗                   |
+|    double  |       ✗     |        ✗                   |
+
 Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](../datasets/settings.md) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.

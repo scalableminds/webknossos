@@ -66,9 +66,12 @@ def parse_change_files():
             if section in changelog_sections:
                 for line in body.strip().splitlines():
                     if line.strip().startswith("- "):
-                        changelog_sections[section].append(
-                            f"{line.strip()} [#{pr_number}](https://github.com/{GITHUB_REPO}/pull/{pr_number})"
-                        )
+                        pr_link = f"[#{pr_number}](https://github.com/{GITHUB_REPO}/pull/{pr_number})"
+                        if pr_link in line:
+                            print(
+                                f"Warning: {file_name} already contains a link to its PR."
+                            )
+                        changelog_sections[section].append(f"{line.strip()} {pr_link}")
                         added_lines += 1
                     else:
                         print(

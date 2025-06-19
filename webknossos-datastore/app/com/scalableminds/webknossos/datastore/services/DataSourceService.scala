@@ -366,6 +366,8 @@ class DataSourceService @Inject()(
         dataLayer <- dataLayerOpt
         _ = dataLayer.mags.foreach(mag =>
           remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+        _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
+          remoteSourceDescriptorService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 }

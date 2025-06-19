@@ -15,7 +15,9 @@ case class DatasetLayerAttachments(
     segmentIndex: Option[LayerAttachment] = None,
     connectomes: Seq[LayerAttachment] = Seq.empty,
     cumsum: Option[LayerAttachment] = None
-)
+) {
+  def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
+}
 
 object DatasetLayerAttachments {
   implicit val jsonFormat: Format[DatasetLayerAttachments] =
@@ -24,7 +26,7 @@ object DatasetLayerAttachments {
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
-  val hdf5, json, zarr3 = Value
+  val hdf5, json, zarr3, neuroglancerPrecomputed = Value
 }
 
 object LayerAttachmentType extends ExtendedEnumeration {
@@ -32,7 +34,10 @@ object LayerAttachmentType extends ExtendedEnumeration {
   val mesh, agglomerate, segmentIndex, connectome, cumsum = Value
 }
 
-case class LayerAttachment(name: String, path: URI, dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat)
+case class LayerAttachment(name: String,
+                           path: URI,
+                           dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
+                           credentialId: Option[String] = None)
 
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]

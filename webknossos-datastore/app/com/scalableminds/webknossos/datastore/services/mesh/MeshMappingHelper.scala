@@ -29,13 +29,13 @@ trait MeshMappingHelper extends FoxImplicits {
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
-        // No mapping selected, assume id matches meshfile
+        // No mapping selected, assume id matches meshFile
         Fox.successful(List(agglomerateId))
       case (Some(mappingName), None) if mappingNameForMeshFile.contains(mappingName) =>
-        // Mapping selected, but meshfile has the same mapping name in its metadata, assume id matches meshfile
+        // Mapping selected, but meshFile has the same mapping name in its metadata, assume id matches meshFile
         Fox.successful(List(agglomerateId))
       case (Some(mappingName), None) =>
-        // Mapping selected, but meshfile does not have matching mapping name in its metadata,
+        // Mapping selected, but meshFile does not have matching mapping name in its metadata,
         // assume agglomerate id, fetch oversegmentation segment ids for it
         for {
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox

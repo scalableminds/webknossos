@@ -13,3 +13,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)
+- [135-neuroglancer-attachment.sql](conf/evolutions/135-neuroglancer-attachment.sql)

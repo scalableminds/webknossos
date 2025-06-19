@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Failure, Full, Empty}
 import play.api.libs.json.{JsObject, Json}
 
 import javax.inject.Inject
@@ -42,15 +43,30 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transaction <- creditTransactionDAO.findTransactionForJob(jobId)
-      _ <- organizationService.assertOrganizationHasPaidPlan(transaction._organization)
-      _ <- creditTransactionDAO.commitTransaction(transaction._id)
+      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      _ <- transactionBox match {
+        case Full(transaction) =>
+          for {
+            _ <- organizationService.assertOrganizationHasPaidPlan(transaction._organization)
+            _ <- creditTransactionDAO.commitTransaction(transaction._id)
+          } yield ()
+        case Empty      => Fox.successful(()) // Assume transaction-less Job
+        case f: Failure => f.toFox
+      }
+
     } yield ()
 
   def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transaction <- creditTransactionDAO.findTransactionForJob(jobId)
-      _ <- refundTransaction(transaction)
+      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      _ <- transactionBox match {
+        case Full(transaction) =>
+          for {
+            _ <- refundTransaction(transaction)
+          } yield ()
+        case Empty      => Fox.successful(()) // Assume transaction-less Job
+        case f: Failure => f.toFox
+      }
     } yield ()
 
   private def refundTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =

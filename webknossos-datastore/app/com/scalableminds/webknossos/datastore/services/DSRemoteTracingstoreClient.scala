@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, NgffZarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -52,9 +52,9 @@ class DSRemoteTracingstoreClient @Inject()(
       .getWithJsonResponse[NgffMetadata]
 
   def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(
-      implicit tc: TokenContext): Fox[Zarr3GroupHeader] =
+      implicit tc: TokenContext): Fox[NgffZarr3GroupHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/zarr.json").withTokenFromContext
-      .getWithJsonResponse[Zarr3GroupHeader]
+      .getWithJsonResponse[NgffZarr3GroupHeader]
 
   def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(
       implicit tc: TokenContext): Fox[Array[Byte]] =

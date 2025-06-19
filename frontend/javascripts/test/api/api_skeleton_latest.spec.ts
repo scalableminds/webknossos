@@ -5,8 +5,10 @@ import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_action
 import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import type { Vector3 } from "viewer/constants";
+import { OrthoViews, OrthoViewToNumber, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import { setRotationAction } from "viewer/model/actions/flycam_actions";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
@@ -298,5 +300,94 @@ describe("API Skeleton", () => {
     expect(enforceSkeletonTracing(Store.getState().annotation).trees.getOrThrow(2).isVisible).toBe(
       true,
     );
+  });
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+    Store.dispatch(setRotationAction([0, 0, 0]));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
+    api.tracing.createNode([10, 10, 10]);
+    const newNode = enforceSkeletonTracing(Store.getState().annotation)
+      .trees.getOrThrow(2)
+      .nodes.getOrThrow(4);
+    const propsToCheck = {
+      untransformedPosition: newNode.untransformedPosition,
+      additionalCoordinates: newNode.additionalCoordinates,
+      rotation: newNode.rotation,
+      viewport: newNode.viewport,
+      mag: newNode.mag,
+    };
+    expect(propsToCheck).toStrictEqual({
+      untransformedPosition: [10, 10, 10],
+      additionalCoordinates: [],
+      rotation: [0, 0, 0],
+      viewport: OrthoViewToNumber[OrthoViews.PLANE_XY],
+      mag: 0,
+    });
+  });
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+    Store.dispatch(setRotationAction([0, 0, 0]));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
+    api.tracing.createNode([10, 10, 10]);
+    const newNode = enforceSkeletonTracing(Store.getState().annotation)
+      .trees.getOrThrow(2)
+      .nodes.getOrThrow(4);
+    const propsToCheck = {
+      untransformedPosition: newNode.untransformedPosition,
+      additionalCoordinates: newNode.additionalCoordinates,
+      rotation: newNode.rotation,
+      viewport: newNode.viewport,
+      mag: newNode.mag,
+    };
+    expect(propsToCheck).toStrictEqual({
+      untransformedPosition: [10, 10, 10],
+      additionalCoordinates: [],
+      rotation: [0, 270, 0],
+      viewport: OrthoViewToNumber[OrthoViews.PLANE_YZ],
+      mag: 0,
+    });
+  });
+
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+    Store.dispatch(setRotationAction([0, 0, 0]));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XZ));
+    api.tracing.createNode([10, 10, 10]);
+    const newNode = enforceSkeletonTracing(Store.getState().annotation)
+      .trees.getOrThrow(2)
+      .nodes.getOrThrow(4);
+    const propsToCheck = {
+      untransformedPosition: newNode.untransformedPosition,
+      additionalCoordinates: newNode.additionalCoordinates,
+      rotation: newNode.rotation,
+      viewport: newNode.viewport,
+      mag: newNode.mag,
+    };
+    expect(propsToCheck).toStrictEqual({
+      untransformedPosition: [10, 10, 10],
+      additionalCoordinates: [],
+      rotation: [90, 0, 0],
+      viewport: OrthoViewToNumber[OrthoViews.PLANE_XZ],
+      mag: 0,
+    });
+  });
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated", ({
+    api,
+  }) => {
+    Store.dispatch(setRotationAction([20, 90, 10]));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
+    api.tracing.createNode([10, 10, 10]);
+    const newNode = enforceSkeletonTracing(Store.getState().annotation)
+      .trees.getOrThrow(2)
+      .nodes.getOrThrow(4);
+    expect(newNode.rotation).toStrictEqual([20, 90, 10]);
+  });
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated", ({
+    api,
+  }) => {
+    Store.dispatch(setRotationAction([20, 90, 0]));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
+    api.tracing.createNode([10, 10, 10]);
+    const newNode = enforceSkeletonTracing(Store.getState().annotation)
+      .trees.getOrThrow(2)
+      .nodes.getOrThrow(4);
+    expect(newNode.rotation).toStrictEqual([20, 90, 0]);
   });
 });

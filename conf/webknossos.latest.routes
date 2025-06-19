@@ -28,7 +28,7 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                                       controllers.AuthenticationController.deleteToken()
 GET           /auth/switch                                                                      controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationId                                          controllers.AuthenticationController.switchOrganization(organizationId: String)
-GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(datasetId: Option[ObjectId], annotationId: Option[String], workflowHash: Option[String])
+GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(datasetId: Option[ObjectId], annotationId: Option[ObjectId], workflowHash: Option[String])
 POST          /auth/sendInvites                                                                 controllers.AuthenticationController.sendInvites()
 POST          /auth/startResetPassword                                                          controllers.AuthenticationController.handleStartResetPassword()
 POST          /auth/changePassword                                                              controllers.AuthenticationController.changePassword()

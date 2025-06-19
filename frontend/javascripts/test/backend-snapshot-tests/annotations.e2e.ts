@@ -199,6 +199,8 @@ describe("Annotation API (E2E)", () => {
           [UpdateActions.updateCameraAnnotation([2, 3, 4], null, [1, 2, 3], 2)],
         ],
         123456789,
+        null,
+        true,
       ),
       0,
     );
@@ -246,6 +248,8 @@ describe("Annotation API (E2E)", () => {
       createSaveQueueFromUpdateActions(
         [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
         123456789,
+        null,
+        true,
       ),
       0,
     );
@@ -284,7 +288,12 @@ describe("Annotation API (E2E)", () => {
 
     const updateTreeAction = UpdateActions.updateTree(trees.getOrThrow(1), tracingId);
     const [saveQueue] = addVersionNumbers(
-      createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
+      createSaveQueueFromUpdateActions(
+        [createTreesUpdateActions, [updateTreeAction]],
+        123456789,
+        null,
+        true,
+      ),
       0,
     );
 
@@ -301,6 +310,8 @@ describe("Annotation API (E2E)", () => {
       createSaveQueueFromUpdateActions(
         [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
         123456789,
+        null,
+        true,
       ),
       0,
     );

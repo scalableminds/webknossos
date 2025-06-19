@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -60,8 +61,8 @@ class SkeletonTracingService @Inject()(
                                 editRotation: Option[Vec3Double],
                                 boundingBox: Option[BoundingBox],
                                 newVersion: Long,
-                                ownerId: String,
-                                requestingUserId: String): SkeletonTracing = {
+                                ownerId: ObjectId,
+                                requestingUserId: ObjectId): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import play.api.libs.json._
 
@@ -18,12 +19,12 @@ case class SplitAgglomerateUpdateAction(agglomerateId: Long, // Unused, we now l
                                         mag: Vec3Int,
                                         actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
+                                        actionAuthorId: Option[ObjectId] = None,
                                         info: Option[String] = None)
     extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)
@@ -44,12 +45,12 @@ case class MergeAgglomerateUpdateAction(agglomerateId1: Long, // Unused, we now 
                                         mag: Vec3Int,
                                         actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
+                                        actionAuthorId: Option[ObjectId] = None,
                                         info: Option[String] = None)
     extends EditableMappingUpdateAction {
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): EditableMappingUpdateAction =
     this.copy(actionTracingId = newTracingId)

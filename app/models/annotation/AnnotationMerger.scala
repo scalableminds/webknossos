@@ -74,7 +74,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
-      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_.id),
+      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_._id),
                                                                         annotations.map(_._user),
                                                                         newAnnotationId,
                                                                         toTemporaryStore,

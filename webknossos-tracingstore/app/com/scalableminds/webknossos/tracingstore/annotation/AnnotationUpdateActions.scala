@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
@@ -28,14 +29,14 @@ trait AnnotationUpdateAction extends UpdateAction
 case class AddLayerAnnotationAction(layerParameters: AnnotationLayerParameters,
                                     tracingId: Option[String] = None, // filled in by backend eagerly on save
                                     actionTimestamp: Option[Long] = None,
-                                    actionAuthorId: Option[String] = None,
+                                    actionAuthorId: Option[ObjectId] = None,
                                     info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -43,80 +44,80 @@ case class DeleteLayerAnnotationAction(tracingId: String,
                                        layerName: String, // Just stored for nicer-looking history
                                        typ: AnnotationLayerType, // Just stored for nicer-looking history
                                        actionTimestamp: Option[Long] = None,
-                                       actionAuthorId: Option[String] = None,
+                                       actionAuthorId: Option[ObjectId] = None,
                                        info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateLayerMetadataAnnotationAction(tracingId: String,
                                                layerName: String,
                                                actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[String] = None,
+                                               actionAuthorId: Option[ObjectId] = None,
                                                info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateMetadataAnnotationAction(
     description: Option[String], // None means do not change description. Empty string means set to empty
     actionTimestamp: Option[Long] = None,
-    actionAuthorId: Option[String] = None,
+    actionAuthorId: Option[ObjectId] = None,
     info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
 case class RevertToVersionAnnotationAction(sourceVersion: Long,
                                            actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[String] = None,
+                                           actionAuthorId: Option[ObjectId] = None,
                                            info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
 // Used only in tasks by admin to undo the work done of the annotator
 case class ResetToBaseAnnotationAction(actionTimestamp: Option[Long] = None,
-                                       actionAuthorId: Option[String] = None,
+                                       actionAuthorId: Option[ObjectId] = None,
                                        info: Option[String] = None)
     extends AnnotationUpdateAction
     with ApplyImmediatelyUpdateAction {
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateTdCameraAnnotationAction(actionTimestamp: Option[Long] = None,
-                                          actionAuthorId: Option[String] = None,
+                                          actionAuthorId: Option[ObjectId] = None,
                                           info: Option[String] = None)
     extends AnnotationUpdateAction {
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 
   override def isViewOnlyChange: Boolean = true
@@ -127,7 +128,7 @@ case class UpdateCameraAnnotationAction(editPosition: Vec3Int,
                                         zoomLevel: Double,
                                         editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                         actionTimestamp: Option[Long] = None,
-                                        actionAuthorId: Option[String] = None,
+                                        actionAuthorId: Option[ObjectId] = None,
                                         info: Option[String] = None)
     extends AnnotationUpdateAction
     with UserStateUpdateAction {
@@ -135,7 +136,7 @@ case class UpdateCameraAnnotationAction(editPosition: Vec3Int,
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
+  override def addAuthorId(authorId: Option[ObjectId]): UpdateAction =
     this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }

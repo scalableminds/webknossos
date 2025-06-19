@@ -1,6 +1,6 @@
 import { AnnotationLayerEnum } from "types/api_types";
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
-import { diffBoundingBoxes } from "viewer/model/sagas/skeletontracing_saga";
+import { diffBoundingBoxes } from "viewer/model/helpers/diff_helpers";
 import {
   updateUserBoundingBoxInSkeletonTracing,
   type UpdateUserBoundingBoxInSkeletonTracingAction,
@@ -56,7 +56,7 @@ describe("Bounding box diffing and compaction", () => {
         },
         name: "bbox 3",
         color: [1, 1, 1],
-        isVisible: false,
+        isVisible: true,
       },
     ];
 
@@ -64,20 +64,23 @@ describe("Bounding box diffing and compaction", () => {
       diffBoundingBoxes(oldBboxes, newBboxes, "skeletonTracing1", AnnotationLayerEnum.Skeleton),
     );
 
-    expect(diff.length).toBe(4);
+    expect(diff.length).toBe(5);
 
-    const [deleteFirst, addThird, updateVisibilityForSecond, changeSecond] = diff;
+    const [deleteBBox1, addBBox3, changeBBox2, updateVisibilityForBBox3, updateVisibilityForBBox2] =
+      diff;
 
-    expect(deleteFirst.name).toBe("deleteUserBoundingBoxInSkeletonTracing");
-    expect(deleteFirst.value).toEqual({
+    expect(deleteBBox1.name).toBe("deleteUserBoundingBoxInSkeletonTracing");
+    expect(deleteBBox1.value).toEqual({
       boundingBoxId: 1,
       actionTracingId: "skeletonTracing1",
     });
 
-    expect(addThird.name).toBe("addUserBoundingBoxInSkeletonTracing");
-    expect(addThird.value).toEqual({
+    expect(addBBox3.name).toBe("addUserBoundingBoxInSkeletonTracing");
+    expect(addBBox3.value).toEqual({
       boundingBox: {
-        ...newBboxes[1],
+        id: 3,
+        name: "bbox 3",
+        color: [1, 1, 1],
         boundingBox: {
           topLeft: [1, 10, 3],
           width: 9,
@@ -88,15 +91,8 @@ describe("Bounding box diffing and compaction", () => {
       actionTracingId: "skeletonTracing1",
     });
 
-    expect(updateVisibilityForSecond.name).toBe("updateUserBoundingBoxVisibilityInSkeletonTracing");
-    expect(updateVisibilityForSecond.value).toEqual({
-      boundingBoxId: 2,
-      actionTracingId: "skeletonTracing1",
-      isVisible: false,
-    });
-
-    expect(changeSecond.name).toBe("updateUserBoundingBoxInSkeletonTracing");
-    expect(changeSecond.value).toEqual({
+    expect(changeBBox2.name).toBe("updateUserBoundingBoxInSkeletonTracing");
+    expect(changeBBox2.value).toEqual({
       boundingBoxId: 2,
       actionTracingId: "skeletonTracing1",
       color: [1, 1, 1],
@@ -106,6 +102,20 @@ describe("Bounding box diffing and compaction", () => {
         height: 15,
         depth: 27,
       },
+    });
+
+    expect(updateVisibilityForBBox3.name).toBe("updateUserBoundingBoxVisibilityInSkeletonTracing");
+    expect(updateVisibilityForBBox3.value).toEqual({
+      boundingBoxId: 3,
+      actionTracingId: "skeletonTracing1",
+      isVisible: true,
+    });
+
+    expect(updateVisibilityForBBox2.name).toBe("updateUserBoundingBoxVisibilityInSkeletonTracing");
+    expect(updateVisibilityForBBox2.value).toEqual({
+      boundingBoxId: 2,
+      actionTracingId: "skeletonTracing1",
+      isVisible: false,
     });
   });
 

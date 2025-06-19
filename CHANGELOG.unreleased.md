@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
+- Before starting a neuron segmentation with `Evaluation Settings` enabled, it is checked that a useful bounding box was selected and that some skeletons exist within the annotation, preventing the job from failing. [#8678](https://github.com/scalableminds/webknossos/pull/8678)
 - The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`. [#8518](https://github.com/scalableminds/webknossos/pull/8518)
 
 ### Fixed

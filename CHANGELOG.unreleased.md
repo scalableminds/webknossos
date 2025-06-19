@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
 
 ### Changed
+- When creating an annotation from the dataset view mode, and more than one segmentation layer is visible or multiple segmentation layers are invisible but available, a selection modal now appears allowing users to choose which segmentation layer to use for the newly created volume annotation. Per default, annotations are still based on the visible segmentation layer. [#8677](https://github.com/scalableminds/webknossos/pull/8677)
 - The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`. [#8518](https://github.com/scalableminds/webknossos/pull/8518)
 
 ### Fixed

@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { ColoredLogger, SoftError, isBigInt, isNumberMap } from "libs/utils";
+import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
@@ -1291,6 +1291,7 @@ function* splitAgglomerateInMapping(
       return [segmentId, agglomerateId];
     }),
   ) as Mapping;
+
   return splitMapping;
 }
 

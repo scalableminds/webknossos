@@ -1,4 +1,3 @@
-import { ColoredLogger } from "libs/utils";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, put, select, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
@@ -24,6 +23,7 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { tryToIncorporateActions } from "viewer/model/sagas/save_saga";
 
 function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
   const { api } = context;
@@ -38,13 +38,9 @@ function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: st
   // (unfortunately, that action is dispatched twice; once for the activation and once
   // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
   yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
-  ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (1)");
   yield take("FINISH_MAPPING_INITIALIZATION");
-  ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (1)");
 
-  ColoredLogger.logYellow("wait for FINISH_MAPPING_INITIALIZATION (2)");
   yield take("FINISH_MAPPING_INITIALIZATION");
-  ColoredLogger.logYellow("received FINISH_MAPPING_INITIALIZATION (2)");
 
   // Activate the proofread tool. WK will reload the bucket data and apply the mapping
   // locally (acknowledged by FINISH_MAPPING_INITIALIZATION).
@@ -87,6 +83,39 @@ function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
   ]);
 }
 
+const initialMapping = new Map([
+  [1, 10],
+  [2, 10],
+  [3, 10],
+  [4, 11],
+  [5, 11],
+  [6, 12],
+  [7, 12],
+  [1337, 1337]
+]);
+
+const expectedMappingAfterMerge = new Map([
+  [1, 10],
+  [2, 10],
+  [3, 10],
+  [4, 10],
+  [5, 10],
+  [6, 12],
+  [7, 12],
+  [1337, 1337]
+])
+
+const expectedMappingAfterSplit = new Map([
+  [1, 9],
+  [2, 10],
+  [3, 10],
+  [4, 11],
+  [5, 11],
+  [6, 12],
+  [7, 12],
+  [1337, 1337]
+])
+
 describe("Proofreading", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -99,7 +128,7 @@ describe("Proofreading", () => {
   });
 
   it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
-    const { api, mocks } = context;
+    const { api } = context;
     mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
@@ -107,6 +136,13 @@ describe("Proofreading", () => {
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(
+        initialMapping,
+      );
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -123,16 +159,7 @@ describe("Proofreading", () => {
       );
 
       expect(mapping).toEqual(
-        new Map([
-          [1, 10],
-          [2, 10],
-          [3, 10],
-          [4, 10],
-          [5, 10],
-          [6, 12],
-          [7, 12],
-          [1337, 1337]
-        ]),
+        expectedMappingAfterMerge,
       );
 
       yield call(() => api.tracing.save());
@@ -170,16 +197,7 @@ describe("Proofreading", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(
-        new Map([
-          [1, 10],
-          [2, 10],
-          [3, 10],
-          [4, 11],
-          [5, 11],
-          [6, 12],
-          [7, 12],
-          [1337, 1337]
-        ]),
+        initialMapping,
       );
 
       // Set up the merge-related segment partners. Normally, this would happen
@@ -214,16 +232,7 @@ describe("Proofreading", () => {
       );
 
       expect(mapping1).toEqual(
-        new Map([
-          [1, 9],
-          [2, 10],
-          [3, 10],
-          [4, 11],
-          [5, 11],
-          [6, 12],
-          [7, 12],
-          [1337, 1337]
-        ]),
+        expectedMappingAfterSplit,
       );
 
       yield call(() => api.tracing.save());
@@ -240,6 +249,119 @@ describe("Proofreading", () => {
           mag: [1, 1, 1]
         }
       }])
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should update the mapping when a the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(
+        initialMapping,
+      );
+      yield call(() => api.tracing.save());
+      context.receivedDataPerSaveRequest = [];
+
+      yield call(tryToIncorporateActions, [{
+        version: 1, value: [{
+          name: 'mergeAgglomerate',
+          value: {
+            actionTracingId: 'volumeTracingId',
+            actionTimestamp: 0,
+            agglomerateId1: 10,
+            agglomerateId2: 11,
+            segmentId1: 1,
+            segmentId2: 4,
+            mag: [1, 1, 1]
+          }
+        }]
+      }])
+
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(
+        expectedMappingAfterMerge,
+      );
+
+      yield call(() => api.tracing.save());
+
+      expect(context.receivedDataPerSaveRequest).toEqual([]);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should update the mapping when a the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
+    const { api, mocks } = context;
+    mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(
+        initialMapping,
+      );
+      yield call(() => api.tracing.save());
+      context.receivedDataPerSaveRequest = [];
+
+      // Already prepare the server's reply for mapping requests that will be sent
+      // after the split.
+      mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
+        [1, 9],
+        [2, 10],
+        [3, 10],
+      ]);
+
+      yield call(tryToIncorporateActions, [{
+        version: 1, value: [{
+          name: 'splitAgglomerate',
+          value: {
+            actionTracingId: 'volumeTracingId',
+            actionTimestamp: 0,
+            agglomerateId: 10,
+            segmentId1: 1,
+            segmentId2: 2,
+            mag: [1, 1, 1]
+          }
+        }]
+      }])
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(
+        expectedMappingAfterSplit,
+      );
+
+      yield call(() => api.tracing.save());
+
+      expect(context.receivedDataPerSaveRequest).toEqual([]);
     });
 
     await task.toPromise();

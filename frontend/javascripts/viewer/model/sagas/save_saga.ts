@@ -682,7 +682,7 @@ function* watchForSaveConflicts(): Saga<never> {
   }
 }
 
-function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+export function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
   const refreshFunctionByTracing: Record<string, () => Saga<void>> = {};
   function* finalize() {
     for (const fn of Object.values(refreshFunctionByTracing)) {

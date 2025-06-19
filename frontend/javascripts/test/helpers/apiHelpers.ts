@@ -1,7 +1,7 @@
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
-import { ColoredLogger, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
@@ -104,18 +104,10 @@ vi.mock("admin/rest_api.ts", async () => {
       segmentIdSet.has(id),
     ) as Vector2[];
     if (entries.length < segmentIdSet.size) {
-      console.log("entries", entries);
-      console.log("segmentIdSet", segmentIdSet);
       throw new Error(
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
       );
     }
-    ColoredLogger.logGreen(
-      "getAgglomeratesForSegmentsImpl returns",
-      entries,
-      "for requested",
-      segmentIds,
-    );
     return new Map(entries);
   };
   const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(

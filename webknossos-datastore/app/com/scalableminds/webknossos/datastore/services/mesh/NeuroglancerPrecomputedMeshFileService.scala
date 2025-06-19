@@ -125,7 +125,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
     )
   }
 
-  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: List[Long])(
+  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"

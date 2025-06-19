@@ -149,6 +149,7 @@ zarr.invalidFirstChunkCoord=First Channel must be 0
 zarr.chunkNotFound=Could not find the requested chunk
 zarr.notEnoughCoordinates=Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0.
 zarr.invalidAdditionalCoordinates=Invalid additional coordinates for this data layer.
+zarr.readShardIndex.failed=Failed to read shard information for zarr data. This may indicate missing data.
 
 nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Could not extract NML file

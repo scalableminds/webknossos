@@ -28,7 +28,7 @@ case class PrecomputedHeader(`type`: String,
 }
 
 case class PrecomputedScale(key: String,
-                            size: Array[Int],
+                            size: Array[Long],
                             resolution: Array[Double],
                             chunk_sizes: Array[Array[Int]],
                             encoding: String,
@@ -45,7 +45,7 @@ case class PrecomputedScale(key: String,
 
 case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precomputedHeader: PrecomputedHeader)
     extends DatasetHeader {
-  override def datasetShape: Option[Array[Int]] = Some(precomputedScale.size)
+  override def datasetShape: Option[Array[Long]] = Some(precomputedScale.size)
 
   override def chunkShape: Array[Int] = precomputedScale.chunk_sizes.head
 
@@ -72,7 +72,7 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
       val (chunkIndexAtDim, dim) = chunkIndexWithDim
       val beginOffset = voxelOffset(dim) + chunkIndexAtDim * precomputedScale.primaryChunkShape(dim)
       val endOffset = voxelOffset(dim) + ((chunkIndexAtDim + 1) * precomputedScale.primaryChunkShape(dim))
-        .min(precomputedScale.size(dim))
+        .min(precomputedScale.size(dim).toInt)
       (beginOffset, endOffset)
     })
 

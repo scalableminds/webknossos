@@ -357,9 +357,9 @@ export function getFlycamRotationWithAppendedRotation(
   totalRotationQuaternion.setFromEuler(flycamRotationEuler).multiply(additionalRotationQuaternion);
   const rotationEuler = totalRotationEuler.setFromQuaternion(totalRotationQuaternion, "ZYX");
   const rotationInDegree = map3(THREE.MathUtils.radToDeg, [
-    rotationEuler.x,
-    rotationEuler.y,
-    rotationEuler.z,
+    mod(rotationEuler.x, 2 * Math.PI),
+    mod(rotationEuler.y, 2 * Math.PI),
+    mod(rotationEuler.z, 2 * Math.PI),
   ]);
   console.log(
     "flycam rotation",

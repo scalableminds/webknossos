@@ -1,7 +1,6 @@
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
-import dummyUser from "test/fixtures/dummy_user";
 import idUserA from "test/e2e-setup";
 
 export function createSaveQueueFromUpdateActions(

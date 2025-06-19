@@ -284,7 +284,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
           .generateSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
@@ -305,7 +305,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateGraph <- agglomerateService
           .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
@@ -326,7 +326,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         position <- agglomerateService
           .positionForSegmentId(agglomerateFileKey, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
@@ -346,7 +346,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
       } yield Ok(Json.toJson(largestAgglomerateId))
     }
@@ -365,7 +365,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSource.id, dataLayer, mappingName)
+        agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
           agglomerateFileKey,
           request.body.items

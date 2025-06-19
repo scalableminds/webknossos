@@ -39,7 +39,7 @@ trait MeshMappingHelper extends FoxImplicits {
         // assume agglomerate id, fetch oversegmentation segment ids for it
         for {
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSourceId, dataLayer, mappingName)
+          agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
           segmentIdsBox <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).shiftBox
           segmentIds <- segmentIdsBox match {
             case Full(segmentIds) => Fox.successful(segmentIds)
@@ -59,7 +59,7 @@ trait MeshMappingHelper extends FoxImplicits {
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
             for {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFile(dataSourceId, dataLayer, mappingName)
+              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
               localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
             } yield localSegmentIds
         } yield segmentIds

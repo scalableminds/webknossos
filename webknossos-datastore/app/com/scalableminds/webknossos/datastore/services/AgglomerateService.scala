@@ -75,7 +75,7 @@ class AgglomerateService(config: DataStoreConfig,
     clearedHdf5Count + clearedZarrCount
   }
 
-  def lookUpAgglomerateFile(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String)(
+  def lookUpAgglomerateFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, mappingName: String)(
       implicit ec: ExecutionContext): Fox[AgglomerateFileKey] =
     agglomerateFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, mappingName),
                                       _ => lookUpAgglomerateFileImpl(dataSourceId, dataLayer, mappingName).toFox)
@@ -113,7 +113,7 @@ class AgglomerateService(config: DataStoreConfig,
     for {
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
-      agglomerateFileKey <- lookUpAgglomerateFile(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName)
+      agglomerateFileKey <- lookUpAgglomerateFileKey(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName)
       data <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)

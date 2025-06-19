@@ -12,7 +12,10 @@ import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { proofreadMergeAction, minCutAgglomerateWithPositionAction } from "viewer/model/actions/proofread_actions";
+import {
+  proofreadMergeAction,
+  minCutAgglomerateWithPositionAction,
+} from "viewer/model/actions/proofread_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
@@ -91,7 +94,7 @@ const initialMapping = new Map([
   [5, 11],
   [6, 12],
   [7, 12],
-  [1337, 1337]
+  [1337, 1337],
 ]);
 
 const expectedMappingAfterMerge = new Map([
@@ -102,8 +105,8 @@ const expectedMappingAfterMerge = new Map([
   [5, 10],
   [6, 12],
   [7, 12],
-  [1337, 1337]
-])
+  [1337, 1337],
+]);
 
 const expectedMappingAfterSplit = new Map([
   [1, 9],
@@ -113,8 +116,8 @@ const expectedMappingAfterSplit = new Map([
   [5, 11],
   [6, 12],
   [7, 12],
-  [1337, 1337]
-])
+  [1337, 1337],
+]);
 
 describe("Proofreading", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -140,9 +143,7 @@ describe("Proofreading", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
-      expect(mapping0).toEqual(
-        initialMapping,
-      );
+      expect(mapping0).toEqual(initialMapping);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -158,25 +159,25 @@ describe("Proofreading", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(mapping).toEqual(
-        expectedMappingAfterMerge,
-      );
+      expect(mapping).toEqual(expectedMappingAfterMerge);
 
       yield call(() => api.tracing.save());
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      expect(mergeSaveActionBatch).toEqual([{
-        name: 'mergeAgglomerate',
-        value: {
-          actionTracingId: 'volumeTracingId',
-          agglomerateId1: 10,
-          agglomerateId2: 11,
-          segmentId1: 1,
-          segmentId2: 4,
-          mag: [1, 1, 1]
-        }
-      }])
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId1: 10,
+            agglomerateId2: 11,
+            segmentId1: 1,
+            segmentId2: 4,
+            mag: [1, 1, 1],
+          },
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -196,9 +197,7 @@ describe("Proofreading", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
-      expect(mapping0).toEqual(
-        initialMapping,
-      );
+      expect(mapping0).toEqual(initialMapping);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -206,14 +205,16 @@ describe("Proofreading", () => {
       yield put(setActiveCellAction(1));
 
       // Prepare the server's reply for the upcoming split.
-      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(Promise.resolve([
-        {
-          position1: [1, 1, 1],
-          position2: [2, 2, 2],
-          segmentId1: 1,
-          segmentId2: 2,
-        },
-      ]))
+      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: [1, 1, 1],
+            position2: [2, 2, 2],
+            segmentId1: 1,
+            segmentId2: 2,
+          },
+        ]),
+      );
       // Already prepare the server's reply for mapping requests that will be sent
       // after the split.
       mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
@@ -231,24 +232,24 @@ describe("Proofreading", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(mapping1).toEqual(
-        expectedMappingAfterSplit,
-      );
+      expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      expect(mergeSaveActionBatch).toEqual([{
-        name: 'splitAgglomerate',
-        value: {
-          actionTracingId: 'volumeTracingId',
-          agglomerateId: 10,
-          segmentId1: 1,
-          segmentId2: 2,
-          mag: [1, 1, 1]
-        }
-      }])
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 10,
+            segmentId1: 1,
+            segmentId2: 2,
+            mag: [1, 1, 1],
+          },
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -268,26 +269,29 @@ describe("Proofreading", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
-      expect(mapping0).toEqual(
-        initialMapping,
-      );
+      expect(mapping0).toEqual(initialMapping);
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 
-      yield call(tryToIncorporateActions, [{
-        version: 1, value: [{
-          name: 'mergeAgglomerate',
-          value: {
-            actionTracingId: 'volumeTracingId',
-            actionTimestamp: 0,
-            agglomerateId1: 10,
-            agglomerateId2: 11,
-            segmentId1: 1,
-            segmentId2: 4,
-            mag: [1, 1, 1]
-          }
-        }]
-      }])
+      yield call(tryToIncorporateActions, [
+        {
+          version: 1,
+          value: [
+            {
+              name: "mergeAgglomerate",
+              value: {
+                actionTracingId: "volumeTracingId",
+                actionTimestamp: 0,
+                agglomerateId1: 10,
+                agglomerateId2: 11,
+                segmentId1: 1,
+                segmentId2: 4,
+                mag: [1, 1, 1],
+              },
+            },
+          ],
+        },
+      ]);
 
       yield take("FINISH_MAPPING_INITIALIZATION");
 
@@ -296,9 +300,7 @@ describe("Proofreading", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(mapping1).toEqual(
-        expectedMappingAfterMerge,
-      );
+      expect(mapping1).toEqual(expectedMappingAfterMerge);
 
       yield call(() => api.tracing.save());
 
@@ -322,9 +324,7 @@ describe("Proofreading", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
-      expect(mapping0).toEqual(
-        initialMapping,
-      );
+      expect(mapping0).toEqual(initialMapping);
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 
@@ -336,28 +336,31 @@ describe("Proofreading", () => {
         [3, 10],
       ]);
 
-      yield call(tryToIncorporateActions, [{
-        version: 1, value: [{
-          name: 'splitAgglomerate',
-          value: {
-            actionTracingId: 'volumeTracingId',
-            actionTimestamp: 0,
-            agglomerateId: 10,
-            segmentId1: 1,
-            segmentId2: 2,
-            mag: [1, 1, 1]
-          }
-        }]
-      }])
+      yield call(tryToIncorporateActions, [
+        {
+          version: 1,
+          value: [
+            {
+              name: "splitAgglomerate",
+              value: {
+                actionTracingId: "volumeTracingId",
+                actionTimestamp: 0,
+                agglomerateId: 10,
+                segmentId1: 1,
+                segmentId2: 2,
+                mag: [1, 1, 1],
+              },
+            },
+          ],
+        },
+      ]);
 
       const mapping1 = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(mapping1).toEqual(
-        expectedMappingAfterSplit,
-      );
+      expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
 

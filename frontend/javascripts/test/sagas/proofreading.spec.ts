@@ -1,5 +1,5 @@
 import { ColoredLogger } from "libs/utils";
-import { Saga } from "redux-saga";
+import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, put, select, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";

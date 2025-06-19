@@ -54,6 +54,7 @@ def parse_change_files():
             pr_number = int(pr_number)
         except ValueError:
             print(f"Warning: Cannot parse pr number for {file_name}. Ignoring file.")
+            continue
         with open(os.path.join(UNRELEASED_CHANGES_DIR, file_name)) as f:
             content = f.read()
 

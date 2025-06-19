@@ -26,12 +26,7 @@ export function applyVolumeUpdateActionsFromServer(
     switch (ua.name) {
       case "updateLargestSegmentId": {
         const volumeTracing = getVolumeTracingById(newState.annotation, ua.value.actionTracingId);
-        newState = setLargestSegmentIdReducer(
-          newState,
-          volumeTracing,
-          // todop: can this really be null? if so, what should we do?
-          ua.value.largestSegmentId ?? 0,
-        );
+        newState = setLargestSegmentIdReducer(newState, volumeTracing, ua.value.largestSegmentId);
         break;
       }
       case "createSegment":

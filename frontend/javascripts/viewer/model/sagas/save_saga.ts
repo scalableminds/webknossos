@@ -592,26 +592,28 @@ function* watchForSaveConflicts(): Saga<never> {
 
       const { url: tracingStoreUrl } = yield* select((state) => state.annotation.tracingStore);
 
-      // The order is ascending in the version number ([v_n, v_(n+1), ...]).
-      const newerActions = yield* call(
-        getUpdateActionLog,
-        tracingStoreUrl,
-        annotationId,
-        versionOnClient + 1,
-        undefined,
-        true,
-      );
+      try {
+        // The order is ascending in the version number ([v_n, v_(n+1), ...]).
+        const newerActions = yield* call(
+          getUpdateActionLog,
+          tracingStoreUrl,
+          annotationId,
+          versionOnClient + 1,
+          undefined,
+          true,
+        );
 
-      if (newerActions.length !== newerVersionCount) {
-        // todop: maybe default to showing the "please reload" toast
-        // as it's not critical here?
-        throw new Error("unexpected error");
-      }
+        if (newerActions.length !== newerVersionCount) {
+          throw new Error("Unexpected size of newer versions.");
+        }
 
-      console.log("newerActions", newerActions);
-
-      if (yield* tryToIncorporateActions(newerActions)) {
-        return false;
+        console.log("Trying to incorporate newerActions", newerActions);
+        if ((yield* tryToIncorporateActions(newerActions)).success) {
+          return false;
+        }
+      } catch (exc) {
+        // Afterwards, the user will be asked to reload the page.
+        console.error("Error during application of update actions", exc);
       }
 
       const saveQueue = yield* select((state) => state.save.queue);
@@ -682,7 +684,9 @@ function* watchForSaveConflicts(): Saga<never> {
   }
 }
 
-export function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+export function* tryToIncorporateActions(
+  newerActions: APIUpdateActionBatch[],
+): Saga<{ success: boolean }> {
   const refreshFunctionByTracing: Record<string, () => Saga<void>> = {};
   function* finalize() {
     for (const fn of Object.values(refreshFunctionByTracing)) {
@@ -854,9 +858,9 @@ export function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): 
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":
         case "updateUserBoundingBoxesInVolumeTracing": {
-          console.log("cannot apply action", action.name);
+          console.log("Cannot apply action", action.name);
           yield* call(finalize);
-          return false;
+          return { success: false };
         }
         default: {
           action satisfies never;
@@ -866,7 +870,7 @@ export function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): 
     yield* put(setVersionNumberAction(actionBatch.version));
   }
   yield* call(finalize);
-  return true;
+  return { success: true };
 }
 
 export default [saveTracingAsync, watchForSaveConflicts];

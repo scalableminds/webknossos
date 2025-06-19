@@ -140,13 +140,14 @@ export function applySkeletonUpdateActionsFromServer(
         const { treeId, source, target } = ua.value;
         // eslint-disable-next-line no-loop-func
         if (newState.annotation.skeleton == null) {
-          continue;
+          throw new Error("Could not apply update action because no skeleton exists.");
         }
 
         const tree = getTree(newState.annotation.skeleton, treeId);
         if (tree == null) {
-          // todop: escalate error?
-          continue;
+          throw new Error(
+            `Could not apply update action because tree with id=${treeId} was not found.`,
+          );
         }
         const newEdge = {
           source,

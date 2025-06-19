@@ -78,6 +78,8 @@ import { ensureWkReady } from "./ready_sagas";
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
+const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
+
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   layerName: string,
@@ -229,7 +231,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
-  // todop: remove again?
+  // todop: remove again? currently only exists for the tests
   yield* call(handler);
 
   while (true) {
@@ -238,10 +240,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
 
-    // todop
-    const throttleDelay = process.env.IS_TESTING ? 5 : 500;
-
-    yield* call(sleep, throttleDelay);
+    yield* call(sleep, BUCKET_WATCHING_THROTTLE_DELAY);
     yield flush(bucketChannel);
     // After flushing and while the handler below is running,
     // the bucketChannel might fill up again. This means, the

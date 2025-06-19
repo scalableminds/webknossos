@@ -45,9 +45,17 @@ object MultiArrayUtils extends LazyLogging {
     }
   }
 
-  def createEmpty(rank: Int): MultiArray =
-    // The data type of the empty MultiArray doesn’t matter, since we’re not accessing any actual elements.
-    MultiArray.factory(MADataType.INT, Array.fill(rank)(0))
+  def createEmpty(dataType: ArrayDataType, rank: Int): MultiArray = {
+    val datyTypeMA = dataType match {
+      case ArrayDataType.i1 | ArrayDataType.u1 => MADataType.BYTE
+      case ArrayDataType.i2 | ArrayDataType.u2 => MADataType.SHORT
+      case ArrayDataType.i4 | ArrayDataType.u4 => MADataType.INT
+      case ArrayDataType.i8 | ArrayDataType.u8 => MADataType.LONG
+      case ArrayDataType.f4                    => MADataType.FLOAT
+      case ArrayDataType.f8                    => MADataType.DOUBLE
+    }
+    MultiArray.factory(datyTypeMA, Array.fill(rank)(0))
+  }
 
   def toLongArray(multiArray: MultiArray): Box[Array[Long]] =
     multiArray.getDataType match {

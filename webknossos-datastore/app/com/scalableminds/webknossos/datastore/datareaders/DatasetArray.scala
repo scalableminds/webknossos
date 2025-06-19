@@ -192,7 +192,7 @@ class DatasetArray(vaultPath: VaultPath,
   def readAsMultiArray(offset: Array[Long], shape: Array[Int])(implicit ec: ExecutionContext,
                                                                tc: TokenContext): Fox[MultiArray] =
     if (shape.contains(0)) {
-      Fox.successful(MultiArrayUtils.createEmpty(rank))
+      Fox.successful(MultiArrayUtils.createEmpty(header.resolvedDataType, rank))
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
       val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)

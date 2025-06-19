@@ -34,5 +34,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[MeshFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
     bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
+    bind(classOf[DatasetCache]).asEagerSingleton()
   }
 }

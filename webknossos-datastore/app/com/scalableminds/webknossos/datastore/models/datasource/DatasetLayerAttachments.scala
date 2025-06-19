@@ -15,13 +15,16 @@ case class DatasetLayerAttachments(
     segmentIndex: Option[LayerAttachment],
     connectomes: Seq[LayerAttachment],
     cumsum: Option[LayerAttachment]
-)
+) {
+  def isEmpty: Boolean =
+    meshes.isEmpty && agglomerates.isEmpty && segmentIndex.isEmpty && connectomes.isEmpty && cumsum.isEmpty
+}
 
 object DatasetLayerAttachments {
   implicit val jsonFormat: Format[DatasetLayerAttachments] = Json.format[DatasetLayerAttachments]
 }
 
-object LayerAttachmentDataformat extends ExtendedEnumeration {
+object LayerAttachmentDataFormat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
   val hdf5, json, zarr3 = Value
 }
@@ -31,14 +34,14 @@ object LayerAttachmentType extends ExtendedEnumeration {
   val mesh, agglomerate, segmentIndex, connectome, cumsum = Value
 }
 
-case class LayerAttachment(name: String, path: URI, dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat)
+case class LayerAttachment(name: String, path: URI, dataFormat: LayerAttachmentDataFormat.LayerAttachmentDataformat)
 
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]
 
   def scanForFiles(layerDirectory: Path,
                    directoryName: String,
-                   dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat): Seq[LayerAttachment] = {
+                   dataFormat: LayerAttachmentDataFormat.LayerAttachmentDataformat): Seq[LayerAttachment] = {
     val dir = layerDirectory.resolve(directoryName)
     val scanExtension = dataFormat.toString
     if (Files.exists(dir)) {
@@ -58,7 +61,7 @@ object LayerAttachment {
 
 object MeshFileInfo {
   val directoryName = "meshes"
-  private val scanDataFormat = LayerAttachmentDataformat.hdf5
+  private val scanDataFormat = LayerAttachmentDataFormat.hdf5
 
   def scanForMeshFiles(layerDirectory: Path): Seq[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat)
@@ -66,7 +69,7 @@ object MeshFileInfo {
 
 object AgglomerateFileInfo {
   val directoryName = "agglomerates"
-  private val scanDataFormat = LayerAttachmentDataformat.hdf5
+  private val scanDataFormat = LayerAttachmentDataFormat.hdf5
 
   def scanForAgglomerateFiles(layerDirectory: Path): Seq[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat)
@@ -74,7 +77,7 @@ object AgglomerateFileInfo {
 
 object SegmentIndexFileInfo {
   val directoryName = "segmentIndex"
-  private val scanDataFormat = LayerAttachmentDataformat.hdf5
+  private val scanDataFormat = LayerAttachmentDataFormat.hdf5
 
   def scanForSegmentIndexFile(layerDirectory: Path): Option[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat).headOption
@@ -82,7 +85,7 @@ object SegmentIndexFileInfo {
 
 object ConnectomeFileInfo {
   val directoryName = "connectomes"
-  private val scanDataFormat = LayerAttachmentDataformat.hdf5
+  private val scanDataFormat = LayerAttachmentDataFormat.hdf5
 
   def scanForConnectomeFiles(layerDirectory: Path): Seq[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat)
@@ -90,7 +93,7 @@ object ConnectomeFileInfo {
 
 object CumsumFileInfo {
   val directoryName = "agglomerates"
-  private val scanDataFormat = LayerAttachmentDataformat.json
+  private val scanDataFormat = LayerAttachmentDataFormat.json
 
   def scanForCumsumFile(layerDirectory: Path): Option[LayerAttachment] =
     LayerAttachment.scanForFiles(layerDirectory, directoryName, scanDataFormat).headOption

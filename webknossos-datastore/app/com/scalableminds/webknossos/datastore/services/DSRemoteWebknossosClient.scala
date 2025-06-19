@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
@@ -192,4 +192,9 @@ class DSRemoteWebknossosClient @Inject()(
           .silent
           .getWithJsonResponse[DataVaultCredential]
     )
+
+  def getDataset(datasetId: String): Fox[GenericDataSource[DataLayer]] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId")
+      .addQueryString("key" -> dataStoreKey)
+      .getWithJsonResponse[GenericDataSource[DataLayer]] ?~> "Failed to get data source from remote webknossos"
 }

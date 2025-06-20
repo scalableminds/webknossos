@@ -96,7 +96,7 @@ import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
-  proofreadMerge,
+  proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   loadAdHocMeshAction,
@@ -108,7 +108,6 @@ import {
   createTreeAction,
   deleteBranchpointByIdAction,
   deleteEdgeAction,
-  deleteNodeAsUserAction,
   expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -138,6 +137,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
@@ -449,7 +449,9 @@ function getMeshItems(
               // Should not happen due to the disabled property.
               return;
             }
-            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
+            return Store.dispatch(
+              proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId),
+            );
           },
           label: (
             <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
@@ -1136,7 +1138,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
+                onClick: () => Store.dispatch(proofreadMergeAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={

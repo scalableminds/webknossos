@@ -122,6 +122,7 @@ const defaultState: WebknossosState = {
   },
   task: null,
   dataset: {
+    areLayersPreprocessed: true,
     id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",

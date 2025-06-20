@@ -78,6 +78,8 @@ import { ensureWkReady } from "./ready_sagas";
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
+const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
+
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   layerName: string,
@@ -229,12 +231,16 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
+  // todop: remove again? currently only exists for the tests
+  yield* call(handler);
+
   while (true) {
     yield take(bucketChannel);
     // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
-    yield* call(sleep, 500);
+
+    yield* call(sleep, BUCKET_WATCHING_THROTTLE_DELAY);
     yield flush(bucketChannel);
     // After flushing and while the handler below is running,
     // the bucketChannel might fill up again. This means, the
@@ -257,7 +263,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     const mappingInfo = yield* select((state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
     );
-    const { mappingName, mappingType, mappingStatus } = mappingInfo;
+    const { mappingName, mappingStatus } = mappingInfo;
 
     if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
       return;
@@ -271,7 +277,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
       let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       if (!isBusy) {
         const { cancel } = yield* race({
-          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
+          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName),
           cancel: take(
             ((action: Action) =>
               action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -397,7 +403,6 @@ function* handleSetMapping(
       layerName,
       layerInfo,
       mappingName,
-      mappingType,
       action,
       oldActiveMappingByLayer,
     );
@@ -408,23 +413,21 @@ function* handleSetHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
   action: SetMappingAction,
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
 ): Saga<void> {
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
-    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
   } else {
     // An HDF5 mapping was set that is applied remotely. A reload is necessary.
     yield* call(reloadData, oldActiveMappingByLayer, action);
   }
 }
 
-function* updateLocalHdf5Mapping(
+export function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.annotation);
@@ -490,7 +493,12 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
+  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+  if (process.env.IS_TESTING) {
+    // in test context, the mapping.ts code is not executed (which is usually responsible
+    // for finishing the initialization).
+    yield put(finishMappingInitializationAction(layerName));
+  }
 }
 
 function* handleSetJsonMapping(

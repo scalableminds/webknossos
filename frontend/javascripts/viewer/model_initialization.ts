@@ -206,8 +206,6 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  throw new Error("bla");
-
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,

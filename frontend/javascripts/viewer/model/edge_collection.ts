@@ -96,7 +96,7 @@ export default class EdgeCollection implements NotEnumerableByObject {
     yield* this.values();
   }
 
-  *values(): MapIterator<Edge> {
+  *values(): Generator<Edge, void, void> {
     for (const edgeArray of this.outMap.values()) {
       for (const edge of edgeArray) {
         yield edge;

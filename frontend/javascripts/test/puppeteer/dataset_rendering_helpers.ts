@@ -479,7 +479,7 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
       browser: "chrome",
       browser_version: "latest",
       os: "os x",
-      os_version: "mojave",
+      os_version: "ventura",
       name: context.task.name, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,

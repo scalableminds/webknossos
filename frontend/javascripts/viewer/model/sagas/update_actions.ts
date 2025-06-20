@@ -750,12 +750,19 @@ export function updateBucket(
   base64Data: string,
   actionTracingId: string,
 ) {
+  if (base64Data == null) {
+    throw new Error("Invalid updateBucket action.");
+  }
   return {
     name: "updateBucket",
     value: {
       actionTracingId,
       ...bucketInfo,
-      base64Data,
+      // The frontend should always send base64Data. However,
+      // the return type of this function is also used for the
+      // update actions that can be retrieved from the server.
+      // In that case, the value will always be undefined.
+      base64Data: base64Data as string | undefined,
     },
   } as const;
 }

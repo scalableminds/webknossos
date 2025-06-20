@@ -9,8 +9,7 @@ import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
-import { diffArrays, map3, unique } from "libs/utils";
-import _ from "lodash";
+import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
 import React from "react";
 import { connect } from "react-redux";
 import type {
@@ -392,11 +391,11 @@ class ConnectomeView extends React.Component<Props, State> {
     // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
-    const agglomerates = _.zipObject(activeAgglomerateIds, synapsesOfAgglomerates);
-    const synapseIdToSource = _.zipObject(allInSynapseIds, synapseSources);
-    const synapseIdToDestination = _.zipObject(allOutSynapseIds, synapseDestinations);
-    const synapseIdToPosition = _.zipObject(allSynapseIds, synapsePositions);
-    const synapseIdToType = _.zipObject(allSynapseIds, synapseTypes);
+    const agglomerates = safeZipObject(activeAgglomerateIds, synapsesOfAgglomerates);
+    const synapseIdToSource = safeZipObject(allInSynapseIds, synapseSources);
+    const synapseIdToDestination = safeZipObject(allOutSynapseIds, synapseDestinations);
+    const synapseIdToPosition = safeZipObject(allSynapseIds, synapsePositions);
+    const synapseIdToType = safeZipObject(allSynapseIds, synapseTypes);
 
     const synapseObjects = allSynapseIds.map((synapseId) => ({
       id: synapseId,
@@ -406,7 +405,7 @@ class ConnectomeView extends React.Component<Props, State> {
       type: typeToString[synapseIdToType[synapseId]],
     }));
 
-    const synapses = _.zipObject(allSynapseIds, synapseObjects);
+    const synapses = safeZipObject(allSynapseIds, synapseObjects);
 
     const connectomeData = {
       agglomerates,

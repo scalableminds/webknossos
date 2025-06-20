@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import collections.SequenceUtils
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{
@@ -9,6 +10,8 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -26,10 +29,16 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTraci
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
+
+case class MergedFromIdsRequest(annotationIds: Seq[String], ownerIds: Seq[String])
+
+object MergedFromIdsRequest {
+  implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
+}
 
 class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
@@ -106,6 +115,8 @@ class TSAnnotationController @Inject()(
 
   def duplicate(annotationId: String,
                 newAnnotationId: String,
+                ownerId: String,
+                requestingUserId: String,
                 version: Option[Long],
                 isFromTask: Boolean,
                 datasetBoundingBox: Option[String]): Action[AnyContent] =
@@ -117,6 +128,8 @@ class TSAnnotationController @Inject()(
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
+                                                             ownerId,
+                                                             requestingUserId,
                                                              version,
                                                              isFromTask,
                                                              datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
@@ -142,12 +155,49 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String): Action[List[String]] =
-    Action.async(validateJson[List[String]]) { implicit request =>
+  private def findAndAdaptVolumesForAnnotation(annotation: AnnotationProto, requestingUserId: String, ownerId: String)(
+      implicit tc: TokenContext): Fox[Seq[VolumeTracing]] = {
+    val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume)
+    for {
+      volumeTracings <- annotationService
+        .findMultipleVolumes(volumeLayersOfAnnotation.map { l =>
+          Some(TracingSelector(l.tracingId))
+        })
+        .map(_.flatten)
+      volumeTracingsAdapted = volumeTracings.map(
+        tracing =>
+          tracing.copy(userStates =
+            Seq(volumeTracingService.renderVolumeUserStateIntoUserState(tracing, requestingUserId, ownerId))))
+    } yield volumeTracingsAdapted
+  }
+
+  private def findAndAdaptSkeletonsForAnnotation(
+      annotation: AnnotationProto,
+      requestingUserId: String,
+      ownerId: String)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
+    val skeletonLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
+    for {
+      skeletonTracings <- annotationService
+        .findMultipleSkeletons(skeletonLayersOfAnnotation.map { l =>
+          Some(TracingSelector(l.tracingId))
+        })
+        .map(_.flatten)
+      skeletonTracingsAdapted = skeletonTracings.map(
+        tracing =>
+          tracing.copy(userStates =
+            Seq(skeletonTracingService.renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))))
+    } yield skeletonTracingsAdapted
+  }
+
+  def mergedFromIds(toTemporaryStore: Boolean,
+                    newAnnotationId: String,
+                    requestingUserId: String): Action[MergedFromIdsRequest] =
+    Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body) ?~> Messages(
+            _ <- Fox.fromBool(request.body.annotationIds.length == request.body.ownerIds.length) ?~> "annotationIds and ownerIds must have the same length"
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Messages(
               "annotation.notFound")
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
@@ -159,17 +209,18 @@ class TSAnnotationController @Inject()(
             mergedVolumeName = SequenceUtils
               .findUniqueElement(volumeLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultVolumeLayerName)
-            volumeTracings <- annotationService
-              .findMultipleVolumes(volumeLayers.map { l =>
-                Some(TracingSelector(l.tracingId))
-              })
-              .map(_.flatten)
+            volumeTracingsAdaptedNested: Seq[Seq[VolumeTracing]] <- Fox.serialCombined(
+              annotations.zip(request.body.ownerIds)) {
+              case (annotation, ownerId) =>
+                findAndAdaptVolumesForAnnotation(annotation, requestingUserId, ownerId)
+            }
+            volumeTracings = volumeTracingsAdaptedNested.flatten
             firstVolumeAnnotationIndex = annotations.indexWhere(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
-            else Some(request.body(firstVolumeAnnotationIndex))
+            else Some(request.body.annotationIds(firstVolumeAnnotationIndex))
             mergeEditableMappingsResultBox <- editableMappingMergeService
-              .mergeEditableMappings(request.body,
+              .mergeEditableMappings(request.body.annotationIds,
                                      firstVolumeAnnotationId,
                                      newAnnotationId,
                                      newVolumeId,
@@ -190,14 +241,15 @@ class TSAnnotationController @Inject()(
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)
-                .toFox)
+                .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
-            skeletonTracings <- annotationService
-              .findMultipleSkeletons(skeletonLayers.map { l =>
-                Some(TracingSelector(l.tracingId))
-              })
-              .map(_.flatten)
+            skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(
+              annotations.zip(request.body.ownerIds)) {
+              case (annotation, ownerId) =>
+                findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
+            }
+            skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(

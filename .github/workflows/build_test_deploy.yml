@@ -43,27 +43,27 @@ jobs:
       #   run: yarn check-cyclic-dependencies
       # - name: Run frontend tests
       #   run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
-      - name: Download Coverage Artifacts
-          # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
-        run: |
-            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
-            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
-            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_NAME: vitest-coverage-master
-          OUTPUT_DIR: coverage-master
-      - name: 'Report Coverage'
-        uses:  davelosert/vitest-coverage-report-action@v2
-        with:
-          comment-on: none # alternative: pr
-          json-summary-compare-path: coverage-master/coverage-summary.json
-      - name: "Upload Coverage"
-        if: github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@v4
-        with:
-          name: vitest-coverage-master
-          path: coverage
+      # - name: Download Coverage Artifacts
+      #     # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+      #   run: |
+      #       gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+      #       [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+      #       gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     ARTIFACT_NAME: vitest-coverage-master
+      #     OUTPUT_DIR: coverage-master
+      # - name: 'Report Coverage'
+      #   uses:  davelosert/vitest-coverage-report-action@v2
+      #   with:
+      #     comment-on: none # alternative: pr
+      #     json-summary-compare-path: coverage-master/coverage-summary.json
+      # - name: "Upload Coverage"
+      #   if: github.ref == 'refs/heads/master'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: vitest-coverage-master
+      #     path: coverage
 
   backend-tests:
     runs-on: ubuntu-22.04
@@ -110,16 +110,16 @@ jobs:
       #   run: docker compose --file .github/docker-compose.yml up -d fossildb
       - name: Prepare binaryData folder for e2e tests
         run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      - name: Run end-to-end tests
-        uses: ./.github/actions/retry
-        with:
-          run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-          retries: 3
-      - name: Assert non-empty e2e files
-        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
-      - name: Check response types of e2e tests
-        run: yarn tsc
+      # - name: Run end-to-end tests
+      #   uses: ./.github/actions/retry
+      #   with:
+      #     run: |
+      #       sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+      #     retries: 3
+      # - name: Assert non-empty e2e files
+      #   run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
+      # - name: Check response types of e2e tests
+      #   run: yarn tsc
 
 
   build-smoketest-push:

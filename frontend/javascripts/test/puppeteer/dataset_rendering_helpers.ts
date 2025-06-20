@@ -243,7 +243,20 @@ async function waitForTracingViewLoad(page: Page) {
       console.log("Waiting suspiciously long for page to load...");
     }
     await sleep(500);
-    inputCatchers = await page.$(".inputcatcher");
+    const inputCatcherPromise = page
+      .$(".inputcatcher")
+      .then((elements) => ({ type: "inputcatchers", elements }));
+    const errorPromise = page
+      .$(".initialization-error-message")
+      .then((elements) => ({ type: "error", elements }));
+
+    const raceResult = await Promise.race([inputCatcherPromise, errorPromise]);
+
+    if (raceResult.type === "error") {
+      throw new Error("Initialization error detected");
+    }
+
+    inputCatchers = raceResult.elements;
   }
 }
 

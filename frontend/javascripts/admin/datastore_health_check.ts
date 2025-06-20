@@ -46,6 +46,8 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
       RestAPI.pingHealthEndpoint(url, path).then(
         () => {
           if (usedStore.path === "data") {
+            // Only check a version mismatch for the data store, because
+            // the tracingstore doesn't serve a tracingstoreApiVersion field.
             checkVersionMismatchInDataStore(url);
           }
         },

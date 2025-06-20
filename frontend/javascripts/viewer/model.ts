@@ -26,7 +26,9 @@ import Deferred from "libs/async/deferred";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
-// TODO: Non-reactive
+const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 5 : 500;
+
+// TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
@@ -385,7 +387,7 @@ export class WebKnossosModel {
         Store.dispatch(saveNowAction());
       }
 
-      await Utils.sleep(500);
+      await Utils.sleep(WAIT_AFTER_SAVE_TRIGGER);
     }
   };
 

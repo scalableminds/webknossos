@@ -9,7 +9,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   NullCompressor,
   StringCompressionSetting,
   ZlibCompressor,
-  ZstdCompressor
+  ZstdCompressor,
+  IntCompressionSetting,
 }
 
 object N5CompressorFactory {

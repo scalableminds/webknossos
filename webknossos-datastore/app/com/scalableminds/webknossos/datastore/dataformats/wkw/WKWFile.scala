@@ -6,8 +6,8 @@ import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.jpountz.lz4.LZ4Factory
-import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

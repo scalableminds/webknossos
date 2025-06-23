@@ -19,8 +19,6 @@ object Dependencies {
     "commons-io" % "commons-io" % "2.19.0",
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.17.0",
-    // Box/Tryo. import net.liftweb
-    "net.liftweb" %% "lift-common" % "3.5.0",
     // ObjectIds. import reactivemongo.api.bson
     "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
     // Protocol buffers. import scalapb

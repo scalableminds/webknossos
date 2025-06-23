@@ -9,8 +9,8 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, W
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream

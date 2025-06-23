@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.DataSourceService
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 
 import java.nio.file.{Files, Path}
 import javax.inject.Inject

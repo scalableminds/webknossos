@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 

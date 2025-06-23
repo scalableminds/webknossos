@@ -19,8 +19,8 @@ import org.apache.commons.io.IOUtils
 
 import java.io._
 import java.nio.{ByteBuffer, ByteOrder}
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 object ChunkType extends Enumeration(1) {
   val Raw, LZ4, LZ4HC = Value

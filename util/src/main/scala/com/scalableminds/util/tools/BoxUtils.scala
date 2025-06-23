@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 
 object BoxUtils {
 

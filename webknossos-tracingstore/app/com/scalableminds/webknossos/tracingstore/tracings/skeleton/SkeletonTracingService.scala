@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings._
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 
 import scala.concurrent.ExecutionContext
 

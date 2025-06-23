@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

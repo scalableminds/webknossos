@@ -25,8 +25,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAO
-import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box._
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream

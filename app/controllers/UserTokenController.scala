@@ -17,7 +17,7 @@ import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette

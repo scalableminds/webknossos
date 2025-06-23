@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full, ParamFailure}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -251,7 +251,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     })
 
   def getOrElse[B >: A](b: => B): Future[B] =
-    futureBox.map(_.getOrElse(b))
+    futureBox.map(_.toOption.getOrElse(b))
 
   def flatten[B](implicit ev: A <:< Fox[B]): Fox[B] =
     new Fox(futureBox.flatMap {
@@ -286,7 +286,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     futureBox.onComplete { t: Try[Box[A]] =>
       t match {
         case Success(resultBox)    => f(resultBox)
-        case scala.util.Failure(e) => f(Failure(e.toString, Some(e), None))
+        case scala.util.Failure(e) => f(Failure(e.toString, Full(e), Empty))
       }
     }
 

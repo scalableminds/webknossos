@@ -7,7 +7,7 @@ import com.google.gson.stream.JsonReader
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import com.scalableminds.util.tools.{Box, Failure}
 
 import scala.collection.mutable
 

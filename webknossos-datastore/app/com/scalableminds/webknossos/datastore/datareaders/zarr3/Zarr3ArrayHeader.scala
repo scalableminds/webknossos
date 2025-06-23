@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder

@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.MessagesProvider
 
 import java.nio.file.{Path, Paths}

@@ -5,8 +5,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext

@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.Future

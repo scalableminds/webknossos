@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream

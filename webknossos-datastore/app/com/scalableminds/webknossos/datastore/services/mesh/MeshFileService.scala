@@ -3,13 +3,12 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, ByteUtils, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}

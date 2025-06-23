@@ -17,8 +17,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   CachedAgglomerateFile,
   CumsumParser
 }
-import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Files, Path}

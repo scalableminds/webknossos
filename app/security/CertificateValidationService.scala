@@ -3,7 +3,7 @@ package security
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 
 import java.security.{KeyFactory, PublicKey}
 import pdi.jwt.{JwtJson, JwtOptions}

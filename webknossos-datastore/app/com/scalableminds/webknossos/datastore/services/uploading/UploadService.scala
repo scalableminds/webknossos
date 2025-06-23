@@ -25,8 +25,8 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common._
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 

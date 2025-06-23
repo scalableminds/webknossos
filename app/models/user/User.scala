@@ -627,7 +627,7 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
                       FROM webknossos.user_datasetConfigurations
                       WHERE _dataset = $datasetId
                       AND _user = $userId""".as[String])
-      result <- rows.headOption.map(JsonHelper.parseAs[DatasetViewConfiguration](_).openOr(Map.empty)).toFox
+      result <- rows.headOption.map(JsonHelper.parseAs[DatasetViewConfiguration](_).getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(

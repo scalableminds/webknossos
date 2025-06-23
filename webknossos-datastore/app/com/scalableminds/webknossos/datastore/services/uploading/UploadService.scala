@@ -516,21 +516,21 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
-    if (looksLikeExploredDataSource(dataSourceDir).openOr(false)) {
+    if (looksLikeExploredDataSource(dataSourceDir).getOrElse(false)) {
       UploadedDataSourceType.EXPLORED
-    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).openOr(false)) {
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 2).getOrElse(false)) {
       UploadedDataSourceType.ZARR
-    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).openOr(false)) {
+    } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).getOrElse(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
-    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).openOr(false)) {
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).getOrElse(false)) {
       UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
-    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).openOr(false)) {
+    } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).getOrElse(false)) {
       UploadedDataSourceType.NEUROGLANCER_MULTILAYER
-    } else if (looksLikeN5Multilayer(dataSourceDir).openOr(false)) {
+    } else if (looksLikeN5Multilayer(dataSourceDir).getOrElse(false)) {
       UploadedDataSourceType.N5_MULTILAYER
-    } else if (looksLikeN5MultiscalesLayer(dataSourceDir).openOr(false)) {
+    } else if (looksLikeN5MultiscalesLayer(dataSourceDir).getOrElse(false)) {
       UploadedDataSourceType.N5_MULTISCALES
-    } else if (looksLikeN5Array(dataSourceDir).openOr(false)) {
+    } else if (looksLikeN5Array(dataSourceDir).getOrElse(false)) {
       UploadedDataSourceType.N5_ARRAY
     } else {
       UploadedDataSourceType.WKW
@@ -566,7 +566,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- bool2Box(matchingFileIsPresent)
       directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
       detectedLayerBoxes = directories.map(looksLikeN5MultiscalesLayer)
-      _ <- bool2Box(detectedLayerBoxes.forall(_.openOr(false)))
+      _ <- bool2Box(detectedLayerBoxes.forall(_.getOrElse(false)))
     } yield true
 
   private def looksLikeN5Array(dataSourceDir: Path): Box[Boolean] =

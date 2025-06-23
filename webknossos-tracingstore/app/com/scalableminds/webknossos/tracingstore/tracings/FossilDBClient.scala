@@ -96,7 +96,9 @@ class FossilDBClient(collection: String,
                 messageWithCauses.append(cause.toString)
                 cause = cause.getCause
               }
-              new com.scalableminds.util.tools.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
+              new com.scalableminds.util.tools.Failure(s"Request to FossilDB failed: $messageWithCauses",
+                                                       Full(e),
+                                                       Empty)
           }
           Future.successful(box)
       }

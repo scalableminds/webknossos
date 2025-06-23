@@ -355,7 +355,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                       .createSkeletonTracingBase(params.boundingBox, params.editPosition, params.editRotation)))
                 val volumeFox = volume
                   .map(v => Fox.successful(v._1.tracing, v._2))
-                  .openOr(annotationService
+                  .getOrElse(annotationService
                     .createVolumeTracingBase(
                       params.datasetId,
                       params.boundingBox,
@@ -429,9 +429,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         skeletonSaveResults: List[Box[Boolean]] <- tracingStoreClient.saveSkeletonTracings(
           SkeletonTracingsWithIds(
-            requestedTasks.map(tuple => SkeletonTracingOpt(tuple.map(_._2).openOr(None))),
-            requestedTasks.map(tuple => StringOpt(tuple.map(_._1.newAnnotationId.map(_.toString)).openOr(None))),
-            requestedTasks.map(tuple => StringOpt(tuple.map(_._1.newSkeletonTracingId).openOr(None)))
+            requestedTasks.map(tuple => SkeletonTracingOpt(tuple.map(_._2).getOrElse(None))),
+            requestedTasks.map(tuple => StringOpt(tuple.map(_._1.newAnnotationId.map(_.toString)).getOrElse(None))),
+            requestedTasks.map(tuple => StringOpt(tuple.map(_._1.newSkeletonTracingId).getOrElse(None)))
           )
         )
         // Note that volume tracings are saved sequentially to reduce server load
@@ -452,7 +452,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
               skeletonTracingIdBox = requestedTaskBox.map(_._1.newSkeletonTracingId),
               volumeTracingIdBox = requestedTaskBox.map(_._1.newVolumeTracingId),
               dataset._id,
-              description = requestedTaskBox.map(_._1.description).openOr(None),
+              description = requestedTaskBox.map(_._1.description).getOrElse(None),
               tracingStoreClient
             )
         }

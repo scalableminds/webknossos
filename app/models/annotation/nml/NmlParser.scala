@@ -221,7 +221,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").openOr(List())
+          extractSegmentGroups(node \ "groups").getOrElse(List())
         )
       }
     )

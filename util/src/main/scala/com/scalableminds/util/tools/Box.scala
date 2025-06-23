@@ -279,7 +279,7 @@ sealed abstract class Box[+A] extends Product with Serializable {
     * The only time when you should be using this method is if the value is
     * guaranteed to be available based on a guard outside of the method. In these
     * cases, please provide that information in the justification `String`.
-    * For example, `User.currentUser.openOrThrowException("This snippet is only
+    * For example, `User.currentUser.getOrThrow("This snippet is only
     * used on pages where the user is logged in")`. For tests, use `[[==]]` or
     * `[[===]]` instead. See the class documentation for more information.
     *
@@ -297,13 +297,13 @@ sealed abstract class Box[+A] extends Product with Serializable {
     * @throws NullPointerException If you attempt to call it on an `EmptyBox`,
     *         with a message that includes the provided `justification`.
     */
-  def openOrThrowException(justification: => String): A
+  def getOrThrow(justification: => String): A
 
   /**
     * Return the value contained in this `Box` if it is full; otherwise return
     * the specified default. Equivalent to `Option`'s `[[scala.Option.getOrElse getOrElse]]`.
     */
-  def openOr[B >: A](default: => B): B = default
+  def getOrElse[B >: A](default: => B): B = default
 
   /**
     * Apply a function to the value contained in this `Box` if it exists and return
@@ -551,7 +551,7 @@ sealed abstract class Box[+A] extends Product with Serializable {
   def ===[B >: A](to: B): Boolean = false
 
   /**
-    * Equivalent to `map(f).openOr(dflt)`.
+    * Equivalent to `map(f).getOr(dflt)`.
     */
   def dmap[B](dflt: => B)(f: A => B): B = dflt
 
@@ -658,9 +658,9 @@ sealed abstract class Box[+A] extends Product with Serializable {
 final case class Full[+A](value: A) extends Box[A] {
   def isEmpty: Boolean = false
 
-  def openOrThrowException(justification: => String): A = value
+  def getOrThrow(justification: => String): A = value
 
-  override def openOr[B >: A](default: => B): B = value
+  override def getOrElse[B >: A](default: => B): B = value
 
   override def or[B >: A](alternative: => Box[B]): Box[B] = this
 
@@ -709,11 +709,11 @@ sealed abstract class EmptyBox extends Box[Nothing] with Serializable {
 
   def isEmpty: Boolean = true
 
-  def openOrThrowException(justification: => String) =
+  def getOrThrow(justification: => String) =
     throw new NullPointerException(
-      "An Empty Box was opened.  The justification for allowing the openOrThrowException was " + justification)
+      "An Empty Box was opened.  The justification for allowing the getOrThrow was " + justification)
 
-  override def openOr[B >: Nothing](default: => B): B = default
+  override def getOrElse[B >: Nothing](default: => B): B = default
 
   override def or[B >: Nothing](alternative: => Box[B]): Box[B] = alternative
 
@@ -743,11 +743,11 @@ object Failure {
 sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Failure]) extends EmptyBox {
   type A = Nothing
 
-  override def openOrThrowException(justification: => String) =
+  override def getOrThrow(justification: => String) =
     throw new NullPointerException(
       "An Failure Box was opened.  Failure Message: " + msg +
-        ".  The justification for allowing the openOrThrowException was " + justification) {
-      override def getCause: Throwable = exception openOr null
+        ".  The justification for allowing the getOrThrow was " + justification) {
+      override def getCause: Throwable = exception getOrElse null
     }
 
   override def map[B](f: A => B): Box[B] = this
@@ -771,7 +771,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
   def exceptionChain: List[Throwable] = {
     import scala.collection.mutable.ListBuffer
     val ret = new ListBuffer[Throwable]()
-    var e: Throwable = exception openOr null
+    var e: Throwable = exception getOrElse null
 
     while (e ne null) {
       ret += e

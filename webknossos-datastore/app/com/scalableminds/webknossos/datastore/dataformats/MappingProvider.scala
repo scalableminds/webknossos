@@ -37,7 +37,7 @@ object MappingProvider {
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
-      .openOr(Nil)
+      .getOrElse(Nil)
       .toSet
     if (mappingSet.isEmpty) None else Some(mappingSet)
   }

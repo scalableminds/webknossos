@@ -18,7 +18,7 @@ trait JsonImplicits {
       tryo(number.longValue())
         .map(JsNumber(_))
         .or(tryo(number.floatValue()).map(JsNumber(_)))
-        .openOr(JsNumber(number.doubleValue()))
+        .getOrElse(JsNumber(number.doubleValue()))
   }
 
   implicit object StringOrIntFormat extends Format[Either[String, Int]] {

@@ -367,6 +367,8 @@ trait DataLayer extends DataLayerLike {
       case _                               => this
     }
   }
+
+  def asAbstractLayer: DataLayerLike
 }
 
 object DataLayer {

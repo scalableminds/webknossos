@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
@@ -47,6 +47,12 @@ case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: 
 
 object MagPathInfo {
   implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+}
+
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String])
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
 trait RemoteWebknossosClient {
@@ -134,6 +140,19 @@ class DSRemoteWebknossosClient @Inject()(
         .withTokenFromContext
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
+
+  def registerDataSource(dataSource: DataSource, dataSourceId: DataSourceId, folderId: Option[String])(
+      implicit tc: TokenContext): Fox[String] =
+    for {
+      _ <- Fox.successful(())
+      info = DataSourceRegistrationInfo(dataSource, folderId)
+      response <- rpc(
+        s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}")
+        .addQueryString("key" -> dataStoreKey)
+        .withTokenFromContext
+        .postJson[DataSourceRegistrationInfo](info)
+      datasetId = response.body
+    } yield datasetId
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")

@@ -37,7 +37,24 @@ case class PrecomputedDataLayer(
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
-) extends PrecomputedLayer
+) extends PrecomputedLayer {
+  override def asAbstractLayer: DataLayerLike =
+    AbstractDataLayer(
+      name,
+      category,
+      boundingBox,
+      resolutions,
+      elementClass,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      Some(mags),
+      numChannels,
+      Some(dataFormat)
+    )
+}
 
 object PrecomputedDataLayer {
   implicit val jsonFormat: OFormat[PrecomputedDataLayer] = Json.format[PrecomputedDataLayer]
@@ -57,7 +74,26 @@ case class PrecomputedSegmentationLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
 ) extends SegmentationLayer
-    with PrecomputedLayer
+    with PrecomputedLayer {
+  override def asAbstractLayer: DataLayerLike =
+    AbstractSegmentationLayer(
+      name,
+      category,
+      boundingBox,
+      resolutions,
+      elementClass,
+      largestSegmentId,
+      mappings,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      Some(mags),
+      numChannels,
+      Some(dataFormat)
+    )
+}
 
 object PrecomputedSegmentationLayer {
   implicit val jsonFormat: OFormat[PrecomputedSegmentationLayer] = Json.format[PrecomputedSegmentationLayer]

@@ -387,32 +387,17 @@ class DataSourceController @Inject()(
       }
     }
 
-  // Stores a remote dataset in the database.
+  // Called by the frontend after the user has set datasetName / FolderId of an explored dataSource
+  // Add this data source to the WK database
   def add(organizationId: String, datasetName: String, folderId: Option[String]): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
         for {
-          reservedAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
-            ReserveUploadInformation(
-              uploadId = "", // Set by core backend
-              name = datasetName,
-              organization = organizationId,
-              totalFileCount = 1,
-              filePaths = None,
-              totalFileSizeInBytes = None,
-              layersToLink = None,
-              initialTeams = List.empty,
-              folderId = folderId,
-              requireUniqueName = Some(false),
-            )
-          ) ?~> "dataset.upload.validation.failed"
-          datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId), expectExisting = false)
-          uploadedDatasetId <- dsRemoteWebknossosClient.reportUpload(datasourceId,
-                                                                     0L,
-                                                                     needsConversion = false,
-                                                                     viaAddRoute = true) ?~> "reportUpload.failed"
-        } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetId))
+          _ <- Fox.successful(())
+          dataSourceId = DataSourceId(datasetName, organizationId)
+          dataSource = request.body.copy(id = dataSourceId)
+          datasetId <- dsRemoteWebknossosClient.registerDataSource(dataSource, dataSourceId, folderId) ?~> "dataset.add.failed"
+        } yield Ok(Json.obj("newDatasetId" -> datasetId))
       }
     }
 

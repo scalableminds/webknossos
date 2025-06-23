@@ -266,6 +266,11 @@ class DataSourceService @Inject()(
     }
   }
 
+  def dataSourceShouldBeStoredOnDisk(dataSource: DataSource): Boolean =
+    // If all mags have a "path" defined, data is not stored in the datasource (but at the location of the path)
+    // and we do not need to store it on disk.
+    !dataSource.dataLayers.forall(layer => layer.mags.forall(mag => mag.path.isDefined))
+
   def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)

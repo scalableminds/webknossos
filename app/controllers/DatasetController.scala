@@ -145,10 +145,10 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
-        _ <- wkExploreRemoteLayerService.addRemoteDatasource(dataSource,
-                                                             request.body.datasetName,
-                                                             request.identity,
-                                                             folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+        _ <- wkExploreRemoteLayerService.addRemoteDatasourceToDatabase(dataSource,
+                                                                       request.body.datasetName,
+                                                                       request.identity,
+                                                                       folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
     }
 

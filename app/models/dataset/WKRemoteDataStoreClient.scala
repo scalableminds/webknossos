@@ -82,18 +82,6 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def addDataSource(organizationId: String,
-                    datasetName: String,
-                    dataSource: GenericDataSource[DataLayer],
-                    folderId: Option[ObjectId],
-                    userToken: String): Fox[Unit] =
-    for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
-        .addQueryString("token" -> userToken)
-        .addQueryStringOptional("folderId", folderId.map(_.toString))
-        .postJson(dataSource)
-    } yield ()
-
   def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(
       implicit ec: ExecutionContext): Fox[Boolean] = {
     val cacheKey = (organizationId, datasetName, layerName)

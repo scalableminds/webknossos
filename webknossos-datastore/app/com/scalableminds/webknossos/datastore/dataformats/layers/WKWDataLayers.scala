@@ -46,7 +46,24 @@ case class WKWDataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
-) extends WKWLayer
+) extends WKWLayer {
+  override def asAbstractLayer: DataLayerLike =
+    AbstractDataLayer(
+      name,
+      category,
+      boundingBox,
+      resolutions,
+      elementClass,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      None,
+      None,
+      Some(dataFormat)
+    )
+}
 
 object WKWDataLayer {
   implicit val jsonFormat: OFormat[WKWDataLayer] = Json.format[WKWDataLayer]
@@ -65,7 +82,26 @@ case class WKWSegmentationLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
-    with WKWLayer
+    with WKWLayer {
+  def asAbstractLayer: AbstractSegmentationLayer =
+    AbstractSegmentationLayer(
+      name,
+      Category.segmentation,
+      boundingBox,
+      resolutions,
+      elementClass,
+      largestSegmentId,
+      mappings,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      None,
+      None,
+      Some(dataFormat)
+    )
+}
 
 object WKWSegmentationLayer {
   implicit val jsonFormat: OFormat[WKWSegmentationLayer] = Json.format[WKWSegmentationLayer]

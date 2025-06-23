@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.layers
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
-import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.{LayerViewConfiguration, empty}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, _}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
@@ -37,7 +37,24 @@ case class ZarrDataLayer(
     override val additionalAxes: Option[Seq[AdditionalAxis]],
     attachments: Option[DatasetLayerAttachments] = None,
     override val dataFormat: DataFormat.Value,
-) extends ZarrLayer
+) extends ZarrLayer {
+  override def asAbstractLayer: DataLayerLike =
+    AbstractDataLayer(
+      name,
+      category,
+      boundingBox,
+      resolutions,
+      elementClass,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      Some(mags),
+      numChannels,
+      Some(dataFormat)
+    )
+}
 
 object ZarrDataLayer {
   implicit val jsonFormat: OFormat[ZarrDataLayer] = Json.format[ZarrDataLayer]
@@ -58,7 +75,26 @@ case class ZarrSegmentationLayer(
     attachments: Option[DatasetLayerAttachments] = None,
     override val dataFormat: DataFormat.Value,
 ) extends SegmentationLayer
-    with ZarrLayer
+    with ZarrLayer {
+  override def asAbstractLayer: AbstractSegmentationLayer =
+    AbstractSegmentationLayer(
+      name,
+      Category.segmentation,
+      boundingBox,
+      resolutions,
+      elementClass,
+      largestSegmentId,
+      mappings,
+      defaultViewConfiguration,
+      adminViewConfiguration,
+      coordinateTransformations,
+      additionalAxes,
+      attachments,
+      Some(mags),
+      numChannels,
+      Some(dataFormat)
+    )
+}
 
 object ZarrSegmentationLayer {
   implicit val jsonFormat: OFormat[ZarrSegmentationLayer] = Json.format[ZarrSegmentationLayer]

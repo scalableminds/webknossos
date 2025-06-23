@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
@@ -27,7 +28,7 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-case class AnnotationUpdatesReport(annotationId: String,
+case class AnnotationUpdatesReport(annotationId: ObjectId,
                                    timestamps: List[Instant],
                                    statistics: Option[JsObject],
                                    significantChangesCount: Int,
@@ -49,8 +50,8 @@ class TSRemoteWebknossosClient @Inject()(
 
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val dataSourceIdByAnnotationIdCache: AlfuCache[String, DataSourceId] = AlfuCache()
-  private lazy val annotationIdByTracingIdCache: AlfuCache[String, String] =
+  private lazy val dataSourceIdByAnnotationIdCache: AlfuCache[ObjectId, DataSourceId] = AlfuCache()
+  private lazy val annotationIdByTracingIdCache: AlfuCache[String, ObjectId] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
 
   def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdatesReport): Fox[WSResponse] =
@@ -59,9 +60,9 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
 
-  def getDataSourceForAnnotation(annotationId: String)(implicit tc: TokenContext): Fox[DataSourceLike] =
+  def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[DataSourceLike] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")
-      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("annotationId" -> annotationId.toString)
       .addQueryString("key" -> tracingStoreKey)
       .withTokenFromContext
       .silent
@@ -74,18 +75,18 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .getWithJsonResponse[String]
 
-  def getDataSourceIdForAnnotation(annotationId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =
+  def getDataSourceIdForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[DataSourceId] =
     dataSourceIdByAnnotationIdCache.getOrLoad(
       annotationId,
       aId =>
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSourceId")
-          .addQueryString("annotationId" -> aId)
+          .addQueryString("annotationId" -> aId.toString)
           .addQueryString("key" -> tracingStoreKey)
           .silent
           .getWithJsonResponse[DataSourceId]
     )
 
-  def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[String] =
+  def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
     annotationIdByTracingIdCache.getOrLoad(
       tracingId,
       tracingId =>
@@ -93,21 +94,21 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryString("tracingId" -> tracingId)
           .addQueryString("key" -> tracingStoreKey)
           .silent
-          .getWithJsonResponse[String]
+          .getWithJsonResponse[ObjectId]
     ) ?~> "annotation.idForTracing.failed"
 
-  def updateAnnotation(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] =
+  def updateAnnotation(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")
-      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("annotationId" -> annotationId.toString)
       .addQueryString("key" -> tracingStoreKey)
       .silent
       .postProto(annotationProto)
 
-  def createTracingFor(annotationId: String,
+  def createTracingFor(annotationId: ObjectId,
                        layerParameters: AnnotationLayerParameters,
                        previousVersion: Long): Fox[Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = {
     val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
-      .addQueryString("annotationId" -> annotationId)
+      .addQueryString("annotationId" -> annotationId.toString)
       .addQueryString("previousVersion" -> previousVersion.toString) // used for fetching old precedence layers
       .addQueryString("key" -> tracingStoreKey)
     layerParameters.typ match {

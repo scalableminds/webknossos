@@ -163,12 +163,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .toOption
       .getOrElse(0)
 
-  def listMeshChunksForSegmentsMerged(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      meshFileName: String,
-      segmentIds: List[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+  def listMeshChunksForSegmentsMerged(organizationId: String,
+                                      datasetDirectoryName: String,
+                                      dataLayerName: String,
+                                      meshFileName: String,
+                                      segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
       _ <- Fox.successful(())
       meshFilePath: Path = dataBaseDir
@@ -190,12 +189,12 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield wkChunkInfos
 
   private def listMeshChunksForSegments(meshFilePath: Path,
-                                        segmentIds: List[Long],
+                                        segmentIds: Seq[Long],
                                         lodScaleMultiplier: Double,
                                         transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
     meshFileCache
       .withCachedHdf5(meshFilePath) { cachedMeshFile: CachedHdf5File =>
-        segmentIds.flatMap(segmentId =>
+        segmentIds.toList.flatMap(segmentId =>
           listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
       }
       .toOption

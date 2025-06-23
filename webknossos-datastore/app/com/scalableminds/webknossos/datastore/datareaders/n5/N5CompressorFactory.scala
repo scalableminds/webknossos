@@ -30,13 +30,13 @@ object N5CompressorFactory {
         new ZlibCompressor(properties)
       case "gzip"  => new GzipCompressor(properties)
       case "blosc" => new BloscCompressor(properties)
-      case "zstd"  => {
+      case "zstd" => {
         val level = properties.get("level") match {
           case Some(IntCompressionSetting(l)) => l
           case _                              => throw new IllegalArgumentException("Zstd level must be int")
         }
         new ZstdCompressor(level, checksum = false)
       }
-      case _       => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
+      case _ => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
     }
 }

@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 trait DatasetHeader {
 
   // Note that in DatasetArray, datasetShape and chunkShape are adapted for 2d datasets
-  def datasetShape: Option[Array[Int]] // shape of the entire array
+  def datasetShape: Option[Array[Long]] // shape of the entire array
   def chunkShape: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator
@@ -44,9 +44,13 @@ trait DatasetHeader {
         None
       else {
         if (axisOrder.hasZAxis) {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
+          Some(
+            BoundingBox(Vec3Int.zeros,
+                        shape(axisOrder.x).toInt,
+                        shape(axisOrder.y).toInt,
+                        shape(axisOrder.zWithFallback).toInt))
         } else {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x).toInt, shape(axisOrder.y).toInt, 1))
         }
       }
     }

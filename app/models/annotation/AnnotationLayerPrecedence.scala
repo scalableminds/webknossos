@@ -29,7 +29,7 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
-    userStateBoundingBoxVisibilities: Map[String, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
+    userStateBoundingBoxVisibilities: Map[ObjectId, Seq[Id32WithBool]] // UserId → Seq(bboxId, bboxIsVisible)
 )
 
 trait AnnotationLayerPrecedence extends FoxImplicits {
@@ -79,7 +79,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       userStates: Seq[SkeletonUserStateProto],
       oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = {
     val adaptedExistingUserStates = userStates.map { userState =>
-      val userId = userState.userId
+      val userId = ObjectId(userState.userId)
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
         case None => userState
         case Some(precedenceBboxVisibilities) =>
@@ -88,9 +88,9 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
-      !userStates.exists(_.userId == tuple._1))
+      !userStates.exists(_.userId == tuple._1.toString))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
+      case (userId: ObjectId, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         SkeletonTracingDefaults
           .emptyUserState(userId)
           .copy(
@@ -104,7 +104,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       userStates: Seq[VolumeUserStateProto],
       oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = {
     val adaptedExistingUserStates = userStates.map { userState =>
-      val userId = userState.userId
+      val userId = ObjectId(userState.userId)
       oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
         case None => userState
         case Some(precedenceBboxVisibilities) =>
@@ -113,9 +113,9 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     }
     // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
     val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
-      !userStates.exists(_.userId == tuple._1))
+      !userStates.exists(_.userId == tuple._1.toString))
     val newUserStates = newUserPrecedenceProperties.map {
-      case (userId: String, boundingBoxVisibilities: Seq[Id32WithBool]) =>
+      case (userId: ObjectId, boundingBoxVisibilities: Seq[Id32WithBool]) =>
         VolumeTracingDefaults
           .emptyUserState(userId)
           .copy(
@@ -194,7 +194,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           s.userBoundingBoxes ++ s.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           s.editPositionAdditionalCoordinates,
-          s.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
+          s.userStates.map(userState => (ObjectId(userState.userId), userState.boundingBoxVisibilities)).toMap
         )
       case Right(v) =>
         RedundantTracingProperties(
@@ -204,7 +204,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           v.userBoundingBoxes ++ v.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
           v.editPositionAdditionalCoordinates,
-          v.userStates.map(userState => (userState.userId, userState.boundingBoxVisibilities)).toMap
+          v.userStates.map(userState => (ObjectId(userState.userId), userState.boundingBoxVisibilities)).toMap
         )
     }
 }

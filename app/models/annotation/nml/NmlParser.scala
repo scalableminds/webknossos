@@ -125,7 +125,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
-        parameters <- (nmlData \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
+        parameters <- Box((nmlData \ "parameters").headOption) ?~ Messages("nml.parameters.notFound")
         timestamp = parseTime(parameters \ "time")
         comments <- parseComments(nmlData \ "comments")
         branchPoints <- parseBranchPoints(nmlData \ "branchpoints", timestamp)
@@ -203,7 +203,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
   private def parseTreeGroup(node: XMLNode)(implicit m: MessagesProvider): Box[TreeGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
       isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
@@ -221,7 +221,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").getOrElse(List())
+          extractSegmentGroups(node \ "groups").openOr(List())
         )
       }
     )
@@ -235,7 +235,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
   private def parseSegmentGroup(node: XMLNode)(implicit m: MessagesProvider): Box[SegmentGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- idText.toIntOpt ?~ Messages("nml.segmentGroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Messages("nml.segmentGroup.id.invalid", idText)
       children <- (node \ "group").map(parseSegmentGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
     } yield SegmentGroup(name, id, children)
@@ -310,11 +310,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
       boundingBoxNodes.flatMap(node => {
         val idText = getSingleAttribute(node, "id")
         for {
-          id <- idText.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", idText)
+          id <- Box(idText.toIntOpt) ?~ Messages("nml.boundingbox.id.invalid", idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
           color = parseColorOpt(node)
-          boundingBox <- parseBoundingBox(node)
+          boundingBox <- Box(parseBoundingBox(node))
           nameOpt = if (name.isEmpty) None else Some(name)
         } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
       })
@@ -407,7 +407,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
       implicit m: MessagesProvider): Box[List[BranchPoint]] =
     (branchPoints \ "branchpoint").zipWithIndex.map {
       case (branchPoint, index) =>
-        getSingleAttribute(branchPoint, "id").toIntOpt.map { nodeId =>
+        Box(getSingleAttribute(branchPoint, "id").toIntOpt).map { nodeId =>
           val parsedTimestamp = getSingleAttribute(branchPoint, "time").toLongOpt
           val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
           BranchPoint(nodeId, timestamp)
@@ -472,7 +472,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
       implicit m: MessagesProvider): Box[Tree] = {
     val treeIdText = getSingleAttribute(tree, "id")
     for {
-      id <- treeIdText.toIntOpt ?~ Messages("nml.tree.id.invalid", treeIdText)
+      id <- Box(treeIdText.toIntOpt) ?~ Messages("nml.tree.id.invalid", treeIdText)
       color = parseColorOpt(tree)
       name = parseName(tree)
       treeType = parseType(tree)
@@ -512,8 +512,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
       commentNode <- comments \ "comment"
     } yield {
       for {
-        nodeId <- getSingleAttribute(commentNode, "node").toIntOpt ?~ Messages("nml.comment.node.invalid",
-                                                                               getSingleAttribute(commentNode, "node"))
+        nodeId <- Box(getSingleAttribute(commentNode, "node").toIntOpt) ?~ Messages("nml.comment.node.invalid",
+                                                                                    getSingleAttribute(commentNode,
+                                                                                                       "node"))
       } yield {
         val content = getSingleAttribute(commentNode, "content")
         Comment(nodeId, content)
@@ -554,8 +555,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
     val sourceStr = getSingleAttribute(edge, "source")
     val targetStr = getSingleAttribute(edge, "target")
     for {
-      source <- sourceStr.toIntOpt ?~ Messages("nml.edge.invalid", sourceStr)
-      target <- targetStr.toIntOpt ?~ Messages("nml.edge.invalid", targetStr)
+      source <- Box(sourceStr.toIntOpt) ?~ Messages("nml.edge.invalid", sourceStr)
+      target <- Box(targetStr.toIntOpt) ?~ Messages("nml.edge.invalid", targetStr)
     } yield {
       Edge(source, target)
     }
@@ -579,10 +580,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
   private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] = {
     val nodeIdText = getSingleAttribute(node, "id")
     for {
-      id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
+      id <- Box(nodeIdText.toIntOpt) ?~ Messages("nml.node.id.invalid", "", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
       additionalCoordinates = parseAdditionalCoordinateValues(node)
-      position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      position <- Box(parseVec3Int(node)) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
       val mag = parseMag(node)

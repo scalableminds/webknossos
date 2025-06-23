@@ -26,7 +26,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).shiftBox
-      userName = userBox.map(_.abbreviatedName).getOrElse("")
+      userName = userBox.map(_.abbreviatedName).openOr("")
       datasetName <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {

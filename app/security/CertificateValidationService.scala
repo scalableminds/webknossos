@@ -18,7 +18,7 @@ import scala.util.Properties
 class CertificateValidationService @Inject()(implicit ec: ExecutionContext) extends LazyLogging {
 
   // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
-  private lazy val publicKeyBox: Box[PublicKey] = webknossos.BuildInfo.toMap.get("certificatePublicKey").flatMap {
+  private lazy val publicKeyBox: Box[PublicKey] = Box(webknossos.BuildInfo.toMap.get("certificatePublicKey")).flatMap {
     case Some(value: String) => deserializePublicKey(value)
     case None                => Empty
   }
@@ -30,7 +30,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
       val base64Key = pem.replaceAll("\\s", "")
       val decodedKey = Base64.getDecoder.decode(base64Key)
       val keySpec = new X509EncodedKeySpec(decodedKey)
-      Some(KeyFactory.getInstance("EC").generatePublic(keySpec))
+      Full(KeyFactory.getInstance("EC").generatePublic(keySpec))
     } catch {
       case _: Throwable =>
         val message = s"Could not deserialize public key from PEM string: $pem"

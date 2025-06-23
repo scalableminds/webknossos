@@ -341,7 +341,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
     val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
+      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).openOr(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,

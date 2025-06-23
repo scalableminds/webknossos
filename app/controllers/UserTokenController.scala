@@ -92,7 +92,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
-        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
+        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox.toOption))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
@@ -179,8 +179,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
-        case AccessMode.read  => restrictions.allowAccess(userBox)
-        case AccessMode.write => restrictions.allowUpdate(userBox)
+        case AccessMode.read  => restrictions.allowAccess(userBox.toOption)
+        case AccessMode.write => restrictions.allowUpdate(userBox.toOption)
         case _                => Fox.successful(false)
       }
 
@@ -190,7 +190,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         annotationId <- ObjectId.fromString(annotationId)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox)(GlobalAccessContext)
+          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox
@@ -218,7 +218,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)
-        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).shiftBox
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox.toOption)).shiftBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
           case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))

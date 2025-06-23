@@ -104,7 +104,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
-          val layerStats: JsObject = JsonHelper.parseAs[JsObject](t._5).getOrElse(Json.obj())
+          val layerStats: JsObject = JsonHelper.parseAs[JsObject](t._5).openOr(Json.obj())
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,

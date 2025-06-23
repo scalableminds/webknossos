@@ -210,7 +210,7 @@ class UserController @Inject()(userService: UserService,
     else userService.isEditableBy(user, issuingUser)
 
   private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
-      issuingUser: User)(implicit m: MessagesProvider): Fox[Unit] =
+      issuingUser: User): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else if (user._id == issuingUser._id) {
@@ -222,18 +222,18 @@ class UserController @Inject()(userService: UserService,
               .authenticate(credentials)
               .flatMap { loginInfo =>
                 userService.retrieve(loginInfo).map {
-                  case Some(user) => Full(())
-                  case None       => Failure(Messages("error.noUser"))
+                  case Some(_) => Full(())
+                  case None    => Failure("error.noUser")
                 }
               }
               .recover {
                 case _: ProviderException =>
-                  Failure(Messages("error.invalidCredentials"))
+                  Failure("user.email.change.passwordWrong")
               })
-        case None => Fox.failure(Messages("error.passwordsDontMatch"))
+        case None => Fox.failure("user.email.change.passwordWrong")
       }
     } else {
-      Fox.failure(Messages("notAllowed"))
+      Fox.failure("notAllowed")
     }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
@@ -260,17 +260,6 @@ class UserController @Inject()(userService: UserService,
           .mkString(";")}"
       } yield ()
     } else Fox.successful(())
-
-  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    if (oldEmail == email) Fox.successful(())
-    else
-      for {
-        count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
-        issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
-        _ <- Fox.fromBool(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
-        // TODOM: @fm3 should we keep this check as now we can have guest users?
-      } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
     if (user.isAdmin && !isAdmin) {
@@ -303,7 +292,7 @@ class UserController @Inject()(userService: UserService,
             lastTaskTypeIdOpt) =>
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-          // properties for team managers dataset manager and admins only: experiences, teams
+          // properties that can be changed by team managers and admins only: experiences, team memberships
           oldExperience <- userService.experiencesFor(user._id)
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
           firstName = firstNameOpt.getOrElse(user.firstName)
@@ -329,7 +318,6 @@ class UserController @Inject()(userService: UserService,
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)
-          _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           _ <- preventZeroOwners(user, isActive)
           teams <- Fox.combined(assignedMemberships.map(t =>

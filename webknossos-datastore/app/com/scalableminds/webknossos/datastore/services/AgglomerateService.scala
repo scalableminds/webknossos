@@ -41,11 +41,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey
 
   def listAgglomeratesFiles(dataSourceId: DataSourceId, dataLayer: DataLayer): Set[String] = {
-    val attachedAgglomerates = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
+    val attachedAgglomerateFileNames = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
 
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
-    val scannedAgglomerates = PathUtils
+    val scannedAgglomerateFileNames = PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
                  PathUtils.fileExtensionFilter(hdf5AgglomerateFileExtension))
@@ -56,7 +56,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       .getOrElse(Nil)
       .toSet
 
-    attachedAgglomerates ++ scannedAgglomerates
+    attachedAgglomerateFileNames ++ scannedAgglomerateFileNames
   }
 
   def clearCaches(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {

@@ -2,15 +2,14 @@
 set -euo pipefail
 
 # This script asserts that each migration file in conf/evolutions
-# - is mentioned in either MIGRATIONS.released.md or MIGRATIONS.unreleased.md (but not both)
+# - is mentioned in either MIGRATIONS.released.md or in unreleased_changes/*.md (but not both)
 # - has a reversion sibling in conf/evolutions/reversions
 
 EVOLUTIONS_FOLDER="conf/evolutions"
 RELEASED_FILE="MIGRATIONS.released.md"
-UNRELEASED_FILE="MIGRATIONS.unreleased.md"
+UNRELEASED_DIR="unreleased_changes"
 
 CONTENT_RELEASED=$(cat "$RELEASED_FILE")
-CONTENT_UNRELEASED=$(cat "$UNRELEASED_FILE")
 
 exit_code=0
 
@@ -23,13 +22,13 @@ for file in "$EVOLUTIONS_FOLDER"/*; do
     fi
 
     mentioned_in_released=$([[ "$CONTENT_RELEASED" == *"$filename"* ]] && echo 1 || echo 0)
-    mentioned_in_unreleased=$([[ "$CONTENT_UNRELEASED" == *"$filename"* ]] && echo 1 || echo 0)
+    mentioned_in_unreleased=$(grep "$filename" "$UNRELEASED_DIR"/*.md >/dev/null 2>&1 && echo 1 || echo 0)
 
     if (( mentioned_in_released == 1 && mentioned_in_unreleased == 1 )); then
-        echo "Conflict: '$filename' is listed in both $RELEASED_FILE and $UNRELEASED_FILE."
+        echo "Conflict: '$filename' is listed in both $RELEASED_FILE and $UNRELEASED_DIR."
         exit_code=1
     elif (( mentioned_in_released == 0 && mentioned_in_unreleased == 0 )); then
-        echo "Missing: '$filename' is not listed in $RELEASED_FILE nor $UNRELEASED_FILE."
+        echo "Missing: '$filename' is not listed in $RELEASED_FILE nor $UNRELEASED_DIR."
         exit_code=1
     fi
 

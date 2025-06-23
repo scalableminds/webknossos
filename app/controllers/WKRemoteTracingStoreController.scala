@@ -82,8 +82,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
-          annotationId <- ObjectId.fromString(report.annotationId)
-          annotation <- annotationDAO.findOne(annotationId)
+          annotation <- annotationDAO.findOne(report.annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           _ = report.statistics.map(statistics => annotationService.updateStatistics(annotation._id, statistics))

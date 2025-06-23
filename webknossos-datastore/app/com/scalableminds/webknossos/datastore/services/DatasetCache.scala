@@ -16,7 +16,8 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient,
     extends FoxImplicits {
 
   lazy val cache: AlfuCache[ObjectId, DataSource] = AlfuCache[ObjectId, DataSource](
-    timeToLive = 1 day // Cache for a longer time, since we invalidate the cache manually
+    timeToLive = 1 day, // Cache for a longer time, since we invalidate the cache manually
+    maxCapacity = 5000
   )
 
   def getById(id: ObjectId): Fox[DataSource] =

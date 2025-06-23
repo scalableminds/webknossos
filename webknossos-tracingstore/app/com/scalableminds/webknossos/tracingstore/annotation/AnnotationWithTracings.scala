@@ -134,12 +134,12 @@ case class AnnotationWithTracings(
     a.actionAuthorId match {
       case None => this
       case Some(actionUserId) =>
-        val userStateAlreadyPresent = annotation.userStates.exists(state => actionUserId == state.userId)
+        val userStateAlreadyPresent = annotation.userStates.exists(state => actionUserId.toString == state.userId)
         if (userStateAlreadyPresent) {
           this.copy(annotation = annotation.copy(userStates = annotation.userStates.map { userState =>
-            if (actionUserId == userState.userId)
+            if (actionUserId.toString == userState.userId)
               userState.copy(
-                userId = actionUserId,
+                userId = actionUserId.toString,
                 editPosition = a.editPosition,
                 editRotation = a.editRotation,
                 zoomLevel = a.zoomLevel,
@@ -150,7 +150,7 @@ case class AnnotationWithTracings(
         } else
           this.copy(
             annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
-              userId = actionUserId,
+              userId = actionUserId.toString,
               editPosition = a.editPosition,
               editRotation = a.editRotation,
               zoomLevel = a.zoomLevel,

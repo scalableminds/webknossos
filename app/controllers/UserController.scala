@@ -15,7 +15,7 @@ import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import models.user.Theme.Theme
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Failure, Full}
 import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.util.Credentials
 import play.silhouette.impl.providers.CredentialsProvider

@@ -35,14 +35,14 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install --immutable
 
-      # - name: Lint frontend code and check formatting
-      #   run: yarn run check-frontend
-      # - name: Typecheck frontend code
-      #   run: yarn typecheck
-      # - name: Check for cyclic dependencies in frontend
-      #   run: yarn check-cyclic-dependencies
-      # - name: Run frontend tests
-      #   run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
+      - name: Lint frontend code and check formatting
+        run: yarn run check-frontend
+      - name: Typecheck frontend code
+        run: yarn typecheck
+      - name: Check for cyclic dependencies in frontend
+        run: yarn check-cyclic-dependencies
+      - name: Run frontend tests
+        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
       - name: Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |
@@ -100,14 +100,14 @@ jobs:
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
 
-      # - name: Lint backend code and check formatting
-      #   run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      - name: Lint backend code and check formatting
+        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
-      # - name: Run backend unit tests
-      #   run: sbt -v "testOnly backend.*"
+      - name: Run backend unit tests
+        run: sbt -v "testOnly backend.*"
 
-      # - name: Start Fossildb for e2e tests
-      #   run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Start Fossildb for e2e tests
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
       - name: Prepare binaryData folder for e2e tests
         run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
       - name: Run end-to-end tests

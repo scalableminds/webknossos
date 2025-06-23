@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.annotation
 import com.scalableminds.util.objectid.ObjectId
 import play.api.libs.json.{Json, OFormat}
 
-case class AnnotationSource(id: String,
+case class AnnotationSource(id: ObjectId,
                             annotationLayers: List[AnnotationLayer],
                             datasetDirectoryName: String,
                             datasetId: ObjectId,

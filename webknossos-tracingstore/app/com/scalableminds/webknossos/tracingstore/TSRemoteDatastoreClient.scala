@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -38,7 +39,7 @@ class TSRemoteDatastoreClient @Inject()(
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
-  private lazy val voxelSizeCache: AlfuCache[String, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
+  private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
@@ -160,10 +161,10 @@ class TSRemoteDatastoreClient @Inject()(
         .postJsonWithBytesResponse(fullMeshRequest)
     } yield result
 
-  def voxelSizeForAnnotationWithCache(annotationId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
+  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(implicit tc: TokenContext): Fox[VoxelSize] =
     voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
 
-  private def voxelSizeForAnnotation(annotationId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
+  private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[VoxelSize] =
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)

@@ -46,7 +46,12 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedAnnotationLayers <- mergeAnnotationsInTracingstore(annotations, datasetId, newId, toTemporaryStore) ?~> "Failed to merge annotations in tracingstore."
+        mergedAnnotationLayers <- mergeAnnotationsInTracingstore(
+          annotations,
+          datasetId,
+          newId,
+          userId,
+          toTemporaryStore) ?~> "Failed to merge annotations in tracingstore."
       } yield {
         Annotation(
           newId,
@@ -64,13 +69,16 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       annotations: List[Annotation],
       datasetId: ObjectId,
       newAnnotationId: ObjectId,
+      requestingUserId: ObjectId,
       toTemporaryStore: Boolean)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
-      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_.id),
+      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_._id),
+                                                                        annotations.map(_._user),
                                                                         newAnnotationId,
-                                                                        toTemporaryStore)
+                                                                        toTemporaryStore,
+                                                                        requestingUserId)
       layers = mergedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
     } yield layers.toList
 

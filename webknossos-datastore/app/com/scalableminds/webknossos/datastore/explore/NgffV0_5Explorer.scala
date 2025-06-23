@@ -122,7 +122,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
         elementClass,
         boundingBox)
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape

@@ -5,7 +5,7 @@ import {
   tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import type { APIAnnotation } from "types/api_types";
+import type { APIAnnotation, SkeletonUserState } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
 import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
@@ -188,24 +188,36 @@ describe("Annotation API (E2E)", () => {
     const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
     const tracingId = createdExplorational.annotationLayers[0].tracingId;
     const initialSkeleton = {
-      activeNodeId: undefined,
+      activeNodeId: 3,
       userBoundingBoxes: [],
       tracingId,
     };
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
         [
-          [UpdateActions.updateSkeletonTracing(initialSkeleton, [1, 2, 3], null, [0, 1, 2], 1)],
-          [UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], null, [1, 2, 3], 2)],
+          [UpdateActions.updateActiveNode(initialSkeleton)],
+          [UpdateActions.updateCameraAnnotation([2, 3, 4], null, [1, 2, 3], 2)],
         ],
         123456789,
+        null,
+        true,
       ),
       0,
     );
     await sendUpdateActions(createdExplorational, saveQueue);
 
     const tracings = await api.getTracingsForAnnotation(createdExplorational);
-    expect(replaceVolatileValues(tracings[0])).toMatchSnapshot();
+    const annotationProto = await api.getAnnotationProto(
+      createdExplorational.tracingStore.url,
+      createdExplorational.id,
+    );
+
+    expect((tracings[0].userStates[0] as SkeletonUserState).activeNodeId).toEqual(
+      initialSkeleton.activeNodeId,
+    );
+    expect(annotationProto.userStates[0].editPosition).toEqual({ x: 2, y: 3, z: 4 });
+    expect(annotationProto.userStates[0].editRotation).toEqual({ x: 1, y: 2, z: 3 });
+    expect(annotationProto.userStates[0].zoomLevel).toEqual(2);
   });
 
   it("Send complex update actions and compare resulting tracing", async () => {
@@ -236,6 +248,8 @@ describe("Annotation API (E2E)", () => {
       createSaveQueueFromUpdateActions(
         [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
         123456789,
+        null,
+        true,
       ),
       0,
     );
@@ -274,7 +288,12 @@ describe("Annotation API (E2E)", () => {
 
     const updateTreeAction = UpdateActions.updateTree(trees.getOrThrow(1), tracingId);
     const [saveQueue] = addVersionNumbers(
-      createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
+      createSaveQueueFromUpdateActions(
+        [createTreesUpdateActions, [updateTreeAction]],
+        123456789,
+        null,
+        true,
+      ),
       0,
     );
 
@@ -291,6 +310,8 @@ describe("Annotation API (E2E)", () => {
       createSaveQueueFromUpdateActions(
         [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
         123456789,
+        null,
+        true,
       ),
       0,
     );

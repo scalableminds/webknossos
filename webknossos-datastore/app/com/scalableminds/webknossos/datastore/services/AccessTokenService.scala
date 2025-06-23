@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.libs.json.{Json, OFormat}
@@ -54,11 +55,11 @@ object UserAccessRequest {
   def writeTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
-  def readAnnotation(annotationId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.read)
+  def readAnnotation(annotationId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(annotationId.toString, ""), AccessResourceType.annotation, AccessMode.read)
 
-  def writeAnnotation(annotationId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.write)
+  def writeAnnotation(annotationId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(annotationId.toString, ""), AccessResourceType.annotation, AccessMode.write)
 
   def downloadJobExport(jobId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
@@ -76,7 +77,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 
 case class VolumeTracingLayer(
     name: String,
-    annotationId: String,
+    annotationId: ObjectId,
     volumeTracingService: VolumeTracingService,
     temporaryTracingService: TemporaryTracingService,
     isTemporaryTracing: Boolean = false,

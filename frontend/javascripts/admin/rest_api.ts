@@ -15,7 +15,9 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfo,
+  type APIBuildInfoDatastore,
+  type APIBuildInfoTracingstore,
+  type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
   type APIDataSource,
@@ -743,7 +745,7 @@ export async function getTracingForAnnotationType(
 
   if (!process.env.IS_TESTING) {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
-    console.log("Parsed protobuf tracing:", tracing);
+    console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
@@ -1066,10 +1068,12 @@ export function getDatasetDefaultConfiguration(datasetId: string): Promise<Datas
 export function updateDatasetDefaultConfiguration(
   datasetId: string,
   datasetConfiguration: DatasetConfiguration,
+  options?: RequestOptions,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
     method: "PUT",
     data: datasetConfiguration,
+    ...options,
   });
 }
 
@@ -1789,17 +1793,31 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 
 export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
 
-// ### BuildInfo webknossos
-export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo", {
+// ### Health
+export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
+  const healthEndpoint = `${url}/${path}/health`;
+  return Request.triggerRequest(healthEndpoint, {
     doNotInvestigate: true,
+    mode: "cors",
+    timeout: 5000,
   });
 }
 
-// ### BuildInfo datastore
-export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, {
+// ### BuildInfo webknossos
+export function getBuildInfo(): Promise<APIBuildInfoWk> {
+  return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
+    mode: "cors",
+  });
+}
+
+// ### BuildInfo datastore/tracingstore
+export function getDataOrTracingStoreBuildInfo(
+  dataOrTracingStoreUrl: string,
+): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
+  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
+    doNotInvestigate: true,
+    mode: "cors",
   });
 }
 

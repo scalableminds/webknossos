@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   ElementClass,
   LayerAttachment,
-  LayerAttachmentDataFormat,
+  LayerAttachmentDataformat,
   LayerAttachmentType,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer,
@@ -1059,7 +1059,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
-      dataFormat <- LayerAttachmentDataFormat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
+      dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
       uri <- tryo(new URI(row.path)).toFox
     } yield LayerAttachment(row.name, uri, dataFormat)
 

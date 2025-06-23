@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
@@ -37,11 +38,11 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
    * So that it itself can be merged again.
    * The earliestAccessibleVersion property ensures that the fully merged annotation is still the earliest accessible one.
    */
-  def mergeEditableMappings(annotationIds: List[String],
-                            firstVolumeAnnotationIdOpt: Option[String],
-                            newAnnotationId: String,
+  def mergeEditableMappings(annotationIds: Seq[ObjectId],
+                            firstVolumeAnnotationIdOpt: Option[ObjectId],
+                            newAnnotationId: ObjectId,
                             newVolumeTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
+                            tracingsWithIds: Seq[(VolumeTracing, String)],
                             toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
@@ -68,7 +69,9 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
           Fox
             .serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
               for {
-                _ <- annotationUpdatesPutBuffer.put(newAnnotationId, Json.toJson(List(update)), Some(updateVersion))
+                _ <- annotationUpdatesPutBuffer.put(newAnnotationId.toString,
+                                                    Json.toJson(List(update)),
+                                                    Some(updateVersion))
                 _ = updateVersion += 1
               } yield ()
             }
@@ -98,13 +101,13 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
       Fox.failure("Cannot merge annotations with and without editable mappings")
     }
 
-  private def mergeEditableMappingUpdates(annotationIds: List[String], newTracingId: String)(
+  private def mergeEditableMappingUpdates(annotationIds: Seq[ObjectId], newTracingId: String)(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
     for {
       updatesByAnnotation <- Fox.serialCombined(annotationIds) { annotationId =>
         for {
-          updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(annotationId)(
-            fromJsonBytes[List[UpdateAction]])
+          updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+            annotationId.toString)(fromJsonBytes[List[UpdateAction]])
           updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
           editableMappingUpdates = updatesIroned.flatMap {
             case a: EditableMappingUpdateAction => Some(a.withActionTracingId(newTracingId))

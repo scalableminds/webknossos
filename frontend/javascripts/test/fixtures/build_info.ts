@@ -1,6 +1,6 @@
-import type { APIBuildInfo } from "types/api_types";
+import type { APIBuildInfoWk } from "types/api_types";
 
-export const buildInfo: APIBuildInfo = {
+export const buildInfo: APIBuildInfoWk = {
   webknossos: {
     name: "webknossos",
     ciTag: "",
@@ -21,6 +21,7 @@ export const buildInfo: APIBuildInfo = {
     sbtVersion: "1.4.1",
     builtAtString: "2021-12-20 21:30:36.569",
   },
+  httpApiVersioning: { currentApiVersion: 9, oldestSupportedApiVersion: 5 },
   schemaVersion: 101,
   localDataStoreEnabled: false,
   localTracingStoreEnabled: true,

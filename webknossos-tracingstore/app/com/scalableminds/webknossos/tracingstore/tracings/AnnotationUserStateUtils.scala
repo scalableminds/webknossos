@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationProto, AnnotationUserStateProto}
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
@@ -131,14 +132,14 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
   def renderSkeletonUserStateIntoUserState(s: SkeletonTracing,
-                                           requestingUserId: String,
-                                           ownerId: String): SkeletonUserStateProto = {
-    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
+                                           requestingUserId: ObjectId,
+                                           ownerId: ObjectId): SkeletonUserStateProto = {
+    val ownerUserState = s.userStates.find(_.userId == ownerId.toString).map(_.copy(userId = requestingUserId.toString))
 
     if (requestingUserId == ownerId)
       ownerUserState.getOrElse(SkeletonTracingDefaults.emptyUserState(requestingUserId))
     else {
-      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
+      val requestingUserState = s.userStates.find(_.userId == requestingUserId.toString)
       val requestingUserTreeVisibilityMap = id32WithBoolsToMap(requestingUserState.map(_.treeVisibilities))
       val ownerTreeVisibilityMap = id32WithBoolsToMap(ownerUserState.map(_.treeVisibilities))
       val mergedTreeVisibilityMap = ownerTreeVisibilityMap ++ requestingUserTreeVisibilityMap
@@ -151,7 +152,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
       val mergedTreeGroupExpandedMap = ownerTreeGroupExpandedMap ++ requestingUserTreeGroupExpandedMap
 
       SkeletonUserStateProto(
-        userId = requestingUserId,
+        userId = requestingUserId.toString,
         activeNodeId = requestingUserState.flatMap(_.activeNodeId).orElse(ownerUserState.flatMap(_.activeNodeId)),
         treeGroupExpandedStates = mapToId32WithBools(mergedTreeGroupExpandedMap),
         boundingBoxVisibilities = mapToId32WithBools(mergedBoundingBoxVisibilityMap),
@@ -162,14 +163,14 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
   def renderVolumeUserStateIntoUserState(s: VolumeTracing,
-                                         requestingUserId: String,
-                                         ownerId: String): VolumeUserStateProto = {
-    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
+                                         requestingUserId: ObjectId,
+                                         ownerId: ObjectId): VolumeUserStateProto = {
+    val ownerUserState = s.userStates.find(_.userId == ownerId.toString).map(_.copy(userId = requestingUserId.toString))
 
     if (requestingUserId == ownerId)
       ownerUserState.getOrElse(VolumeTracingDefaults.emptyUserState(requestingUserId))
     else {
-      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
+      val requestingUserState = s.userStates.find(_.userId == requestingUserId.toString)
       val requestingUserBoundingBoxVisibilityMap = id32WithBoolsToMap(
         requestingUserState.map(_.boundingBoxVisibilities))
       val ownerBoundingBoxVisibilityMap = id32WithBoolsToMap(ownerUserState.map(_.boundingBoxVisibilities))
@@ -182,7 +183,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger with IdWithBoolUtils {
       val mergedSegmentGroupExpandedMap = ownerSegmentGroupExpandedMap ++ requestingUserSegmentGroupExpandedMap
       val mergedSegmentVisibilityMap = ownerSegmentVisibilityMap ++ requestingUserSegmentVisibilityMap
       VolumeUserStateProto(
-        userId = requestingUserId,
+        userId = requestingUserId.toString,
         activeSegmentId =
           requestingUserState.flatMap(_.activeSegmentId).orElse(ownerUserState.flatMap(_.activeSegmentId)),
         segmentGroupExpandedStates = mapToId32WithBools(mergedSegmentGroupExpandedMap),

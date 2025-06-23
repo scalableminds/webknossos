@@ -1,6 +1,6 @@
 import { CheckOutlined, DownOutlined } from "@ant-design/icons";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Descriptions, Dropdown } from "antd";
+import { Col, Dropdown, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import { getSystemColorTheme } from "theme";
@@ -10,6 +10,7 @@ import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 import { SettingsTitle } from "./helpers/settings_title";
+import { SettingsCard } from "./helpers/settings_card";
 
 function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -57,24 +58,24 @@ function AccountProfileView() {
 
   const profileItems = [
     {
-      label: "Name",
-      children: formatUserName(activeUser, activeUser),
+      title: "Name",
+      value: formatUserName(activeUser, activeUser),
     },
     {
-      label: "Email",
-      children: activeUser.email,
+      title: "Email",
+      value: activeUser.email,
     },
     {
-      label: "Organization",
-      children: activeOrganization?.name || activeUser.organization,
+      title: "Organization",
+      value: activeOrganization?.name || activeUser.organization,
     },
     {
-      label: "Role",
-      children: role,
+      title: "Role",
+      value: role,
     },
     {
-      label: "Theme",
-      children: (
+      title: "Theme",
+      value: (
         <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
           {themeItems.find((item) => item.key === selectedTheme)?.label}
         </Dropdown.Button>
@@ -88,13 +89,13 @@ function AccountProfileView() {
         title="Profile"
         description="Manage your personal information and preferences"
       />
-      <Descriptions
-        column={2}
-        colon={false}
-        layout="vertical"
-        style={{ marginBottom: 24 }}
-        items={profileItems}
-      />
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        {profileItems.map((item) => (
+          <Col span={12} key={item.title}>
+            <SettingsCard title={item.title} description={item.value} />
+          </Col>
+        ))}
+      </Row>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { LockOutlined } from "@ant-design/icons";
-import { Alert, Button, Descriptions, Form, Input, List, Space } from "antd";
+import { Alert, Button, Col, Form, Input, List, Row, Space } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -8,6 +8,7 @@ import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 import { SettingsTitle } from "./helpers/settings_title";
+import { SettingsCard } from "./helpers/settings_card";
 const FormItem = Form.Item;
 const { Password } = Input;
 
@@ -161,13 +162,6 @@ function AccountPasswordView({ history }: Props) {
     setResetPasswordVisible(true);
   }
 
-  const passwordItems = [
-    {
-      label: "Password",
-      children: getPasswordComponent(),
-    },
-  ];
-
   const passKeyList = [
     {
       name: "passkey1",
@@ -182,13 +176,11 @@ function AccountPasswordView({ history }: Props) {
   return (
     <div>
       <SettingsTitle title="Password" description="Manage and update your password" />
-      <Descriptions
-        column={2}
-        layout="vertical"
-        colon={false}
-        items={passwordItems}
-        style={{ marginBottom: "3rem" }}
-      />
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <SettingsCard title="Password" description={getPasswordComponent()} />
+        </Col>
+      </Row>
 
       <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
       <List

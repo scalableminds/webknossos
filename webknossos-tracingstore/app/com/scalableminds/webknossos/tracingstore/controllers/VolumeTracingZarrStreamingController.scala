@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -329,7 +330,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   private def getFallbackLayerDataIfEmpty(
       tracing: VolumeTracing,
-      annotationId: String,
+      annotationId: ObjectId,
       data: Array[Byte],
       missingBucketIndices: List[Int],
       mag: Vec3Int,

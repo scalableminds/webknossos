@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -36,7 +37,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: String, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -47,7 +48,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield data
 
   private def loadFullMeshFromMeshFile(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
@@ -63,7 +64,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield array
 
   private def loadFullMeshFromAdHoc(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
@@ -91,7 +92,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield array
 
   private def getAllAdHocChunksWithSegmentIndex(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       mag: Vec3Int,
@@ -133,7 +134,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
-  private def getAllAdHocChunksWithNeighborLogic(annotationId: String,
+  private def getAllAdHocChunksWithNeighborLogic(annotationId: ObjectId,
                                                  tracingId: String,
                                                  tracing: VolumeTracing,
                                                  mag: Vec3Int,
@@ -176,7 +177,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield allVertices
 
   private def loadMeshChunkFromAdHoc(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =

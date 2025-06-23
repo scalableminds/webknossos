@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits, SegmentStatistics}
@@ -26,7 +27,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
   protected lazy val bucketScanner = new NativeBucketScanner()
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(annotationId: String,
+  def getSegmentVolume(annotationId: ObjectId,
                        tracingId: String,
                        segmentId: Long,
                        mag: Vec3Int,
@@ -41,7 +42,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       getDataForBucketPositions(annotationId, tracingId)
     )
 
-  def getSegmentBoundingBox(annotationId: String,
+  def getSegmentBoundingBox(annotationId: ObjectId,
                             tracingId: String,
                             segmentId: Long,
                             mag: Vec3Int,
@@ -57,7 +58,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       getDataForBucketPositions(annotationId, tracingId)
     )
 
-  private def getDataForBucketPositions(annotationId: String, tracingId: String)(
+  private def getDataForBucketPositions(annotationId: ObjectId, tracingId: String)(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
@@ -87,7 +88,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                              includeFallbackDataIfAvailable = true)
     } yield (bucketDataBoxes, elementClassFromProto(tracing.elementClass))
 
-  private def getBucketPositions(annotationId: String,
+  private def getBucketPositions(annotationId: ObjectId,
                                  tracingId: String,
                                  mappingName: Option[String],
                                  additionalCoordinates: Option[Seq[AdditionalCoordinate]])(

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -20,14 +21,14 @@ trait AnnotationReversion extends FoxImplicits {
                                           version: Option[Long]): Fox[VersionedKeyValuePair[EditableMappingInfo]]
 
   protected def editableMappingUpdaterFor(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       volumeTracing: VolumeTracing,
       editableMappingInfo: EditableMappingInfo,
       currentMaterializedVersion: Long,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
 
-  def revertDistributedElements(annotationId: String,
+  def revertDistributedElements(annotationId: ObjectId,
                                 currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
                                 sourceVersion: Long,
@@ -60,7 +61,7 @@ trait AnnotationReversion extends FoxImplicits {
     } yield ()
 
   private def revertEditableMappingFields(
-      annotationId: String,
+      annotationId: ObjectId,
       currentAnnotationWithTracings: AnnotationWithTracings,
       tracingBeforeRevert: VolumeTracing,
       sourceVersion: Long,
@@ -75,7 +76,7 @@ trait AnnotationReversion extends FoxImplicits {
     } yield ()
 
   // If source annotation doesn’t have this editable mapping, use the last existing one as a “before point” for the reversion
-  private def editableMappingReversionUpdater(annotationId: String,
+  private def editableMappingReversionUpdater(annotationId: ObjectId,
                                               tracingId: String,
                                               tracingBeforeRevert: VolumeTracing,
                                               targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) =

@@ -79,7 +79,8 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
 
   def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
-    Fox.fromFuture((for {dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
+    Fox.fromFuture((for {
+      dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound")))))

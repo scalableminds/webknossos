@@ -37,7 +37,6 @@ import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, EmptyBox, Full}
-import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -65,7 +64,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
+  private val virtualRemoteDatasetStatus = "Virtual remote dataset" // Virtual datasets should not be deleted when not reported
+  private val inactiveStatusList =
+    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus, virtualRemoteDatasetStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
@@ -98,8 +99,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
     } yield newDataset
   }
-
-  private def virtualRemoteDatasetStatus = "Virtual remote dataset"
 
   def createVirtualDataset(datasetName: String,
                            organizationId: String,

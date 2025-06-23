@@ -121,6 +121,5 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
         folderId.map(_.toString),
         user
       )
-    } yield datasetId
-
+    } yield ()
 }

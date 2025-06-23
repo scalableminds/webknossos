@@ -1,4 +1,4 @@
-import { FieldTimeOutlined, MailOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { FieldTimeOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
@@ -7,38 +7,12 @@ import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
 import {
   PricingPlanEnum,
-  customPlanFeatures,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-
-function CustomPlanUpgradeCard() {
-  return (
-    <Card styles={{ body: { minHeight: 220 } }}>
-      <Row>
-        <Col span={18}>
-          <p>
-            Contact our support team to upgrade Webknossos to match your organization and customized
-            your experience.
-          </p>
-          <ul>
-            {customPlanFeatures.map((feature) => (
-              <li key={feature.slice(0, 10)}>{feature}</li>
-            ))}
-          </ul>
-        </Col>
-        <Col span={6}>
-          <Button type="primary" href="mailto:sales@webknossos.org" icon={<MailOutlined />}>
-            Contact Support
-          </Button>
-        </Col>
-      </Row>
-    </Card>
-  );
-}
 
 export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
   return (
@@ -88,19 +62,6 @@ export function PowerPlanUpgradeCard({
 }
 
 export function PlanUpgradeCard({ organization }: { organization: APIOrganization }) {
-  if (
-    organization.pricingPlan === PricingPlanEnum.Power ||
-    organization.pricingPlan === PricingPlanEnum.PowerTrial ||
-    organization.pricingPlan === PricingPlanEnum.Custom
-  )
-    return (
-      <Row gutter={24}>
-        <Col span={24}>
-          <CustomPlanUpgradeCard />
-        </Col>
-      </Row>
-    );
-
   if (
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial

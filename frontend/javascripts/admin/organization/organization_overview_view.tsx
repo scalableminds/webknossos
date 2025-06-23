@@ -190,11 +190,17 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
         </Row>
       </Spin>
       <PlanExpirationCard organization={organization} />
-      <SettingsTitle
-        title="Unlock more features"
-        description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-      />
-      <PlanUpgradeCard organization={organization} />
+      {organization.pricingPlan === PricingPlanEnum.Basic ||
+      organization.pricingPlan === PricingPlanEnum.Team ||
+      organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
+        <>
+          <SettingsTitle
+            title="Unlock more features"
+            description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+          />
+          <PlanUpgradeCard organization={organization} />
+        </>
+      ) : null}
     </>
   );
 }

@@ -11,6 +11,7 @@ export default function checkBrowserFeatures() {
     new Map([[1, 2]]).values().map((v) => v);
     [].at(0);
     new Set().difference(new Set());
+    [].values().flatMap((el) => [el, el]);
   } catch (exception) {
     Toast.warning(
       <div>

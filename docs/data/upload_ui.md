@@ -43,12 +43,12 @@ We support a variety of data types for the uploaded data. To make sure that your
 |   uint24  rgb  |       ✓   |   does not apply        |
 |   uint32   |       ✓     |   ✓                       |
 |   uint64   |       ✗     |   (✓)  [(til 2⁵³−1)](https://github.com/scalableminds/webknossos/issues/6921)          |
-|   |  |  |  |
+|   |  |  |
 |    int8    |       ✓     |        ✓                   |
 |    int16   |       ✓     |        ✓                   |
 |    int32   |       ✓     |        ✓                   |
 |    int64   |       ✗     |        ✓                   |
-|   |  |  |  |
+|   |  |  |
 |    float   |       ✓     |        ✗                   |
 |    double  |       ✗     |        ✗                   |
 

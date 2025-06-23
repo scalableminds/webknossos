@@ -78,7 +78,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
   private val meshFileKeyCache
     : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
 
-  def lookUpMeshFile(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
+  def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
       implicit ec: ExecutionContext): Fox[MeshFileKey] =
     meshFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, meshFileName),
                                _ => lookUpMeshFileImpl(dataSourceId, dataLayer, meshFileName).toFox)
@@ -133,8 +133,9 @@ class MeshFileService @Inject()(config: DataStoreConfig,
       Fox
         .serialSequence(allMeshFileNames.toSeq) { meshFileName =>
           for {
-            meshFileKey <- lookUpMeshFile(dataSourceId, dataLayer, meshFileName) ?~> Messages("mesh.file.lookup.failed",
-                                                                                              meshFileName)
+            meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Messages(
+              "mesh.file.lookup.failed",
+              meshFileName)
             formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
             mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
                                                                             meshFileName)

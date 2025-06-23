@@ -130,7 +130,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.required"
-      meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, meshFileName)
+      meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
       mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
         dataSource.id,

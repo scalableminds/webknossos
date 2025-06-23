@@ -61,7 +61,7 @@ class DSMeshController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
-          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFileName)
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
           mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
           segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             dataSource.id,
@@ -87,7 +87,7 @@ class DSMeshController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
-          meshFileKey <- meshFileService.lookUpMeshFile(dataSource.id, dataLayer, request.body.meshFileName)
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
           (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {

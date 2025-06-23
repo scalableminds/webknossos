@@ -28,7 +28,7 @@ package com.scalableminds.util.tools
   * It also provides implicit methods to transform `Option` to `Box`, `Box` to
   * `[[scala.collection.Iterable Iterable]]`, and `Box` to `Option`.
   */
-object Box extends BoxTrait with Tryo {
+object Box extends Tryo {
 
   /**
     * Helper class to provide an easy way for converting a `List[Box[T]]` into
@@ -79,23 +79,6 @@ object Box extends BoxTrait with Tryo {
       }
   }
 
-}
-
-/**
-  * Implementation for the `[[Box$ Box]]` singleton.
-  */
-sealed trait BoxTrait {
-  val primitiveMap: Map[Class[_], Class[_]] = Map(
-    java.lang.Boolean.TYPE -> classOf[java.lang.Boolean],
-    java.lang.Character.TYPE -> classOf[java.lang.Character],
-    java.lang.Byte.TYPE -> classOf[java.lang.Byte],
-    java.lang.Double.TYPE -> classOf[java.lang.Double],
-    java.lang.Float.TYPE -> classOf[java.lang.Float],
-    java.lang.Integer.TYPE -> classOf[java.lang.Integer],
-    java.lang.Long.TYPE -> classOf[java.lang.Long],
-    java.lang.Short.TYPE -> classOf[java.lang.Short]
-  )
-
   /**
     * Create a `Box` from the specified `Option`.
     *
@@ -135,9 +118,9 @@ sealed trait BoxTrait {
     * Apply the specified `PartialFunction` to the specified `value` and return the result
     * in a `Full`; if the `pf`` is not defined at that point return `Empty`.
     *
-    * @param pf The partial function to use to transform the value.
-    * @param value The value to transform.
     *
+    * @param pf    The partial function to use to transform the value.
+    * @param value The value to transform.
     * @return A `Full` containing the transformed value if
     *         `pf.isDefinedAt(value)` and `Empty` otherwise.
     */
@@ -149,7 +132,7 @@ sealed trait BoxTrait {
     * the result in a `Full`; if the `pf`` is not defined at that point return
     * `Empty`.
     *
-    * @param pf The partial function to use to transform the value.
+    * @param pf    The partial function to use to transform the value.
     * @param value The value to transform.
     * @return A `Full` containing the transformed value if
     *         `pf.isDefinedAt(value)` and `Empty` otherwise.
@@ -172,25 +155,12 @@ sealed trait BoxTrait {
     *
     * @return `Full` if `in` is not null and `Empty` otherwise.
     */
-  def legacyNullTest[T](in: T): Box[T] = in match {
+  private def legacyNullTest[T](in: T): Box[T] = in match {
     case null => Empty
     case _    => Full(in)
   }
 
-  /**
-    * Alias for `[[legacyNullTest]]`.
-    */
-  def !![T](in: T): Box[T] = legacyNullTest(in)
-
 }
-
-/**
-  * Used as a return type for certain methods that should not be called. One
-  * example is the `get` method on a Lift `Box`. It exists to prevent client
-  * code from using `.get` as an easy way to open a `Box`, so it needs a return
-  * type that will match no valid client return types.
-  */
-final class DoNotCallThisMethod
 
 /**
   * The `Box` class is a container which is able to declare if it is `Full`
@@ -328,15 +298,6 @@ sealed abstract class Box[+A] extends Product with Serializable {
     *         with a message that includes the provided `justification`.
     */
   def openOrThrowException(justification: => String): A
-
-  /**
-    * Exists to avoid the implicit conversion from `Box` to `Option`. Opening a
-    * `Box` unsafely should be done using `openOrThrowException`.
-    *
-    * This method '''always''' throws an exception.
-    */
-  final def get: DoNotCallThisMethod =
-    throw new Exception("Attempted to open a Box incorrectly. Please use openOrThrowException.")
 
   /**
     * Return the value contained in this `Box` if it is full; otherwise return
@@ -523,7 +484,7 @@ sealed abstract class Box[+A] extends Product with Serializable {
     *
     * @return The result of the function or the `in` value.
     */
-  def run[T](in: => T)(f: (T, A) => T) = in
+  def run[T](in: => T)(f: (T, A) => T): T = in
 
   /**
     * Perform a side effect by passing this `Box` to the specified function and
@@ -786,7 +747,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
     throw new NullPointerException(
       "An Failure Box was opened.  Failure Message: " + msg +
         ".  The justification for allowing the openOrThrowException was " + justification) {
-      override def getCause() = exception openOr null
+      override def getCause: Throwable = exception openOr null
     }
 
   override def map[B](f: A => B): Box[B] = this
@@ -933,12 +894,4 @@ final class ParamFailure[T](override val msg: String,
 
   override def ~>[T](errorCode: => T): ParamFailure[T] =
     ParamFailure(msg, exception, Full(this), errorCode)
-}
-
-/**
-  * A trait that a class can mix into itself to indicate that it can convert
-  * itself into a `Box`.
-  */
-trait Boxable[T] {
-  def asBox: Box[T]
 }

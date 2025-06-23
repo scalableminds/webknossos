@@ -146,7 +146,7 @@ class SkeletonTracingService @Inject()(
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
+  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Option[TreeBody] =
     for {
       tree <- tracing.trees.find(_.treeId == treeId)
     } yield TreeBody(nodes = tree.nodes, edges = tree.edges)

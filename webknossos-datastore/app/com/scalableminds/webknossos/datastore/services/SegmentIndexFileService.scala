@@ -42,7 +42,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
       segmentIndexDir = layerDir.resolve(this.segmentIndexDir)
       files <- PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
-      file <- files.headOption
+      file <- Box(files.headOption)
     } yield file
 
   /**

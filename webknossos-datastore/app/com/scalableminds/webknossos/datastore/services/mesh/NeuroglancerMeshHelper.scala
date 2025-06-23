@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
+import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
@@ -108,8 +109,8 @@ object WebknossosSegmentInfo {
 
   def fromMeshInfosAndMetadata(chunkInfos: List[List[MeshLodInfo]],
                                encoding: String,
-                               chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Option[WebknossosSegmentInfo] =
-    chunkInfos.headOption.flatMap { firstChunkInfo =>
+                               chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Box[WebknossosSegmentInfo] =
+    Box(chunkInfos.headOption).flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           meshFormat = encoding,

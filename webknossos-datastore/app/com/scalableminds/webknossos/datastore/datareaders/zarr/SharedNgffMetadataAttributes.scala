@@ -27,7 +27,7 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
     else {
       unit match {
         case None | Some("") => Full(VoxelSize.DEFAULT_UNIT)
-        case Some(someUnit)  => LengthUnit.fromString(someUnit)
+        case Some(someUnit)  => Box(LengthUnit.fromString(someUnit))
       }
     }
 }

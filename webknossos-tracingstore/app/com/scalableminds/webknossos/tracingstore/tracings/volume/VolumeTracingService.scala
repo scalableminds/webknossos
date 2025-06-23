@@ -241,7 +241,7 @@ class VolumeTracingService @Inject()(
                     segmentIndexBuffer,
                     bucketPosition,
                     filteredBytes,
-                    Some(data),
+                    Full(data),
                     editableMappingTracingId(volumeTracing, tracingId)
                   )
                 } yield ()

@@ -17,8 +17,8 @@ trait JsonImplicits {
     override def writes(number: Number): JsValue =
       tryo(number.longValue())
         .map(JsNumber(_))
-        .orElse(tryo(number.floatValue()).map(JsNumber(_)))
-        .getOrElse(JsNumber(number.doubleValue()))
+        .or(tryo(number.floatValue()).map(JsNumber(_)))
+        .openOr(JsNumber(number.doubleValue()))
   }
 
   implicit object StringOrIntFormat extends Format[Either[String, Int]] {

@@ -1,10 +1,9 @@
 package controllers
 
-import collections.SequenceUtils
-
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing

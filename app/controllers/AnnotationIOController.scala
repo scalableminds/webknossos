@@ -1,7 +1,7 @@
 package controllers
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}

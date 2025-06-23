@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

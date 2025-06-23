@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import collections.SequenceUtils
 import com.google.inject.Inject
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import collections.SequenceUtils
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Full}

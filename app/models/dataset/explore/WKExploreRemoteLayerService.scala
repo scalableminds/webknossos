@@ -1,7 +1,7 @@
 package models.dataset.explore
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,

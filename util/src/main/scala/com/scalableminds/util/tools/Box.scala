@@ -160,6 +160,8 @@ object Box extends Tryo {
     case _    => Full(in)
   }
 
+  def fromBool(in: Boolean): Box[Unit] = if (in) Full(()) else Empty
+
 }
 
 /**

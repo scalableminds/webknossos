@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -556,17 +555,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                       silent = false,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
-      _ <- bool2Box(attributesFiles.nonEmpty)
+      _ <- Box.fromBool(attributesFiles.nonEmpty)
       _ <- JsonHelper.parseAs[N5Metadata](Files.readAllBytes(attributesFiles.head))
     } yield true
 
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
     for {
       matchingFileIsPresent <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
-      _ <- bool2Box(matchingFileIsPresent)
+      _ <- Box.fromBool(matchingFileIsPresent)
       directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
       detectedLayerBoxes = directories.map(looksLikeN5MultiscalesLayer)
-      _ <- bool2Box(detectedLayerBoxes.forall(_.getOrElse(false)))
+      _ <- Box.fromBool(detectedLayerBoxes.forall(_.getOrElse(false)))
     } yield true
 
   private def looksLikeN5Array(dataSourceDir: Path): Box[Boolean] =
@@ -579,10 +578,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     //        - attributes.json (N5Header, dimension, compression,...)
     for {
       matchingFileIsPresent <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
-      _ <- bool2Box(matchingFileIsPresent)
+      _ <- Box.fromBool(matchingFileIsPresent)
       datasetDir <- PathUtils.listDirectories(dataSourceDir, silent = false).map(_.headOption)
       scaleDirs <- datasetDir.map(PathUtils.listDirectories(_, silent = false)).getOrElse(Full(Seq.empty))
-      _ <- bool2Box(scaleDirs.length == 1) // Must be 1, otherwise it is a multiscale dataset
+      _ <- Box.fromBool(scaleDirs.length == 1) // Must be 1, otherwise it is a multiscale dataset
       attributesFiles <- PathUtils.listFilesRecursive(scaleDirs.head,
                                                       silent = false,
                                                       maxDepth = 1,

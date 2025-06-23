@@ -182,7 +182,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]]
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
 
   protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {
@@ -203,7 +203,7 @@ trait NgffExplorationUtils extends FoxImplicits {
           .filter(axis => !defaultAxes.contains(axis.name))
           .zipWithIndex
           .map(axisAndIndex =>
-            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2))).toFox))
+            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2).toInt)).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
       _ <- Fox.fromBool(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes
@@ -220,7 +220,7 @@ trait NgffExplorationUtils extends FoxImplicits {
         case Some(channeAxislIndex) => shape(channeAxislIndex)
         case _                      => 1
       }
-    } yield channelCount
+    } yield channelCount.toInt
 
   protected def createLayer(remotePath: VaultPath,
                             credentialId: Option[String],

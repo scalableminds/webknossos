@@ -96,6 +96,9 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
 
+  def permuteIndicesArrayToWkLong(indices: Array[Long]): Array[Long] =
+    arrayToWkPermutation.map(indices(_))
+
   def toWkLibsJson: JsValue =
     Json.toJson(axes.zipWithIndex.collect {
       case (axis, index) if axis.name == "x" || axis.name == "y" || axis.name == "z" =>

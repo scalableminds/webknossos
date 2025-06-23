@@ -6,7 +6,7 @@ import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import Saxophone from "saxophone";
-import type { APIBuildInfo, MetadataEntryProto } from "types/api_types";
+import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -131,7 +131,7 @@ export function serializeToNml(
   state: WebknossosState,
   annotation: StoreAnnotation,
   tracing: SkeletonTracing,
-  buildInfo: APIBuildInfo,
+  buildInfo: APIBuildInfoWk,
   applyTransform: boolean,
 ): string {
   // Only visible trees will be serialized!
@@ -161,7 +161,7 @@ export function serializeToNml(
 function serializeMetaInformation(
   state: WebknossosState,
   annotation: StoreAnnotation,
-  buildInfo: APIBuildInfo,
+  buildInfo: APIBuildInfoWk,
 ): string[] {
   return _.compact([
     serializeTag("meta", {

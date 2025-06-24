@@ -1297,8 +1297,8 @@ function* splitAgglomerateInMapping(
 
 function mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  targetAgglomerateId: number,
   sourceAgglomerateId: number,
+  targetAgglomerateId: number,
 ): Mapping {
   const adaptToType =
     activeMapping.mapping && isNumberMap(activeMapping.mapping)
@@ -1323,8 +1323,8 @@ export function* updateMappingWithMerge(
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
     activeMapping,
-    targetAgglomerateId,
     sourceAgglomerateId,
+    targetAgglomerateId,
   );
   yield* put(
     setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {

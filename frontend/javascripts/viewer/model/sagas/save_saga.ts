@@ -691,8 +691,8 @@ export function* tryToIncorporateActions(
   // "finalization step", because it requires that the newest version is set
   // in the store annotation. Also, it only needs to happen once (instead of
   // per action).
-  const updateLocalHdf5FunctionByTracing: Record<string, () => void> = {};
-  const refreshLayerFunctionByTracing: Record<string, () => void> = {};
+  const updateLocalHdf5FunctionByTracing: Record<string, () => unknown> = {};
+  const refreshLayerFunctionByTracing: Record<string, () => unknown> = {};
   function* finalize() {
     for (const fn of Object.values(updateLocalHdf5FunctionByTracing).concat(
       Object.values(refreshLayerFunctionByTracing),
@@ -836,8 +836,8 @@ export function* tryToIncorporateActions(
           const dataset = yield* select((state) => state.dataset);
           const layerInfo = getLayerByName(dataset, layerName);
 
-          updateLocalHdf5FunctionByTracing[layerName] = () => {
-            updateLocalHdf5Mapping(layerName, layerInfo, mappingName);
+          updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
           };
 
           break;

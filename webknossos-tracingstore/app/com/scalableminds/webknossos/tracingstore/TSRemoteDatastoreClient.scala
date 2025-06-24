@@ -11,12 +11,10 @@ import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
-  GetSegmentIndexParameters,
   MissingBucketHeaders,
   ProtoGeometryImplicits,
   SegmentIndexData
 }
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC

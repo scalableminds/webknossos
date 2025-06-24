@@ -10,7 +10,7 @@ interface SettingsCardProps {
 
 export function SettingsCard({ title, description, explanation, action }: SettingsCardProps) {
   return (
-    <Card>
+    <Card style={{ minHeight: 105 }}>
       <Typography.Text type="secondary" style={{ fontSize: 14 }}>
         <Flex justify="space-between">
           <div>

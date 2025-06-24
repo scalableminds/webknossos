@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, Voxe
 import com.scalableminds.webknossos.datastore.services.{
   AgglomerateService,
   BinaryDataServiceHolder,
-  Hdf5HashedArrayUtils
+  ArrayArtifactHashing
 }
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import net.liftweb.common.Box.tryo
@@ -41,12 +41,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                         zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
                                         remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         agglomerateService: AgglomerateService,
-                                        binaryDataServiceHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
+                                        binaryDataServiceHolder: BinaryDataServiceHolder)
     extends FoxImplicits
-    with Hdf5HashedArrayUtils
+    with ArrayArtifactHashing
     with SegmentStatistics {
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val localSegmentIndexDir = "segmentIndex"
+  private val hdf5SegmentIndexFileExtension = "hdf5"
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
@@ -58,8 +59,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     segmentIndexFileKeyCache.getOrLoad((dataSourceId, dataLayer.name),
                                        _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer))
 
-  private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId,
-                                            dataLayer: DataLayer): Fox[SegmentIndexFileKey] = {
+  private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId, dataLayer: DataLayer)(
+      implicit ec: ExecutionContext): Fox[SegmentIndexFileKey] = {
     val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments.flatMap(_.segmentIndex)
     val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localAttachment: Option[LayerAttachment] = findLocalSegmentIndexFile(localDatasetDir, dataLayer).toOption
@@ -81,7 +82,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   private def findLocalSegmentIndexFile(localDatasetDir: Path, dataLayer: DataLayer): Box[LayerAttachment] = {
     val segmentIndexDir = localDatasetDir.resolve(dataLayer.name).resolve(this.localSegmentIndexDir)
     for {
-      files <- PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
+      files <- PathUtils.listFiles(segmentIndexDir,
+                                   silent = true,
+                                   PathUtils.fileExtensionFilter(hdf5SegmentIndexFileExtension))
       file <- files.headOption
     } yield
       LayerAttachment(
@@ -95,7 +98,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     * Read the segment index file and return the bucket positions for the given segment id.
     * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
     */
-  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long): Fox[Array[Vec3Int]] =
+  def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
+                       segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
     segmentIndexFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrSegmentIndexFileService.readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)
@@ -104,7 +108,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       case _ => unsupportedDataFormat(segmentIndexFileKey)
     }
 
-  def readFileMag(segmentIndexFileKey: SegmentIndexFileKey): Fox[Vec3Int] =
+  def readFileMag(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext,
+                                                            tc: TokenContext): Fox[Vec3Int] =
     segmentIndexFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrSegmentIndexFileService.readFileMag(segmentIndexFileKey: SegmentIndexFileKey)
@@ -127,7 +132,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        segmentIndexFileKey: SegmentIndexFileKey,
                        agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                        segmentId: Long,
-                       mag: Vec3Int)(implicit tc: TokenContext): Fox[Long] =
+                       mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
@@ -141,7 +146,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                             segmentIndexFileKey: SegmentIndexFileKey,
                             agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                             segmentId: Long,
-                            mag: Vec3Int)(implicit tc: TokenContext): Fox[BoundingBox] =
+                            mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
@@ -156,7 +161,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
     // Additional coordinates parameter ignored, see #7556
     val mag1BucketPositions = bucketPositions.map(_ * mag)
     val bucketRequests = mag1BucketPositions.map(
@@ -183,10 +189,10 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     } yield (bucketData, dataLayer.elementClass)
   }
 
-  private def getBucketPositions(
-      segmentIndexFileKey: SegmentIndexFileKey,
-      agglomerateFileKeyOpt: Option[AgglomerateFileKey])(segmentOrAgglomerateId: Long, mag: Vec3Int)(
-      implicit tc: TokenContext): Fox[Set[Vec3IntProto]] =
+  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
+                                 agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
+      segmentOrAgglomerateId: Long,
+      mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(agglomerateFileKeyOpt, segmentOrAgglomerateId)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
@@ -194,9 +200,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       positionsCollected = positionsPerSegment.flatten.toSet.map(vec3IntToProto)
     } yield positionsCollected
 
-  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
-                                 segmentId: Long,
-                                 mag: Vec3Int): Fox[Array[Vec3Int]] =
+  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, mag: Vec3Int)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
       fileMag <- readFileMag(segmentIndexFileKey)
       bucketPositionsInFileMag <- readSegmentIndex(segmentIndexFileKey, segmentId)
@@ -205,7 +211,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
 
   private def getSegmentIdsForAgglomerateIdIfNeeded(
       agglomerateFileKeyOpt: Option[AgglomerateFileKey],
-      segmentOrAgglomerateId: Long)(implicit tc: TokenContext): Fox[Seq[Long]] =
+      segmentOrAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     // Editable mappings cannot happen here since those requests go to the tracingstore
     agglomerateFileKeyOpt match {
       case Some(agglomerateFileKey) =>

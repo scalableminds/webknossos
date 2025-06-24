@@ -13,7 +13,7 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import net.liftweb.common.{Box, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
+import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 
@@ -23,7 +23,7 @@ import scala.util.Using
 class CachedHdf5File(reader: IHDF5Reader)
     extends SafeCachable
     with AutoCloseable
-    with Hdf5HashedArrayUtils
+    with ArrayArtifactHashing
     with LazyLogging {
 
   override protected def onFinalize(): Unit = reader.close()

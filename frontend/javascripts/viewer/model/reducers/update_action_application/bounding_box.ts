@@ -37,14 +37,14 @@ export function applyAddUserBoundingBox(
   ua: AddUserBoundingBoxInSkeletonTracingAction | AddUserBoundingBoxInVolumeTracingAction,
 ) {
   const { boundingBox, ...valueWithoutBoundingBox } = ua.value.boundingBox;
-  const maybeBoundingBoxValue = {
+  const boundingBoxValue = {
     boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox),
   };
   const newUserBBox: UserBoundingBox = {
     // The visibility is stored per user. Therefore, we default to true here.
     isVisible: true,
     ...valueWithoutBoundingBox,
-    ...maybeBoundingBoxValue,
+    ...boundingBoxValue,
   };
   const updatedUserBoundingBoxes = tracing.userBoundingBoxes.concat([newUserBBox]);
 

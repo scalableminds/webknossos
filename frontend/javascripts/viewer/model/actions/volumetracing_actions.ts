@@ -138,7 +138,6 @@ export const VolumeTracingSaveRelevantActions = [
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
   "SET_HIDE_UNREGISTERED_SEGMENTS",
-  "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

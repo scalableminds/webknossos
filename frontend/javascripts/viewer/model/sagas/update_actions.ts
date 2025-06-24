@@ -234,7 +234,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
     value: {
       actionTracingId,
       id: tree.treeId,
-      updatedId: undefined,
+      updatedId: undefined, // was never really used, but is kept to keep the type information precise
       color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,

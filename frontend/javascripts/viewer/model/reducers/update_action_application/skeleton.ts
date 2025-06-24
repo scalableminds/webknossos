@@ -36,6 +36,7 @@ function applySingleAction(
 ): WebknossosState {
   switch (ua.name) {
     case "createTree": {
+      // updatedId is part of the updateAction format but was never really used.
       const { id, updatedId: _updatedId, actionTracingId: _actionTracingId, ...rest } = ua.value;
       const newTree: Tree = {
         treeId: id,
@@ -59,6 +60,7 @@ function applySingleAction(
       const {
         id: treeId,
         actionTracingId: _actionTracingId,
+        // updatedId is part of the updateAction format but was never really used.
         updatedId: _updatedId,
         ...treeRest
       } = ua.value;
@@ -180,7 +182,7 @@ function applySingleAction(
       const skeleton = enforceSkeletonTracing(state.annotation);
       const updatedTrees = skeleton.trees.delete(id);
 
-      const newActiveTreeId = skeleton.activeTreeId === id ? null : id;
+      const newActiveTreeId = skeleton.activeTreeId === id ? null : skeleton.activeTreeId;
 
       return update(state, {
         annotation: {

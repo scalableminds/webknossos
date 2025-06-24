@@ -81,7 +81,6 @@ function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
     [5, 11],
     [6, 12],
     [7, 12],
-    [8, 13],
     [1337, 1337],
   ]);
 }
@@ -255,7 +254,7 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should update the mapping when a the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
+  it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
     const { api } = context;
     mockInitialBucketAndAgglomerateData(context);
 
@@ -310,7 +309,7 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should update the mapping when a the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
+  it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
     mockInitialBucketAndAgglomerateData(context);
 

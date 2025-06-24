@@ -172,7 +172,6 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_TREE_COLOR",
   "BATCH_UPDATE_GROUPS_AND_TREES", // Composited actions, only dispatched using `batchActions`
   ...AllUserBoundingBoxActions,
-  "APPLY_UPDATE_ACTIONS_FROM_SERVER",
 ];
 
 export const noAction = () =>

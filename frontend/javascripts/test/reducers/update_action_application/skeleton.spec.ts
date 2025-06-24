@@ -279,6 +279,7 @@ describe("Update Action Application for SkeletonTracing", () => {
   });
 
   afterAll(() => {
+    // Ensure that each possible action is included in the testing at least once
     expect(seenActionTypes).toEqual(new Set(actionNamesList));
   });
 });

@@ -498,7 +498,7 @@ function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
   initializeAdditionalCoordinates(dataset);
 }
 
-function initializeAdditionalCoordinates(dataset: APIDataset) {
+function initializeAdditionalCoordinates(dataset: StoreDataset) {
   const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
     ({ name, bounds }) => ({

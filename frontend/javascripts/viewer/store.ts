@@ -557,7 +557,7 @@ export type LocalSegmentationData = {
 };
 
 export type StoreDataset = APIDataset & {
-  // The backend servers an APIDataset object. The frontend
+  // The backend serves an APIDataset object. The frontend
   // adds/merges volume tracing objects into that dataset. The
   // StoreDataset reflects this on a type level. For example,
   // one cannot accidentally use the APIDataset during store

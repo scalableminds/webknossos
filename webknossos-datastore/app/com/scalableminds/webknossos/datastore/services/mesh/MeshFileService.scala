@@ -73,7 +73,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     with Hdf5HashedArrayUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
-  private val meshesDir = "meshes"
+  private val localMeshesDir = "meshes"
 
   private val meshFileKeyCache
     : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
@@ -104,7 +104,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         registeredAttachmentNormalized.getOrElse(
           LayerAttachment(
             meshFileName,
-            localDatasetDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
+            localDatasetDir.resolve(dataLayer.name).resolve(localMeshesDir).toUri,
             LayerAttachmentDataformat.hdf5
           )
         )
@@ -119,7 +119,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val scannedMeshFileNames = PathUtils
-      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
+      .listFiles(layerDir.resolve(localMeshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

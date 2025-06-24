@@ -43,13 +43,8 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
   def clearCache(predicate: AgglomerateFileKey => Boolean): Int = agglomerateFileCache.clear(predicate)
 
-  private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader = {
-    if (agglomerateFileKey.attachment.path.getScheme.nonEmpty && agglomerateFileKey.attachment.path.getScheme != "file") {
-      throw new Exception(
-        "Trying to open non-local hdf5 agglomerate file. Hdf5 agglomerate files are only supported on the datastore-local file system")
-    }
-    HDF5FactoryProvider.get.openForReading(Path.of(agglomerateFileKey.attachment.path).toFile)
-  }
+  private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader =
+    HDF5FactoryProvider.get.openForReading(agglomerateFileKey.attachment.localPath.toFile)
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
     tryo {

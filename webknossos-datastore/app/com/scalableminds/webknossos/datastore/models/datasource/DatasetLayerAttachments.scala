@@ -37,7 +37,16 @@ object LayerAttachmentType extends ExtendedEnumeration {
 case class LayerAttachment(name: String,
                            path: URI,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
-                           credentialId: Option[String] = None)
+                           credentialId: Option[String] = None) {
+  // Warning: throws! Use inside of tryo
+  def localPath: Path = {
+    if (path.getScheme.nonEmpty && path.getScheme != "file") {
+      throw new Exception(
+        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system")
+    }
+    Path.of(path)
+  }
+}
 
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]

@@ -146,37 +146,6 @@ function applySingleAction(
         },
       });
     }
-    case "createEdge": {
-      const { treeId, source, target } = ua.value;
-      // eslint-disable-next-line no-loop-func
-      if (state.annotation.skeleton == null) {
-        throw new Error("Could not apply update action because no skeleton exists.");
-      }
-
-      const tree = getTree(state.annotation.skeleton, treeId);
-      if (tree == null) {
-        throw new Error(
-          `Could not apply update action because tree with id=${treeId} was not found.`,
-        );
-      }
-      const newEdge = {
-        source,
-        target,
-      };
-      const edges = tree.edges.addEdge(newEdge);
-      const newTree = update(tree, { edges: { $set: edges } });
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, newTree);
-
-      return update(state, {
-        annotation: {
-          skeleton: {
-            trees: {
-              $set: newTrees,
-            },
-          },
-        },
-      });
-    }
     case "deleteTree": {
       const { id } = ua.value;
       const skeleton = enforceSkeletonTracing(state.annotation);
@@ -259,7 +228,37 @@ function applySingleAction(
         },
       });
     }
+    case "createEdge": {
+      const { treeId, source, target } = ua.value;
+      // eslint-disable-next-line no-loop-func
+      if (state.annotation.skeleton == null) {
+        throw new Error("Could not apply update action because no skeleton exists.");
+      }
 
+      const tree = getTree(state.annotation.skeleton, treeId);
+      if (tree == null) {
+        throw new Error(
+          `Could not apply update action because tree with id=${treeId} was not found.`,
+        );
+      }
+      const newEdge = {
+        source,
+        target,
+      };
+      const edges = tree.edges.addEdge(newEdge);
+      const newTree = update(tree, { edges: { $set: edges } });
+      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, newTree);
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
     case "deleteEdge": {
       const { treeId, source, target } = ua.value;
 

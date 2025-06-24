@@ -75,7 +75,7 @@ import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
 import type { Action } from "../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
 import { updateLocalHdf5Mapping } from "./mapping_saga";
-import { updateMappingWithMerge, updateMappingWithOmittedSplitPartners } from "./proofread_saga";
+import { updateMappingWithMerge, removeAgglomerateFromActiveMapping } from "./proofread_saga";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -607,7 +607,6 @@ function* watchForSaveConflicts(): Saga<never> {
           throw new Error("Unexpected size of newer versions.");
         }
 
-        console.log("Trying to incorporate newerActions", newerActions);
         if ((yield* tryToIncorporateActions(newerActions)).success) {
           return false;
         }
@@ -695,7 +694,6 @@ export function* tryToIncorporateActions(
   }
   for (const actionBatch of newerActions) {
     for (const action of actionBatch.value) {
-      console.log("incorporating", action.name);
       switch (action.name) {
         /////////////
         // Updates to user-specific state can be ignored:
@@ -755,7 +753,7 @@ export function* tryToIncorporateActions(
 
           const bucket = cube.getBucket(bucketAddress);
           if (bucket != null && bucket.type !== "null") {
-            cube.collectBucket(bucket);
+            cube.removeBucket(bucket);
             dataLayer.layerRenderingManager.refresh();
           }
           break;
@@ -766,7 +764,7 @@ export function* tryToIncorporateActions(
           const cube = Model.getCubeByLayerName(actionTracingId);
           const dataLayer = Model.getLayerByName(actionTracingId);
 
-          cube.collectBucketsIf((bucket) => bucket.containsValue(id));
+          cube.removeBucketsIf((bucket) => bucket.containsValue(id));
           dataLayer.layerRenderingManager.refresh();
           break;
         }
@@ -804,7 +802,7 @@ export function* tryToIncorporateActions(
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
           yield* call(
-            updateMappingWithOmittedSplitPartners,
+            removeAgglomerateFromActiveMapping,
             action.value.actionTracingId,
             activeMapping,
             action.value.agglomerateId,

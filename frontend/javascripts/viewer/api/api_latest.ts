@@ -1638,7 +1638,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectBucketsIf(predicateFn || truePredicate);
+          dataLayer.cube.removeBucketsIf(predicateFn || truePredicate);
           dataLayer.layerRenderingManager.refresh();
         }
       }),
@@ -1654,7 +1654,7 @@ class DataApi {
     }
 
     Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
-      dataLayer.cube.collectAllBuckets();
+      dataLayer.cube.removeAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
   }

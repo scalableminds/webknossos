@@ -409,7 +409,7 @@ class DataCube {
       }
 
       if (foundCollectibleBucket) {
-        this.collectBucket(this.buckets[this.bucketIterator]);
+        this.removeBucket(this.buckets[this.bucketIterator]);
       } else {
         const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
 
@@ -442,11 +442,11 @@ class DataCube {
     this.bucketIterator = (this.bucketIterator + 1) % (this.buckets.length + 1);
   }
 
-  collectAllBuckets(): void {
-    this.collectBucketsIf(() => true);
+  removeAllBuckets(): void {
+    this.removeBucketsIf(() => true);
   }
 
-  collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
+  removeBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     // This method is always called in the context of reloading data.
     // All callers should ensure a saved state. This is encapsulated in the
     // api's reloadBuckets function that is used for most refresh-related
@@ -479,7 +479,7 @@ class DataCube {
           false,
         )
       ) {
-        this.collectBucket(bucket);
+        this.removeBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);
       }
@@ -513,7 +513,7 @@ class DataCube {
     return valueSet;
   }
 
-  collectBucket(bucket: DataBucket): void {
+  removeBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 

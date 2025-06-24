@@ -1333,14 +1333,14 @@ export function* updateMappingWithMerge(
   );
 }
 
-export function* updateMappingWithOmittedSplitPartners(
+export function* removeAgglomerateFromActiveMapping(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
+  agglomerateId: number,
 ) {
   /*
-   * When sourceAgglomerateId was split, all segment ids that were mapped to sourceAgglomerateId,
-   * are removed from the activeMapping by this function.
+   * This function removes all super-voxels segments from the active mapping
+   * that map to the specified agglomerateId.
    */
 
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
@@ -1350,7 +1350,7 @@ export function* updateMappingWithOmittedSplitPartners(
       ? (el: number) => BigInt(el)
       : (el: number) => el;
   // If the mapping contains BigInts, we need a BigInt for the filtering
-  const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  const comparableSourceAgglomerateId = adaptToType(agglomerateId);
 
   const newMapping = new Map();
 

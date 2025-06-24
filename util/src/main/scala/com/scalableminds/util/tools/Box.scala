@@ -1,6 +1,7 @@
 package com.scalableminds.util.tools
 
 // Adapted from https://github.com/lift/framework/blob/main/core/common/src/main/scala/net/liftweb/common/Box.scala
+// (Removed some code not used by us, changed some naming, added Box.fromBool)
 
 /*
  * Copyright 2007-2011 WorldWide Conferencing, LLC

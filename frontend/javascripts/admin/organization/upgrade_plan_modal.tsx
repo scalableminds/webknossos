@@ -379,12 +379,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
             sales team. We typically respond within one business day to discuss payment options and
             purchasing requirements. See our{" "}
-            <a
-              href="https://webknossos.org/faq"
-              target="_blank"
-              ref="noopener noreferrer"
-              rel="noreferrer"
-            >
+            <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
               FAQ
             </a>{" "}
             for more information. information.

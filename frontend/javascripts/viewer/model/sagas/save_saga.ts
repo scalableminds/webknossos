@@ -686,9 +686,17 @@ function* watchForSaveConflicts(): Saga<never> {
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
 ): Saga<{ success: boolean }> {
-  const refreshFunctionByTracing: Record<string, () => Saga<void>> = {};
+  // After all actions were incorporated, volume buckets and hdf5 mappings
+  // are reloaded (if they exist and necessary). This is done as a
+  // "finalization step", because it requires that the newest version is set
+  // in the store annotation. Also, it only needs to happen once (instead of
+  // per action).
+  const updateLocalHdf5FunctionByTracing: Record<string, () => void> = {};
+  const refreshLayerFunctionByTracing: Record<string, () => void> = {};
   function* finalize() {
-    for (const fn of Object.values(refreshFunctionByTracing)) {
+    for (const fn of Object.values(updateLocalHdf5FunctionByTracing).concat(
+      Object.values(refreshLayerFunctionByTracing),
+    )) {
       yield* call(fn);
     }
   }
@@ -754,7 +762,9 @@ export function* tryToIncorporateActions(
           const bucket = cube.getBucket(bucketAddress);
           if (bucket != null && bucket.type !== "null") {
             cube.removeBucket(bucket);
-            dataLayer.layerRenderingManager.refresh();
+            refreshLayerFunctionByTracing[value.actionTracingId] = () => {
+              dataLayer.layerRenderingManager.refresh();
+            };
           }
           break;
         }
@@ -765,7 +775,9 @@ export function* tryToIncorporateActions(
           const dataLayer = Model.getLayerByName(actionTracingId);
 
           cube.removeBucketsIf((bucket) => bucket.containsValue(id));
-          dataLayer.layerRenderingManager.refresh();
+          refreshLayerFunctionByTracing[value.actionTracingId] = () => {
+            dataLayer.layerRenderingManager.refresh();
+          };
           break;
         }
         case "updateLargestSegmentId":
@@ -824,8 +836,8 @@ export function* tryToIncorporateActions(
           const dataset = yield* select((state) => state.dataset);
           const layerInfo = getLayerByName(dataset, layerName);
 
-          refreshFunctionByTracing[layerName] = function* (): Saga<void> {
-            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
+          updateLocalHdf5FunctionByTracing[layerName] = () => {
+            updateLocalHdf5Mapping(layerName, layerInfo, mappingName);
           };
 
           break;

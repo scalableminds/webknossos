@@ -627,13 +627,11 @@ class DataSourceController @Inject()(
             mappingNameForMeshFile = None,
             omitMissing = false
           )
-          fileMag <- segmentIndexFileService.readFileMag(segmentIndexFileKey)
           topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
             segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
           topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
-          bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
-                                                                                      request.body.mag,
-                                                                                      fileMag)
+          bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts,
+                                                                                               request.body.mag)
           bucketPositionsForCubeSize = bucketPositions
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / request.body.cubeSize)
@@ -645,7 +643,7 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for multiple segments
-    * @return List of bucketPositions as indices of 32³ buckets
+    * @return List of bucketPositions as indices of 32³ buckets (in target mag)
     */
   def querySegmentIndex(organizationId: String,
                         datasetDirectoryName: String,
@@ -669,13 +667,11 @@ class DataSourceController @Inject()(
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
               )
-              fileMag <- segmentIndexFileService.readFileMag(segmentIndexFileKey)
               topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
                 segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
               topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
-              bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
-                                                                                          request.body.mag,
-                                                                                          fileMag)
+              bucketPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts,
+                                                                                                   request.body.mag)
             } yield SegmentIndexData(segmentOrAgglomerateId, bucketPositions.toSeq)
           }
         } yield Ok(Json.toJson(segmentIdsAndBucketPositions))

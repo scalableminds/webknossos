@@ -97,6 +97,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   /**
     * Read the segment index file and return the bucket positions for the given segment id.
     * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
+    * The bucket positions are in mag1 coordinates though!
     */
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
                        segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
@@ -108,22 +109,10 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       case _ => unsupportedDataFormat(segmentIndexFileKey)
     }
 
-  def readFileMag(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext,
-                                                            tc: TokenContext): Fox[Vec3Int] =
-    segmentIndexFileKey.attachment.dataFormat match {
-      case LayerAttachmentDataformat.zarr3 =>
-        zarrSegmentIndexFileService.readFileMag(segmentIndexFileKey: SegmentIndexFileKey)
-      case LayerAttachmentDataformat.hdf5 =>
-        hdf5SegmentIndexFileService.readFileMag(segmentIndexFileKey: SegmentIndexFileKey)
-      case _ => unsupportedDataFormat(segmentIndexFileKey)
-    }
-
-  def topLeftsToDistinctBucketPositions(topLefts: Array[Vec3Int],
-                                        targetMag: Vec3Int,
-                                        fileMag: Vec3Int): Array[Vec3Int] =
+  def topLeftsToDistinctTargetMagBucketPositions(topLefts: Array[Vec3Int], targetMag: Vec3Int): Array[Vec3Int] =
     topLefts
       .map(_.scale(DataLayer.bucketLength)) // map indices to positions
-      .map(_ / (targetMag / fileMag))
+      .map(_ / targetMag)
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
@@ -158,13 +147,15 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   private def getDataForBucketPositions(dataSourceId: DataSourceId,
                                         dataLayer: DataLayer,
                                         agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
-      bucketPositions: Seq[Vec3Int],
-      mag: Vec3Int,
+      bucketPositionsInRequestedMag: Seq[Vec3Int],
+      requestedMag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
     // Additional coordinates parameter ignored, see #7556
-    val mag1BucketPositions = bucketPositions.map(_ * mag)
+
+    val mag1BucketPositions = bucketPositionsInRequestedMag.map(_ * requestedMag)
+
     val bucketRequests = mag1BucketPositions.map(
       mag1BucketPosition =>
         DataServiceDataRequest(
@@ -174,7 +165,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
             VoxelPosition(mag1BucketPosition.x * DataLayer.bucketLength,
                           mag1BucketPosition.y * DataLayer.bucketLength,
                           mag1BucketPosition.z * DataLayer.bucketLength,
-                          mag),
+                          requestedMag),
             DataLayer.bucketLength,
             DataLayer.bucketLength,
             DataLayer.bucketLength
@@ -189,25 +180,26 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     } yield (bucketData, dataLayer.elementClass)
   }
 
+  // Reads bucket positions froms egment index file. Returns target-mag bucket positions
+  // (even though the file stores mag1 bucket positions)
   private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
                                  agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
       segmentOrAgglomerateId: Long,
-      mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
+      requestedMag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(agglomerateFileKeyOpt, segmentOrAgglomerateId)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
-        getBucketPositions(segmentIndexFileKey, segmentId, mag))
+        getBucketPositions(segmentIndexFileKey, segmentId, requestedMag))
       positionsCollected = positionsPerSegment.flatten.toSet.map(vec3IntToProto)
     } yield positionsCollected
 
-  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, mag: Vec3Int)(
+  private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, requestedMag: Vec3Int)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
-      fileMag <- readFileMag(segmentIndexFileKey)
-      bucketPositionsInFileMag <- readSegmentIndex(segmentIndexFileKey, segmentId)
-      bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
-    } yield bucketPositions
+      mag1BucketPositions <- readSegmentIndex(segmentIndexFileKey, segmentId)
+      bucketPositionsInRequestedMag = mag1BucketPositions.map(_ / requestedMag)
+    } yield bucketPositionsInRequestedMag
 
   private def getSegmentIdsForAgglomerateIdIfNeeded(
       agglomerateFileKeyOpt: Option[AgglomerateFileKey],

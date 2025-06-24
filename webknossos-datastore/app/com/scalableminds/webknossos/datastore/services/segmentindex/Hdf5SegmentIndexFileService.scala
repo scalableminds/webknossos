@@ -31,12 +31,6 @@ class Hdf5SegmentIndexFileService @Inject()() extends FoxImplicits {
         case None           => Array.empty
       }
 
-  def readFileMag(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext): Fox[Vec3Int] =
-    for {
-      segmentIndex <- fileHandleCache.getCachedHdf5File(segmentIndexFileKey.attachment)(CachedHdf5File.fromPath).toFox
-      mag <- Vec3Int.fromArray(segmentIndex.uint64Reader.getArrayAttr("/", "mag").map(_.toInt)).toFox
-    } yield mag
-
   private def readTopLefts(segmentIndex: CachedHdf5File, bucketStart: Long, bucketEnd: Long, segmentId: Long)(
       implicit ec: ExecutionContext): Fox[Option[Array[Array[Short]]]] =
     for {

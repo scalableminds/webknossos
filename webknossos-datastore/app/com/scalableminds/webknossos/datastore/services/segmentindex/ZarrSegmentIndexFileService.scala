@@ -58,6 +58,8 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
                                             chunkCacheService: ChunkCacheService)
     extends FoxImplicits {
 
+  // TODO clear caches
+
   private val keyHashBucketOffsets = "hash_bucket_offsets"
   private val keyHashBuckets = "hash_buckets"
   private val keyTopLefts = "top_lefts"
@@ -80,12 +82,6 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
         .parseAs[SegmentIndexFileAttributes](groupHeaderBytes)
         .toFox ?~> "Could not parse meshFile attributes from zarr group file"
     } yield segmentIndexFileAttributes
-
-  def readFileMag(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext,
-                                                            tc: TokenContext): Fox[Vec3Int] =
-    for {
-      attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
-    } yield attributes.mag
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
                        segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
@@ -120,9 +116,9 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
         topLeftsMA <- topLeftsArray.readAsMultiArray(offset = Array(topLeftStart, 0), shape = Array(topLeftCount, 3))
         topLefts <- tryo((0 until topLeftCount).map { idx =>
           Vec3Int(
-            topLeftsMA.getInt(topLeftsMA.getIndex.set(Array(idx, 0))),
-            topLeftsMA.getInt(topLeftsMA.getIndex.set(Array(idx, 1))),
-            topLeftsMA.getInt(topLeftsMA.getIndex.set(Array(idx, 2)))
+            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 0))),
+            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 1))),
+            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 2)))
           )
         }.toArray).toFox
       } yield topLefts)
@@ -130,34 +126,6 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
 
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
-
-  /*
-
-  private def readTopLefts(segmentIndex: CachedHdf5File, bucketStart: Long, bucketEnd: Long, segmentId: Long)(
-      implicit ec: ExecutionContext): Fox[Option[Array[Array[Short]]]] =
-    for {
-      _ <- Fox.successful(())
-      buckets = segmentIndex.uint64Reader.readMatrixBlockWithOffset("hash_buckets",
-                                                                    (bucketEnd - bucketStart + 1).toInt,
-                                                                    3,
-                                                                    bucketStart,
-                                                                    0)
-      bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
-      topLeftOpts <- Fox.runIf(bucketLocalOffset >= 0)(for {
-        _ <- Fox.successful(())
-        topLeftStart = buckets(bucketLocalOffset)(1)
-        topLeftEnd = buckets(bucketLocalOffset)(2)
-        bucketEntriesDtype <- tryo(segmentIndex.stringReader.getAttr("/", "dtype_bucket_entries")).toFox
-        _ <- Fox
-          .fromBool(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
-        topLefts = segmentIndex.uint16Reader.readMatrixBlockWithOffset("top_lefts",
-                                                                       (topLeftEnd - topLeftStart).toInt,
-                                                                       3,
-                                                                       topLeftStart,
-                                                                       0)
-      } yield topLefts)
-    } yield topLeftOpts
-   */
 
   private def openZarrArray(segmentIndexFileKey: SegmentIndexFileKey,
                             zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =

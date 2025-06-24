@@ -401,8 +401,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      targetAgglomerateId,
       sourceAgglomerateId,
+      targetAgglomerateId,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -743,8 +743,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      targetAgglomerateId,
       sourceAgglomerateId,
+      targetAgglomerateId,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -1317,8 +1317,8 @@ function mergeAgglomeratesInMapping(
 export function* updateMappingWithMerge(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  targetAgglomerateId: number,
   sourceAgglomerateId: number,
+  targetAgglomerateId: number,
 ) {
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,

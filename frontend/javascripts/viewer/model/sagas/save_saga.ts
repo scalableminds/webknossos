@@ -803,8 +803,8 @@ export function* tryToIncorporateActions(
             updateMappingWithMerge,
             action.value.actionTracingId,
             activeMapping,
-            action.value.agglomerateId2,
             action.value.agglomerateId1,
+            action.value.agglomerateId2,
           );
           break;
         }

@@ -4,13 +4,13 @@ import { Card, Flex, Popover, Typography } from "antd";
 interface SettingsCardProps {
   title: string;
   description: React.ReactNode;
-  explanation?: string;
+  explanation?: React.ReactNode;
   action?: React.ReactNode;
 }
 
 export function SettingsCard({ title, description, explanation, action }: SettingsCardProps) {
   return (
-    <Card>
+    <Card style={{ minHeight: 105 }}>
       <Typography.Text type="secondary" style={{ fontSize: 14 }}>
         <Flex justify="space-between">
           <div>

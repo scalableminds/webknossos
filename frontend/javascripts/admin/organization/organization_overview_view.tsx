@@ -66,7 +66,6 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
 
   let upgradeUsersAction: React.ReactNode = null;
   let upgradeStorageAction: React.ReactNode = null;
-  let upgradePlanAction: React.ReactNode = null;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Basic ||
@@ -98,18 +97,6 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
-      />
-    );
-
-    upgradePlanAction = (
-      <Button
-        shape="circle"
-        size="small"
-        key="comparePlanAction"
-        icon={<PlusOutlined />}
-        href="https://webknossos.org/pricing"
-        target="_blank"
-        rel="noopener noreferrer"
       />
     );
   }
@@ -150,7 +137,11 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
       key: "plan",
       title: "Current Plan",
       value: organization.pricingPlan,
-      action: upgradePlanAction,
+      explanation: (
+        <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
+          Compare all plans
+        </a>
+      ),
     },
     {
       key: "users",
@@ -184,7 +175,12 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           {orgaStats.map((stat) => (
             <Col span={8} key={stat.key}>
-              <SettingsCard title={stat.title} description={stat.value} action={stat.action} />
+              <SettingsCard
+                title={stat.title}
+                description={stat.value}
+                action={stat.action}
+                explanation={stat.explanation}
+              />
             </Col>
           ))}
         </Row>

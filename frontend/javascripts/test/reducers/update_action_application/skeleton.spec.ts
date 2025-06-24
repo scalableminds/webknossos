@@ -241,7 +241,8 @@ describe("Update Action Application for SkeletonTracing", () => {
       SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
     ]);
 
-    expect(getActiveNode(enforceSkeletonTracing(newState3.annotation))).toBeNull();
+    const { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+    expect(activeNodeId).toBeNull();
   });
 
   it("should clear the active node and active tree if the active tree was deleted", () => {
@@ -271,8 +272,10 @@ describe("Update Action Application for SkeletonTracing", () => {
       SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
     ]);
 
-    expect(getActiveTree(enforceSkeletonTracing(newState3.annotation))).toBeNull();
-    expect(getActiveNode(enforceSkeletonTracing(newState3.annotation))).toBeNull();
+    const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+
+    expect(activeNodeId).toBeNull();
+    expect(activeTreeId).toBeNull();
   });
 
   afterAll(() => {

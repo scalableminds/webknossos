@@ -180,11 +180,14 @@ function applySingleAction(
       const skeleton = enforceSkeletonTracing(state.annotation);
       const updatedTrees = skeleton.trees.delete(id);
 
+      const newActiveTreeId = skeleton.activeTreeId === id ? null : id;
+
       return update(state, {
         annotation: {
           skeleton: {
             trees: { $set: updatedTrees },
             cachedMaxNodeId: { $set: getMaximumNodeId(updatedTrees) },
+            activeTreeId: { $set: newActiveTreeId },
           },
         },
       });
@@ -347,7 +350,6 @@ function applySingleAction(
   }
   ua satisfies never;
 
-  console.log("update action name", ua.name);
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

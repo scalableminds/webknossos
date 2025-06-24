@@ -3,8 +3,8 @@ import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { SettingsTitle } from "./helpers/settings_title";
 import { SettingsCard } from "./helpers/settings_card";
+import { SettingsTitle } from "./helpers/settings_title";
 
 const { Text } = Typography;
 

@@ -9,8 +9,8 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsTitle } from "./helpers/settings_title";
 import { SettingsCard } from "./helpers/settings_card";
+import { SettingsTitle } from "./helpers/settings_title";
 
 function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);

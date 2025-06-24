@@ -21,7 +21,7 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\\-_\\. ß]+$/;
 
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
-  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
   const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
 

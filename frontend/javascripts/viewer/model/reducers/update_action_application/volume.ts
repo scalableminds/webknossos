@@ -16,85 +16,92 @@ import {
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
-  newState: WebknossosState,
+  state: WebknossosState,
   VolumeTracingReducer: (
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
-): { value: WebknossosState } {
+): WebknossosState {
+  let newState = state;
   for (const ua of actions) {
-    switch (ua.name) {
-      case "updateLargestSegmentId": {
-        const volumeTracing = getVolumeTracingById(newState.annotation, ua.value.actionTracingId);
-        newState = setLargestSegmentIdReducer(newState, volumeTracing, ua.value.largestSegmentId);
-        break;
-      }
-      case "createSegment":
-      case "updateSegment": {
-        const { actionTracingId, ...originalSegment } = ua.value;
-        const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
-        const segment: Partial<Segment> = {
-          somePosition: anchorPosition ?? undefined,
-          ...segmentWithoutAnchor,
-        };
-        newState = VolumeTracingReducer(
-          newState,
-          updateSegmentAction(originalSegment.id, segment, actionTracingId),
-        );
-        break;
-      }
-      case "deleteSegment": {
-        newState = VolumeTracingReducer(
-          newState,
-          removeSegmentAction(ua.value.id, ua.value.actionTracingId),
-        );
-        break;
-      }
-      case "updateSegmentGroups": {
-        newState = VolumeTracingReducer(
-          newState,
-          setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
-        );
-        break;
-      }
-      case "updateUserBoundingBoxInVolumeTracing": {
-        newState = applyUpdateUserBoundingBox(
-          newState,
-          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
-          ua,
-        );
-        break;
-      }
-      case "addUserBoundingBoxInVolumeTracing": {
-        newState = applyAddUserBoundingBox(
-          newState,
-          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
-          ua,
-        );
-        break;
-      }
-      case "deleteUserBoundingBoxInVolumeTracing": {
-        newState = applyDeleteUserBoundingBox(
-          newState,
-          getVolumeTracingById(newState.annotation, ua.value.actionTracingId),
-          ua,
-        );
-        break;
-      }
-      case "updateSegmentGroupsExpandedState":
-      case "updateUserBoundingBoxVisibilityInVolumeTracing": {
-        // These update actions are user specific and don't need to be incorporated here
-        // because they are from another user.
-        break;
-      }
-      default: {
-        ua satisfies never;
-      }
+    newState = applySingleAction(ua, newState, VolumeTracingReducer);
+  }
+
+  return newState;
+}
+
+function applySingleAction(
+  ua: ApplicableVolumeUpdateAction,
+  state: WebknossosState,
+  VolumeTracingReducer: (
+    state: WebknossosState,
+    action: VolumeTracingReducerAction,
+  ) => WebknossosState,
+): WebknossosState {
+  switch (ua.name) {
+    case "updateLargestSegmentId": {
+      const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
+      return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
+    }
+    case "createSegment":
+    case "updateSegment": {
+      const { actionTracingId, ...originalSegment } = ua.value;
+      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
+      const segment: Partial<Segment> = {
+        somePosition: anchorPosition ?? undefined,
+        ...segmentWithoutAnchor,
+      };
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+      );
+    }
+    case "deleteSegment": {
+      return VolumeTracingReducer(
+        state,
+        removeSegmentAction(ua.value.id, ua.value.actionTracingId),
+      );
+    }
+    case "updateSegmentGroups": {
+      return VolumeTracingReducer(
+        state,
+        setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
+      );
+    }
+    case "updateUserBoundingBoxInVolumeTracing": {
+      return applyUpdateUserBoundingBox(
+        state,
+        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
+        ua,
+      );
+    }
+    case "addUserBoundingBoxInVolumeTracing": {
+      return applyAddUserBoundingBox(
+        state,
+        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
+        ua,
+      );
+    }
+    case "deleteUserBoundingBoxInVolumeTracing": {
+      return applyDeleteUserBoundingBox(
+        state,
+        getVolumeTracingById(state.annotation, ua.value.actionTracingId),
+        ua,
+      );
+    }
+    case "updateSegmentGroupsExpandedState":
+    case "updateUserBoundingBoxVisibilityInVolumeTracing": {
+      // These update actions are user specific and don't need to be incorporated here
+      // because they are from another user.
+      return state;
+    }
+    default: {
+      ua satisfies never;
     }
   }
 
-  // The state is wrapped in this container object to prevent the above switch-cases from
-  // accidentally returning newState (which is common in reducers but would ignore
-  // remaining update actions here).
-  return { value: newState };
+  ua satisfies never;
+
+  // Satisfy TS.
+  throw new Error("Reached unexpected part of function.");
 }

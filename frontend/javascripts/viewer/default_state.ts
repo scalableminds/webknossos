@@ -1,5 +1,5 @@
 import { getSystemColorTheme } from "theme";
-import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
+import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,

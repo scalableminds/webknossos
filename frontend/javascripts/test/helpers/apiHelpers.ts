@@ -147,7 +147,10 @@ vi.mock("admin/rest_api.ts", async () => {
         _tracingId: string,
         _segmentsInfo: unknown,
       ): Promise<Array<MinCutTargetEdge>> => {
-        throw new Error("Not yet mocked.");
+        // This simply serves as a preparation so that specs can mock the function
+        // when needed. Without this stub, it's harder to mock this specific function
+        // later.
+        throw new Error("No test has mocked the return value yet here.");
       },
     ),
   };

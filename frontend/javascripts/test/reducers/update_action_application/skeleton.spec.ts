@@ -3,6 +3,7 @@ import _ from "lodash";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
+import { withoutUpdateActiveItemTracing } from "test/helpers/saveHelpers";
 import type { Vector3 } from "viewer/constants";
 import {
   enforceSkeletonTracing,
@@ -230,8 +231,10 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteNodeAction(2)]);
 
-    const updateActions = Array.from(
-      diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
+    const updateActions = withoutUpdateActiveItemTracing(
+      Array.from(
+        diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
+      ),
     ) as ApplicableSkeletonUpdateAction[];
 
     const newState3 = applyActions(newState, [
@@ -258,8 +261,10 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteTreeAction(2)]);
 
-    const updateActions = Array.from(
-      diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
+    const updateActions = withoutUpdateActiveItemTracing(
+      Array.from(
+        diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
+      ),
     ) as ApplicableSkeletonUpdateAction[];
 
     const newState3 = applyActions(newState, [

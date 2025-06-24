@@ -1068,10 +1068,12 @@ export function getDatasetDefaultConfiguration(datasetId: string): Promise<Datas
 export function updateDatasetDefaultConfiguration(
   datasetId: string,
   datasetConfiguration: DatasetConfiguration,
+  options?: RequestOptions,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
     method: "PUT",
     data: datasetConfiguration,
+    ...options,
   });
 }
 

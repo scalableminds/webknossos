@@ -24,12 +24,17 @@ function AccountPasswordView({ history }: Props) {
   function onFinish(formValues: Record<string, any>) {
     Request.sendJSONReceiveJSON("/api/auth/changePassword", {
       data: formValues,
-    }).then(async () => {
-      Toast.success(messages["auth.reset_pw_confirmation"]);
-      await Request.receiveJSON("/api/auth/logout");
-      history.push("/auth/login");
-      Store.dispatch(logoutUserAction());
-    });
+    })
+      .then(async () => {
+        Toast.success(messages["auth.reset_pw_confirmation"]);
+        await Request.receiveJSON("/api/auth/logout");
+        history.push("/auth/login");
+        Store.dispatch(logoutUserAction());
+      })
+      .catch((error) => {
+        console.error("Password change failed:", error);
+        Toast.error("Failed to change password. Please try again.");
+      });
   }
 
   function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {

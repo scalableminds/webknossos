@@ -651,7 +651,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
-                render={() => <Redirect to="/account/login" />}
+                render={() => <Redirect to="/account/token" />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

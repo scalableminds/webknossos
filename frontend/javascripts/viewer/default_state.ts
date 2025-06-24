@@ -9,6 +9,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
   UnitLong,
+  ViewModeValues,
 } from "viewer/constants";
 import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
@@ -33,7 +34,7 @@ const initialAnnotationInfo = {
     somaClickingAllowed: false,
     mergerMode: false,
     volumeInterpolationAllowed: false,
-    allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
+    allowedModes: ViewModeValues,
     magRestrictions: {},
   },
   visibility: "Internal" as APIAnnotationVisibility,

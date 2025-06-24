@@ -5,6 +5,7 @@ import {
 } from "types/api_types";
 import { tracing as skeletonTracing } from "./skeletontracing_server_objects";
 import { tracing as volumeTracing } from "./volumetracing_server_objects";
+import { ViewModeValues } from "viewer/constants";
 
 export const tracings = [skeletonTracing, volumeTracing];
 
@@ -54,7 +55,7 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
   },
   settings: {
-    allowedModes: ["orthogonal", "oblique", "flight"],
+    allowedModes: ViewModeValues,
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,

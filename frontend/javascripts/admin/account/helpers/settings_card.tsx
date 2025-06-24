@@ -4,7 +4,7 @@ import { Card, Flex, Popover, Typography } from "antd";
 interface SettingsCardProps {
   title: string;
   description: React.ReactNode;
-  explanation?: string;
+  explanation?: React.ReactNode;
   action?: React.ReactNode;
 }
 

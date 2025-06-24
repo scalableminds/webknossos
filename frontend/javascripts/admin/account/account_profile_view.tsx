@@ -72,6 +72,9 @@ function AccountProfileView() {
     {
       title: "Role",
       value: role,
+      explanation: (
+        <a href="https://docs.webknossos.org/webknossos/users/access_rights.html">Learn More</a>
+      ),
     },
     {
       title: "Theme",
@@ -92,7 +95,11 @@ function AccountProfileView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {profileItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} description={item.value} />
+            <SettingsCard
+              title={item.title}
+              description={item.value}
+              explanation={item.explanation}
+            />
           </Col>
         ))}
       </Row>

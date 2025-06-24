@@ -1,4 +1,4 @@
-import { SwapOutlined } from "@ant-design/icons";
+import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -67,7 +67,11 @@ function AccountAuthTokenView() {
       : []),
     {
       title: "API Documentation",
-      value: <a href="https://docs.webknossos.org/webknossos-py/index.html">Read the docs</a>,
+      value: (
+        <a href="https://docs.webknossos.org/webknossos-py/index.html">
+          Read the docs <ExportOutlined />
+        </a>
+      ),
     },
   ];
 

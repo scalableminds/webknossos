@@ -66,7 +66,9 @@ def main():
     with open(file_path, "w") as f:
         f.write(TEMPLATE)
 
-    print(f"✅ Created changelog entry: {file_path}")
+    print(
+        f"✅ Created new file for a changelog entry. Please adapt its content here: {file_path}"
+    )
 
 
 if __name__ == "__main__":

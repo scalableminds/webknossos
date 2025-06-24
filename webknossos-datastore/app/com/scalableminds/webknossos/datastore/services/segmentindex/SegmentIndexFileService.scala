@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.segmentindex
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
@@ -14,6 +14,11 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataServiceHolder,
+  DataSourceRepository,
+  Hdf5HashedArrayUtils
+}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}

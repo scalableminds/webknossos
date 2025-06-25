@@ -19,6 +19,7 @@ import type {
   UnregisterCallback,
 } from "history";
 import { handleGenericError } from "libs/error_handling";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
@@ -42,7 +43,6 @@ import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import { Hideable, hasFormError } from "./helper_components";
-import { useWkSelector } from "libs/react_hooks";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";

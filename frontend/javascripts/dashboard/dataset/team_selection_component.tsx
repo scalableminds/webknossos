@@ -1,9 +1,9 @@
 import { getEditableTeams, getTeams } from "admin/rest_api";
 import { Select } from "antd";
-import _ from "lodash";
-import type { APITeam } from "types/api_types";
-import { useEffect, useState, useCallback } from "react";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import _ from "lodash";
+import { useCallback, useEffect, useState } from "react";
+import type { APITeam } from "types/api_types";
 
 const { Option } = Select;
 

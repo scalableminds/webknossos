@@ -13,9 +13,9 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import type { VolumeTracing } from "viewer/store";
 import { getActiveSegmentationTracing } from "../../../accessors/volumetracing_accessor";
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../../../actions/ui_actions";
+import { requestBucketModificationInVolumeTracing } from "../../saga_helpers";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
 import performQuickSelectML from "./quick_select_ml_saga";
-import { requestBucketModificationInVolumeTracing } from "../../saga_helpers";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);

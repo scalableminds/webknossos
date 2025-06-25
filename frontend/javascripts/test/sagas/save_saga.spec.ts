@@ -16,7 +16,7 @@ import {
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-} from "viewer/model/sagas/saving/save_saga";
+} from "viewer/model/sagas/saving/save_queue_draining";
 import { TIMESTAMP } from "test/global_mocks";
 import { sendSaveRequestWithToken } from "admin/rest_api";
 

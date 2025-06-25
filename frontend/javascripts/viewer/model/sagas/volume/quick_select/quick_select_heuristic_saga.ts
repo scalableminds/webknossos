@@ -22,9 +22,23 @@ import { call, put, race, take } from "typed-redux-saga";
 import type { APIDataLayer, APIDataset } from "types/api_types";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import {
+  getDefaultValueRangeOfLayer,
+  getEnabledColorLayers,
+  getLayerBoundingBox,
+  getMagInfo,
+} from "viewer/model/accessors/dataset_accessor";
+import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
+import {
   getActiveSegmentationTracing,
   getSegmentationLayerForTracing,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import {
+  type EnterAction,
+  type EscapeAction,
+  showQuickSelectSettingsAction,
+} from "viewer/model/actions/ui_actions";
 import {
   type CancelQuickSelectAction,
   type ComputeQuickSelectForPointAction,
@@ -36,6 +50,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import Dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { api } from "viewer/singletons";
@@ -45,21 +60,6 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import {
-  getDefaultValueRangeOfLayer,
-  getEnabledColorLayers,
-  getLayerBoundingBox,
-  getMagInfo,
-} from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import {
-  type EnterAction,
-  type EscapeAction,
-  showQuickSelectSettingsAction,
-} from "viewer/model/actions/ui_actions";
-import Dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "../helpers";
 import { copyNdArray } from "../volume_interpolation_saga";
 

@@ -523,7 +523,7 @@ const VERSION_POLL_INTERVAL_COLLAB = 1 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
 
-function* watchForSaveConflicts(): Saga<never> {
+function* watchForSaveConflicts(): Saga<void> {
   function* checkForNewVersion(): Saga<boolean> {
     /*
      * Checks whether there is a newer version on the server. If so,
@@ -571,42 +571,25 @@ function* watchForSaveConflicts(): Saga<never> {
       return false;
     }
 
-    const versionOnServer = yield* call(
-      getNewestVersionForAnnotation,
-      tracingStoreUrl,
-      annotationId,
-    );
-
-    // Read the tracing version again from the store, since the
-    // old reference to tracing might be outdated now due to the
-    // immutability.
     const versionOnClient = yield* select((state) => {
       return state.annotation.version;
     });
 
+    // Fetch all update actions that belong to a version that is newer than
+    // versionOnClient. If there are none, the array will be empty.
+    // The order is ascending in the version number ([v_n, v_(n+1), ...]).
+    const newerActions = yield* call(
+      getUpdateActionLog,
+      tracingStoreUrl,
+      annotationId,
+      versionOnClient + 1,
+      undefined,
+      true,
+    );
+
     const toastKey = "save_conflicts_warning";
-    const newerVersionCount = versionOnServer - versionOnClient;
-    if (newerVersionCount > 0) {
-      // The latest version on the server is greater than the most-recently
-      // stored version.
-
-      const { url: tracingStoreUrl } = yield* select((state) => state.annotation.tracingStore);
-
+    if (newerActions.length > 0) {
       try {
-        // The order is ascending in the version number ([v_n, v_(n+1), ...]).
-        const newerActions = yield* call(
-          getUpdateActionLog,
-          tracingStoreUrl,
-          annotationId,
-          versionOnClient + 1,
-          undefined,
-          true,
-        );
-
-        if (newerActions.length !== newerVersionCount) {
-          throw new Error("Unexpected size of newer versions.");
-        }
-
         if ((yield* tryToIncorporateActions(newerActions)).success) {
           return false;
         }

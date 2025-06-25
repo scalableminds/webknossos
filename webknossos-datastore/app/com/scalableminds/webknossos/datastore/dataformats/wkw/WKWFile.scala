@@ -3,11 +3,10 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import java.io._
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.jpountz.lz4.LZ4Factory
-import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
@@ -49,7 +48,7 @@ trait WKWCompressionHelper {
         val rawChunk: Array[Byte] = Array.ofDim[Byte](numBytesPerChunk)
         for {
           bytesDecompressed <- tryo(lz4Decompressor.decompress(compressedChunk, rawChunk, numBytesPerChunk))
-          _ <- bool2Box(bytesDecompressed == compressedChunk.length) ?~! error(
+          _ <- Box.fromBool(bytesDecompressed == compressedChunk.length) ?~! error(
             "Decompressed unexpected number of bytes",
             compressedChunk.length,
             bytesDecompressed)
@@ -88,9 +87,9 @@ object WKWFile extends WKWCompressionHelper with FoxImplicits {
           if (blocks.hasNext) {
             val data = blocks.next()
             for {
-              _ <- bool2Box(data.length == header.numBytesPerChunk) ?~! error("Unexpected chunk size",
-                                                                              header.numBytesPerChunk,
-                                                                              data.length)
+              _ <- Box.fromBool(data.length == header.numBytesPerChunk) ?~! error("Unexpected chunk size",
+                                                                                  header.numBytesPerChunk,
+                                                                                  data.length)
               compressedChunk <- if (header.isCompressed) compressChunk(header.blockType)(data) else Full(data)
               _ <- tryo(dataBuffer.write(compressedChunk))
             } yield {

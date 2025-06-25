@@ -11,7 +11,7 @@ import ch.systemsx.cisd.hdf5.{
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.typesafe.scalalogging.LazyLogging
 

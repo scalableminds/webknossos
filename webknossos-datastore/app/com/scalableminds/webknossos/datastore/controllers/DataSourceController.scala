@@ -22,8 +22,8 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
@@ -40,6 +40,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
+    datasetCache: DatasetCache,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -379,7 +380,6 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.writeDataSource(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          _ <- Fox.successful(())
           dataSource <- dataSourceRepository.get(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
@@ -604,6 +604,7 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for a single segment
+    *
     * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
     */
   def getSegmentIndex(organizationId: String,
@@ -644,6 +645,7 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for multiple segments
+    *
     * @return List of bucketPositions as indices of 32³ buckets
     */
   def querySegmentIndex(organizationId: String,
@@ -753,5 +755,12 @@ class DataSourceController @Inject()(
         } yield Ok(Json.toJson(ExploreRemoteDatasetResponse(dataSourceOpt, reportMutable.mkString("\n"))))
       }
     }
+
+  def invalidateCache(datasetId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+      datasetCache.invalidateCache(datasetId)
+      Future.successful(Ok)
+    }
+  }
 
 }

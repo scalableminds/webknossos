@@ -18,7 +18,7 @@ import {
 import { PricingPlanEnum, getActiveUserCount } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
-const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\\-_\\. ß]+$/;
+const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 
 export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
   const [isFetchingData, setIsFetchingData] = useState(true);
@@ -159,7 +159,7 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
-      value: "2",
+      value: organization.creditBalance || "N/A",
       action: buyMoreCreditsAction,
     },
   ];

@@ -29,8 +29,8 @@ function AccountPasswordView({ history }: Props) {
       .then(async () => {
         Toast.success(messages["auth.reset_pw_confirmation"]);
         await Request.receiveJSON("/api/auth/logout");
-        history.push("/auth/login");
         Store.dispatch(logoutUserAction());
+        history.push("/auth/login");
       })
       .catch((error) => {
         console.error("Password change failed:", error);

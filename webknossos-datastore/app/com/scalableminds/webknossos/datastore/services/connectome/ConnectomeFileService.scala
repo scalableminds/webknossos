@@ -1,12 +1,22 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Full, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataSourceId,
+  LayerAttachment,
+  LayerAttachmentDataformat
+}
+import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileInfo, MeshFileKey}
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FilenameUtils
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.File
@@ -78,33 +88,92 @@ object ConnectomeLegend {
   implicit val jsonFormat: OFormat[ConnectomeLegend] = Json.format[ConnectomeLegend]
 }
 
+case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+
 class ConnectomeFileService @Inject()(
     config: DataStoreConfig,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
     zarrConnectomeFileService: ZarrConnectomeFileService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
-  private val connectomesDir = "connectomes"
-  private val connectomeFileExtension = "hdf5"
+  private val localConnectomesDir = "connectomes"
+  private val hdf5ConnectomeFileExtension = "hdf5"
 
-  private lazy val connectomeFileCache = new Hdf5FileCache(30)
+  private val connectomeFileKeyCache
+    : AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] = AlfuCache() // dataSourceId, layerName, attachmentName → MeshFileKey
 
-  def exploreConnectomeFiles(organizationId: String,
-                             datasetDirectoryName: String,
-                             dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
-    PathUtils
-      .listFiles(layerDir.resolve(connectomesDir),
+  def lookUpConnectomeFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, connectomeFileName: String)(
+      implicit ec: ExecutionContext): Fox[ConnectomeFileKey] =
+    connectomeFileKeyCache.getOrLoad(
+      (dataSourceId, dataLayer.name, connectomeFileName),
+      _ => lookUpConnectomeFileKeyImpl(dataSourceId, dataLayer, connectomeFileName).toFox)
+
+  private def lookUpConnectomeFileKeyImpl(dataSourceId: DataSourceId,
+                                          dataLayer: DataLayer,
+                                          connectomeFileName: String): Box[ConnectomeFileKey] = {
+    val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
+      case Some(attachments) => attachments.meshes.find(_.name == connectomeFileName)
+      case None              => None
+    }
+    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    for {
+      registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
+        attachment.copy(
+          path =
+            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
+      })
+      localFallbackAttachment = LayerAttachment(
+        connectomeFileName,
+        localDatasetDir.resolve(dataLayer.name).resolve(localConnectomesDir).toUri,
+        LayerAttachmentDataformat.hdf5
+      )
+      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
+    } yield
+      ConnectomeFileKey(
+        dataSourceId,
+        dataLayer.name,
+        selectedAttachment
+      )
+  }
+
+  def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext,
+      m: MessagesProvider): Fox[List[ConnectomeFileNameWithMappingName]] = {
+    val attachedConnectomeFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name).toSet
+
+    val layerDir =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
+    val scannedConnectomeFileNames = PathUtils
+      .listFiles(layerDir.resolve(localConnectomesDir),
                  silent = true,
-                 PathUtils.fileExtensionFilter(connectomeFileExtension))
+                 PathUtils.fileExtensionFilter(hdf5ConnectomeFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
       .toOption
       .getOrElse(Nil)
       .toSet
+
+    val allConnectomeFileNames = attachedConnectomeFileNames ++ scannedConnectomeFileNames
+
+    Fox.fromFuture(
+      Fox
+        .serialSequence(allConnectomeFileNames.toSeq) { connectomeFileName =>
+          for {
+            connectomeFileKey <- lookUpConnectomeFileKey(dataSourceId, dataLayer, connectomeFileName) ?~> Messages(
+              "connectome.file.lookup.failed",
+              connectomeFileName)
+            mappingName <- mappingNameForConnectomeFile(connectomeFileKey) ?~> Messages(
+              "connectome.file.readMappingName.failed",
+              connectomeFileName)
+          } yield ConnectomeFileNameWithMappingName(connectomeFileName, mappingName)
+        }
+        // Only return successes, we don’t want a malformed file breaking the list request.
+        .map(_.flatten))
   }
 
   def connectomeFilePath(organizationId: String,
@@ -118,16 +187,12 @@ class ConnectomeFileService @Inject()(
       .resolve(connectomesDir)
       .resolve(s"$connectomeFileName.$connectomeFileExtension")
 
-  def mappingNameForConnectomeFile(connectomeFilePath: Path): Fox[String] =
-    for {
-      cachedConnectomeFile <- tryo {
-        connectomeFileCache.getCachedHdf5File(connectomeFilePath)(CachedHdf5File.fromPath)
-      }.toFox ?~> "connectome.file.open.failed"
-      mappingName <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.stringReader.getAttr("/", "metadata/mapping_name")
-      } ?~> "connectome.file.readEncoding.failed"
-      _ = cachedConnectomeFile.finishAccess()
-    } yield mappingName
+  def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey): Fox[String] =
+    connectomeFileKey.attachment.dataFormat match {
+      case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
+      case LayerAttachmentDataformat.hdf5  => hdf5ConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
+      case _                               => unsupportedDataFormat(connectomeFileKey)
+    }
 
   def synapsesForAgglomerates(connectomeFilePath: Path, agglomerateIds: List[Long]): Fox[List[DirectedSynapseList]] =
     if (agglomerateIds.length == 1) {
@@ -306,5 +371,9 @@ class ConnectomeFileService @Inject()(
     } {
       block
     }.toFox
+
+  private def unsupportedDataFormat(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext) =
+    Fox.failure(
+      s"Trying to load connectome file with unsupported data format ${connectomeFileKey.attachment.dataFormat}")
 
 }

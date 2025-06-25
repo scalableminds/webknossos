@@ -5,8 +5,17 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
-import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, SegmentIndexData, SegmentStatisticsParameters}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  SegmentIndexData,
+  SegmentStatisticsParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
@@ -16,7 +25,12 @@ import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.connectome.{ByAgglomerateIdsRequest, BySynapseIdsRequest, ConnectomeFileNameWithMappingName, ConnectomeFileService}
+import com.scalableminds.webknossos.datastore.services.connectome.{
+  ByAgglomerateIdsRequest,
+  BySynapseIdsRequest,
+  ConnectomeFileNameWithMappingName,
+  ConnectomeFileService
+}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
@@ -502,20 +516,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         val connectomeFileNames =
-          connectomeFileService.exploreConnectomeFiles(organizationId, datasetDirectoryName, dataLayerName)
+          connectomeFileService.listConnectomeFiles(organizationId, datasetDirectoryName, dataLayerName)
         for {
-          mappingNames <- Fox.serialCombined(connectomeFileNames.toList) { connectomeFileName =>
-            val path =
-              connectomeFileService.connectomeFilePath(organizationId,
-                                                       datasetDirectoryName,
-                                                       dataLayerName,
-                                                       connectomeFileName)
-            connectomeFileService.mappingNameForConnectomeFile(path)
-          }
-          connectomesWithMappings = connectomeFileNames
-            .zip(mappingNames)
-            .map(tuple => ConnectomeFileNameWithMappingName(tuple._1, tuple._2))
-        } yield Ok(Json.toJson(connectomesWithMappings))
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          connectomeFileInfos <- connectomeFileService.listConnectomeFiles(dataSource.id, dataLayer)
+        } yield Ok(Json.toJson(connectomeFileInfos))
       }
     }
 

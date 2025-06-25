@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.Future
@@ -13,7 +13,7 @@ class FoxTestSuite extends AsyncFlatSpec with FoxImplicits {
     val exception = new Exception("boom!")
     val f: Future[Unit] = Future.failed(exception)
     Fox.fromFuture(f).futureBox.map {
-      case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!", e.contains(exception))
+      case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!", e.toOption.contains(exception))
       case _                  => fail()
     }
   }
@@ -54,7 +54,7 @@ class FoxTestSuite extends AsyncFlatSpec with FoxImplicits {
     val exception = new Exception("boom!")
     val t: Try[Int] = scala.util.Failure(exception)
     t.toFox.futureBox.map {
-      case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!"); assert(e.contains(exception))
+      case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!"); assert(e.toOption.contains(exception))
       case _                  => fail()
     }
   }

@@ -13,8 +13,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.Box
 import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}

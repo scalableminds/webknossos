@@ -13,7 +13,7 @@ import models.organization.{
   OrganizationService
 }
 import models.user.UserService
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette
 import security.WkEnv

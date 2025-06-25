@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 

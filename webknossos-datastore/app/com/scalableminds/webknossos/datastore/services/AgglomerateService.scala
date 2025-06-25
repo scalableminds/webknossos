@@ -18,8 +18,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio.file.Paths
@@ -96,17 +96,17 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
           path =
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
+      localFallbackAttachment = LayerAttachment(
+        mappingName,
+        localDatasetDir.resolve(dataLayer.name).resolve(localAgglomeratesDir).toUri,
+        LayerAttachmentDataformat.hdf5
+      )
+      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
     } yield
       AgglomerateFileKey(
         dataSourceId,
         dataLayer.name,
-        registeredAttachmentNormalized.getOrElse(
-          LayerAttachment(
-            mappingName,
-            localDatasetDir.resolve(dataLayer.name).resolve(localAgglomeratesDir).toUri,
-            LayerAttachmentDataformat.hdf5
-          )
-        )
+        selectedAttachment
       )
   }
 

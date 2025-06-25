@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, SegmentStatistics}
@@ -23,12 +24,10 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services.{
   AgglomerateService,
-  BinaryDataServiceHolder,
-  ArrayArtifactHashing
+  ArrayArtifactHashing,
+  BinaryDataServiceHolder
 }
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.Box
 
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
@@ -85,7 +84,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       files <- PathUtils.listFiles(segmentIndexDir,
                                    silent = true,
                                    PathUtils.fileExtensionFilter(hdf5SegmentIndexFileExtension))
-      file <- files.headOption
+      file <- Box(files.headOption)
     } yield
       LayerAttachment(
         file.getFileName.toString,

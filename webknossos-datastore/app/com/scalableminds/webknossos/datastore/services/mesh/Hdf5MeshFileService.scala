@@ -1,13 +1,12 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.geometry.Vec3Float
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import jakarta.inject.Inject
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.nio.file.Paths

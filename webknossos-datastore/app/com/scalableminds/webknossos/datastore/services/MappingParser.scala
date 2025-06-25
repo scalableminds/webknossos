@@ -7,7 +7,7 @@ import com.google.gson.stream.JsonReader
 import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import com.scalableminds.util.tools.{Box, Failure}
 
 import scala.collection.mutable
 
@@ -15,7 +15,7 @@ object MappingParser extends LazyLogging {
 
   def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     try {
-      parseImpl(r, fromLongFn)
+      Box(parseImpl(r, fromLongFn))
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")
@@ -33,7 +33,7 @@ object MappingParser extends LazyLogging {
   def parse[T](a: Array[Byte], fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     parse(new InputStreamReader(new ByteArrayInputStream(a)), fromLongFn)
 
-  private def parseImpl[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] = {
+  private def parseImpl[T](r: Reader, fromLongFn: Long => T): Option[DataLayerMapping[T]] = {
     val before = Instant.now
 
     val jsonReader = new JsonReader(r)

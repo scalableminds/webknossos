@@ -14,7 +14,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.segmentindex
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
-import net.liftweb.common.Box.tryo
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

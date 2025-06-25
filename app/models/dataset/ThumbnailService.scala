@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfi
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import com.scalableminds.util.objectid.ObjectId

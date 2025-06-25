@@ -10,12 +10,12 @@ import ch.systemsx.cisd.hdf5.{
   IHDF5StringReader
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
-import net.liftweb.common.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
 
 import java.nio.file.Path
 import scala.util.Using

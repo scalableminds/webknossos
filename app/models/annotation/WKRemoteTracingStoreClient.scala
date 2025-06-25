@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 

@@ -6,27 +6,25 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_types";
+import type { APIDataset } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
-import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: FormInstance | null;
   datasetId: string;
   dataset: APIDataset | null | undefined;
-  activeUser: APIUser | null | undefined;
 };
 
-function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Props) {
+export default function DatasetSettingsSharingTab({ form, datasetId, dataset }: Props) {
   const [sharingToken, setSharingToken] = useState("");
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
 
   const allowedTeamsComponent = (
@@ -161,10 +159,3 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     </div>
   ) : null;
 }
-
-const mapStateToProps = (state: WebknossosState) => ({
-  activeUser: state.activeUser,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DatasetSettingsSharingTab));

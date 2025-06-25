@@ -1722,13 +1722,23 @@ export async function updateOrganization(
   name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
-    method: "PATCH",
-    data: {
-      name,
-      newUserMailingList,
+  const updatedOrganization = await Request.sendJSONReceiveJSON(
+    `/api/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      data: {
+        name,
+        newUserMailingList,
+      },
     },
-  });
+  );
+
+  return {
+    ...updatedOrganization,
+    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function isDatasetAccessibleBySwitching(

@@ -96,17 +96,17 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
           path =
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
+      localFallbackAttachment = LayerAttachment(
+        mappingName,
+        localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
+        LayerAttachmentDataformat.hdf5
+      )
+      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
     } yield
       AgglomerateFileKey(
         dataSourceId,
         dataLayer.name,
-        registeredAttachmentNormalized.getOrElse(
-          LayerAttachment(
-            mappingName,
-            localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
-            LayerAttachmentDataformat.hdf5
-          )
-        )
+        selectedAttachment
       )
   }
 

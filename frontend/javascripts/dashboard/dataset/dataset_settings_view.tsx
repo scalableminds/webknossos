@@ -47,18 +47,12 @@ import { Hideable, hasFormError } from "./helper_components";
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 
-type OwnProps = {
+type DatasetSettingsViewProps = {
   datasetId: string;
   isEditingMode: boolean;
   onComplete: () => void;
   onCancel: () => void;
 };
-
-type StateProps = {
-  isUserAdmin: boolean;
-};
-
-type Props = OwnProps & StateProps;
 
 type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
 
@@ -71,7 +65,7 @@ export type FormData = {
   datasetRotation?: DatasetRotationAndMirroringSettings;
 };
 
-const DatasetSettingsView: React.FC<Props> = ({
+const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
   datasetId,
   isEditingMode,
   onComplete,

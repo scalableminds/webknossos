@@ -28,7 +28,6 @@ import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
-  ConnectomeFileNameWithMappingName,
   ConnectomeFileService
 }
 import play.api.data.Form
@@ -515,8 +514,6 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-        val connectomeFileNames =
-          connectomeFileService.listConnectomeFiles(organizationId, datasetDirectoryName, dataLayerName)
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
@@ -533,10 +530,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapses <- connectomeFileService.synapsesForAgglomerates(meshFilePath, request.body.agglomerateIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
         } yield Ok(Json.toJson(synapses))
       }
     }
@@ -549,10 +549,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFilePath,
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFileKey,
                                                                              request.body.synapseIds,
                                                                              direction)
         } yield Ok(Json.toJson(agglomerateIds))
@@ -566,10 +569,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapsePositions <- connectomeFileService.positionsForSynapses(meshFilePath, request.body.synapseIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapsePositions <- connectomeFileService.positionsForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapsePositions))
       }
     }
@@ -581,10 +587,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapseTypes <- connectomeFileService.typesForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapseTypes))
       }
     }

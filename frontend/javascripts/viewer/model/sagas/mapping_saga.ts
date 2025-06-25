@@ -228,36 +228,43 @@ function createBucketRetrievalSourceChannel(layerName: string) {
 }
 
 function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
+  /*
+   * This saga listens for changed bucket data and then triggers the updateLocalHdf5Mapping
+   * saga in an interruptible manner. See comments below for some rationale.
+   */
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
-  // todop: remove again? currently only exists for the tests
-  yield* call(handler);
+  // Also update the local hdf5 mapping by inspecting all already existing
+  // buckets (likely, there are none yet because all buckets were reloaded, but
+  // it's still safer to do this here).
+  yield* call(startInterruptibleUpdateMapping);
 
   while (true) {
     yield take(bucketChannel);
-    // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
+    // We received a BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
+    // to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
 
     yield* call(sleep, BUCKET_WATCHING_THROTTLE_DELAY);
     yield flush(bucketChannel);
-    // After flushing and while the handler below is running,
+    // After flushing and while the startInterruptibleUpdateMapping below is running,
     // the bucketChannel might fill up again. This means, the
     // next loop will immediately take from the channel which
     // is what we need.
-    yield* call(handler);
+    yield* call(startInterruptibleUpdateMapping);
 
     // Addendum:
     // ¹ We don't use redux-saga's throttle, because that would
-    //   call `handler` in parallel if enough events are
+    //   call `startInterruptibleUpdateMapping` in parallel if enough events are
     //   consumed over the throttling duration.
-    //   However, running `handler` in parallel would be a waste
-    //   of computation. Therefore, we invoke `handler` strictly
+    //   However, running `startInterruptibleUpdateMapping` in parallel would be a waste
+    //   of computation. Therefore, we invoke `startInterruptibleUpdateMapping` strictly
     //   sequentially.
   }
 
-  function* handler() {
+  function* startInterruptibleUpdateMapping() {
     const dataset = yield* select((state) => state.dataset);
     const layerInfo = getLayerByName(dataset, layerName);
     const mappingInfo = yield* select((state) =>

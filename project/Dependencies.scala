@@ -106,9 +106,4 @@ object Dependencies {
     "org.postgresql" % "postgresql" % "42.7.5"
   )
 
-  val dependencyOverrides: Seq[ModuleID] = Seq(
-    // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
-    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0"
-  )
-
 }

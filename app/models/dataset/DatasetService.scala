@@ -9,6 +9,8 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   N5SegmentationLayer,
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
   ZarrDataLayer,
@@ -360,8 +362,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                 case Some(df) =>
                   df match {
                     case DataFormat.wkw =>
-                      throw new NotImplementedError(
-                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                      WKWDataLayer(
+                        name,
+                        category,
+                        boundingBox,
+                        mags,
+                        elementClass,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
                     case DataFormat.neuroglancerPrecomputed =>
                       PrecomputedDataLayer(
                         name,
@@ -442,8 +454,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                 case Some(df) =>
                   df match {
                     case DataFormat.wkw =>
-                      throw new NotImplementedError(
-                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                      WKWSegmentationLayer(
+                        name,
+                        boundingBox,
+                        mags,
+                        elementClass,
+                        mappings,
+                        largestSegmentId,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
                     case DataFormat.neuroglancerPrecomputed =>
                       PrecomputedSegmentationLayer(
                         name,

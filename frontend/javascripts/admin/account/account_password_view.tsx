@@ -1,5 +1,5 @@
-import { LockOutlined } from "@ant-design/icons";
-import { Alert, Button, Descriptions, Form, Input, List, Space } from "antd";
+import { DeleteOutlined, LockOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -7,6 +7,7 @@ import { useState } from "react";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
+import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -151,14 +152,7 @@ function AccountPasswordView({ history }: Props) {
         </FormItem>
       </Form>
     ) : (
-      <>
-        <Space.Compact>
-          <Input.Password visibilityToggle={false} disabled value="******************" />
-          <Button type="primary" onClick={handleResetPassword}>
-            Reset Password
-          </Button>
-        </Space.Compact>
-      </>
+      "***********"
     );
   }
 
@@ -166,46 +160,48 @@ function AccountPasswordView({ history }: Props) {
     setResetPasswordVisible(true);
   }
 
-  const passwordItems = [
-    {
-      label: "Password",
-      children: getPasswordComponent(),
-    },
-  ];
-
   const passKeyList = [
     {
-      name: "passkey1",
-      details: "2024-05-01",
+      title: "passkey1",
+      value: "2024-05-01",
+      action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
     },
     {
-      name: "passkey2",
-      details: "2025-05-01",
+      title: "passkey2",
+      value: "2025-05-01",
+      action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
     },
   ];
 
   return (
     <div>
       <SettingsTitle title="Password" description="Manage and update your password" />
-      <Descriptions
-        column={2}
-        layout="vertical"
-        colon={false}
-        items={passwordItems}
-        style={{ marginBottom: "3rem" }}
-      />
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <SettingsCard
+            title="Password"
+            description={getPasswordComponent()}
+            action={
+              <Button
+                type="default"
+                shape="circle"
+                icon={<ReloadOutlined />}
+                size="small"
+                onClick={handleResetPassword}
+              />
+            }
+          />
+        </Col>
+      </Row>
 
       <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
-      <List
-        className="demo-loadmore-list"
-        itemLayout="horizontal"
-        dataSource={passKeyList}
-        renderItem={(item) => (
-          <List.Item actions={[<a key="list-delete">Delete</a>]}>
-            <List.Item.Meta title={item.name} description={item.details} />
-          </List.Item>
-        )}
-      />
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        {passKeyList.map((item) => (
+          <Col span={12} key={item.title}>
+            <SettingsCard title={item.title} description={item.value} action={item.action} />
+          </Col>
+        ))}
+      </Row>
     </div>
   );
 }

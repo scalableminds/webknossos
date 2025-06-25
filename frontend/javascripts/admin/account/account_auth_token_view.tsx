@@ -1,8 +1,9 @@
-import { InfoCircleOutlined, SwapOutlined } from "@ant-design/icons";
+import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
-import { Button, Descriptions, Popover, Spin, Typography } from "antd";
+import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
+import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
 const { Text } = Typography;
@@ -35,27 +36,19 @@ function AccountAuthTokenView() {
 
   const APIitems = [
     {
-      label: "Auth Token",
-      children: (
+      title: "Auth Token",
+      value: (
         <Text code copyable>
           {currentToken}
         </Text>
       ),
     },
     {
-      label: (
-        <>
-          <span className="icon-margin-right">Token Revocation</span>
-          <Popover
-            content="Revoke your token if it has been compromised or if you suspect someone else has gained
-        access to it. This will invalidate all active sessions."
-          >
-            <InfoCircleOutlined />
-          </Popover>
-        </>
-      ),
-      children: (
-        <Button icon={<SwapOutlined />} onClick={handleRevokeToken}>
+      title: "Token Revocation",
+      explanation:
+        "Revoke your token if it has been compromised or if you suspect someone else has gained access to it. This will invalidate all active sessions.",
+      value: (
+        <Button icon={<SwapOutlined />} type="primary" ghost onClick={handleRevokeToken}>
           Revoke and Generate New Token
         </Button>
       ),
@@ -63,8 +56,8 @@ function AccountAuthTokenView() {
     ...(activeUser
       ? [
           {
-            label: "Organization ID",
-            children: (
+            title: "Organization ID",
+            value: (
               <Text code copyable>
                 {activeUser.organization}
               </Text>
@@ -73,8 +66,12 @@ function AccountAuthTokenView() {
         ]
       : []),
     {
-      label: "API Documentation",
-      children: <a href="https://docs.webknossos.org/webknossos-py/index.html">Read the docs</a>,
+      title: "API Documentation",
+      value: (
+        <a href="https://docs.webknossos.org/webknossos-py/index.html">
+          Read the docs <ExportOutlined />
+        </a>
+      ),
     },
   ];
 
@@ -85,7 +82,17 @@ function AccountAuthTokenView() {
         description="Access the WEBKNOSSO Python API with your API token"
       />
       <Spin size="large" spinning={isLoading}>
-        <Descriptions column={2} layout="vertical" colon={false} items={APIitems} />
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+          {APIitems.map((item) => (
+            <Col span={12} key={item.title}>
+              <SettingsCard
+                title={item.title}
+                description={item.value}
+                explanation={item.explanation}
+              />
+            </Col>
+          ))}
+        </Row>
       </Spin>
     </div>
   );

@@ -14,40 +14,40 @@ const BREADCRUMB_LABELS = {
   profile: "Profile",
 };
 
+const MENU_ITEMS: MenuItemGroupType[] = [
+  {
+    label: "Account",
+    type: "group",
+    children: [
+      {
+        key: "profile",
+        icon: <UserOutlined />,
+        label: "Profile",
+      },
+      {
+        key: "password",
+        icon: <SafetyOutlined />,
+        label: "Password",
+      },
+    ],
+  },
+  {
+    label: "Developer",
+    type: "group",
+    children: [
+      {
+        key: "token",
+        icon: <SettingOutlined />,
+        label: "Auth Token",
+      },
+    ],
+  },
+];
+
 function AccountSettingsView() {
   const location = useLocation();
   const history = useHistory();
   const selectedKey = location.pathname.split("/").pop() || "profile";
-
-  const menuItems: MenuItemGroupType[] = [
-    {
-      label: "Account",
-      type: "group",
-      children: [
-        {
-          key: "profile",
-          icon: <UserOutlined />,
-          label: "Profile",
-        },
-        {
-          key: "password",
-          icon: <SafetyOutlined />,
-          label: "Password",
-        },
-      ],
-    },
-    {
-      label: "Developer",
-      type: "group",
-      children: [
-        {
-          key: "token",
-          icon: <SettingOutlined />,
-          label: "Auth Token",
-        },
-      ],
-    },
-  ];
 
   return (
     <Layout
@@ -58,12 +58,12 @@ function AccountSettingsView() {
           mode="inline"
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
-          items={menuItems}
+          items={MENU_ITEMS}
           onClick={({ key }) => history.push(`/account/${key}`)}
         />
       </Sider>
-      <Content style={{ padding: "24px", minHeight: 280, maxWidth: 1000 }}>
-        <Breadcrumb style={{ marginBottom: "16px", padding: "8px 0" }}>
+      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
+        <Breadcrumb style={{ marginBottom: "16px" }}>
           <Breadcrumb.Item>Account Settings</Breadcrumb.Item>
           <Breadcrumb.Item>
             {BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS]}

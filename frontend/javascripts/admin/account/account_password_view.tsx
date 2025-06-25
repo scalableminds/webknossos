@@ -162,13 +162,8 @@ function AccountPasswordView({ history }: Props) {
 
   const passKeyList = [
     {
-      title: "passkey1",
-      value: "2024-05-01",
-      action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
-    },
-    {
-      title: "passkey2",
-      value: "2025-05-01",
+      title: "Coming soon",
+      value: "Passwordless login with passkeys is coming soon",
       action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
     },
   ];

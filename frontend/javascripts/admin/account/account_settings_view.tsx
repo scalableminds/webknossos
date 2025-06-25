@@ -49,6 +49,15 @@ function AccountSettingsView() {
   const history = useHistory();
   const selectedKey = location.pathname.split("/").pop() || "profile";
 
+  const breadcrumbItems = [
+    {
+      title: "Account Settings",
+    },
+    {
+      title: BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS],
+    },
+  ];
+
   return (
     <Layout
       style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "var(--ant-layout-body-bg)" }}
@@ -63,12 +72,7 @@ function AccountSettingsView() {
         />
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
-        <Breadcrumb style={{ marginBottom: "16px" }}>
-          <Breadcrumb.Item>Account Settings</Breadcrumb.Item>
-          <Breadcrumb.Item>
-            {BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS]}
-          </Breadcrumb.Item>
-        </Breadcrumb>
+        <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
         <Switch>
           <Route path="/account/profile" component={AccountProfileView} />
           <Route path="/account/password" component={AccountPasswordView} />

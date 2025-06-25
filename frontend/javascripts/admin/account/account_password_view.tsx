@@ -1,10 +1,10 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
+import { changePassword, logoutUser } from "admin/rest_api";
 import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 import { SettingsCard } from "./helpers/settings_card";
@@ -12,23 +12,18 @@ import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type Props = {
-  history: RouteComponentProps["history"];
-};
-
 const MIN_PASSWORD_LENGTH = 8;
 
-function AccountPasswordView({ history }: Props) {
+function AccountPasswordView() {
+  const history = useHistory();
   const [form] = Form.useForm();
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
   function onFinish(formValues: Record<string, any>) {
-    Request.sendJSONReceiveJSON("/api/auth/changePassword", {
-      data: formValues,
-    })
+    changePassword(formValues)
       .then(async () => {
         Toast.success(messages["auth.reset_pw_confirmation"]);
-        await Request.receiveJSON("/api/auth/logout");
+        await logoutUser();
         Store.dispatch(logoutUserAction());
         history.push("/auth/login");
       })
@@ -165,6 +160,7 @@ function AccountPasswordView({ history }: Props) {
       title: "Coming soon",
       value: "Passwordless login with passkeys is coming soon",
       // action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
+      action: undefined,
     },
   ];
 
@@ -201,4 +197,4 @@ function AccountPasswordView({ history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps, any>(AccountPasswordView);
+export default AccountPasswordView;

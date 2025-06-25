@@ -47,7 +47,7 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 function AccountSettingsView() {
   const location = useLocation();
   const history = useHistory();
-  const selectedKey = location.pathname.split("/").pop() || "profile";
+  const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "profile";
 
   const breadcrumbItems = [
     {

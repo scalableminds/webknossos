@@ -18,9 +18,14 @@ function AccountAuthTokenView() {
   }, []);
 
   async function fetchData(): Promise<void> {
-    const token = await getAuthToken();
-    setCurrentToken(token);
-    setIsLoading(false);
+    try {
+      const token = await getAuthToken();
+      setCurrentToken(token);
+    } catch (error) {
+      console.error("Failed to fetch auth token:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleRevokeToken = async (): Promise<void> => {

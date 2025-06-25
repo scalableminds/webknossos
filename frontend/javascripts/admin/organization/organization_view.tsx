@@ -48,7 +48,7 @@ const OrganizationView = () => {
   );
   const location = useLocation();
   const history = useHistory();
-  const selectedKey = location.pathname.split("/").pop() || "overview";
+  const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "overview";
 
   const breadcrumbItems = [
     {

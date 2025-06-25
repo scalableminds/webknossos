@@ -150,6 +150,10 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
+export async function logoutUser(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logout");
+}
+
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);
@@ -234,6 +238,12 @@ export async function getAuthToken(): Promise<string> {
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
+  });
+}
+
+export async function changePassword(data: Record<string, string>): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
+    data: data,
   });
 }
 

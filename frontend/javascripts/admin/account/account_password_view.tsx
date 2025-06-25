@@ -1,4 +1,4 @@
-import { DeleteOutlined, LockOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EditOutlined, LockOutlined } from "@ant-design/icons";
 import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -164,7 +164,7 @@ function AccountPasswordView({ history }: Props) {
     {
       title: "Coming soon",
       value: "Passwordless login with passkeys is coming soon",
-      action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
+      // action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
     },
   ];
 
@@ -180,7 +180,7 @@ function AccountPasswordView({ history }: Props) {
               <Button
                 type="default"
                 shape="circle"
-                icon={<ReloadOutlined />}
+                icon={<EditOutlined />}
                 size="small"
                 onClick={handleResetPassword}
               />

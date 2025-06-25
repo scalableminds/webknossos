@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.ws.WSClient
 
 import javax.inject.Inject

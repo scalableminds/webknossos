@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, Node
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}

@@ -32,7 +32,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.Skel
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Full}
+import com.scalableminds.util.tools.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject

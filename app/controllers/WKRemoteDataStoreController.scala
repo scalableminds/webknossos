@@ -27,7 +27,7 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}

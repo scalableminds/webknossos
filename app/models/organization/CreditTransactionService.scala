@@ -2,9 +2,8 @@ package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full, Empty}
 import play.api.libs.json.{JsObject, Json}
 
 import javax.inject.Inject

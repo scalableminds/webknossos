@@ -38,7 +38,7 @@ export function OrganizationDangerZoneView({ organization }: { organization: API
       setIsDeleting(true);
       await deleteOrganization(organization.id);
       setIsDeleting(false);
-      window.location.replace(`${window.location.origin}/dashboard`);
+      window.location.replace(`${window.location.origin}`);
     }
   }
   return (

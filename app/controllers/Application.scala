@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.mvc.ApiVersioning
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
@@ -11,7 +12,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
-import utils.{ApiVersioning, StoreModules, WkConf}
+import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -42,10 +43,7 @@ class Application @Inject()(actorSystem: ActorSystem,
             "webknossos" -> Json.toJson(
               webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap),
             "schemaVersion" -> schemaVersion.toOption,
-            "httpApiVersioning" -> Json.obj(
-              "currentApiVersion" -> CURRENT_API_VERSION,
-              "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
-            ),
+            "httpApiVersioning" -> apiVersioningInfo,
             "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
             "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
           ))

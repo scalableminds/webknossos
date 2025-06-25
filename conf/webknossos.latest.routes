@@ -1,6 +1,5 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# ~~~~
+# Defines latest version of webknossos backend routes (Higher priority routes first)
+
 GET           /buildinfo                                                                        controllers.Application.buildInfo()
 GET           /features                                                                         controllers.Application.features()
 GET           /health                                                                           controllers.Application.health()

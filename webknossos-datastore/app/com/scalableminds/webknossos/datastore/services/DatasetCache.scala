@@ -1,18 +1,15 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.google.inject.name.Named
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource}
-import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient,
-                             @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
+class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   lazy val cache: AlfuCache[ObjectId, DataSource] = AlfuCache[ObjectId, DataSource](

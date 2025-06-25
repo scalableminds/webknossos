@@ -1,8 +1,4 @@
-import {
-  getNewestVersionForAnnotation,
-  getUpdateActionLog,
-  sendSaveRequestWithToken,
-} from "admin/rest_api";
+import { getUpdateActionLog, sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";

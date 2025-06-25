@@ -3,12 +3,18 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 
+import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5SegmentIndexFileService @Inject()() extends FoxImplicits {
+class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends FoxImplicits {
+
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+
   private lazy val fileHandleCache = new Hdf5FileCache(100)
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)(
@@ -55,4 +61,10 @@ class Hdf5SegmentIndexFileService @Inject()() extends FoxImplicits {
                                                                        0)
       } yield topLefts)
     } yield topLeftOpts
+
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    val datasetPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
+    fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
+  }
 }

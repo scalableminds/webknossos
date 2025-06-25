@@ -58,8 +58,6 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
                                             chunkCacheService: ChunkCacheService)
     extends FoxImplicits {
 
-  // TODO clear caches
-
   private val keyHashBucketOffsets = "hash_bucket_offsets"
   private val keyHashBuckets = "hash_buckets"
   private val keyTopLefts = "top_lefts"
@@ -146,4 +144,14 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
                                    chunkCacheService.sharedChunkContentsCache)
     } yield zarrArray
 
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    attributesCache.clear { segmentIndexFileKey =>
+      segmentIndexFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(segmentIndexFileKey.layerName == _)
+    }
+
+    openArraysCache.clear {
+      case (segmentIndexFileKey, _) =>
+        segmentIndexFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(segmentIndexFileKey.layerName == _)
+    }
+  }
 }

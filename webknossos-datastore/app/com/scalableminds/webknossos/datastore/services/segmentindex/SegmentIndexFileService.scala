@@ -219,6 +219,19 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       case None => Fox.successful(List(segmentOrAgglomerateId))
     }
 
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    segmentIndexFileKeyCache.clear {
+      case (keyDataSourceId, keyLayerName) =>
+        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    }
+
+    val clearedHdf5Count = hdf5SegmentIndexFileService.clearCache(dataSourceId, layerNameOpt)
+
+    val clearedZarrCount = zarrSegmentIndexFileService.clearCache(dataSourceId, layerNameOpt)
+
+    clearedHdf5Count + clearedZarrCount
+  }
+
   private def unsupportedDataFormat(segmentIndexFileKey: SegmentIndexFileKey)(implicit ec: ExecutionContext) =
     Fox.failure(
       s"Trying to load segment index file with unsupported data format ${segmentIndexFileKey.attachment.dataFormat}")

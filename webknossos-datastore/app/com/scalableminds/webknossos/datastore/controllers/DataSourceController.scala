@@ -444,10 +444,13 @@ class DataSourceController @Inject()(
   private def clearCachesOfDataSource(organizationId: String,
                                       datasetDirectoryName: String,
                                       layerName: Option[String]): InboxDataSource = {
+    val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
     val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
       binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
     val closedMeshFileHandleCount =
-      meshFileService.clearCache(DataSourceId(organizationId, datasetDirectoryName), layerName)
+      meshFileService.clearCache(dataSourceId, layerName)
+    val closedSegmentIndexFileHandleCount =
+      segmentIndexFileService.clearCache(dataSourceId, layerName)
     val reloadedDataSource: InboxDataSource = dataSourceService.dataSourceFromDir(
       dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
       organizationId)
@@ -455,7 +458,7 @@ class DataSourceController @Inject()(
     val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
     clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
       logger.info(
-        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
     }
     reloadedDataSource
   }

@@ -17,6 +17,7 @@ case class DatasetLayerAttachments(
     cumsum: Option[LayerAttachment] = None
 ) {
   def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
+  def isEmpty: Boolean = allAttachments.isEmpty
 }
 
 object DatasetLayerAttachments {

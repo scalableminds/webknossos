@@ -88,13 +88,13 @@ function* restartableSaga(): Saga<void> {
       call(splitBoundaryMeshSaga),
       call(toolSaga),
     ]);
-  } catch (err) {
+  } catch (err: any) {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
     if (!process.env.IS_TESTING) {
-      // @ts-ignore
-      ErrorHandling.notify(err, {});
+      ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
+
       // Hide potentially old error highlighting which mentions a retry mechanism.
       toggleErrorHighlighting(false);
       // Show error highlighting which mentions the permanent error.
@@ -103,10 +103,7 @@ function* restartableSaga(): Saga<void> {
 Internal error.
 Please reload the page to avoid losing data.
 
-${
-  JSON.stringify(err)
-  // @ts-ignore
-} ${err.stack || ""}`);
+${JSON.stringify(err)} ${err.stack || ""}`);
     }
   }
 }

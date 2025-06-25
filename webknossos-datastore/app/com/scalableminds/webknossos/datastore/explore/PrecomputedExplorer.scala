@@ -91,15 +91,19 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   }
 
   private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[Seq[LayerAttachment]] =
-    (for {
-      meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)
-        .parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
-      _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
-    } yield
-      Seq(
-        LayerAttachment(NeuroglancerMesh.meshName,
-                        meshPath.toUri,
-                        LayerAttachmentDataformat.neuroglancerPrecomputed,
-                        credentialId))).orElse(Fox.successful(Seq.empty))
+      implicit tc: TokenContext): Fox[Seq[LayerAttachment]] = {
+    val exploredMeshesFox =
+      for {
+        meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)
+          .parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
+        _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
+      } yield
+        Seq(
+          LayerAttachment(NeuroglancerMesh.meshName,
+                          meshPath.toUri,
+                          LayerAttachmentDataformat.neuroglancerPrecomputed,
+                          credentialId))
+    // If mesh exploration at this path failed, continue but return no meshes.
+    exploredMeshesFox.orElse(Fox.successful(Seq.empty))
+  }
 }

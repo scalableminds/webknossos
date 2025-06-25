@@ -804,6 +804,7 @@ class AnnotationService @Inject()(
         id = annotation._id,
         annotationLayers = annotation.annotationLayers,
         datasetDirectoryName = dataset.directoryName,
+        datasetId = dataset._id,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

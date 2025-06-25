@@ -172,8 +172,8 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
         .map(_.flatten))
   }
 
-  def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,
-                                                                         tc: TokenContext): Fox[String] =
+  private def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,
+                                                                                 tc: TokenContext): Fox[String] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
       case LayerAttachmentDataformat.hdf5  => hdf5ConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)

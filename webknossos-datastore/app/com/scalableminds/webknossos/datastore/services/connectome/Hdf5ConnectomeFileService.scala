@@ -1,11 +1,9 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 
-import java.io.File
-import java.nio.file.Paths
 import javax.inject.Inject
 import scala.collection.Searching.{Found, InsertionPoint}
 import scala.concurrent.ExecutionContext
@@ -13,7 +11,6 @@ import scala.concurrent.ExecutionContext
 class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
 
   private lazy val connectomeFileCache = new Hdf5FileCache(30)
-  private val connectomeFileExtension = "hdf5"
 
   def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext): Fox[String] =
     for {
@@ -148,24 +145,14 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
-      typeNames = typeNamesForSynapsesOrEmpty(connectomeFileKey)
+      // Hard coded type name list, as all legacy files have this value.
+      typeNames = List("dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse")
       synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/synapse_types", 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
     } yield SynapseTypesWithLegend(synapseTypes, typeNames)
-
-  private def typeNamesForSynapsesOrEmpty(connectomeFileKey: ConnectomeFileKey): List[String] = {
-    val typeNamesPath =
-      Paths.get(s"${connectomeFileKey.attachment.localPath.toString.dropRight(connectomeFileExtension.length)}json")
-    if (new File(typeNamesPath.toString).exists()) {
-      JsonHelper.parseFromFileAs[ConnectomeLegend](typeNamesPath, typeNamesPath.getParent) match {
-        case Full(connectomeLegend) => connectomeLegend.synapse_type_names
-        case _                      => List.empty
-      }
-    } else List.empty
-  }
 
   private def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey,
                                         srcAgglomerateId: Long,

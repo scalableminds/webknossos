@@ -9,7 +9,7 @@ import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import slick.lifted.Rep

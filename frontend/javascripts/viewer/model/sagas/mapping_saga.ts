@@ -317,17 +317,27 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
     return [layerInfo.mappings, layerInfo.agglomerates];
   }
 
-  const params = [
-    dataset.dataStore.url,
-    dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerInfo.name,
-  ] as const;
-  const [jsonMappings, serverHdf5Mappings] = yield* all([
-    call(getMappingsForDatasetLayer, ...params),
-    call(getAgglomeratesForDatasetLayer, ...params),
-  ]);
+  let jsonMappings: string[];
+  let serverHdf5Mappings: string[];
+
+  if (layerInfo.tracingId != null && layerInfo.fallbackLayer == null) {
+    // The layer is a volume tracing without fallback layer. No mappings
+    // exist for these kind of layers and should not be requested from the server.
+    jsonMappings = [];
+    serverHdf5Mappings = [];
+  } else {
+    const params = [
+      dataset.dataStore.url,
+      dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+      "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+        ? layerInfo.fallbackLayer
+        : layerInfo.name,
+    ] as const;
+    [jsonMappings, serverHdf5Mappings] = yield* all([
+      call(getMappingsForDatasetLayer, ...params),
+      call(getAgglomeratesForDatasetLayer, ...params),
+    ]);
+  }
 
   if (updateInStore) {
     yield* put(setLayerMappingsAction(layerName, jsonMappings, serverHdf5Mappings));

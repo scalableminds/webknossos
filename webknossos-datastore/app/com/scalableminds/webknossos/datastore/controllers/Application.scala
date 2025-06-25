@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}

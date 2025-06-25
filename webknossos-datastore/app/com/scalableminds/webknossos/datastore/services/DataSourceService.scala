@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common._
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 

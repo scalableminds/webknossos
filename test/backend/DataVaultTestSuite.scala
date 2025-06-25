@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
-import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 

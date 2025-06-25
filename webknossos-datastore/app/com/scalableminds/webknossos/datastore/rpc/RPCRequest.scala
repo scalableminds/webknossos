@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full, Empty}
+import com.scalableminds.util.tools.{Failure, Full, Empty}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._

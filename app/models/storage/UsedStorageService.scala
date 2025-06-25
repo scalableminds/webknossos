@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.organization.{Organization, OrganizationDAO}
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 

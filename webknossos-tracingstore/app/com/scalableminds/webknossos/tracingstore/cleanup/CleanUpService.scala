@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.cleanup
 
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import org.apache.pekko.actor.{ActorSystem, Cancellable}
 
 import javax.inject.Inject

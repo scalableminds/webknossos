@@ -49,6 +49,7 @@ import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
+import Toast from "libs/toast";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -177,15 +178,20 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
   // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
-  yield* call(
-    loadAdHocMesh,
-    action.seedPosition,
-    action.seedAdditionalCoordinates,
-    action.segmentId,
-    false,
-    layer.name,
-    action.extraInfo,
-  );
+  try {
+    yield* call(
+      loadAdHocMesh,
+      action.seedPosition,
+      action.seedAdditionalCoordinates,
+      action.segmentId,
+      false,
+      layer.name,
+      action.extraInfo,
+    );
+  } catch (exc) {
+    Toast.error(`The mesh for segment ${action.segmentId} could not be loaded. Please try again.`);
+    ErrorHandling.notify(exc as any);
+  }
 }
 
 export function* getMeshExtraInfo(

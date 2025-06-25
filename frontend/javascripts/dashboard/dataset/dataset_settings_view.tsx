@@ -13,11 +13,7 @@ import {
 import { Alert, Button, Card, Form, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";
-import type {
-  Action as HistoryAction,
-  Location as HistoryLocation,
-  UnregisterCallback,
-} from "history";
+import type { UnregisterCallback } from "history";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -25,7 +21,7 @@ import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import { Unicode } from "viewer/constants";
@@ -43,6 +39,7 @@ import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import { Hideable, hasFormError } from "./helper_components";
+import useBeforeUnload from "./useBeforeUnload_hook";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -72,7 +69,6 @@ const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
   onCancel,
 }) => {
   const [form] = Form.useForm();
-  const history = useHistory();
   const queryClient = useQueryClient();
   const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
 
@@ -403,37 +399,7 @@ const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
   );
 
   // Setup beforeunload handling
-  useEffect(() => {
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        if (hasUnsavedChanges) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-
-          blockTimeoutIdRef.current = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["dataset.leave_with_unsaved_changes"];
-        }
-      }
-      return;
-    };
-
-    unblockRef.current = history.block(beforeUnload);
-    // @ts-ignore
-    window.onbeforeunload = beforeUnload;
-
-    return () => {
-      unblockHistory();
-    };
-  }, [history, hasUnsavedChanges, unblockHistory]);
+  useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
   // Initial data fetch and analytics
   // biome-ignore lint/correctness/useExhaustiveDependencies: dataset dependency removed to avoid infinite loop

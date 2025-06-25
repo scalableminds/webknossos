@@ -14,9 +14,9 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.MessagesProvider
 
 import java.nio.file.{Path, Paths}
@@ -42,7 +42,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
       segmentIndexDir = layerDir.resolve(this.segmentIndexDir)
       files <- PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
-      file <- files.headOption
+      file <- Box(files.headOption)
     } yield file
 
   /**
@@ -185,11 +185,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         ))
       bucketData <- binaryDataServiceHolder.binaryDataService.handleMultipleBucketRequests(bucketRequests)
     } yield (bucketData, dataLayer.elementClass)
-  private def getBucketPositions(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
-      mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[Set[Vec3IntProto]] =
+  private def getBucketPositions(organizationId: String,
+                                 datasetDirectoryName: String,
+                                 dataLayerName: String,
+                                 mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int)(
+      implicit tc: TokenContext,
+      m: MessagesProvider): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationId,
                                                           datasetDirectoryName,
@@ -212,30 +213,27 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       bucketPositions = bucketPositionsInFileMag.map(_ / (mag / fileMag))
     } yield bucketPositions
 
-  private def getSegmentIdsForAgglomerateIdIfNeeded(organizationId: String,
-                                                    datasetDirectoryName: String,
-                                                    dataLayerName: String,
-                                                    segmentOrAgglomerateId: Long,
-                                                    mappingNameOpt: Option[String]): Fox[List[Long]] =
+  private def getSegmentIdsForAgglomerateIdIfNeeded(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      segmentOrAgglomerateId: Long,
+      mappingNameOpt: Option[String])(implicit tc: TokenContext, m: MessagesProvider): Fox[Seq[Long]] =
     // Editable mappings cannot happen here since those requests go to the tracingstore
     mappingNameOpt match {
       case Some(mappingName) =>
         for {
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          agglomerateFileKey = AgglomerateFileKey(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
-            mappingName
-          )
-          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey).toFox
+          agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
+          largestAgglomerateId <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
           segmentIds <- if (segmentOrAgglomerateId <= largestAgglomerateId) {
-            agglomerateService
-              .segmentIdsForAgglomerateId(
-                agglomerateFileKey,
-                segmentOrAgglomerateId
-              )
-              .toFox
+            agglomerateService.segmentIdsForAgglomerateId(
+              agglomerateFileKey,
+              segmentOrAgglomerateId
+            )
           } else
             Fox.successful(List.empty) // agglomerate id is outside of file range, was likely created during brushing
         } yield segmentIds

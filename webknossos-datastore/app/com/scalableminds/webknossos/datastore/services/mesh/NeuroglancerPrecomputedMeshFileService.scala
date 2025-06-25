@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -125,7 +125,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, 
     )
   }
 
-  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: List[Long])(
+  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"

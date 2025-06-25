@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -16,8 +15,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
@@ -25,7 +24,7 @@ import java.nio.ByteOrder
 case class Zarr3ArrayHeader(
     zarr_format: Int, // must be 3
     node_type: String, // must be "array"
-    shape: Array[Int],
+    shape: Array[Long],
     data_type: Either[String, ExtensionDataType],
     chunk_grid: Either[ChunkGridSpecification, ExtensionChunkGridSpecification],
     chunk_key_encoding: ChunkKeyEncoding,
@@ -36,7 +35,7 @@ case class Zarr3ArrayHeader(
     dimension_names: Option[Array[String]]
 ) extends DatasetHeader {
 
-  override def datasetShape: Option[Array[Int]] = Some(shape)
+  override def datasetShape: Option[Array[Long]] = Some(shape)
 
   override def chunkShape: Array[Int] = getChunkSize
 
@@ -64,8 +63,8 @@ case class Zarr3ArrayHeader(
 
   def assertValid: Box[Unit] =
     for {
-      _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
-      _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
+      _ <- Box.fromBool(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
+      _ <- Box.fromBool(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)
@@ -168,7 +167,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       for {
         zarr_format <- (json \ "zarr_format").validate[Int]
         node_type <- (json \ "node_type").validate[String]
-        shape <- (json \ "shape").validate[Array[Int]]
+        shape <- (json \ "shape").validate[Array[Long]]
         data_type <- (json \ "data_type").validate[String]
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
@@ -271,7 +270,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       zarr_format = 3,
       node_type = "array",
       // channel, additional axes, XYZ
-      shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds,
+      shape = (Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ xyzBBounds).map(_.toLong),
       data_type = Left(dataLayer.elementClass.toString),
       chunk_grid = Left(
         ChunkGridSpecification(

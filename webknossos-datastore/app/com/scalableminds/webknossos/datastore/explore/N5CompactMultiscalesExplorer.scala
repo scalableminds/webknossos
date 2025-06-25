@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.{N5CompactMultiscal
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerWithMagLocators
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

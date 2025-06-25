@@ -4,7 +4,10 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
@@ -17,12 +20,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
+  DataFormat,
   DataSourceId,
   ElementClass,
   LayerAttachment,
+  LayerAttachmentDataformat,
   LayerAttachmentType,
   ThinPlateSplineCorrespondences,
-  DataLayerLike => DataLayer
+  DataLayerLike => DataLayer,
+  DatasetLayerAttachments => AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
@@ -40,6 +46,7 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
+import java.net.URI
 import scala.concurrent.ExecutionContext
 
 case class Dataset(_id: ObjectId,
@@ -841,6 +848,30 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos
 
+  def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
+    for {
+      mag <- parseMag(row.mag)
+      axisOrderParsed = row.axisorder match {
+        case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
+        case None            => None
+      }
+    } yield
+      MagLocator(
+        mag,
+        row.path,
+        None,
+        axisOrderParsed,
+        row.channelindex,
+        row.credentialid
+      )
+
+  def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
+    for {
+      // We assume non-WKW Datasets here (WKW Resolutions are not handled)
+      rows <- run(q"""SELECT * FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
+      mags <- Fox.combined(rows.map(parseMagLocator))
+    } yield rows.map(r => r.datalayername).zip(mags)
+
 }
 
 class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
@@ -855,7 +886,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
-        .toFox ?~> "Could not parse boundingbox"
+        .toFox ?~> "Could not parse bounding box"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
@@ -867,6 +898,10 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
       additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
+      attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
+      attachmentsOpt = if (attachments.isEmpty) None else Some(attachments)
+
+      dataFormat = row.dataformat.flatMap(df => DataFormat.fromString(df))
     } yield {
       category match {
         case Category.segmentation =>
@@ -883,7 +918,10 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalAxesOpt
+              additionalAxesOpt,
+              numChannels = row.numchannels,
+              dataFormat = dataFormat,
+              attachments = attachmentsOpt
             ))
         case Category.color =>
           Fox.successful(
@@ -896,7 +934,10 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt,
               coordinateTransformationsOpt,
-              additionalAxesOpt
+              additionalAxesOpt,
+              numChannels = row.numchannels,
+              dataFormat = dataFormat,
+              attachments = attachmentsOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
@@ -907,7 +948,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
   def findAllForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
       rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
-                          defaultViewConfiguration, adminViewConfiguration
+                          defaultViewConfiguration, adminViewConfiguration, numChannels, dataFormat
                       FROM webknossos.dataset_layers
                       WHERE _dataset = $datasetId
                       ORDER BY name""".as[DatasetLayersRow])
@@ -1015,6 +1056,39 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
+
+  def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
+    for {
+      dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
+      uri <- tryo(new URI(row.path)).toFox
+    } yield LayerAttachment(row.name, uri, dataFormat)
+
+  def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
+    for {
+      meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(parseRow)
+      agglomerateFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.agglomerate.toString))(
+        parseRow)
+      connectomeFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.connectome.toString))(parseRow)
+      segmentIndexFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.segmentIndex.toString))(
+        parseRow)
+      cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(parseRow)
+    } yield
+      AttachmentWrapper(
+        agglomerates = agglomerateFiles,
+        connectomes = connectomeFiles,
+        segmentIndex = segmentIndexFiles.headOption,
+        meshes = meshFiles,
+        cumsum = cumsumFiles.headOption
+      )
+
+  def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
+    for {
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
+                FROM webknossos.dataset_layer_attachments
+                WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
+      attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
+    } yield attachments
+
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
       q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)

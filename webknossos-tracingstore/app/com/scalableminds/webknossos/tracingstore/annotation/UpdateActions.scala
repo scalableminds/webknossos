@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.tracingstore.tracings.IdWithBoolUtils
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   MergeAgglomerateUpdateAction,
@@ -16,7 +17,7 @@ trait UpdateAction {
 
   def addInfo(info: Option[String]): UpdateAction
 
-  def addAuthorId(authorId: Option[String]): UpdateAction
+  def addAuthorId(authorId: Option[ObjectId]): UpdateAction
 
   def isViewOnlyChange: Boolean = false
 }
@@ -266,7 +267,7 @@ object UpdateAction {
 
 case class UpdateActionGroup(version: Long,
                              timestamp: Long,
-                             authorId: Option[String],
+                             authorId: Option[ObjectId],
                              actions: List[UpdateAction],
                              stats: Option[JsObject],
                              info: Option[String],

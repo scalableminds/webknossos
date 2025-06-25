@@ -7,8 +7,8 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 import java.net.URI
 import java.nio.file.{Path, Paths}
@@ -48,33 +48,37 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       remoteSource = RemoteSourceDescriptor(uri, credentialBox.toOption)
     } yield remoteSource
 
+  def uriFromPathLiteral(pathLiteral: String, localDatasetDir: Path, layerName: String): URI = {
+    val uri = new URI(pathLiteral)
+    if (DataVaultService.isRemoteScheme(uri.getScheme)) {
+      uri
+    } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
+      val localPath = Paths.get(uri.getPath)
+      if (localPath.isAbsolute) {
+        if (localPath.toString.startsWith(localDatasetDir.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
+              .exists(whitelistEntry => localPath.toString.startsWith(whitelistEntry)))
+          uri
+        else
+          throw new Exception(
+            s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
+      } else { // relative local path, resolve in dataset dir
+        val pathRelativeToDataset = localDatasetDir.resolve(localPath)
+        val pathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)
+        if (pathRelativeToDataset.toFile.exists) {
+          pathRelativeToDataset.toUri
+        } else {
+          pathRelativeToLayer.toUri
+        }
+      }
+    } else {
+      throw new Exception(s"Unsupported path: $localDatasetDir")
+    }
+  }
+
   def resolveMagPath(datasetDir: Path, layerDir: Path, layerName: String, magLocator: MagLocator): URI =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        val uri = new URI(magLocatorPath)
-        if (DataVaultService.isRemoteScheme(uri.getScheme)) {
-          uri
-        } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
-          val localPath = Paths.get(uri.getPath)
-          if (localPath.isAbsolute) {
-            if (dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
-                  localPath.toString.startsWith(whitelistEntry)))
-              uri
-            else
-              throw new Exception(
-                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
-          } else { // relative local path, resolve in dataset dir
-            val magPathRelativeToDataset = datasetDir.resolve(localPath)
-            val magPathRelativeToLayer = datasetDir.resolve(layerName).resolve(localPath)
-            if (magPathRelativeToDataset.toFile.exists) {
-              magPathRelativeToDataset.toUri
-            } else {
-              magPathRelativeToLayer.toUri
-            }
-          }
-        } else {
-          throw new Exception(s"Unsupported mag path: $magLocatorPath")
-        }
+        uriFromPathLiteral(magLocatorPath, datasetDir, layerName)
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
         val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral())

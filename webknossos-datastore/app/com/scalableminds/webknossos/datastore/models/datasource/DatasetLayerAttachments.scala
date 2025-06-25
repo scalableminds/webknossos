@@ -15,7 +15,10 @@ case class DatasetLayerAttachments(
     segmentIndex: Option[LayerAttachment] = None,
     connectomes: Seq[LayerAttachment] = Seq.empty,
     cumsum: Option[LayerAttachment] = None
-)
+) {
+  def isEmpty: Boolean =
+    meshes.isEmpty && agglomerates.isEmpty && segmentIndex.isEmpty && connectomes.isEmpty && cumsum.isEmpty
+}
 
 object DatasetLayerAttachments {
   implicit val jsonFormat: Format[DatasetLayerAttachments] =

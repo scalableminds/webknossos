@@ -38,7 +38,7 @@ class BinaryDataController @Inject()(
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService,
+    findDataService: FindDataService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {

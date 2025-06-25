@@ -9,7 +9,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import type { ApplicableSkeletonUpdateAction } from "../sagas/update_actions";
+import type { ApplicableSkeletonUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;

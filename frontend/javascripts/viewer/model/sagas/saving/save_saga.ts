@@ -51,13 +51,13 @@ import {
   MAX_SAVE_RETRY_WAITING_TIME,
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
-} from "viewer/model/sagas/save_saga_constants";
+} from "viewer/model/sagas/saving/save_saga_constants";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   type UpdateActionWithoutIsolationRequirement,
   updateCameraAnnotation,
   updateTdCamera,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import { Model } from "viewer/singletons";
 import type {
@@ -67,12 +67,12 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
-import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
-import type { Action } from "../actions/actions";
-import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
-import { updateLocalHdf5Mapping } from "./mapping_saga";
-import { removeAgglomerateFromActiveMapping, updateMappingWithMerge } from "./proofread_saga";
-import { takeEveryWithBatchActionSupport } from "./saga_helpers";
+import { getFlooredPosition, getRotation } from "../../accessors/flycam_accessor";
+import type { Action } from "../../actions/actions";
+import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
+import { removeAgglomerateFromActiveMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 

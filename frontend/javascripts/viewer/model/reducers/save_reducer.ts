@@ -5,7 +5,7 @@ import { type TracingStats, getStats } from "viewer/model/accessors/annotation_a
 import type { Action } from "viewer/model/actions/actions";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/save_saga_constants";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
 import type { SaveState, WebknossosState } from "viewer/store";
 
 // These update actions are not idempotent. Having them

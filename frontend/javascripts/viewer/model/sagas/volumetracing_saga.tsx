@@ -58,7 +58,7 @@ import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/buck
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import listenToMinCut from "viewer/model/sagas/min_cut_saga";
-import listenToQuickSelect from "viewer/model/sagas/quick_select_saga";
+import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
@@ -77,7 +77,7 @@ import {
   updateSegmentGroupsExpandedState,
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";

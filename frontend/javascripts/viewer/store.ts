@@ -51,7 +51,7 @@ import type { BLEND_MODES, ControlModeEnum } from "viewer/constants";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type { UpdateAction } from "viewer/model/sagas/update_actions";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import type {
   MutableTreeGroup,

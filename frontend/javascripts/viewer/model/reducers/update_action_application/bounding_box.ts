@@ -7,7 +7,7 @@ import type {
   DeleteUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import type {
   SkeletonTracing,
   UserBoundingBox,

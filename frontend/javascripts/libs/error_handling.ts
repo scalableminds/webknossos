@@ -54,6 +54,31 @@ export function handleGenericError(
   console.warn(error);
 }
 
+function mutateErrorMessage(error: Error, newMessage: string) {
+  try {
+    // In the past, we had records of the following line not working because message was read-only.
+    // However, with Chrome, Firefox, Safari and Edge, that bug could not be reproduced in July 2024.
+    // Therefore, we assume that the code should work. If not, we don't augment the error message.
+    // Instead, the exceptionType is passed to the notify() method below.
+    error.message = newMessage;
+  } catch {}
+}
+
+function anyToError(maybeError: any): Error {
+  return maybeError instanceof Error ? maybeError : new Error(maybeError);
+}
+
+function getPrefixedErrorMessage(
+  prefix: string,
+  maybeError: unknown,
+): { prefixedMessage: string; fullMessage: string } {
+  const fullMessage =
+    maybeError instanceof Error ? maybeError.toString() : JSON.stringify(maybeError);
+  const prefixedMessage = prefix + fullMessage.slice(0, 80);
+
+  return { prefixedMessage, fullMessage };
+}
+
 class ErrorHandling {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'throwAssertions' has no initializer and ... Remove this comment to see the full error message
   throwAssertions: boolean;
@@ -126,20 +151,7 @@ class ErrorHandling {
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", (event) => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
-      let wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
-
-      const newMessage = UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
-      try {
-        // In the past, we had records of the following line not working because message was read-only.
-        // However, with Chrome, Firefox, Safari and Edge, that bug could not be reproduced in July 2024.
-        // Therefore, we assume that the code should work. If not, we don't augment the error message.
-        // Instead, the exceptionType is passed to the notify() method below.
-        wrappedError.message = newMessage;
-      } catch {}
-
-      this.notify(wrappedError, {
-        originalError: reasonAsString,
+      this.notifyWithPrefix(event.reason, UNHANDLED_REJECTION_PREFIX, {
         exceptionType: "unhandledrejection",
       });
     });
@@ -211,6 +223,16 @@ class ErrorHandling {
       error,
       params: { ...optParams, actionLog, sessionStartTime: this.sessionStartTime },
       context: { severity },
+    });
+  }
+
+  notifyWithPrefix(error: unknown, prefix: string, optParams: Record<string, any> = {}) {
+    const wrappedError = anyToError(error);
+    const { prefixedMessage, fullMessage } = getPrefixedErrorMessage(prefix, error);
+    mutateErrorMessage(wrappedError, prefixedMessage);
+    this.notify(wrappedError, {
+      originalError: fullMessage,
+      ...optParams,
     });
   }
 

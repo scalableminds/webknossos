@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -10,15 +10,19 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 
 case class DatasetLayerAttachments(
-    meshes: Seq[LayerAttachment],
-    agglomerates: Seq[LayerAttachment],
-    segmentIndex: Option[LayerAttachment],
-    connectomes: Seq[LayerAttachment],
-    cumsum: Option[LayerAttachment]
-)
+    meshes: Seq[LayerAttachment] = Seq.empty,
+    agglomerates: Seq[LayerAttachment] = Seq.empty,
+    segmentIndex: Option[LayerAttachment] = None,
+    connectomes: Seq[LayerAttachment] = Seq.empty,
+    cumsum: Option[LayerAttachment] = None
+) {
+  def isEmpty: Boolean =
+    meshes.isEmpty && agglomerates.isEmpty && segmentIndex.isEmpty && connectomes.isEmpty && cumsum.isEmpty
+}
 
 object DatasetLayerAttachments {
-  implicit val jsonFormat: Format[DatasetLayerAttachments] = Json.format[DatasetLayerAttachments]
+  implicit val jsonFormat: Format[DatasetLayerAttachments] =
+    Json.using[Json.WithDefaultValues].format[DatasetLayerAttachments]
 }
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {
@@ -54,6 +58,7 @@ object LayerAttachment {
       Seq.empty
     }
   }
+
 }
 
 object MeshFileInfo {

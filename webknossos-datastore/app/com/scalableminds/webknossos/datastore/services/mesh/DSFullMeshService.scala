@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
@@ -137,10 +137,12 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                       datasetDirectoryName,
                                                                       layerName,
                                                                       meshFileName)
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                datasetDirectoryName,
+                                                                                layerName)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-        organizationId,
-        datasetDirectoryName,
-        layerName,
+        dataSource.id,
+        dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,

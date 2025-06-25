@@ -2,7 +2,7 @@ package com.scalableminds.util.mvc
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import net.liftweb.common.{Box, Failure, Full, ParamFailure}
+import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.text.SimpleDateFormat

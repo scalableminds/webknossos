@@ -4,9 +4,9 @@ import com.scalableminds.util.cache.AlfuCache
 
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
@@ -19,14 +19,13 @@ import scala.concurrent.ExecutionContext
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(
-    config: DataStoreConfig,
-    agglomerateService: AgglomerateService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
-    datasetErrorLoggingService: DSDatasetErrorLoggingService)(implicit ec: ExecutionContext)
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
+                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                        datasetErrorLoggingService: DSDatasetErrorLoggingService,
+                                        dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
+  lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
     // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
 
     val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
@@ -40,6 +39,16 @@ class BinaryDataServiceHolder @Inject()(
 
     AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
   }
+
+  val zarrAgglomerateService = new ZarrAgglomerateService(config, dataVaultService, sharedChunkContentsCache)
+  val hdf5AgglomerateService = new Hdf5AgglomerateService(config)
+
+  val agglomerateService = new AgglomerateService(
+    config,
+    zarrAgglomerateService,
+    hdf5AgglomerateService,
+    remoteSourceDescriptorService
+  )
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseDirectory),

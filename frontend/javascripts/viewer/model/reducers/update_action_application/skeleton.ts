@@ -302,7 +302,7 @@ function applySingleAction(
 
       const updatedTrees = skeleton.trees.set(treeId, updatedTree);
 
-      const newActiveNodeId = skeleton.activeNodeId === nodeId ? null : nodeId;
+      const newActiveNodeId = skeleton.activeNodeId === nodeId ? null : skeleton.activeNodeId;
 
       return update(state, {
         annotation: {

@@ -1,19 +1,17 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.connectome
 
-import java.io.File
-import java.nio.file.{Path, Paths}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
-import com.scalableminds.util.tools.Full
-import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
+import java.io.File
+import java.nio.file.{Path, Paths}
+import javax.inject.Inject
 import scala.collection.Searching._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -80,7 +78,10 @@ object ConnectomeLegend {
   implicit val jsonFormat: OFormat[ConnectomeLegend] = Json.format[ConnectomeLegend]
 }
 
-class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class ConnectomeFileService @Inject()(
+    config: DataStoreConfig,
+    hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
+    zarrConnectomeFileService: ZarrConnectomeFileService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 

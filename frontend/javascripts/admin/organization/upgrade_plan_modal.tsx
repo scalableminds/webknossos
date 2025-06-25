@@ -382,7 +382,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
               FAQ
             </a>{" "}
-            for more information. information.
+            for more information.
           </p>
         </>
       </div>

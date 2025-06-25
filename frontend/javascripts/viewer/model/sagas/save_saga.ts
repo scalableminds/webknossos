@@ -677,8 +677,11 @@ function* watchForSaveConflicts(): Saga<never> {
       console.warn(exception);
       // @ts-ignore
       ErrorHandling.notify(exception);
-      // todop: remove again?
-      Toast.error(`${exception}`);
+      Toast.error(
+        "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
+      );
+      // A hard error was thrown. Terminate this saga.
+      break;
     }
   }
 }

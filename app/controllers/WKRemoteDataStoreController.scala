@@ -27,7 +27,7 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -257,6 +257,17 @@ class WKRemoteDataStoreController @Inject()(
           }
         } yield Ok(Json.toJson(layersAndMagLinkInfos))
       }
+    }
+
+  def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+          dataSource <- datasetService.fullDataSourceFor(dataset)
+        } yield Ok(Json.toJson(dataSource))
+      }
+
     }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {

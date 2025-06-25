@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -50,7 +50,7 @@ class AnnotationStore @Inject()(
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] =
     temporaryAnnotationStore.get(annotationId.toUniqueString).map(Fox.successful(_))
 
-  def findInCache(annotationId: ObjectId): Box[Annotation] =
+  def findInCache(annotationId: ObjectId): Option[Annotation] =
     temporaryAnnotationStore.getAll.find(a => a._id == annotationId)
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {

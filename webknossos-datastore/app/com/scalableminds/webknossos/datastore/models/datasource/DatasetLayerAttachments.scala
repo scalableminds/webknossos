@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -15,7 +15,10 @@ case class DatasetLayerAttachments(
     segmentIndex: Option[LayerAttachment] = None,
     connectomes: Seq[LayerAttachment] = Seq.empty,
     cumsum: Option[LayerAttachment] = None
-)
+) {
+  def isEmpty: Boolean =
+    meshes.isEmpty && agglomerates.isEmpty && segmentIndex.isEmpty && connectomes.isEmpty && cumsum.isEmpty
+}
 
 object DatasetLayerAttachments {
   implicit val jsonFormat: Format[DatasetLayerAttachments] =

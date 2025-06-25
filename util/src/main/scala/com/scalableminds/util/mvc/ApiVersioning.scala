@@ -1,12 +1,18 @@
-package utils
+package com.scalableminds.util.mvc
 
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.RequestHeader
 
 trait ApiVersioning {
 
-  protected def CURRENT_API_VERSION: Int = 9
+  private lazy val CURRENT_API_VERSION: Int = 9
+  private lazy val OLDEST_SUPPORTED_API_VERSION: Int = 5
 
-  protected def OLDEST_SUPPORTED_API_VERSION: Int = 5
+  protected lazy val apiVersioningInfo: JsObject =
+    Json.obj(
+      "currentApiVersion" -> CURRENT_API_VERSION,
+      "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
+    )
 
   protected def isInvalidApiVersion(request: RequestHeader): Boolean = {
     val requestedVersion = extractRequestedApiVersion(request)
@@ -19,9 +25,9 @@ trait ApiVersioning {
   }
 
   private def extractRequestedApiVersion(request: RequestHeader): Int =
-    "^/api/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
+    "^/(api|data|tracings)/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
       case Some(m) =>
-        m.group(1).toInt
+        m.group(2).toInt
       case None => CURRENT_API_VERSION
     }
 }

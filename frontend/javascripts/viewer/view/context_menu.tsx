@@ -124,7 +124,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/min_cut_saga";
+import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/volume/min_cut_saga";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";

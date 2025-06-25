@@ -57,7 +57,7 @@ import {
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
-import listenToMinCut from "viewer/model/sagas/min_cut_saga";
+import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import {
   requestBucketModificationInVolumeTracing,

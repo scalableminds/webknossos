@@ -50,18 +50,18 @@ import {
   getEnabledColorLayers,
   getLayerBoundingBox,
   getMagInfo,
-} from "../accessors/dataset_accessor";
-import { getTransformsForLayer } from "../accessors/dataset_layer_transformation_accessor";
-import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import { updateUserSettingAction } from "../actions/settings_actions";
+} from "viewer/model/accessors/dataset_accessor";
+import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   type EnterAction,
   type EscapeAction,
   showQuickSelectSettingsAction,
-} from "../actions/ui_actions";
-import Dimensions, { type DimensionIndices } from "../dimensions";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { copyNdArray } from "./volume/volume_interpolation_saga";
+} from "viewer/model/actions/ui_actions";
+import Dimensions, { type DimensionIndices } from "viewer/model/dimensions";
+import { createVolumeLayer, labelWithVoxelBuffer2D } from "../helpers";
+import { copyNdArray } from "../volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 

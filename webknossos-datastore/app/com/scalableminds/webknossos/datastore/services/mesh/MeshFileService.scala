@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
@@ -97,17 +97,17 @@ class MeshFileService @Inject()(config: DataStoreConfig,
           path =
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
+      localFallbackAttachment = LayerAttachment(
+        meshFileName,
+        localDatasetDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
+        LayerAttachmentDataformat.hdf5
+      )
+      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
     } yield
       MeshFileKey(
         dataSourceId,
         dataLayer.name,
-        registeredAttachmentNormalized.getOrElse(
-          LayerAttachment(
-            meshFileName,
-            localDatasetDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
-            LayerAttachmentDataformat.hdf5
-          )
-        )
+        selectedAttachment
       )
   }
 
@@ -155,6 +155,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         hdf5MeshFileService.mappingNameForMeshFile(meshFileKey).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         Fox.successful(None)
+      case _ => unsupportedDataFormat(meshFileKey)
     }
 
   private def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
@@ -165,6 +166,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         Fox.successful(hdf5MeshFileService.versionForMeshFile(meshFileKey))
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         Fox.successful(NeuroglancerMesh.meshInfoVersion)
+      case _ => unsupportedDataFormat(meshFileKey)
     }
 
   def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Int] =
@@ -185,6 +187,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         hdf5MeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)
+      case _ => unsupportedDataFormat(meshFileKey)
     }
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
@@ -194,6 +197,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
       case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.readMeshChunk(meshFileKey, meshChunkDataRequests)
+      case _ => unsupportedDataFormat(meshFileKey)
     }
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
@@ -211,4 +215,6 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     clearedHdf5Count + clearedZarrCount + clearedNeuroglancerCount
   }
 
+  private def unsupportedDataFormat(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext) =
+    Fox.failure(s"Trying to load mesh file with unsupported data format ${meshFileKey.attachment.dataFormat}")
 }

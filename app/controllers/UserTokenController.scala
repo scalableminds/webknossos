@@ -96,6 +96,9 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
+          case AccessResourceType.dataset =>
+            handleDataSetAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox)(
+              sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox, token)
           case AccessResourceType.annotation =>
@@ -155,6 +158,34 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       case AccessMode.administrate => tryAdministrate
       case AccessMode.delete       => tryDelete
       case _                       => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
+    }
+  }
+
+  def handleDataSetAccess(id: String, mode: AccessMode.Value, userBox: Box[User])(
+      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+
+    def tryRead: Fox[UserAccessAnswer] =
+      for {
+        datasetId <- ObjectId.fromString(id)
+        datasetBox <- datasetDAO.findOne(datasetId).shiftBox
+      } yield
+        datasetBox match {
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
+        }
+
+    def tryWrite: Fox[UserAccessAnswer] =
+      for {
+        datasetId <- ObjectId.fromString(id)
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        user <- userBox.toFox ?~> "auth.token.noUser"
+        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
+      } yield UserAccessAnswer(isAllowed)
+
+    mode match {
+      case AccessMode.read  => tryRead
+      case AccessMode.write => tryWrite
+      case _                => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
     }
   }
 

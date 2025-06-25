@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils

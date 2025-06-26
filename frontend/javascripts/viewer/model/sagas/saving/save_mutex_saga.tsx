@@ -19,6 +19,9 @@ const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
 const RETRY_COUNT = 12;
 const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
 
+// todop
+const DISABLE_EAGER_MUTEX_ACQUISITION = true;
+
 type MutexLogicState = {
   isInitialRequest: boolean;
   doesHaveMutexFromBeginning: boolean;
@@ -27,9 +30,10 @@ type MutexLogicState = {
 };
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  // todop
-  return;
   yield* call(ensureWkReady);
+  if (DISABLE_EAGER_MUTEX_ACQUISITION) {
+    return;
+  }
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) {
     return;
@@ -133,7 +137,7 @@ function onMutexStateChanged(
   blockedByUser: APIUserCompact | null | undefined,
 ) {
   if (canEdit) {
-    Toast.close("MutexCouldNotBeAcquired");
+    Toast.close(MUTEX_NOT_ACQUIRED_KEY);
     if (!isInitialRequest) {
       const message = (
         <React.Fragment>

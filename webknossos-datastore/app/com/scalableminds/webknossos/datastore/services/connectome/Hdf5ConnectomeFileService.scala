@@ -23,44 +23,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       _ = cachedConnectomeFile.finishAccess()
     } yield mappingName
 
-  def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: List[Long])(
-      implicit ec: ExecutionContext): Fox[List[DirectedSynapseList]] =
-    if (agglomerateIds.length == 1) {
-      for {
-        agglomerateId <- agglomerateIds.headOption.toFox ?~> "Failed to extract the single agglomerate ID from request"
-        inSynapses <- ingoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId) ?~> "Failed to read ingoing synapses"
-        outSynapses <- outgoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId) ?~> "Failed to read outgoing synapses"
-      } yield List(DirectedSynapseList(inSynapses, outSynapses))
-    } else {
-      val agglomeratePairs = directedPairs(agglomerateIds.toSet.toList)
-      for {
-        synapsesPerPair <- Fox.serialCombined(agglomeratePairs)(pair =>
-          synapseIdsForDirectedPair(connectomeFileKey, pair._1, pair._2))
-        synapseListsMap = gatherPairSynapseLists(agglomerateIds, agglomeratePairs, synapsesPerPair)
-        synapseListsOrdered = agglomerateIds.map(id => synapseListsMap(id))
-      } yield synapseListsOrdered
-    }
-
-  private def directedPairs(items: List[Long]): List[(Long, Long)] =
-    (for { x <- items; y <- items } yield (x, y)).filter(pair => pair._1 != pair._2)
-
-  private def gatherPairSynapseLists(agglomerateIds: List[Long],
-                                     agglomeratePairs: List[(Long, Long)],
-                                     synapsesPerPair: List[List[Long]]): collection.Map[Long, DirectedSynapseList] = {
-    val directedSynapseListsMutable = scala.collection.mutable.Map[Long, DirectedSynapseListMutable]()
-    agglomerateIds.foreach { agglomerateId =>
-      directedSynapseListsMutable(agglomerateId) = DirectedSynapseListMutable.empty
-    }
-    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), List[Long]) =>
-      val srcAgglomerate = pairWithSynapses._1._1
-      val dstAgglomerate = pairWithSynapses._1._2
-      directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2
-      directedSynapseListsMutable(dstAgglomerate).in ++= pairWithSynapses._2
-    }
-    directedSynapseListsMutable.view.mapValues(_.freeze).toMap
-  }
-
-  private def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
+  def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
@@ -92,7 +55,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       _ = cachedConnectomeFile.finishAccess()
     } yield synapseIdsNested.flatten
 
-  private def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
+  def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
@@ -154,9 +117,8 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       }
     } yield SynapseTypesWithLegend(synapseTypes, typeNames)
 
-  private def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey,
-                                        srcAgglomerateId: Long,
-                                        dstAgglomerateId: Long)(implicit ec: ExecutionContext): Fox[List[Long]] =
+  def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
+      implicit ec: ExecutionContext): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)

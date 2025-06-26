@@ -4,7 +4,6 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
-import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileAttributes, MeshFileKey}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import jakarta.inject.Inject
 import play.api.libs.json.{JsResult, JsValue, Reads}
@@ -83,4 +82,15 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[SynapseTypesWithLegend] = ???
 
+  def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[Long]] = ???
+
+  def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[Long]] = ???
+
+  def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[Long]] = ???
 }

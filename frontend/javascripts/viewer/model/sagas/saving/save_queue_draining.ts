@@ -7,7 +7,6 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";

@@ -1,6 +1,6 @@
 import {
-  acquireAnnotationMutex,
   type NeighborInfo,
+  acquireAnnotationMutex,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,

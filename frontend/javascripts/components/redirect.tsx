@@ -1,15 +1,14 @@
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import type React from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 
 type Props = {
   redirectTo: () => Promise<string>;
-  history: RouteComponentProps["history"];
   pushToHistory?: boolean;
 };
 
-const AsyncRedirect: React.FC<Props> = ({ redirectTo, history, pushToHistory = true }) => {
+const AsyncRedirect: React.FC<Props> = ({ redirectTo, pushToHistory = true }) => {
+  const history = useHistory();
   useEffectOnlyOnce(() => {
     const redirect = async () => {
       const newPath = await redirectTo();
@@ -38,4 +37,4 @@ const AsyncRedirect: React.FC<Props> = ({ redirectTo, history, pushToHistory = t
   return null;
 };
 
-export default withRouter<RouteComponentProps & Props, any>(AsyncRedirect);
+export default AsyncRedirect;

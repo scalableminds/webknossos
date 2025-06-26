@@ -3,20 +3,17 @@ import { Alert, Button, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type Props = {
-  history: RouteComponentProps["history"];
-};
-
 const MIN_PASSWORD_LENGTH = 8;
 
-function ChangePasswordView({ history }: Props) {
+function ChangePasswordView() {
   const [form] = Form.useForm();
+  const history = useHistory();
 
   function onFinish(formValues: Record<string, any>) {
     Request.sendJSONReceiveJSON("/api/auth/changePassword", {
@@ -158,4 +155,4 @@ function ChangePasswordView({ history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps, any>(ChangePasswordView);
+export default ChangePasswordView;

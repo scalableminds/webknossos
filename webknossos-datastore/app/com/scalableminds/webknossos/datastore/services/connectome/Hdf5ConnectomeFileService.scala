@@ -1,21 +1,26 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 
+import java.nio.file.Paths
 import javax.inject.Inject
-import scala.collection.Searching.{Found, InsertionPoint}
 import scala.concurrent.ExecutionContext
 
-class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
+class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxImplicits {
 
-  private lazy val connectomeFileCache = new Hdf5FileCache(30)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+
+  private lazy val fileHandleCache = new Hdf5FileCache(30)
 
   def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext): Fox[String] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       mappingName <- finishAccessOnFailure(cachedConnectomeFile) {
@@ -27,7 +32,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
   def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
@@ -59,7 +64,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
   def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
@@ -79,7 +84,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
                                  synapseIds: List[Long],
                                  direction: SynapticPartnerDirection)(implicit ec: ExecutionContext): Fox[List[Long]] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
@@ -94,7 +99,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext): Fox[List[List[Long]]] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
@@ -107,7 +112,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
   def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext): Fox[SynapseTypesWithLegend] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       // Hard coded type name list, as all legacy files have this value.
@@ -122,7 +127,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
   def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
-      cachedConnectomeFile <- connectomeFileCache
+      cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
@@ -135,7 +140,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSR_indices", (toPtr - fromPtr).toInt, fromPtr)
         } ?~> "Could not read agglomerate pairs from connectome file"
-      columnOffset <- searchSorted(columnValues, dstAgglomerateId).toFox
+      columnOffset = SequenceUtils.searchSorted(columnValues, dstAgglomerateId)
       pairIndex = fromPtr + columnOffset
       synapses <- if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
         Fox.successful(List.empty)
@@ -149,17 +154,16 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
         } yield Seq.range(from, to)
     } yield synapses
 
-  // TODO move to utils?
-  private def searchSorted(haystack: Array[Long], needle: Long): Box[Int] =
-    haystack.search(needle) match {
-      case Found(i)          => Full(i)
-      case InsertionPoint(i) => Full(i)
-    }
-
   private def finishAccessOnFailure[T](f: CachedHdf5File)(block: => T)(implicit ec: ExecutionContext): Fox[T] =
     tryo { _: Throwable =>
       f.finishAccess()
     } {
       block
     }.toFox
+
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    val datasetPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
+    fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
+  }
 }

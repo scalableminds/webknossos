@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 import jakarta.inject.Inject
 import play.api.libs.json.{JsResult, JsValue, Reads}
 
-import scala.collection.Searching.{Found, InsertionPoint}
 import scala.concurrent.ExecutionContext
 
 case class ConnectomeFileAttributes(
@@ -175,7 +175,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, srcAgglomerateId)
       columnValuesMA <- csrIndicesArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       columnValues: Array[Long] <- tryo(columnValuesMA.getStorage.asInstanceOf[Array[Long]]).toFox
-      columnOffset <- searchSorted(columnValues, dstAgglomerateId).toFox
+      columnOffset = SequenceUtils.searchSorted(columnValues, dstAgglomerateId)
       pairIndex = fromPtr + columnOffset
       synapses <- if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
         Fox.successful(List.empty)
@@ -187,13 +187,6 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
           to <- tryo(fromAndTo.getLong(1)).toFox
         } yield Seq.range(from, to)
     } yield synapses
-
-  // TODO move to utils?
-  private def searchSorted(haystack: Array[Long], needle: Long): Box[Int] =
-    haystack.search(needle) match {
-      case Found(i)          => Full(i)
-      case InsertionPoint(i) => Full(i)
-    }
 
   private def openZarrArray(connectomeFileKey: ConnectomeFileKey,
                             zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
@@ -211,4 +204,15 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
                                        chunkCacheService.sharedChunkContentsCache)
         } yield zarrArray
     )
+
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    attributesCache.clear { meshFileKey =>
+      meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    }
+
+    openArraysCache.clear {
+      case (meshFileKey, _) =>
+        meshFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(meshFileKey.layerName == _)
+    }
+  }
 }

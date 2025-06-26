@@ -271,6 +271,19 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
       hdf5Fn = hdf5ConnectomeFileService.typesForSynapses(connectomeFileKey, synapseIds)
     )
 
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    connectomeFileKeyCache.clear {
+      case (keyDataSourceId, keyLayerName, _) =>
+        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    }
+
+    val clearedHdf5Count = hdf5ConnectomeFileService.clearCache(dataSourceId, layerNameOpt)
+
+    val clearedZarrCount = zarrConnectomeFileService.clearCache(dataSourceId, layerNameOpt)
+
+    clearedHdf5Count + clearedZarrCount
+  }
+
   private def delegateToService[A](connectomeFileKey: ConnectomeFileKey, zarrFn: Fox[A], hdf5Fn: Fox[A])(
       implicit ec: ExecutionContext): Fox[A] =
     connectomeFileKey.attachment.dataFormat match {

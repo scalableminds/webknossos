@@ -131,6 +131,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
   }
 }
 
+// todop: this should automatically react to store changes / actions. there could be a "SET_MUTEX_INFO" action
 function onMutexStateChanged(
   isInitialRequest: boolean,
   canEdit: boolean,

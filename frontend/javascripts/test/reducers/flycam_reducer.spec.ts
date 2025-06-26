@@ -11,6 +11,7 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import * as FlycamActions from "viewer/model/actions/flycam_actions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 import { describe, it, expect } from "vitest";
 
 function equalWithEpsilon(a: number[], b: number[], epsilon = 1e-10) {

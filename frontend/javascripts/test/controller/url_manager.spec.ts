@@ -12,7 +12,7 @@ import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
 import _ from "lodash";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/hybridtracing_object";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {

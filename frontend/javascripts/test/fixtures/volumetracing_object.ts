@@ -2,7 +2,7 @@ import update from "immutability-helper";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { FlycamMatrixWithDefaultRotation } from "./hybridtracing_object";
+import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 
 const volumeTracing = {
   type: "volume",

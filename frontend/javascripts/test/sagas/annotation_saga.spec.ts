@@ -12,7 +12,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { wkReadyAction } from "viewer/model/actions/actions";
-import { acquireAnnotationMutexMaybe } from "viewer/model/sagas/annotation_saga";
+import { acquireAnnotationMutexMaybe } from "viewer/model/sagas/saving/save_mutex_saga";
 
 const createInitialState = (
   othersMayEdit: boolean,

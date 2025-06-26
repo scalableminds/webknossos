@@ -14,118 +14,141 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
 
+const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
+const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
+const RETRY_COUNT = 12;
+const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
+
+type MutexLogicState = {
+  isInitialRequest: boolean;
+  doesHaveMutexFromBeginning: boolean;
+  doesHaveMutex: boolean;
+  shallTryAcquireMutex: boolean;
+};
+
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* call(ensureWkReady);
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
-  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   if (!allowUpdate) {
     return;
   }
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-  const activeUser = yield* select((state) => state.activeUser);
-  const acquireMutexInterval = 1000 * 60;
-  const RETRY_COUNT = 12;
-  const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
-  const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
-  let isInitialRequest = true;
-  let doesHaveMutexFromBeginning = false;
-  let doesHaveMutex = false;
-  let shallTryAcquireMutex = othersMayEdit;
 
-  function onMutexStateChanged(canEdit: boolean, blockedByUser: APIUserCompact | null | undefined) {
-    if (canEdit) {
-      Toast.close("MutexCouldNotBeAcquired");
-      if (!isInitialRequest) {
-        const message = (
-          <React.Fragment>
-            {messages["annotation.acquiringMutexSucceeded"]}" "
-            <Button onClick={() => location.reload()}>Reload the annotation</Button>
-          </React.Fragment>
-        );
-        Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
-      }
-    } else {
-      Toast.close(MUTEX_ACQUIRED_KEY);
-      const message =
-        blockedByUser != null
-          ? messages["annotation.acquiringMutexFailed"]({
-              userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
-            })
-          : messages["annotation.acquiringMutexFailed.noUser"];
-      Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
-    }
-  }
+  const mutexLogicState: MutexLogicState = {
+    isInitialRequest: true,
+    doesHaveMutexFromBeginning: false,
+    doesHaveMutex: false,
+    shallTryAcquireMutex: othersMayEdit,
+  };
 
-  function* tryAcquireMutexContinuously(): Saga<void> {
-    while (shallTryAcquireMutex) {
-      if (isInitialRequest) {
-        yield* put(setAnnotationAllowUpdateAction(false));
-      }
-      try {
-        const { canEdit, blockedByUser } = yield* retry(
-          RETRY_COUNT,
-          acquireMutexInterval / RETRY_COUNT,
-          acquireAnnotationMutex,
-          annotationId,
-        );
-        if (isInitialRequest && canEdit) {
-          doesHaveMutexFromBeginning = true;
-          // Only set allow update to true in case the first try to get the mutex succeeded.
-          yield* put(setAnnotationAllowUpdateAction(true));
-        }
-        if (!canEdit || !doesHaveMutexFromBeginning) {
-          // If the mutex could not be acquired anymore or the user does not have it from the beginning, set allow update to false.
-          doesHaveMutexFromBeginning = false;
-          yield* put(setAnnotationAllowUpdateAction(false));
-        }
-        if (canEdit) {
-          yield* put(setBlockedByUserAction(activeUser));
-        } else {
-          yield* put(setBlockedByUserAction(blockedByUser));
-        }
-        if (canEdit !== doesHaveMutex || isInitialRequest) {
-          doesHaveMutex = canEdit;
-          onMutexStateChanged(canEdit, blockedByUser);
-        }
-      } catch (error) {
-        if (process.env.IS_TESTING) {
-          // In unit tests, that explicitly control this generator function,
-          // the console.error after the next yield won't be printed, because
-          // test assertions on the yield will already throw.
-          // Therefore, we also print the error in the test context.
-          console.error("Error while trying to acquire mutex:", error);
-        }
-        const wasCanceled = yield* cancelled();
-        if (!wasCanceled) {
-          console.error("Error while trying to acquire mutex.", error);
-          yield* put(setBlockedByUserAction(undefined));
-          yield* put(setAnnotationAllowUpdateAction(false));
-          doesHaveMutexFromBeginning = false;
-          if (doesHaveMutex || isInitialRequest) {
-            onMutexStateChanged(false, null);
-            doesHaveMutex = false;
-          }
-        }
-      }
-      isInitialRequest = false;
-      yield* call(delay, acquireMutexInterval);
-    }
-  }
-  let runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
+  let runningTryAcquireMutexContinuouslySaga = yield* fork(
+    tryAcquireMutexContinuously,
+    mutexLogicState,
+  );
   function* reactToOthersMayEditChanges({
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {
-    shallTryAcquireMutex = othersMayEdit;
-    if (shallTryAcquireMutex) {
+    mutexLogicState.shallTryAcquireMutex = othersMayEdit;
+    if (mutexLogicState.shallTryAcquireMutex) {
       if (runningTryAcquireMutexContinuouslySaga != null) {
         yield* cancel(runningTryAcquireMutexContinuouslySaga);
       }
-      isInitialRequest = true;
-      runningTryAcquireMutexContinuouslySaga = yield* fork(tryAcquireMutexContinuously);
+      mutexLogicState.isInitialRequest = true;
+      runningTryAcquireMutexContinuouslySaga = yield* fork(
+        tryAcquireMutexContinuously,
+        mutexLogicState,
+      );
     } else {
       // othersMayEdit was turned off. The user editing it should be able to edit the annotation.
       yield* put(setAnnotationAllowUpdateAction(true));
     }
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
+}
+
+function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<void> {
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
+  const activeUser = yield* select((state) => state.activeUser);
+
+  while (mutexLogicState.shallTryAcquireMutex) {
+    if (mutexLogicState.isInitialRequest) {
+      yield* put(setAnnotationAllowUpdateAction(false));
+    }
+    try {
+      const { canEdit, blockedByUser } = yield* retry(
+        RETRY_COUNT,
+        ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
+        acquireAnnotationMutex,
+        annotationId,
+      );
+      if (mutexLogicState.isInitialRequest && canEdit) {
+        mutexLogicState.doesHaveMutexFromBeginning = true;
+        // Only set allow update to true in case the first try to get the mutex succeeded.
+        yield* put(setAnnotationAllowUpdateAction(true));
+      }
+      if (!canEdit || !mutexLogicState.doesHaveMutexFromBeginning) {
+        // If the mutex could not be acquired anymore or the user does not have it from the beginning, set allow update to false.
+        mutexLogicState.doesHaveMutexFromBeginning = false;
+        yield* put(setAnnotationAllowUpdateAction(false));
+      }
+      if (canEdit) {
+        yield* put(setBlockedByUserAction(activeUser));
+      } else {
+        yield* put(setBlockedByUserAction(blockedByUser));
+      }
+      if (canEdit !== mutexLogicState.doesHaveMutex || mutexLogicState.isInitialRequest) {
+        mutexLogicState.doesHaveMutex = canEdit;
+        onMutexStateChanged(mutexLogicState.isInitialRequest, canEdit, blockedByUser);
+      }
+    } catch (error) {
+      if (process.env.IS_TESTING) {
+        // In unit tests, that explicitly control this generator function,
+        // the console.error after the next yield won't be printed, because
+        // test assertions on the yield will already throw.
+        // Therefore, we also print the error in the test context.
+        console.error("Error while trying to acquire mutex:", error);
+      }
+      const wasCanceled = yield* cancelled();
+      if (!wasCanceled) {
+        console.error("Error while trying to acquire mutex.", error);
+        yield* put(setBlockedByUserAction(undefined));
+        yield* put(setAnnotationAllowUpdateAction(false));
+        mutexLogicState.doesHaveMutexFromBeginning = false;
+        if (mutexLogicState.doesHaveMutex || mutexLogicState.isInitialRequest) {
+          onMutexStateChanged(mutexLogicState.isInitialRequest, false, null);
+          mutexLogicState.doesHaveMutex = false;
+        }
+      }
+    }
+    mutexLogicState.isInitialRequest = false;
+    yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+  }
+}
+
+function onMutexStateChanged(
+  isInitialRequest: boolean,
+  canEdit: boolean,
+  blockedByUser: APIUserCompact | null | undefined,
+) {
+  if (canEdit) {
+    Toast.close("MutexCouldNotBeAcquired");
+    if (!isInitialRequest) {
+      const message = (
+        <React.Fragment>
+          {messages["annotation.acquiringMutexSucceeded"]}" "
+          <Button onClick={() => location.reload()}>Reload the annotation</Button>
+        </React.Fragment>
+      );
+      Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
+    }
+  } else {
+    Toast.close(MUTEX_ACQUIRED_KEY);
+    const message =
+      blockedByUser != null
+        ? messages["annotation.acquiringMutexFailed"]({
+            userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+          })
+        : messages["annotation.acquiringMutexFailed.noUser"];
+    Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
+  }
 }

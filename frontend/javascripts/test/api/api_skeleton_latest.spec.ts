@@ -377,6 +377,7 @@ describe("API Skeleton", () => {
     const newNode = enforceSkeletonTracing(Store.getState().annotation)
       .trees.getOrThrow(2)
       .nodes.getOrThrow(4);
+    // TODOM: Adjust expectation to allow equal euler angles with a little numeric offset!
     expect(newNode.rotation).toStrictEqual([20, 90, 10]);
   });
   it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated", ({

@@ -353,6 +353,10 @@ export function getFlycamRotationWithAppendedRotation(
 ): Vector3 {
   const flycamRotation = map3(THREE.MathUtils.degToRad, flycam.rotation);
   flycamRotationEuler.set(...flycamRotation, "ZYX");
+  const rotFlycamMatrix = new THREE.Matrix4()
+    .makeRotationFromEuler(flycamRotationEuler)
+    .multiply(new THREE.Matrix4().makeRotationFromEuler(rotationToAppend));
+  const rotation = new THREE.Euler().setFromRotationMatrix(rotFlycamMatrix, "ZYX");
   additionalRotationQuaternion.setFromEuler(rotationToAppend);
   totalRotationQuaternion.setFromEuler(flycamRotationEuler).multiply(additionalRotationQuaternion);
   const rotationEuler = totalRotationEuler.setFromQuaternion(totalRotationQuaternion, "ZYX");
@@ -361,13 +365,23 @@ export function getFlycamRotationWithAppendedRotation(
     mod(rotationEuler.y, 2 * Math.PI),
     mod(rotationEuler.z, 2 * Math.PI),
   ]);
+  const flycamRotationForthAndBack = new THREE.Euler().setFromQuaternion(
+    new THREE.Quaternion().setFromEuler(flycamRotationEuler),
+    "ZYX",
+  );
   console.log(
     "flycam rotation",
     flycamRotation,
     "viewport rotation",
     rotationToAppend,
+    "rotationEuler",
+    rotationEuler,
     "resulting rotation",
     rotationInDegree,
+    "rotation",
+    rotation,
+    "flycamRotationForthAndBack",
+    flycamRotationForthAndBack,
   );
   return rotationInDegree;
 }

@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import { map3, values } from "libs/utils";
+import { map3, mod, values } from "libs/utils";
 import _ from "lodash";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -318,11 +318,10 @@ export function getOptionsForCreateSkeletonNode(
   const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
   const flycamOnlyRotationInDegree = map3(
     Math.round,
-    map3(THREE.MathUtils.radToDeg, [
-      flycamOnlyRotation.x,
-      flycamOnlyRotation.y,
-      flycamOnlyRotation.z,
-    ]),
+    map3(
+      (a) => mod(THREE.MathUtils.radToDeg(a), 360),
+      [flycamOnlyRotation.x, flycamOnlyRotation.y, flycamOnlyRotation.z],
+    ),
   );
   console.log("calculated the following rotation back of the node", flycamOnlyRotationInDegree);
 

@@ -1,5 +1,4 @@
-# Defines tracingstore routes (Higher priority routes first)
-# ~~~~
+# Defines latest version of tracingstore routes (Higher priority routes first)
 
 # Health endpoint
 GET         /health                                                                 @com.scalableminds.webknossos.tracingstore.controllers.Application.health

@@ -50,7 +50,9 @@ function* watchForSaveConflicts(): Saga<void> {
       (state) =>
         state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
     );
-    if (allowSave) {
+
+    // todop
+    if (false && allowSave) {
       // The active user is currently the only one that is allowed to mutate the annotation.
       // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
       // between the page load and this check here.

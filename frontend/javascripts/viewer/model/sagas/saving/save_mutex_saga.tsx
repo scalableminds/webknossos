@@ -27,6 +27,8 @@ type MutexLogicState = {
 };
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
+  // todop
+  return;
   yield* call(ensureWkReady);
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) {

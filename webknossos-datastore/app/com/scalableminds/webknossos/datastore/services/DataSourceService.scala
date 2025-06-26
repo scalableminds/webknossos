@@ -226,7 +226,10 @@ class DataSourceService @Inject()(
       val uri = new URI(pathStr)
       if (DataVaultService.isRemoteScheme(uri.getScheme)) true
       else {
-        val path = Path.of(new URI(pathStr).getPath).normalize().toAbsolutePath
+        val path = organizationDir
+          .resolve(dataSource.id.directoryName)
+          .resolve(Path.of(new URI(pathStr).getPath).normalize())
+          .toAbsolutePath
         val allowedParent = organizationDir.toAbsolutePath
         if (path.startsWith(allowedParent)) true else false
       }

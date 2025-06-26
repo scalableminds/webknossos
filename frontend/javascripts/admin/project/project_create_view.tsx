@@ -14,13 +14,11 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
-type OwnProps = {
+type Props = {
   projectId?: string | null | undefined;
 };
-type Props = OwnProps;
-type PropsWithRouter = Props;
 
-function ProjectCreateView({ projectId }: PropsWithRouter) {
+function ProjectCreateView({ projectId }: Props) {
   const [teams, setTeams] = useState<APITeam[]>([]);
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);

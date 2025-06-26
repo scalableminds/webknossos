@@ -57,7 +57,11 @@ import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
 
-function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
+function SkeletonTracingReducer(
+  state: WebknossosState,
+  action: Action,
+  ignoreAllowUpdate: boolean = false,
+): WebknossosState {
   if (action.type === "INITIALIZE_SKELETONTRACING") {
     const userState = getUserStateForTracing(
       action.tracing,
@@ -653,7 +657,13 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
     case "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
-      return applySkeletonUpdateActionsFromServer(SkeletonTracingReducer, actions, state);
+      return applySkeletonUpdateActionsFromServer(
+        // Pass a SkeletonTracingReducer that ignores allowUpdate because
+        // we want to be able to apply updates even in read-only views.
+        (state: WebknossosState, action: Action) => SkeletonTracingReducer(state, action, true),
+        actions,
+        state,
+      );
     }
 
     default: // pass
@@ -664,7 +674,9 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
    */
   const { restrictions } = state.annotation;
   const { allowUpdate } = restrictions;
-  if (!allowUpdate) return state;
+  if (!(allowUpdate || ignoreAllowUpdate)) {
+    return state;
+  }
 
   switch (action.type) {
     case "CREATE_NODE": {

@@ -333,7 +333,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.leave_with_unsaved_changes":
-    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
+    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Ok”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.add_zarr_different_scale_warning":

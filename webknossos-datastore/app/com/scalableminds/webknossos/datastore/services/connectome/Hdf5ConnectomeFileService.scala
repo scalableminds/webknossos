@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 
 import javax.inject.Inject
@@ -74,17 +75,18 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
     } yield Seq.range(from, to)
 
-  def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long], direction: String)(
-      implicit ec: ExecutionContext): Fox[List[Long]] =
+  def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey,
+                                 synapseIds: List[Long],
+                                 direction: SynapticPartnerDirection)(implicit ec: ExecutionContext): Fox[List[Long]] =
     for {
-      _ <- Fox.fromBool(direction == "src" || direction == "dst") ?~> s"Invalid synaptic partner direction: $direction"
-      collection = s"/synapse_to_${direction}_agglomerate"
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(collection, 1, synapseId)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(s"/synapse_to_${direction.toString}_agglomerate",
+                                                                     1,
+                                                                     synapseId)
         }.flatMap(_.headOption.toFox)
       }
     } yield agglomerateIds

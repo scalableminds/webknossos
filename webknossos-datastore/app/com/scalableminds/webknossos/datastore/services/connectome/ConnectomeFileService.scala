@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FilenameUtils
@@ -62,8 +63,8 @@ object DirectedSynapseListMutable {
 }
 
 case class SynapseTypesWithLegend(
-    synapseTypes: List[Long],
-    typeToString: List[String],
+    synapseTypes: Seq[Long],
+    typeToString: Seq[String],
 )
 
 object SynapseTypesWithLegend {
@@ -242,9 +243,10 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
         hdf5ConnectomeFileService.synapseIdsForDirectedPair(connectomeFileKey, srcAgglomerateId, dstAgglomerateId)
     )
 
-  def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long], direction: String)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] =
+  def synapticPartnerForSynapses(
+      connectomeFileKey: ConnectomeFileKey,
+      synapseIds: List[Long],
+      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     delegateToService(
       connectomeFileKey,
       zarrFn = zarrConnectomeFileService.synapticPartnerForSynapses(connectomeFileKey, synapseIds, direction),
@@ -253,7 +255,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
 
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[List[Long]]] =
+      tc: TokenContext): Fox[Seq[Seq[Long]]] =
     delegateToService(
       connectomeFileKey,
       zarrFn = zarrConnectomeFileService.positionsForSynapses(connectomeFileKey, synapseIds),

@@ -28,7 +28,8 @@ import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
-  ConnectomeFileService
+  ConnectomeFileService,
+  SynapticPartnerDirection
 }
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -549,6 +550,9 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
+          directionValidated <- SynapticPartnerDirection
+            .fromString(direction)
+            .toFox ?~> "could not parse synaptic partner direction"
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName)
@@ -557,7 +561,7 @@ class DataSourceController @Inject()(
                                                                        request.body.connectomeFile)
           agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFileKey,
                                                                              request.body.synapseIds,
-                                                                             direction)
+                                                                             directionValidated)
         } yield Ok(Json.toJson(agglomerateIds))
       }
     }

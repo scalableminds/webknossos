@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.ChunkCacheService
+import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import jakarta.inject.Inject
 import play.api.libs.json.{JsResult, JsValue, Reads}
@@ -55,6 +56,10 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
   private val keyCsrIndices = "CSR_indices"
   private val keyAgglomeratePairOffsets = "agglomerate_pair_offsets"
   private val keyCscAgglomeratePair = "CSC_agglomerate_pair"
+  private val keySynapseTypes = "synapse_types"
+  private val keySynapsePositions = "synapse_positions"
+  private val keySynapseToSrcAgglomerate = "synapse_to_src_agglomerate"
+  private val keySynapseToDstAgglomerate = "synapse_to_dst_agglomerate"
 
   private def readConnectomeFileAttributes(connectomeFileKey: ConnectomeFileKey)(
       implicit ec: ExecutionContext,
@@ -77,28 +82,59 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       attributes <- readConnectomeFileAttributes(connectomeFileKey)
     } yield attributes.mappingName
 
-  def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long], direction: String)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] = ???
+  def synapticPartnerForSynapses(
+      connectomeFileKey: ConnectomeFileKey,
+      synapseIds: List[Long],
+      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] = {
+    val arrayKey = direction match {
+      case SynapticPartnerDirection.src => keySynapseToSrcAgglomerate
+      case SynapticPartnerDirection.dst => keySynapseToDstAgglomerate
+    }
+    for {
+      synapseToPartnerAgglomerateArray <- openZarrArray(connectomeFileKey, arrayKey)
+      agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        for {
+          agglomerateIdMA <- synapseToPartnerAgglomerateArray.readAsMultiArray(offset = synapseId, shape = 1)
+          agglomerateId <- tryo(agglomerateIdMA.getLong(0)).toFox
+        } yield agglomerateId
+      }
+    } yield agglomerateIds
+  }
 
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[List[Long]]] = ???
+      tc: TokenContext): Fox[Seq[Seq[Long]]] =
+    for {
+      arraySynapsePositions <- openZarrArray(connectomeFileKey, keySynapsePositions)
+      synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        for {
+          synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3)) // TODO should offset and shape be transposed?
+          synapsePosition <- tryo(synapsePositionMA.getStorage.asInstanceOf[Array[Long]].toSeq).toFox
+        } yield synapsePosition
+      }
+    } yield synapsePositions
 
   def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[SynapseTypesWithLegend] = ???
+      tc: TokenContext): Fox[SynapseTypesWithLegend] =
+    for {
+      arraySynapseTypes <- openZarrArray(connectomeFileKey, keySynapseTypes)
+      attributes <- readConnectomeFileAttributes(connectomeFileKey)
+      synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        for {
+          synapseTypeMA <- arraySynapseTypes.readAsMultiArray(offset = synapseId, shape = 1)
+          synapseType <- tryo(synapseTypeMA.getLong(0)).toFox
+        } yield synapseType
+      }
+    } yield SynapseTypesWithLegend(synapseTypes, attributes.synapseTypeNames)
 
   def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[Long]] =
     for {
-      csrIndptrArray <- openZarrArray(connectomeFileKey, keyCsrIndptr)
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
       cscAgglomeratePairArray <- openZarrArray(connectomeFileKey, keyCscAgglomeratePair)
-      fromAndToPtr <- csrIndptrArray.readAsMultiArray(offset = agglomerateId, shape = 2)
-      fromPtr <- tryo(fromAndToPtr.getLong(0)).toFox
-      toPtr <- tryo(fromAndToPtr.getLong(1)).toFox
       agglomeratePairsMA <- cscAgglomeratePairArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       agglomeratePairs <- tryo(agglomeratePairsMA.getStorage.asInstanceOf[Array[Long]]).toFox
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
@@ -110,19 +146,33 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       }
     } yield synapseIdsNested.flatten
 
+  private def getToAndFromPtr(connectomeFileKey: ConnectomeFileKey,
+                              agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] =
+    for {
+      csrIndptrArray <- openZarrArray(connectomeFileKey, keyCsrIndptr)
+      fromAndToPtr <- csrIndptrArray.readAsMultiArray(offset = agglomerateId, shape = 2)
+      fromPtr <- tryo(fromAndToPtr.getLong(0)).toFox
+      toPtr <- tryo(fromAndToPtr.getLong(1)).toFox
+    } yield (fromPtr, toPtr)
+
   def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] = ???
+      tc: TokenContext): Fox[Seq[Long]] =
+    for {
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId)
+      agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
+      fromMA <- agglomeratePairOffsetsArray.readAsMultiArray(offset = fromPtr, shape = 1)
+      from <- tryo(fromMA.getLong(0)).toFox
+      toMA <- agglomeratePairOffsetsArray.readAsMultiArray(offset = toPtr, shape = 1)
+      to <- tryo(toMA.getLong(0)).toFox
+    } yield Seq.range(from, to)
 
   def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
-      csrIndptrArray <- openZarrArray(connectomeFileKey, keyCsrIndptr)
       csrIndicesArray <- openZarrArray(connectomeFileKey, keyCsrIndices)
-      fromAndToPtr <- csrIndptrArray.readAsMultiArray(offset = srcAgglomerateId, shape = 2)
-      fromPtr <- tryo(fromAndToPtr.getLong(0)).toFox
-      toPtr <- tryo(fromAndToPtr.getLong(1)).toFox
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, srcAgglomerateId)
       columnValuesMA <- csrIndicesArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       columnValues: Array[Long] <- tryo(columnValuesMA.getStorage.asInstanceOf[Array[Long]]).toFox
       columnOffset <- searchSorted(columnValues, dstAgglomerateId).toFox

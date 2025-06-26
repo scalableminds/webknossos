@@ -113,19 +113,17 @@ export function* sendSaveRequestToServer(): Saga<number> {
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  const storeSaveQueue = sliceAppropriateBatchCount(fullSaveQueue);
-  const compactedSaveQueueWithoutVersions = compactSaveQueue(storeSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  let compactedSaveQueue = compactSaveQueue(saveQueue);
+  const version = yield* select((state) => state.annotation.version);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  let versionIncrement;
+  [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
 
   // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
-    const version = yield* select((state) => state.annotation.version);
-    const [compactedSaveQueue, versionIncrement] = addVersionNumbers(
-      compactedSaveQueueWithoutVersions,
-      version,
-    );
     let exceptionDuringMarkBucketsAsNotDirty = false;
 
     try {
@@ -155,7 +153,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
 
       yield* put(setVersionNumberAction(version + versionIncrement));
       yield* put(setLastSaveTimestampAction());
-      yield* put(shiftSaveQueueAction(storeSaveQueue.length));
+      yield* put(shiftSaveQueueAction(saveQueue.length));
 
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);
@@ -167,7 +165,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
       }
 
       yield* call(toggleErrorHighlighting, false);
-      return storeSaveQueue.length;
+      return saveQueue.length;
     } catch (error) {
       if (exceptionDuringMarkBucketsAsNotDirty) {
         throw error;
@@ -192,9 +190,8 @@ export function* sendSaveRequestToServer(): Saga<number> {
         retryCount,
       });
 
-      // todop: detect actual 409 errors again
       // @ts-ignore
-      if (false && error.status === 409) {
+      if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         // @ts-ignore
         window.onbeforeunload = null;

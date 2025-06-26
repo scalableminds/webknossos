@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 case class ByAgglomerateIdsRequest(
     connectomeFile: String,
-    agglomerateIds: List[Long]
+    agglomerateIds: Seq[Long]
 )
 
 object ByAgglomerateIdsRequest {
@@ -42,8 +42,8 @@ object BySynapseIdsRequest {
 }
 
 case class DirectedSynapseList(
-    in: List[Long],
-    out: List[Long]
+    in: Seq[Long],
+    out: Seq[Long]
 )
 
 object DirectedSynapseList {
@@ -174,9 +174,9 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
       hdf5Fn = hdf5ConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
     )
 
-  def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: List[Long])(
+  def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: Seq[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[DirectedSynapseList]] =
+      tc: TokenContext): Fox[Seq[DirectedSynapseList]] =
     if (agglomerateIds.length == 1) {
       for {
         agglomerateId <- agglomerateIds.headOption.toFox ?~> "Failed to extract the single agglomerate ID from request"
@@ -184,7 +184,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
         outSynapses <- outgoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId) ?~> "Failed to read outgoing synapses"
       } yield List(DirectedSynapseList(inSynapses, outSynapses))
     } else {
-      val agglomeratePairs = directedPairs(agglomerateIds.toSet.toList)
+      val agglomeratePairs = directedPairs(agglomerateIds.toSet.toSeq)
       for {
         synapsesPerPair <- Fox.serialCombined(agglomeratePairs)(pair =>
           synapseIdsForDirectedPair(connectomeFileKey, pair._1, pair._2))
@@ -193,17 +193,17 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
       } yield synapseListsOrdered
     }
 
-  private def directedPairs(items: List[Long]): List[(Long, Long)] =
+  private def directedPairs(items: Seq[Long]): Seq[(Long, Long)] =
     (for { x <- items; y <- items } yield (x, y)).filter(pair => pair._1 != pair._2)
 
-  private def gatherPairSynapseLists(agglomerateIds: List[Long],
-                                     agglomeratePairs: List[(Long, Long)],
-                                     synapsesPerPair: List[List[Long]]): collection.Map[Long, DirectedSynapseList] = {
+  private def gatherPairSynapseLists(agglomerateIds: Seq[Long],
+                                     agglomeratePairs: Seq[(Long, Long)],
+                                     synapsesPerPair: List[Seq[Long]]): collection.Map[Long, DirectedSynapseList] = {
     val directedSynapseListsMutable = scala.collection.mutable.Map[Long, DirectedSynapseListMutable]()
     agglomerateIds.foreach { agglomerateId =>
       directedSynapseListsMutable(agglomerateId) = DirectedSynapseListMutable.empty
     }
-    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), List[Long]) =>
+    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), Seq[Long]) =>
       val srcAgglomerate = pairWithSynapses._1._1
       val dstAgglomerate = pairWithSynapses._1._2
       directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2
@@ -214,7 +214,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
 
   private def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] =
+      tc: TokenContext): Fox[Seq[Long]] =
     delegateToService(
       connectomeFileKey,
       zarrFn = zarrConnectomeFileService.ingoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId),
@@ -223,7 +223,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
 
   private def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Long]] =
+      tc: TokenContext): Fox[Seq[Long]] =
     delegateToService(
       connectomeFileKey,
       zarrFn = zarrConnectomeFileService.outgoingSynapsesForAgglomerate(connectomeFileKey, agglomerateId),
@@ -233,7 +233,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
   private def synapseIdsForDirectedPair(
       connectomeFileKey: ConnectomeFileKey,
       srcAgglomerateId: Long,
-      dstAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+      dstAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     delegateToService(
       connectomeFileKey,
       zarrFn =

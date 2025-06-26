@@ -24,7 +24,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
     } yield mappingName
 
   def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext): Fox[List[Long]] =
+      implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
@@ -56,7 +56,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
     } yield synapseIdsNested.flatten
 
   def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext): Fox[List[Long]] =
+      implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
@@ -72,7 +72,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
       to <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets", 1, toPtr)
       }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
-    } yield List.range(from, to)
+    } yield Seq.range(from, to)
 
   def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long], direction: String)(
       implicit ec: ExecutionContext): Fox[List[Long]] =
@@ -118,7 +118,7 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
     } yield SynapseTypesWithLegend(synapseTypes, typeNames)
 
   def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
-      implicit ec: ExecutionContext): Fox[List[Long]] =
+      implicit ec: ExecutionContext): Fox[Seq[Long]] =
     for {
       cachedConnectomeFile <- connectomeFileCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
@@ -144,9 +144,10 @@ class Hdf5ConnectomeFileService @Inject()() extends FoxImplicits {
           }
           from <- fromAndTo.lift(0).toFox
           to <- fromAndTo.lift(1).toFox
-        } yield List.range(from, to)
+        } yield Seq.range(from, to)
     } yield synapses
 
+  // TODO move to utils?
   private def searchSorted(haystack: Array[Long], needle: Long): Box[Int] =
     haystack.search(needle) match {
       case Found(i)          => Full(i)

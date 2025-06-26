@@ -1,5 +1,4 @@
-# Datastore Routes (Higher priority routes first)
-
+# Defines latest version of datastore routes (Higher priority routes first)
 
 # Health endpoint
 GET           /health                                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.Application.health

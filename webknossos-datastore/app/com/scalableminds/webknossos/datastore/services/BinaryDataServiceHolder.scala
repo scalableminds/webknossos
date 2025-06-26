@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
  * There is, however an additional instance for volume tracings in the TracingStore
  * The TracingStore one (for VolumeTracings) already is a singleton, since the surrounding VolumeTracingService is a singleton.
  * The DataStore one is singleton-ized via this holder.
- * Also, this allows giving the datastore-only sharedChunkContentsCache to the datastore one, while passing None to the tracingstore one.
+ * Also, this allows giving the datastore-only sharedChunkContentsCache to the DataStore one, while passing None to the TracingStore one.
  */
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,

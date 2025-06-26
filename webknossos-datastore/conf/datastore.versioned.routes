@@ -1,0 +1,9 @@
+# Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
+
+->  /v9/  datastore.latest.Routes
+->  /v8/  datastore.latest.Routes
+->  /v7/  datastore.latest.Routes
+->  /v6/  datastore.latest.Routes
+->  /v5/  datastore.latest.Routes
+
+->  /     datastore.latest.Routes

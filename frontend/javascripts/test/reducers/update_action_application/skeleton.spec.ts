@@ -4,7 +4,7 @@ import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
 import { withoutUpdateActiveItemTracing } from "test/helpers/saveHelpers";
-import { applyActionsOnReadOnlyVersion } from "test/helpers/utils";
+import { transformStateAsReadOnly } from "test/helpers/utils";
 import type { Vector3 } from "viewer/constants";
 import {
   enforceSkeletonTracing,
@@ -203,14 +203,12 @@ describe("Update Action Application for SkeletonTracing", () => {
             seenActionTypes.add(action.name);
           }
 
-          const reappliedNewState = applyActionsOnReadOnlyVersion(
-            applyActions,
-            state2WithoutActiveState,
-            [
+          const reappliedNewState = transformStateAsReadOnly(state2WithoutActiveState, (state) =>
+            applyActions(state, [
               SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
               SkeletonTracingActions.setActiveNodeAction(null),
               setActiveUserBoundingBoxId(null),
-            ],
+            ]),
           );
 
           expect(reappliedNewState).toEqual(state3);
@@ -242,9 +240,11 @@ describe("Update Action Application for SkeletonTracing", () => {
       ),
     ) as ApplicableSkeletonUpdateAction[];
 
-    const newState3 = applyActionsOnReadOnlyVersion(applyActions, newState, [
-      SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
-    ]);
+    const newState3 = transformStateAsReadOnly(newState, (state) =>
+      applyActions(state, [
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+      ]),
+    );
 
     const { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
     expect(activeNodeId).toBeNull();
@@ -273,9 +273,11 @@ describe("Update Action Application for SkeletonTracing", () => {
       ),
     ) as ApplicableSkeletonUpdateAction[];
 
-    const newState3 = applyActionsOnReadOnlyVersion(applyActions, newState, [
-      SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
-    ]);
+    const newState3 = transformStateAsReadOnly(newState, (state) =>
+      applyActions(state, [
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+      ]),
+    );
 
     const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);
 

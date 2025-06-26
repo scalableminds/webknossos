@@ -20,7 +20,7 @@ import type {
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, test } from "vitest";
-import { applyActionsOnReadOnlyVersion } from "test/helpers/utils";
+import { transformStateAsReadOnly } from "test/helpers/utils";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -180,14 +180,12 @@ describe("Update Action Application for VolumeTracing", () => {
             seenActionTypes.add(action.name);
           }
 
-          const reappliedNewState = applyActionsOnReadOnlyVersion(
-            applyActions,
-            state2WithoutActiveState,
-            [
+          const reappliedNewState = transformStateAsReadOnly(state2WithoutActiveState, (state) =>
+            applyActions(state, [
               VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
               VolumeTracingActions.setActiveCellAction(0),
               setActiveUserBoundingBoxId(null),
-            ],
+            ]),
           );
 
           expect(reappliedNewState).toEqual(state3);

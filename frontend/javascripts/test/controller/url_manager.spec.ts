@@ -193,7 +193,7 @@ describe("UrlManager", () => {
       additionalCoordinates: [],
       mode,
       zoomStep: 1.3,
-      rotation: [0, 0, 180] as Vector3 as Vector3,
+      rotation: [0, 0, 180] as Vector3,
     };
     const initialState = update(defaultState, {
       temporaryConfiguration: {
@@ -244,7 +244,8 @@ describe("UrlManager", () => {
   it("should build default url in csv format", () => {
     UrlManager.initialize();
     const url = UrlManager.buildUrl();
-    // There is a default rotation of 180 around z which needs to be accounted for here.
+    // The default state in the store does not include the rotation of 180 degrees around z axis which is always subtracted from the rotation.
+    // Thus, the rotation of 180 around z is present.
     expect(url).toBe("#0,0,0,0,1.3,0,0,180");
   });
 
@@ -254,6 +255,9 @@ describe("UrlManager", () => {
       flycam: {
         currentMatrix: {
           $set: rotationMatrixWithDefaultRotation,
+        },
+        rotation: {
+          $set: [0, 0, 0],
         },
       },
     });

@@ -6,7 +6,7 @@ import {
   setTreeGroupsAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/update_actions";
+import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Tree } from "viewer/model/types/tree_types";
 import type { Reducer, WebknossosState } from "viewer/store";
 import { getMaximumNodeId } from "../skeletontracing_reducer_helpers";

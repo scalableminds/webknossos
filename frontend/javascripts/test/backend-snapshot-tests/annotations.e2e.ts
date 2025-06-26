@@ -11,14 +11,14 @@ import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracin
 import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
-import { addVersionNumbers } from "viewer/model/sagas/save_saga";
-import * as UpdateActions from "viewer/model/sagas/update_actions";
+import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
 import * as api from "admin/rest_api";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { SaveQueueEntry } from "viewer/store";
 import DiffableMap from "libs/diffable_map";
+import { addVersionNumbers } from "viewer/model/sagas/saving/save_queue_draining";
 
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 

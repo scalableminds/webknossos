@@ -8,7 +8,7 @@ import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
 import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
-import type { ApplicableVolumeUpdateAction } from "../sagas/update_actions";
+import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;

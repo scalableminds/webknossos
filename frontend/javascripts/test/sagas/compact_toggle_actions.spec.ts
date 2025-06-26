@@ -7,7 +7,7 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateTreeGroupVisibility,
   updateTreeVisibility,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import {
   withoutUpdateSegment,
   withoutUpdateActiveItemTracing,

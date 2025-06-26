@@ -6,7 +6,7 @@ import {
 import { call } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { tryToIncorporateActions } from "viewer/model/sagas/save_saga";
+import { tryToIncorporateActions } from "viewer/model/sagas/saving/save_saga";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

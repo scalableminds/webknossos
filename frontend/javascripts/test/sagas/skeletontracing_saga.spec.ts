@@ -17,7 +17,7 @@ import {
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";

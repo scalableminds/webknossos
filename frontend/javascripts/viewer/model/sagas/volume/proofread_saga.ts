@@ -69,14 +69,14 @@ import {
   type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,
   splitAgglomerate,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { Model, Store, api } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
-import { getCurrentMag } from "../accessors/flycam_accessor";
-import type { Action } from "../actions/actions";
-import type { Tree } from "../types/tree_types";
-import { ensureWkReady } from "./ready_sagas";
-import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "./saga_helpers";
+import { getCurrentMag } from "../../accessors/flycam_accessor";
+import type { Action } from "../../actions/actions";
+import type { Tree } from "../../types/tree_types";
+import { ensureWkReady } from "../ready_sagas";
+import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {

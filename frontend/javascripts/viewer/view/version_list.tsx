@@ -26,7 +26,7 @@ import {
   type ServerUpdateAction,
   revertToVersion,
   serverCreateTracing,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import { api } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";

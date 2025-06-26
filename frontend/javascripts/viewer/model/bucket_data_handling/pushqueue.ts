@@ -7,7 +7,7 @@ import { createCompressedUpdateBucketActions } from "viewer/model/bucket_data_ha
 import Store from "viewer/store";
 import { escalateErrorAction } from "../actions/actions";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import type { UpdateActionWithoutIsolationRequirement } from "../sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "../sagas/volume/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
 // downsampling) for PUSH_DEBOUNCE_TIME milliseconds.

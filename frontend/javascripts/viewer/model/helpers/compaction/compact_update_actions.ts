@@ -8,8 +8,8 @@ import type {
   DeleteNodeUpdateAction,
   DeleteTreeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
-} from "viewer/model/sagas/update_actions";
-import { moveTreeComponent, updateNode } from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
+import { moveTreeComponent, updateNode } from "viewer/model/sagas/volume/update_actions";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 
 // The Cantor pairing function assigns one natural number to each pair of natural numbers

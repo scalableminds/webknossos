@@ -17,9 +17,9 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type { WebknossosState } from "viewer/store";
-import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
-import { setGlobalProgressAction } from "../actions/ui_actions";
-import Dimensions from "../dimensions";
+import { getPlaneExtentInVoxelFromStore } from "../../../accessors/view_mode_accessor";
+import { setGlobalProgressAction } from "../../../actions/ui_actions";
+import Dimensions from "../../../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
 const MAXIMUM_MASK_BASE = 1024;

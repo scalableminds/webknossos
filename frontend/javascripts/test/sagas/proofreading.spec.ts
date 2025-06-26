@@ -26,7 +26,7 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { tryToIncorporateActions } from "viewer/model/sagas/save_saga";
+import { tryToIncorporateActions } from "viewer/model/sagas/saving/save_saga";
 
 function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
   const { api } = context;

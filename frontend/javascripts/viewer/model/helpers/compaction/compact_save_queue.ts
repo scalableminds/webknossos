@@ -2,7 +2,7 @@ import _ from "lodash";
 import type {
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
 
 function removeAllButLastUpdateActiveItemAndCameraAction(

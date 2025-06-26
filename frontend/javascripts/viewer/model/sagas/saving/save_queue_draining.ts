@@ -106,10 +106,6 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-// The value for this boolean does not need to be restored to false
-// at any time, because the browser page is reloaded after the message is shown, anyway.
-let didShowFailedSimultaneousTracingError = false;
-
 export function* sendSaveRequestToServer(): Saga<number> {
   /*
    * Saves a reasonably-sized part of the save queue to the server (plus retry-mechanism).
@@ -203,21 +199,10 @@ export function* sendSaveRequestToServer(): Saga<number> {
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
-        if (!didShowFailedSimultaneousTracingError) {
-          // If the saving fails for one tracing (e.g., skeleton), it can also
-          // fail for another tracing (e.g., volume). The message simply tells the
-          // user that the saving in general failed. So, there is no sense in showing
-          // the message multiple times.
-          yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-          location.reload();
-          didShowFailedSimultaneousTracingError = true;
-        }
 
-        // Wait "forever" to avoid that the caller initiates other save calls afterwards (e.g.,
-        // can happen if the caller tries to force-flush the save queue).
-        // The reason we don't throw an error immediately is that this would immediately
-        // crash all sagas (including saving other tracings).
-        yield* call(sleep, ONE_YEAR_MS);
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+        location.reload();
+
         throw new Error("Saving failed due to conflict.");
       }
 

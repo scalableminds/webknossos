@@ -137,6 +137,13 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
+    case "SET_IS_MUTEX_ACQUIRED": {
+      const { isMutexAcquired } = action;
+      return updateKey(state, "annotation", {
+        isMutexAcquired,
+      });
+    }
+
     case "SET_USER_BOUNDING_BOXES": {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }

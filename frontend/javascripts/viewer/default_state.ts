@@ -178,6 +178,7 @@ const defaultState: WebknossosState = {
     contributors: [],
     othersMayEdit: false,
     blockedByUser: null,
+    isMutexAcquired: false,
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,

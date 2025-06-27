@@ -793,6 +793,16 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
+  componentDidUpdate(prevProps: Props) {
+    if (this.props.skeletonTracing?.activeTreeId !== prevProps.skeletonTracing?.activeTreeId) {
+      if (this.props.skeletonTracing?.activeTreeId != null) {
+        this.setState({
+          selectedTreeIds: [this.props.skeletonTracing.activeTreeId],
+        });
+      }
+    }
+  }
+
   render() {
     const { skeletonTracing } = this.props;
 

@@ -2,10 +2,10 @@ import { ExportOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
-import Toast from "libs/toast";
 
 const { Text } = Typography;
 

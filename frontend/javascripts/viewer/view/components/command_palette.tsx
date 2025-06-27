@@ -1,3 +1,4 @@
+import { updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
@@ -12,6 +13,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import type { UserConfiguration } from "viewer/store";
 import {
@@ -20,8 +22,6 @@ import {
 } from "../action-bar/tracing_actions_view";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { updateSelectedThemeOfUser } from "admin/rest_api";
 
 type CommandWithoutId = Omit<Command, "id">;
 

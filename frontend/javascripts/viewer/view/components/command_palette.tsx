@@ -6,12 +6,12 @@ import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
-import { getThemeFromUser } from "theme";
+import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
+import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
 import type { UserConfiguration } from "viewer/store";
 import {
@@ -20,6 +20,8 @@ import {
 } from "../action-bar/tracing_actions_view";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { updateSelectedThemeOfUser } from "admin/rest_api";
 
 type CommandWithoutId = Omit<Command, "id">;
 
@@ -164,6 +166,33 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
+  const getThemeEntries = () => {
+    if (activeUser == null) return [];
+    const commands: CommandWithoutId[] = [];
+
+    const themesWithNames = [
+      ["auto", "System-default"],
+      ["light", "Light"],
+      ["dark", "Dark"],
+    ] as const;
+
+    for (let [theme, name] of themesWithNames) {
+      commands.push({
+        name: `Switch to “${name}” color theme`,
+        command: async () => {
+          if (theme === "auto") theme = getSystemColorTheme();
+
+          const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+          Store.dispatch(setThemeAction(theme));
+          Store.dispatch(setActiveUserAction(newUser));
+        },
+        color: commandEntryColor,
+      });
+    }
+
+    return commands;
+  };
+
   const getToolEntries = () => {
     if (!isInTracingView) return [];
     const commands: CommandWithoutId[] = [];
@@ -185,6 +214,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const allCommands = [
     ...getNavigationEntries(),
+    ...getThemeEntries(),
     ...getToolEntries(),
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),

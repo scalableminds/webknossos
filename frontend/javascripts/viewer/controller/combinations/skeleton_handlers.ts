@@ -302,29 +302,6 @@ export function getOptionsForCreateSkeletonNode(
     initialViewportRotation,
   );
 
-  // TODOM: delete me
-  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, rotationInDegree);
-  const nodeRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(...nodeRotationRadian, "ZYX"),
-  );
-  const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    OrthoBaseRotations[activeViewport || state.viewModeData.plane.activeViewport],
-  );
-  // Invert the rotation of the viewport to get the rotation configured during node creation.
-  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
-  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
-    inverseViewportRotationQuaternion,
-  );
-  const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
-  const flycamOnlyRotationInDegree = map3(
-    Math.round,
-    map3(
-      (a) => mod(THREE.MathUtils.radToDeg(a), 360),
-      [flycamOnlyRotation.x, flycamOnlyRotation.y, flycamOnlyRotation.z],
-    ),
-  );
-  console.log("calculated the following rotation back of the node", flycamOnlyRotationInDegree);
-
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
 

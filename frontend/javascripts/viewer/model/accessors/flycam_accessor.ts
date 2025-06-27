@@ -42,6 +42,10 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -339,50 +343,22 @@ function _isRotated(flycam: Flycam): boolean {
   return !V3.equals(getRotationInRadian(flycam), [0, 0, 0]);
 }
 
-// Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
-const flycamRotationEuler = new THREE.Euler(0, 0, 0);
-const additionalRotationQuaternion = new THREE.Quaternion();
-const totalRotationQuaternion = new THREE.Quaternion();
-const totalRotationEuler = new THREE.Euler();
-
 // Memoizing this function makes no sense as its result will always be used to change the flycam rotation.
 export function getFlycamRotationWithAppendedRotation(
   flycam: Flycam,
   // prependedRotation must be in ZYX order.
   rotationToAppend: THREE.Euler,
 ): Vector3 {
-  const flycamRotation = map3(THREE.MathUtils.degToRad, flycam.rotation);
-  flycamRotationEuler.set(...flycamRotation, "ZYX");
-  const rotFlycamMatrix = new THREE.Matrix4()
-    .makeRotationFromEuler(flycamRotationEuler)
-    .multiply(new THREE.Matrix4().makeRotationFromEuler(rotationToAppend));
-  const rotation = new THREE.Euler().setFromRotationMatrix(rotFlycamMatrix, "ZYX");
-  additionalRotationQuaternion.setFromEuler(rotationToAppend);
-  totalRotationQuaternion.setFromEuler(flycamRotationEuler).multiply(additionalRotationQuaternion);
-  const rotationEuler = totalRotationEuler.setFromQuaternion(totalRotationQuaternion, "ZYX");
-  const rotationInDegree = map3(THREE.MathUtils.radToDeg, [
-    mod(rotationEuler.x, 2 * Math.PI),
-    mod(rotationEuler.y, 2 * Math.PI),
-    mod(rotationEuler.z, 2 * Math.PI),
-  ]);
-  const flycamRotationForthAndBack = new THREE.Euler().setFromQuaternion(
-    new THREE.Quaternion().setFromEuler(flycamRotationEuler),
-    "ZYX",
+  const flycamRotation = getRotationInRadian(flycam, false);
+
+  // Perform same operations as the flycam reducer does. First default 180° around z.
+  let rotFlycamMatrix = eulerAngleToReducerInternalMatrix(flycamRotation);
+  // Apply viewport default rotation
+  rotFlycamMatrix = rotFlycamMatrix.multiply(
+    new THREE.Matrix4().makeRotationFromEuler(rotationToAppend),
   );
-  console.log(
-    "flycam rotation",
-    flycamRotation,
-    "viewport rotation",
-    rotationToAppend,
-    "rotationEuler",
-    rotationEuler,
-    "resulting rotation",
-    rotationInDegree,
-    "rotation",
-    rotation,
-    "flycamRotationForthAndBack",
-    flycamRotationForthAndBack,
-  );
+  const rotationInRadian = reducerInternalMatrixToEulerAngle(rotFlycamMatrix);
+  const rotationInDegree = map3(THREE.MathUtils.radToDeg, rotationInRadian);
   return rotationInDegree;
 }
 

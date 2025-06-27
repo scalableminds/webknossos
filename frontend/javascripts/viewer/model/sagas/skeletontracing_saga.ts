@@ -94,31 +94,26 @@ import Store from "viewer/store";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-
-const map3 = Utils.map3;
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, we need to subtract the
-  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
-  const nodeRotationQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(...nodeRotationRadian, "ZYX"),
-  );
-  const viewportRotationQuaternion = new THREE.Quaternion().setFromEuler(
+  const nodeRotationRadian = Utils.map3(THREE.MathUtils.degToRad, activeNode.rotation);
+  const nodeRotationInReducerFormatMatrix = eulerAngleToReducerInternalMatrix(nodeRotationRadian);
+  const viewportRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
     OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
   );
   // Invert the rotation of the viewport to get the rotation configured during node creation.
-  const inverseViewportRotationQuaternion = viewportRotationQuaternion.invert();
-  const rotationWithoutQuaternion = nodeRotationQuaternion.multiply(
-    inverseViewportRotationQuaternion,
+  const viewportRotationMatrixInverted = viewportRotationMatrix.invert();
+  const rotationWithoutViewportRotation = nodeRotationInReducerFormatMatrix.multiply(
+    viewportRotationMatrixInverted,
   );
-  const flycamOnlyRotation = new THREE.Euler().setFromQuaternion(rotationWithoutQuaternion, "ZYX");
-  const flycamOnlyRotationInDegree = map3(
-    Math.round,
-    map3(THREE.MathUtils.radToDeg, [
-      flycamOnlyRotation.x,
-      flycamOnlyRotation.y,
-      flycamOnlyRotation.z,
-    ]),
+  const rotationInRadian = reducerInternalMatrixToEulerAngle(rotationWithoutViewportRotation);
+  const flycamOnlyRotationInDegree = V3.round(
+    Utils.map3(THREE.MathUtils.radToDeg, rotationInRadian),
   );
   return flycamOnlyRotationInDegree;
 }

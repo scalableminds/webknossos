@@ -186,34 +186,6 @@ export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
-    const threeMatrix = new THREE.Matrix4().fromArray(matrix);
-    const position = new THREE.Vector3();
-    const scale = new THREE.Vector3();
-    const quat = new THREE.Quaternion();
-    threeMatrix.decompose(position, quat, scale);
-    let euler = new THREE.Euler().setFromQuaternion(quat, "ZYX");
-    console.log("matrix after setting rotation", { position, scale, quat, euler, threeMatrix });
-
-    console.log("--------------------testing......----------------------------");
-    const testM = rotateOnAxis(
-      rotateOnAxis(
-        rotateOnAxis(M4x4.identity(), THREE.MathUtils.degToRad(10), [0, 0, 1]),
-        THREE.MathUtils.degToRad(90),
-        [0, 1, 0],
-      ),
-      THREE.MathUtils.degToRad(20),
-      [1, 0, 0],
-    );
-    console.log("test matrix", testM);
-    const threeM = new THREE.Matrix4().fromArray(testM);
-    threeM.decompose(position, quat, scale);
-    euler = new THREE.Euler().setFromQuaternion(quat, "ZYX");
-    console.log("untransposed:", { threeM, position, quat, scale, euler });
-    const threeM2 = new THREE.Matrix4().fromArray(testM).transpose();
-    threeM2.decompose(position, quat, scale);
-    euler = new THREE.Euler().setFromQuaternion(quat, "ZYX");
-    console.log("transposed:", { threeM2, position, quat, scale, euler });
-    console.log("--------------------end.--------------------------------");
     return update(state, {
       flycam: {
         currentMatrix: {

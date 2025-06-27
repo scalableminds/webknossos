@@ -1414,23 +1414,23 @@ class TracingApi {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;
     const curPosition = getPosition(flycam);
-    const curRotation = getRotationInRadian(flycam); //Utils.map3(THREE.MathUtils.degToRad, flycam.rotation);
+    // As the node rotation was calculated in the way the flycam reducer does its matrix rotation
+    // by using the rotation_helpers.ts there is no need to invert z and we must use XYZ ordered euler angles.
+    const curRotation = getRotationInRadian(flycam, false);
     const startQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...curRotation, "ZYX"),
+      new THREE.Euler(...curRotation, "XYZ"),
     );
     const isNotRotated = V3.equals(curRotation, [0, 0, 0]);
     const dimensionToSkip =
       skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
-    if (!Array.isArray(rotation)) {
+    if (rotation == null) {
       rotation = curRotation;
     } else {
       rotation = Utils.map3(THREE.MathUtils.degToRad, rotation);
     }
-    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation, "ZYX"));
-    rotation = this.getShortestRotation(curRotation, rotation);
-    console.log(startQuaternion, endQuaternion, rotation);
+    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation, "XYZ"));
 
     type Tweener = {
       positionX: number;
@@ -1464,7 +1464,7 @@ class TracingApi {
         );
         const interpolatedEuler = new THREE.Euler().setFromQuaternion(
           interpolatedQuaternion,
-          "ZYX",
+          "XYZ",
         );
         const interpolatedEulerInDegree = Utils.map3(THREE.MathUtils.radToDeg, [
           interpolatedEuler.x,

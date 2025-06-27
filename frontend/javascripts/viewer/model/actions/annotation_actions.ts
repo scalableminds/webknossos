@@ -52,6 +52,7 @@ export type EditAnnotationLayerAction = ReturnType<typeof editAnnotationLayerAct
 export type SetAnnotationDescriptionAction = ReturnType<typeof setAnnotationDescriptionAction>;
 type SetAnnotationAllowUpdateAction = ReturnType<typeof setAnnotationAllowUpdateAction>;
 type SetBlockedByUserAction = ReturnType<typeof setBlockedByUserAction>;
+export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 type SetUserBoundingBoxesAction = ReturnType<typeof setUserBoundingBoxesAction>;
 type FinishedResizingUserBoundingBoxAction = ReturnType<
   typeof finishedResizingUserBoundingBoxAction
@@ -87,6 +88,7 @@ export type AnnotationActionTypes =
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | SetBlockedByUserAction
+  | SetIsMutexAcquiredAction
   | SetUserBoundingBoxesAction
   | ChangeUserBoundingBoxAction
   | FinishedResizingUserBoundingBoxAction
@@ -174,6 +176,12 @@ export const setBlockedByUserAction = (blockedByUser: APIUserCompact | null | un
   ({
     type: "SET_BLOCKED_BY_USER",
     blockedByUser,
+  }) as const;
+
+export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
+  ({
+    type: "SET_IS_MUTEX_ACQUIRED",
+    isMutexAcquired,
   }) as const;
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with

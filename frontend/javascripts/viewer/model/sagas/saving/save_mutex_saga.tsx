@@ -4,11 +4,12 @@ import Toast from "libs/toast";
 import messages from "messages";
 import React from "react";
 import { call, cancel, cancelled, delay, fork, put, retry, takeEvery } from "typed-redux-saga";
-import type { APIUserCompact } from "types/api_types";
 import {
+  type SetIsMutexAcquiredAction,
   type SetOthersMayEditForAnnotationAction,
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
+  setIsMutexAcquiredAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
@@ -25,12 +26,16 @@ const DISABLE_EAGER_MUTEX_ACQUISITION = true;
 type MutexLogicState = {
   isInitialRequest: boolean;
   doesHaveMutexFromBeginning: boolean;
-  doesHaveMutex: boolean;
   shallTryAcquireMutex: boolean;
 };
 
+function* getDoesHaveMutex(): Saga<boolean> {
+  return yield* select((state) => state.annotation.isMutexAcquired);
+}
+
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* call(ensureWkReady);
+  yield* fork(watchMutexStateChanges);
   if (DISABLE_EAGER_MUTEX_ACQUISITION) {
     return;
   }
@@ -43,7 +48,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
     doesHaveMutexFromBeginning: false,
-    doesHaveMutex: false,
     shallTryAcquireMutex: othersMayEdit,
   };
 
@@ -97,14 +101,11 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
         mutexLogicState.doesHaveMutexFromBeginning = false;
         yield* put(setAnnotationAllowUpdateAction(false));
       }
-      if (canEdit) {
-        yield* put(setBlockedByUserAction(activeUser));
-      } else {
-        yield* put(setBlockedByUserAction(blockedByUser));
-      }
-      if (canEdit !== mutexLogicState.doesHaveMutex || mutexLogicState.isInitialRequest) {
-        mutexLogicState.doesHaveMutex = canEdit;
-        onMutexStateChanged(mutexLogicState.isInitialRequest, canEdit, blockedByUser);
+
+      yield* put(setBlockedByUserAction(canEdit ? activeUser : blockedByUser));
+
+      if (canEdit !== (yield* call(getDoesHaveMutex)) || mutexLogicState.isInitialRequest) {
+        yield* put(setIsMutexAcquiredAction(canEdit));
       }
     } catch (error) {
       if (process.env.IS_TESTING) {
@@ -120,9 +121,8 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
         yield* put(setBlockedByUserAction(undefined));
         yield* put(setAnnotationAllowUpdateAction(false));
         mutexLogicState.doesHaveMutexFromBeginning = false;
-        if (mutexLogicState.doesHaveMutex || mutexLogicState.isInitialRequest) {
-          onMutexStateChanged(mutexLogicState.isInitialRequest, false, null);
-          mutexLogicState.doesHaveMutex = false;
+        if ((yield* call(getDoesHaveMutex)) || mutexLogicState.isInitialRequest) {
+          yield* put(setIsMutexAcquiredAction(false));
         }
       }
     }
@@ -131,31 +131,35 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
   }
 }
 
-// todop: this should automatically react to store changes / actions. there could be a "SET_MUTEX_INFO" action
-function onMutexStateChanged(
-  isInitialRequest: boolean,
-  canEdit: boolean,
-  blockedByUser: APIUserCompact | null | undefined,
-) {
-  if (canEdit) {
-    Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-    if (!isInitialRequest) {
-      const message = (
-        <React.Fragment>
-          {messages["annotation.acquiringMutexSucceeded"]}" "
-          <Button onClick={() => location.reload()}>Reload the annotation</Button>
-        </React.Fragment>
-      );
-      Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
-    }
-  } else {
-    Toast.close(MUTEX_ACQUIRED_KEY);
-    const message =
-      blockedByUser != null
-        ? messages["annotation.acquiringMutexFailed"]({
-            userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
-          })
-        : messages["annotation.acquiringMutexFailed.noUser"];
-    Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
-  }
+function* watchMutexStateChanges(): Saga<void> {
+  // todop: wrong?
+  let isInitialRequest = true;
+  yield* takeEvery(
+    "SET_IS_MUTEX_ACQUIRED",
+    function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
+      if (isMutexAcquired) {
+        Toast.close(MUTEX_NOT_ACQUIRED_KEY);
+        if (!isInitialRequest) {
+          const message = (
+            <React.Fragment>
+              {messages["annotation.acquiringMutexSucceeded"]}" "
+              <Button onClick={() => location.reload()}>Reload the annotation</Button>
+            </React.Fragment>
+          );
+          Toast.success(message, { sticky: true, key: MUTEX_ACQUIRED_KEY });
+        }
+      } else {
+        Toast.close(MUTEX_ACQUIRED_KEY);
+        const blockedByUser = yield* select((state) => state.annotation.blockedByUser);
+        const message =
+          blockedByUser != null
+            ? messages["annotation.acquiringMutexFailed"]({
+                userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+              })
+            : messages["annotation.acquiringMutexFailed.noUser"];
+        Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
+      }
+      isInitialRequest = false;
+    },
+  );
 }

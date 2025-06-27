@@ -25,8 +25,6 @@ const DISABLE_EAGER_MUTEX_ACQUISITION = true;
 
 type MutexLogicState = {
   isInitialRequest: boolean;
-  doesHaveMutexFromBeginning: boolean;
-  shallTryAcquireMutex: boolean;
 };
 
 function* getDoesHaveMutex(): Saga<boolean> {
@@ -34,22 +32,22 @@ function* getDoesHaveMutex(): Saga<boolean> {
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  yield* call(ensureWkReady);
-  yield* fork(watchMutexStateChanges);
   if (DISABLE_EAGER_MUTEX_ACQUISITION) {
     return;
   }
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
-  if (!allowUpdate) {
+  const initialAllowUpdate = yield* select(
+    (state) => state.annotation.restrictions.initialAllowUpdate,
+  );
+  if (!initialAllowUpdate) {
+    // We are in an read-only annotation.
     return;
   }
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
-    doesHaveMutexFromBeginning: false,
-    shallTryAcquireMutex: othersMayEdit,
   };
+
+  yield* call(ensureWkReady);
+  yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
 
   let runningTryAcquireMutexContinuouslySaga = yield* fork(
     tryAcquireMutexContinuously,
@@ -58,19 +56,22 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   function* reactToOthersMayEditChanges({
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {
-    mutexLogicState.shallTryAcquireMutex = othersMayEdit;
-    if (mutexLogicState.shallTryAcquireMutex) {
+    if (othersMayEdit) {
       if (runningTryAcquireMutexContinuouslySaga != null) {
         yield* cancel(runningTryAcquireMutexContinuouslySaga);
       }
-      mutexLogicState.isInitialRequest = true;
       runningTryAcquireMutexContinuouslySaga = yield* fork(
         tryAcquireMutexContinuously,
         mutexLogicState,
       );
     } else {
       // othersMayEdit was turned off. The user editing it should be able to edit the annotation.
-      yield* put(setAnnotationAllowUpdateAction(true));
+      // let's check that owner === activeUser, anyway.
+      const owner = yield* select((storeState) => storeState.annotation.owner);
+      const activeUser = yield* select((state) => state.activeUser);
+      if (activeUser && owner?.id === activeUser?.id) {
+        yield* put(setAnnotationAllowUpdateAction(true));
+      }
     }
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
@@ -79,9 +80,15 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<void> {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   const activeUser = yield* select((state) => state.activeUser);
+  mutexLogicState.isInitialRequest = true;
 
-  while (mutexLogicState.shallTryAcquireMutex) {
-    if (mutexLogicState.isInitialRequest) {
+  // We can simply use an infinite loop here, because the saga will be cancelled by
+  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  while (true) {
+    const blockedByUser = yield* select((state) => state.annotation.blockedByUser);
+    if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
+      // If the annotation is currently not blocked by the active user,
+      // we immediately disallow updating the annotation.
       yield* put(setAnnotationAllowUpdateAction(false));
     }
     try {
@@ -91,20 +98,12 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
         acquireAnnotationMutex,
         annotationId,
       );
-      if (mutexLogicState.isInitialRequest && canEdit) {
-        mutexLogicState.doesHaveMutexFromBeginning = true;
-        // Only set allow update to true in case the first try to get the mutex succeeded.
-        yield* put(setAnnotationAllowUpdateAction(true));
-      }
-      if (!canEdit || !mutexLogicState.doesHaveMutexFromBeginning) {
-        // If the mutex could not be acquired anymore or the user does not have it from the beginning, set allow update to false.
-        mutexLogicState.doesHaveMutexFromBeginning = false;
-        yield* put(setAnnotationAllowUpdateAction(false));
-      }
-
+      yield* put(setAnnotationAllowUpdateAction(canEdit));
       yield* put(setBlockedByUserAction(canEdit ? activeUser : blockedByUser));
 
-      if (canEdit !== (yield* call(getDoesHaveMutex)) || mutexLogicState.isInitialRequest) {
+      if (canEdit !== (yield* call(getDoesHaveMutex))) {
+        // Only dispatch the action if it changes the store to avoid
+        // unnecessary notifications.
         yield* put(setIsMutexAcquiredAction(canEdit));
       }
     } catch (error) {
@@ -120,8 +119,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
         console.error("Error while trying to acquire mutex.", error);
         yield* put(setBlockedByUserAction(undefined));
         yield* put(setAnnotationAllowUpdateAction(false));
-        mutexLogicState.doesHaveMutexFromBeginning = false;
-        if ((yield* call(getDoesHaveMutex)) || mutexLogicState.isInitialRequest) {
+        if (yield* call(getDoesHaveMutex)) {
           yield* put(setIsMutexAcquiredAction(false));
         }
       }
@@ -131,15 +129,13 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
   }
 }
 
-function* watchMutexStateChanges(): Saga<void> {
-  // todop: wrong?
-  let isInitialRequest = true;
+function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState): Saga<void> {
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
       if (isMutexAcquired) {
         Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-        if (!isInitialRequest) {
+        if (!mutexLogicState.isInitialRequest) {
           const message = (
             <React.Fragment>
               {messages["annotation.acquiringMutexSucceeded"]}" "
@@ -159,7 +155,7 @@ function* watchMutexStateChanges(): Saga<void> {
             : messages["annotation.acquiringMutexFailed.noUser"];
         Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
       }
-      isInitialRequest = false;
+      mutexLogicState.isInitialRequest = false;
     },
   );
 }

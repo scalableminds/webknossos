@@ -80,7 +80,7 @@ export async function previewVersion(version?: number) {
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
 
   for (const segmentationLayer of segmentationLayersToReload) {
-    segmentationLayer.cube.collectAllBuckets();
+    segmentationLayer.cube.removeAllBuckets();
     segmentationLayer.layerRenderingManager.refresh();
   }
 }

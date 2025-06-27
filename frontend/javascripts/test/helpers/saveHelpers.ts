@@ -23,15 +23,11 @@ export function createSaveQueueFromUpdateActions(
   }));
 }
 
-export function withoutUpdateTracing(
+export function withoutUpdateActiveItemTracing(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter(
-    (item) =>
-      item.name !== "updateSkeletonTracing" &&
-      item.name !== "updateVolumeTracing" &&
-      item.name !== "updateActiveNode" &&
-      item.name !== "updateActiveSegmentId",
+    (item) => item.name !== "updateActiveNode" && item.name !== "updateActiveSegmentId",
   );
 }
 

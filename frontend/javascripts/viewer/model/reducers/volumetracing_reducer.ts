@@ -66,6 +66,7 @@ import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_ac
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
+import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 
 type SegmentUpdateInfo =
   | {
@@ -322,7 +323,7 @@ export function serverVolumeToClientVolumeTracing(
   return volumeTracing;
 }
 
-type VolumeTracingReducerAction =
+export type VolumeTracingReducerAction =
   | VolumeTracingAction
   | SetMappingAction
   | FinishMappingInitializationAction
@@ -435,6 +436,9 @@ function VolumeTracingReducer(
         annotation: {
           volumes: {
             $set: newVolumes,
+          },
+          readOnly: {
+            $set: null,
           },
         },
       });
@@ -674,6 +678,11 @@ function VolumeTracingReducer(
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsLocked: true,
       });
+    }
+
+    case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
+      const { actions } = action;
+      return applyVolumeUpdateActionsFromServer(actions, state, VolumeTracingReducer);
     }
 
     default:

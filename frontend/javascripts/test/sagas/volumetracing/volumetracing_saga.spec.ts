@@ -1,7 +1,6 @@
 import { it, expect, describe, beforeEach, afterEach } from "vitest";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { take, put, call } from "redux-saga/effects";
-import type { ServerVolumeTracing } from "types/api_types";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   OrthoViews,
@@ -22,41 +21,7 @@ import VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model, Store } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-
-const serverVolumeTracing: ServerVolumeTracing = {
-  typ: "Volume",
-  id: "tracingId",
-  elementClass: "uint32",
-  createdTimestamp: 0,
-  boundingBox: {
-    topLeft: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-    width: 10,
-    height: 10,
-    depth: 10,
-  },
-  segments: [],
-  segmentGroups: [],
-  additionalAxes: [],
-  userBoundingBoxes: [],
-  largestSegmentId: 0,
-  userStates: [],
-  zoomLevel: 0,
-  editPosition: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-};
+import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
@@ -85,10 +50,7 @@ describe("VolumeTracingSaga", () => {
 
     afterEach<WebknossosTestContext>(async (context) => {
       context.tearDownPullQueues();
-
       // Saving after each test and checking that the root saga didn't crash,
-      // ensures that each test is cleanly exited. Without it weird output can
-      // occur (e.g., a promise gets resolved which interferes with the next test).
       expect(hasRootSagaCrashed()).toBe(false);
     });
 
@@ -110,7 +72,7 @@ describe("VolumeTracingSaga", () => {
       expect(action).toMatchObject({
         name: "updateActiveSegmentId",
         value: {
-          actionTracingId: "volumeTracingId-1234",
+          actionTracingId: volumeTracing.tracingId,
           activeSegmentId: 5,
         },
       });

@@ -151,7 +151,7 @@ export function setContourTracingModeReducer(
 export function setLargestSegmentIdReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  id: number,
+  id: number | null,
 ) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     largestSegmentId: id,

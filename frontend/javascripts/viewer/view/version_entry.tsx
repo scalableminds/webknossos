@@ -40,10 +40,10 @@ import type {
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
+  LEGACY_MergeTreeUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
-  MergeTreeUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -387,7 +387,7 @@ const descriptionFns: Record<
     icon: <EditOutlined />,
   }),
   // This should never be shown since currently this update action is never dispatched.
-  mergeTree: (action: AsServerAction<MergeTreeUpdateAction>): Description => ({
+  mergeTree: (action: AsServerAction<LEGACY_MergeTreeUpdateAction>): Description => ({
     description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),

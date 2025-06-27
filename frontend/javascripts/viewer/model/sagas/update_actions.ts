@@ -5,6 +5,7 @@ import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_a
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type {
+  BoundingBoxObject,
   NumberLike,
   SegmentGroup,
   UserBoundingBox,
@@ -22,7 +23,7 @@ type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisi
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
 export type MoveTreeComponentUpdateAction = ReturnType<typeof moveTreeComponent>;
-export type MergeTreeUpdateAction = ReturnType<typeof mergeTree>;
+export type LEGACY_MergeTreeUpdateAction = ReturnType<typeof LEGACY_mergeTree>;
 export type CreateNodeUpdateAction = ReturnType<typeof createNode>;
 export type UpdateNodeUpdateAction = ReturnType<typeof updateNode>;
 export type UpdateTreeVisibilityUpdateAction = ReturnType<typeof updateTreeVisibility>;
@@ -105,13 +106,42 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
+export type ApplicableSkeletonUpdateAction =
+  | UpdateTreeUpdateAction
+  | UpdateNodeUpdateAction
+  | CreateNodeUpdateAction
+  | CreateEdgeUpdateAction
+  | DeleteTreeUpdateAction
+  | DeleteEdgeUpdateAction
+  | DeleteNodeUpdateAction
+  | MoveTreeComponentUpdateAction
+  | UpdateTreeEdgesVisibilityUpdateAction
+  | UpdateTreeGroupsUpdateAction
+  | UpdateTreeGroupsExpandedStateAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction;
+
+export type ApplicableVolumeUpdateAction =
+  | UpdateLargestSegmentIdVolumeAction
+  | UpdateSegmentUpdateAction
+  | CreateSegmentUpdateAction
+  | DeleteSegmentUpdateAction
+  | UpdateSegmentGroupsUpdateAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction;
+
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
   | AddLayerToAnnotationUpdateAction;
 export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeUpdateAction
   | DeleteTreeUpdateAction
-  | MergeTreeUpdateAction
+  | LEGACY_MergeTreeUpdateAction
   | MoveTreeComponentUpdateAction
   | CreateNodeUpdateAction
   | UpdateNodeUpdateAction
@@ -204,7 +234,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
     value: {
       actionTracingId,
       id: tree.treeId,
-      updatedId: undefined,
+      updatedId: undefined, // was never really used, but is kept to keep the type information precise
       color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
@@ -283,7 +313,11 @@ export function updateTreeGroupVisibility(
     },
   } as const;
 }
-export function mergeTree(sourceTreeId: number, targetTreeId: number, actionTracingId: string) {
+export function LEGACY_mergeTree(
+  sourceTreeId: number,
+  targetTreeId: number,
+  actionTracingId: string,
+) {
   return {
     name: "mergeTree",
     value: {
@@ -330,36 +364,40 @@ export type CreateActionNode = Omit<Node, "untransformedPosition" | "mag"> & {
   position: Node["untransformedPosition"];
   treeId: number;
   resolution: number;
+  actionTracingId: string;
 };
 
 export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
   position: Node["untransformedPosition"];
   treeId: number;
+  actionTracingId: string;
 };
 
 export function createNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, mag, ...restNode } = node;
+  const value: CreateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+    resolution: mag,
+  };
   return {
     name: "createNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-      resolution: mag,
-    } as CreateActionNode,
+    value,
   } as const;
 }
 export function updateNode(treeId: number, node: Node, actionTracingId: string) {
   const { untransformedPosition, ...restNode } = node;
+  const value: UpdateActionNode = {
+    actionTracingId,
+    ...restNode,
+    position: untransformedPosition,
+    treeId,
+  };
   return {
     name: "updateNode",
-    value: {
-      actionTracingId,
-      ...restNode,
-      position: untransformedPosition,
-      treeId,
-    } as UpdateActionNode,
+    value,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number, actionTracingId: string) {
@@ -563,24 +601,26 @@ export function deleteUserBoundingBoxInVolumeTracing(
 }
 
 function _updateUserBoundingBoxHelper(
-  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
-) {
+): {
+  boundingBoxId: number;
+  actionTracingId: string;
+  boundingBox?: BoundingBoxObject;
+  name?: string;
+  color?: Vector3;
+} {
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropsForServer =
     boundingBox != null
       ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
-      : updatedProps;
+      : (updatedProps as Omit<PartialBoundingBoxWithoutVisibility, "boundingBox">);
   return {
-    name: actionName,
-    value: {
-      boundingBoxId,
-      actionTracingId,
-      ...updatedPropsForServer,
-    },
-  } as const;
+    boundingBoxId,
+    actionTracingId,
+    ...updatedPropsForServer,
+  };
 }
 
 export function updateUserBoundingBoxInVolumeTracing(
@@ -588,12 +628,10 @@ export function updateUserBoundingBoxInVolumeTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInVolumeTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInVolumeTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxInSkeletonTracing(
@@ -601,12 +639,10 @@ export function updateUserBoundingBoxInSkeletonTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return _updateUserBoundingBoxHelper(
-    "updateUserBoundingBoxInSkeletonTracing",
-    boundingBoxId,
-    updatedProps,
-    actionTracingId,
-  );
+  return {
+    name: "updateUserBoundingBoxInSkeletonTracing",
+    value: _updateUserBoundingBoxHelper(boundingBoxId, updatedProps, actionTracingId),
+  } as const;
 }
 
 export function updateUserBoundingBoxVisibilityInSkeletonTracing(
@@ -714,12 +750,19 @@ export function updateBucket(
   base64Data: string,
   actionTracingId: string,
 ) {
+  if (base64Data == null) {
+    throw new Error("Invalid updateBucket action.");
+  }
   return {
     name: "updateBucket",
     value: {
       actionTracingId,
       ...bucketInfo,
-      base64Data,
+      // The frontend should always send base64Data. However,
+      // the return type of this function is also used for the
+      // update actions that can be retrieved from the server.
+      // In that case, the value will always be undefined.
+      base64Data: base64Data as string | undefined,
     },
   } as const;
 }

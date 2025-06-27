@@ -1,11 +1,9 @@
 import {
   type NeighborInfo,
-  acquireAnnotationMutex,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
-  releaseAnnotationMutex,
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -444,7 +442,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
-  yield* call(releaseAnnotationMutex, annotationId);
+  // todop
+  // yield* call(releaseAnnotationMutex, annotationId);
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -794,7 +793,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
-  yield* call(releaseAnnotationMutex, annotationId);
+  // todop
+  // yield* call(releaseAnnotationMutex, annotationId);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
@@ -954,7 +954,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
-  yield* call(releaseAnnotationMutex, annotationId);
+  // todop
+  // yield* call(releaseAnnotationMutex, annotationId);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -1138,12 +1139,13 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     return null;
   }
 
-  const annotationId = yield* select((state) => state.annotation.annotationId);
-  const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
-  if (!canEdit) {
-    Toast.error("Could not acquire mutex. Somebody else is proofreading at the moment.");
-    return null;
-  }
+  // todop
+  // const annotationId = yield* select((state) => state.annotation.annotationId);
+  // const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
+  // if (!canEdit) {
+  //   Toast.error("Could not acquire mutex. Somebody else is proofreading at the moment.");
+  //   return null;
+  // }
 
   return {
     agglomerateFileMag,

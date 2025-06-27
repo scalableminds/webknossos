@@ -26,6 +26,8 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
+export type EnsureMaySaveNowAction = ReturnType<typeof ensureMaySaveNowAction>;
+export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -38,7 +40,9 @@ export type SaveAction =
   | UndoAction
   | RedoAction
   | DisableSavingAction
-  | EnsureTracingsWereDiffedToSaveQueueAction;
+  | EnsureTracingsWereDiffedToSaveQueueAction
+  | EnsureMaySaveNowAction
+  | DoneSavingAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -131,4 +135,22 @@ export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: 
   ({
     type: "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
     callback,
+  }) as const;
+
+export const ensureMaySaveNowAction = (callback: () => void) =>
+  ({
+    type: "ENSURE_MAY_SAVE_NOW",
+    callback,
+  }) as const;
+
+export const dispatchEnsureMaySaveNowAsync = async (dispatch: Dispatch<any>): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = ensureMaySaveNowAction(() => readyDeferred.resolve(null));
+  dispatch(action);
+  await readyDeferred.promise();
+};
+
+export const doneSavingAction = () =>
+  ({
+    type: "DONE_SAVING",
   }) as const;

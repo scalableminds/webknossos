@@ -5,6 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
+import Toast from "libs/toast";
 
 const { Text } = Typography;
 
@@ -22,6 +23,7 @@ function AccountAuthTokenView() {
       const token = await getAuthToken();
       setCurrentToken(token);
     } catch (error) {
+      Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
       console.error("Failed to fetch auth token:", error);
     } finally {
       setIsLoading(false);

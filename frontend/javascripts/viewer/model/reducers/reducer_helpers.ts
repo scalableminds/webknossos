@@ -156,6 +156,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     othersMayEdit,
     annotationLayers,
     blockedByUser: null,
+    isMutexAcquired: false,
   };
 }
 

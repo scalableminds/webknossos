@@ -146,6 +146,7 @@ export type Annotation = {
   readonly othersMayEdit: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
   readonly isLockedByOwner: boolean;
+  readonly isMutexAcquired: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;

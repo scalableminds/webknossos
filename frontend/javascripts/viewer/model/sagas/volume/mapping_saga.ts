@@ -477,6 +477,7 @@ export function* updateLocalHdf5Mapping(
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
 
+  // todop: does this crash wk if the request fails?
   const newEntries =
     editableMapping != null
       ? yield* call(

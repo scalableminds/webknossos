@@ -3,7 +3,19 @@ import { Button } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import React from "react";
-import { call, cancel, cancelled, delay, fork, put, retry, takeEvery } from "typed-redux-saga";
+import {
+  call,
+  cancel,
+  cancelled,
+  delay,
+  type FixedTask,
+  fork,
+  put,
+  race,
+  retry,
+  take,
+  takeEvery,
+} from "typed-redux-saga";
 import {
   type SetIsMutexAcquiredAction,
   type SetOthersMayEditForAnnotationAction,
@@ -14,11 +26,15 @@ import {
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
+import { EnsureMaySaveNowAction } from "viewer/model/actions/save_actions";
+
+// Also refer to application.conf where annotation.mutex.expiryTime is defined
+// (typically, 2 minutes).
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
-const RETRY_COUNT = 12;
 const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
+const RETRY_COUNT = 12; // 12 retries with 60/12=5 seconds backup delay
 
 // todop
 const DISABLE_EAGER_MUTEX_ACQUISITION = true;
@@ -32,27 +48,23 @@ function* getDoesHaveMutex(): Saga<boolean> {
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  if (DISABLE_EAGER_MUTEX_ACQUISITION) {
-    return;
-  }
+  yield* call(ensureWkReady);
   const initialAllowUpdate = yield* select(
     (state) => state.annotation.restrictions.initialAllowUpdate,
   );
   if (!initialAllowUpdate) {
-    // We are in an read-only annotation.
+    // We are in an read-only annotation. There's no point in acquiring mutexes.
+    console.log("exit mutex saga");
     return;
   }
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
   };
 
-  yield* call(ensureWkReady);
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
 
-  let runningTryAcquireMutexContinuouslySaga = yield* fork(
-    tryAcquireMutexContinuously,
-    mutexLogicState,
-  );
+  let runningTryAcquireMutexContinuouslySaga: FixedTask<void> | null;
+
   function* reactToOthersMayEditChanges({
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {
@@ -65,8 +77,9 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
         mutexLogicState,
       );
     } else {
-      // othersMayEdit was turned off. The user editing it should be able to edit the annotation.
-      // let's check that owner === activeUser, anyway.
+      // othersMayEdit was turned off by the activeUser. Since this is only
+      // allowed by the owner, they should be able to edit the annotation, too.
+      // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);
       if (activeUser && owner?.id === activeUser?.id) {
@@ -75,9 +88,47 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     }
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
+
+  if (DISABLE_EAGER_MUTEX_ACQUISITION) {
+    console.log("listening to all ENSURE_MAY_SAVE_NOW");
+    yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
+    while (true) {
+      console.log("taking ENSURE_MAY_SAVE_NOW");
+      yield* take("ENSURE_MAY_SAVE_NOW");
+      console.log("took ENSURE_MAY_SAVE_NOW");
+      const { doneSaving } = yield race({
+        tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
+        doneSaving: take("DONE_SAVING"),
+      });
+      if (doneSaving) {
+        yield call(releaseMutex);
+      }
+    }
+  } else {
+    runningTryAcquireMutexContinuouslySaga = yield* fork(
+      tryAcquireMutexContinuously,
+      mutexLogicState,
+    );
+  }
 }
 
-function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<void> {
+function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
+  /*
+   * For each EnsureMaySaveNowAction wait until, we have the mutex. Then call
+   * the callback.
+   */
+  while (true) {
+    const doesHaveMutex = yield* select(getDoesHaveMutex);
+    if (doesHaveMutex) {
+      action.callback();
+      return;
+    }
+    yield* take("SET_BLOCKED_BY_USER");
+  }
+}
+
+function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<never> {
+  console.log("started tryAcquireMutexContinuously");
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   const activeUser = yield* select((state) => state.activeUser);
   mutexLogicState.isInitialRequest = true;
@@ -85,6 +136,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
   while (true) {
+    console.log("tryAcquireMutexContinuously loop");
     const blockedByUser = yield* select((state) => state.annotation.blockedByUser);
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
       // If the annotation is currently not blocked by the active user,
@@ -114,7 +166,9 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<vo
         // Therefore, we also print the error in the test context.
         console.error("Error while trying to acquire mutex:", error);
       }
+      // todop: I think this needs to happen in a finally block?
       const wasCanceled = yield* cancelled();
+      console.log("wasCanceled", wasCanceled);
       if (!wasCanceled) {
         console.error("Error while trying to acquire mutex.", error);
         yield* put(setBlockedByUserAction(undefined));
@@ -158,4 +212,16 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
       mutexLogicState.isInitialRequest = false;
     },
   );
+}
+
+function* releaseMutex() {
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
+  yield* retry(
+    RETRY_COUNT,
+    ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
+    acquireAnnotationMutex,
+    annotationId,
+  );
+  yield* put(setAnnotationAllowUpdateAction(true));
+  yield* put(setBlockedByUserAction(null));
 }

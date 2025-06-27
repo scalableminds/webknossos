@@ -14,6 +14,8 @@ import { call, delay, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  dispatchEnsureMaySaveNowAsync,
+  doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
@@ -30,10 +32,8 @@ import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
-
-const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
 export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
@@ -64,6 +64,9 @@ export function* pushSaveQueueAsync(): Saga<never> {
       forcePush: take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true));
+
+    // Wait until we may save
+    yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
 
     // Send (parts of) the save queue to the server.
     // There are two main cases:
@@ -96,6 +99,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
         break;
       }
     }
+    yield* put(doneSavingAction());
     yield* put(setSaveBusyAction(false));
   }
 }

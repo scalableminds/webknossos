@@ -5,10 +5,17 @@ import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_action
 import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { OrthoViews, OrthoViewToNumber, type Vector3 } from "viewer/constants";
+import { OrthoBaseRotations, OrthoViews, OrthoViewToNumber, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
+import * as THREE from "three";
+
+const toRadian = (arr: Vector3): Vector3 => [
+  THREE.MathUtils.degToRad(arr[0]),
+  THREE.MathUtils.degToRad(arr[1]),
+  THREE.MathUtils.degToRad(arr[2]),
+];
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
@@ -368,27 +375,41 @@ describe("API Skeleton", () => {
       mag: 0,
     });
   });
-  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated", ({
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in XY viewport.", ({
     api,
   }) => {
-    Store.dispatch(setRotationAction([20, 90, 10]));
+    const rotation = [20, 90, 10] as Vector3;
+    const rotationQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...toRadian(rotation), "ZYX"),
+    );
+    Store.dispatch(setRotationAction(rotation));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
     api.tracing.createNode([10, 10, 10]);
     const newNode = enforceSkeletonTracing(Store.getState().annotation)
       .trees.getOrThrow(2)
       .nodes.getOrThrow(4);
-    // TODOM: Adjust expectation to allow equal euler angles with a little numeric offset!
-    expect(newNode.rotation).toStrictEqual([20, 90, 10]);
+    const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...toRadian(newNode.rotation), "ZYX"),
+    );
+    expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
   });
-  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated", ({
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated  in YZ viewport.", ({
     api,
   }) => {
-    Store.dispatch(setRotationAction([20, 90, 0]));
+    const rotation = [20, 90, 0] as Vector3;
+    const rotationQuaternion = new THREE.Quaternion()
+      .setFromEuler(new THREE.Euler(...toRadian(rotation), "ZYX"))
+      // Apply viewport's default rotation.
+      .multiply(new THREE.Quaternion().setFromEuler(OrthoBaseRotations[OrthoViews.PLANE_YZ]));
+    Store.dispatch(setRotationAction(rotation));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
     api.tracing.createNode([10, 10, 10]);
     const newNode = enforceSkeletonTracing(Store.getState().annotation)
       .trees.getOrThrow(2)
       .nodes.getOrThrow(4);
-    expect(newNode.rotation).toStrictEqual([20, 90, 0]);
+    const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...toRadian(newNode.rotation), "ZYX"),
+    );
+    expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
   });
 });

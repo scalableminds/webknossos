@@ -150,6 +150,10 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
+export async function logoutUser(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logout");
+}
+
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);
@@ -234,6 +238,12 @@ export async function getAuthToken(): Promise<string> {
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
+  });
+}
+
+export async function changePassword(data: Record<string, string>): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
+    data: data,
   });
 }
 
@@ -1722,13 +1732,23 @@ export async function updateOrganization(
   name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
-    method: "PATCH",
-    data: {
-      name,
-      newUserMailingList,
+  const updatedOrganization = await Request.sendJSONReceiveJSON(
+    `/api/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      data: {
+        name,
+        newUserMailingList,
+      },
     },
-  });
+  );
+
+  return {
+    ...updatedOrganization,
+    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function isDatasetAccessibleBySwitching(

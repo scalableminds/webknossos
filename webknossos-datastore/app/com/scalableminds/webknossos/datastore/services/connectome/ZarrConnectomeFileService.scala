@@ -34,7 +34,7 @@ object ConnectomeFileAttributes {
       val connectomeFileAttrs = json \ keyAttributes \ keyVx \ keyArtifactAttrs
       for {
         formatVersion <- (json \ keyAttributes \ keyVx \ keyFormatVersion).validate[Long]
-        mappingName <- (connectomeFileAttrs \ "mapping_name").validate[String]
+        mappingName <- (connectomeFileAttrs \ "metadata/mapping_name").validate[String]
         synapseTypeNames <- (connectomeFileAttrs \ "synapse_type_names").validate[Seq[String]]
       } yield
         ConnectomeFileAttributes(

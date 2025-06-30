@@ -35,6 +35,10 @@ import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
+import {
   type Transform,
   chainTransforms,
   invertTransform,
@@ -42,10 +46,6 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import {
-  eulerAngleToReducerInternalMatrix,
-  reducerInternalMatrixToEulerAngle,
-} from "../helpers/rotation_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

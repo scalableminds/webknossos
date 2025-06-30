@@ -5,7 +5,7 @@ import {
   type APITracingStoreAnnotation,
 } from "types/api_types";
 
-const TRACING_ID = "tracingId-1234";
+const TRACING_ID = "volumeTracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -71,6 +71,7 @@ export const tracing: ServerVolumeTracing = {
       z: 32,
     },
   ],
+  userStates: [],
 };
 export const annotation: APIAnnotation = {
   datasetId: "66f3c82966010034942e9740",
@@ -135,4 +136,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Volume,
     },
   ],
+  userStates: [],
 };

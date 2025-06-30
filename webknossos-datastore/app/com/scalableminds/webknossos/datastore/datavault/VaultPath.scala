@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.Reads
 

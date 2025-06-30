@@ -6,7 +6,7 @@ import play.api.libs.json.JsObject
 import play.api.mvc.{Action, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
-import utils.{ApiVersioning, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -14,8 +14,7 @@ import scala.concurrent.ExecutionContext
 class AnalyticsController @Inject()(analyticsService: AnalyticsService, conf: WkConf, sil: Silhouette[WkEnv])(
     implicit ec: ExecutionContext,
     bodyParsers: PlayBodyParsers)
-    extends Controller
-    with ApiVersioning {
+    extends Controller {
 
   def ingestAnalyticsEvents: Action[AnalyticsEventsIngestJson] = Action.async(validateJson[AnalyticsEventsIngestJson]) {
     implicit request =>

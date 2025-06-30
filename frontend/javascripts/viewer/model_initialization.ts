@@ -22,6 +22,7 @@ import _ from "lodash";
 import messages from "messages";
 import type {
   APIAnnotation,
+  APIAnnotationUserState,
   APICompoundType,
   APIDataLayer,
   APIDataset,
@@ -57,7 +58,6 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { getSomeServerTracing } from "viewer/model/accessors/tracing_accessor";
 import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
 import {
   batchedAnnotationInitializationAction,
@@ -114,6 +114,7 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
@@ -141,6 +142,7 @@ export async function initialize(
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
   let annotationProto: APITracingStoreAnnotation | null | undefined;
+  let userState: APIAnnotationUserState | null | undefined;
   let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
@@ -154,6 +156,10 @@ export async function initialize(
         unversionedAnnotation.id,
         version,
       );
+      userState =
+        annotationProto != null
+          ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)
+          : null;
       const layersWithStats = annotationProto.annotationLayers.map((protoLayer) => {
         return {
           tracingId: protoLayer.tracingId,
@@ -233,8 +239,9 @@ export async function initialize(
   if (initialFetch) {
     const { gpuMemoryFactor } = Store.getState().userConfiguration;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
-    if (serverTracings.length > 0)
-      Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));
+    if (userState != null) {
+      Store.dispatch(setZoomStepAction(userState.zoomLevel));
+    }
     const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
     Store.dispatch(
       initializeGpuSetupAction(
@@ -267,7 +274,7 @@ export async function initialize(
     Store.dispatch(setViewModeAction(mode));
   }
 
-  const defaultState = determineDefaultState(UrlManager.initialState, serverTracings);
+  const defaultState = determineDefaultState(UrlManager.initialState, userState, serverTracings);
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
 
@@ -647,6 +654,7 @@ function validateVolumeLayers(
 
 function determineDefaultState(
   urlState: PartialUrlManagerState,
+  userState: APIAnnotationUserState | null | undefined,
   tracings: Array<ServerTracing>,
 ): PartialUrlManagerState {
   const {
@@ -665,13 +673,18 @@ function determineDefaultState(
   let position = getDatasetCenter(dataset);
   let additionalCoordinates = null;
 
+  // someTracing should only be used if no userState exists (this is the case
+  // for annotations that were not touched after #8542 was deployed).
+  const someTracing = _.first(tracings);
+
   if (defaultPosition != null) {
     position = defaultPosition;
   }
 
-  const someTracing = tracings.length > 0 ? getSomeServerTracing(tracings) : null;
-
-  if (someTracing != null) {
+  if (userState) {
+    position = Utils.point3ToVector3(userState.editPosition);
+    additionalCoordinates = userState.editPositionAdditionalCoordinates;
+  } else if (someTracing != null) {
     position = Utils.point3ToVector3(someTracing.editPosition);
     additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
@@ -686,16 +699,18 @@ function determineDefaultState(
 
   let zoomStep = datasetConfiguration.zoom;
 
-  if (someTracing != null) {
+  if (urlStateZoomStep != null) {
+    zoomStep = urlStateZoomStep;
+  } else if (userState != null) {
+    zoomStep = userState.zoomLevel;
+  } else if (someTracing != null) {
     zoomStep = someTracing.zoomLevel;
   }
 
-  if (urlStateZoomStep != null) {
-    zoomStep = urlStateZoomStep;
-  }
-
   let rotation = datasetConfiguration.rotation;
-  if (someTracing != null) {
+  if (userState != null) {
+    rotation = Utils.point3ToVector3(userState.editRotation);
+  } else if (someTracing != null) {
     rotation = Utils.point3ToVector3(someTracing.editRotation);
   }
 
@@ -885,6 +900,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedPosition,
               seedAdditionalCoordinates,
               meshFileName,
+              undefined,
               effectiveLayerName,
             ),
           );

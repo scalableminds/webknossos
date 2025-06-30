@@ -4,15 +4,25 @@ import type {
   AdditionalAxis,
   ServerAdditionalAxis,
   ServerBoundingBox,
+  SkeletonUserState,
   UserBoundingBoxFromServer,
+  VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxType } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
-import type { BoundingBoxObject, UserBoundingBox, UserBoundingBoxToServer } from "viewer/store";
-import type { Annotation, WebknossosState } from "viewer/store";
+import type {
+  Annotation,
+  BoundingBoxObject,
+  SegmentGroup,
+  UserBoundingBox,
+  UserBoundingBoxToServer,
+  UserBoundingBoxWithOptIsVisible,
+  WebknossosState,
+} from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { Tree, TreeGroup } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -25,15 +35,20 @@ export function convertServerBoundingBoxToBoundingBox(
     ]),
   );
 }
+
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
   if (!boundingBox) return null;
   return convertServerBoundingBoxToBoundingBox(boundingBox);
 }
+
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,
+  userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
+  const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};
+
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
@@ -42,17 +57,18 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
       name: name || `Bounding box ${id}`,
-      isVisible: isVisible != null ? isVisible : true,
+      isVisible: idToVisible[id] ?? isVisible ?? true,
     };
   });
 }
 
 export function convertUserBoundingBoxFromFrontendToServer(
-  boundingBox: UserBoundingBox,
+  boundingBox: UserBoundingBoxWithOptIsVisible,
 ): UserBoundingBoxToServer {
   const { boundingBox: bb, ...rest } = boundingBox;
   return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }
+
 export function convertFrontendBoundingBoxToServer(
   boundingBox: BoundingBoxType,
 ): BoundingBoxObject {
@@ -72,6 +88,7 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
     topLeft: Utils.point3ToVector3(boundingBox.topLeft),
   };
 }
+
 export function convertServerAnnotationToFrontendAnnotation(
   annotation: APIAnnotation,
   version: number,
@@ -164,6 +181,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
@@ -184,6 +202,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;
@@ -197,4 +216,44 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   return updateKey(state, "uiInformation", {
     activeTool: tool,
   });
+}
+
+export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
+  groups: Group[],
+  userState: SkeletonUserState | VolumeUserState | undefined,
+): Group[] {
+  if (userState == null) {
+    return groups;
+  }
+
+  const expandedStates =
+    "segmentGroupExpandedStates" in userState
+      ? userState.segmentGroupExpandedStates
+      : userState.treeGroupExpandedStates;
+
+  const groupIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(expandedStates);
+  return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
+    return {
+      ...group,
+      isExpanded: groupIdToExpanded[group.groupId] ?? group.isExpanded,
+      children,
+    };
+  });
+}
+
+export function getApplyUserStateToTreeFn(
+  userState: SkeletonUserState | undefined,
+): ((tree: Tree) => Tree) | undefined {
+  if (userState == null) {
+    return undefined;
+  }
+
+  const visibilities = userState.treeVisibilities;
+  const treeIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(visibilities);
+  return (tree) => {
+    return {
+      ...tree,
+      isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
+    };
+  };
 }

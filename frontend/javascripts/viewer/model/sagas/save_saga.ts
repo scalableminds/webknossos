@@ -1,20 +1,20 @@
-import { doWithToken, getNewestVersionForAnnotation } from "admin/rest_api";
+import { getNewestVersionForAnnotation, sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
-import type { RequestOptionsWithData } from "libs/request";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { call, delay, fork, put, race, take } from "typed-redux-saga";
+import { buffers } from "redux-saga";
+import { actionChannel, call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
+  type EnsureTracingsWereDiffedToSaveQueueAction,
   pushSaveQueueTransaction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
@@ -43,6 +43,7 @@ import {
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   type UpdateActionWithoutIsolationRequirement,
+  updateCameraAnnotation,
   updateTdCamera,
 } from "viewer/model/sagas/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
@@ -54,6 +55,9 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
+import { getFlooredPosition, getRotationInDegrees } from "../accessors/flycam_accessor";
+import type { Action } from "../actions/actions";
+import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -122,12 +126,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     yield* put(setSaveBusyAction(false));
   }
 }
-export function sendRequestWithToken(
-  urlWithoutToken: string,
-  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
-): Promise<any> {
-  return doWithToken((token) => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
-}
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
@@ -181,7 +179,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
     try {
       const startTime = Date.now();
       yield* call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -345,6 +343,21 @@ export function addVersionNumbers(
 export function performDiffTracing(
   prevTracing: SkeletonTracing | VolumeTracing,
   tracing: SkeletonTracing | VolumeTracing,
+): Array<UpdateActionWithoutIsolationRequirement> {
+  let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
+
+  if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
+    actions = actions.concat(Array.from(diffSkeletonTracing(prevTracing, tracing)));
+  }
+
+  if (prevTracing.type === "volume" && tracing.type === "volume") {
+    actions = actions.concat(Array.from(diffVolumeTracing(prevTracing, tracing)));
+  }
+
+  return actions;
+}
+
+export function performDiffAnnotation(
   prevFlycam: Flycam,
   flycam: Flycam,
   prevTdCamera: CameraData,
@@ -352,15 +365,14 @@ export function performDiffTracing(
 ): Array<UpdateActionWithoutIsolationRequirement> {
   let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
 
-  if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
+  if (prevFlycam !== flycam) {
     actions = actions.concat(
-      Array.from(diffSkeletonTracing(prevTracing, tracing, prevFlycam, flycam)),
-    );
-  }
-
-  if (prevTracing.type === "volume" && tracing.type === "volume") {
-    actions = actions.concat(
-      Array.from(diffVolumeTracing(prevTracing, tracing, prevFlycam, flycam)),
+      updateCameraAnnotation(
+        getFlooredPosition(flycam),
+        flycam.additionalCoordinates,
+        getRotationInDegrees(flycam),
+        flycam.zoomStep,
+      ),
     );
   }
 
@@ -373,8 +385,42 @@ export function performDiffTracing(
 
 export function* saveTracingAsync(): Saga<void> {
   yield* fork(pushSaveQueueAsync);
+  yield* takeEvery("INITIALIZE_ANNOTATION_WITH_TRACINGS", setupSavingForAnnotation);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
+}
+
+function* setupSavingForAnnotation(_action: BatchedAnnotationInitializationAction): Saga<void> {
+  yield* call(ensureWkReady);
+
+  while (true) {
+    let prevFlycam = yield* select((state) => state.flycam);
+    let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+    yield* take([
+      ...FlycamActions,
+      ...ViewModeSaveRelevantActions,
+      ...SkeletonTracingSaveRelevantActions,
+    ]);
+    // The allowUpdate setting could have changed in the meantime
+    const allowUpdate = yield* select(
+      (state) =>
+        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+    );
+    if (!allowUpdate) continue;
+    const flycam = yield* select((state) => state.flycam);
+    const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+
+    const items = Array.from(
+      yield* call(performDiffAnnotation, prevFlycam, flycam, prevTdCamera, tdCamera),
+    );
+
+    if (items.length > 0) {
+      yield* put(pushSaveQueueTransaction(items));
+    }
+
+    prevFlycam = flycam;
+    prevTdCamera = tdCamera;
+  }
 }
 
 export function* setupSavingForTracingType(
@@ -385,32 +431,49 @@ export function* setupSavingForTracingType(
     old and new state.
     The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
-  const saveQueueType =
+  const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;
-  let prevFlycam = yield* select((state) => state.flycam);
-  let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+
   yield* call(ensureWkReady);
 
+  const actionBuffer = buffers.expanding<Action>();
+  const tracingActionChannel = yield* actionChannel(
+    tracingType === "skeleton"
+      ? [
+          ...SkeletonTracingSaveRelevantActions,
+          // SET_SKELETON_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
+          // should not create its own Undo/Redo stack entry
+          "SET_SKELETON_TRACING",
+        ]
+      : VolumeTracingSaveRelevantActions,
+    actionBuffer,
+  );
+
+  // See Model.ensureSavedState for an explanation of this action channel.
+  const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
+    "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+  );
+
   while (true) {
-    if (saveQueueType === "skeleton") {
-      yield* take([
-        ...SkeletonTracingSaveRelevantActions,
-        ...FlycamActions,
-        ...ViewModeSaveRelevantActions,
-        // SET_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
-        // should not create its own Undo/Redo stack entry
-        "SET_TRACING",
-      ]);
+    // Prioritize consumption of tracingActionChannel since we don't want to
+    // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
+    // are unprocessed user actions.
+    if (!actionBuffer.isEmpty()) {
+      yield* take(tracingActionChannel);
     } else {
-      yield* take([
-        ...VolumeTracingSaveRelevantActions,
-        ...FlycamActions,
-        ...ViewModeSaveRelevantActions,
-      ]);
+      // Wait for either a user action or the "ensureAction".
+      const { ensureAction } = yield* race({
+        _tracingAction: take(tracingActionChannel),
+        ensureAction: take(ensureDiffedChannel),
+      });
+      if (ensureAction != null) {
+        ensureAction.callback(tracingId);
+        continue;
+      }
     }
 
     // The allowUpdate setting could have changed in the meantime
@@ -419,23 +482,12 @@ export function* setupSavingForTracingType(
         state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
       | VolumeTracing
       | SkeletonTracing;
-    const flycam = yield* select((state) => state.flycam);
-    const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+
     const items = compactUpdateActions(
-      Array.from(
-        yield* call(
-          performDiffTracing,
-          prevTracing,
-          tracing,
-          prevFlycam,
-          flycam,
-          prevTdCamera,
-          tdCamera,
-        ),
-      ),
+      Array.from(yield* call(performDiffTracing, prevTracing, tracing)),
       tracing,
     );
 
@@ -444,8 +496,6 @@ export function* setupSavingForTracingType(
     }
 
     prevTracing = tracing;
-    prevFlycam = flycam;
-    prevTdCamera = tdCamera;
   }
 }
 

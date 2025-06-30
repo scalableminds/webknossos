@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
@@ -13,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
@@ -76,7 +77,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 
 case class VolumeTracingLayer(
     name: String,
-    annotationId: String,
+    annotationId: ObjectId,
     volumeTracingService: VolumeTracingService,
     temporaryTracingService: TemporaryTracingService,
     isTemporaryTracing: Boolean = false,
@@ -84,6 +85,7 @@ case class VolumeTracingLayer(
     tracing: VolumeTracing,
     tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]],
+    attachments: Option[DatasetLayerAttachments] = None,
     volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer

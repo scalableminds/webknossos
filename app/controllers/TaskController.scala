@@ -1,10 +1,9 @@
 package controllers
 
-import collections.SequenceUtils
-
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -16,7 +15,7 @@ import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -67,7 +66,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
                                                                                     dataset,
-                                                                                    dataSource)
+                                                                                    dataSource,
+                                                                                    request.identity._id)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(

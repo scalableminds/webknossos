@@ -34,13 +34,10 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
-// Allow path binding for ObjectId
-routesImport += "com.scalableminds.util.objectid.ObjectId"
-
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
-  Compile / packageDoc / publishArtifact := false
+  Compile / packageDoc / publishArtifact := false,
 )
 
 lazy val protocolBufferSettings = Seq(
@@ -62,7 +59,6 @@ lazy val copyMessagesFilesSetting = {
 lazy val util = (project in file("util")).settings(
   commonSettings,
   libraryDependencies ++= Dependencies.utilDependencies,
-  dependencyOverrides ++= Dependencies.dependencyOverrides
 )
 
 lazy val webknossosJni = (project in file("webknossos-jni"))
@@ -82,7 +78,6 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -92,6 +87,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     copyMessagesFilesSetting
   )
 
@@ -102,11 +98,11 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
-    copyMessagesFilesSetting
+    copyMessagesFilesSetting,
   )
 
 lazy val webknossos = (project in file("."))
@@ -116,11 +112,11 @@ lazy val webknossos = (project in file("."))
   .settings(
     name := "webknossos",
     commonSettings,
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     generateReverseRouter := false,
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
     Assets / sourceDirectory := file("none"),
     // The following two assignments avoid that the public assets
     // appear in two output jars. Namely, target/universal/stage/lib/webknossos.webknossos-wk-sans-externalized.jar

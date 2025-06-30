@@ -17,9 +17,11 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
+  applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
+  getApplyUserStateToTreeFn,
 } from "viewer/model/reducers/reducer_helpers";
 import {
   addTreesAndGroups,
@@ -50,13 +52,22 @@ import {
   additionallyExpandGroup,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   if (action.type === "INITIALIZE_SKELETONTRACING") {
-    const trees = createTreeMapFromTreeArray(action.tracing.trees);
-    let activeNodeId = action.tracing.activeNodeId;
+    const userState = getUserStateForTracing(
+      action.tracing,
+      state.activeUser,
+      state.annotation.owner,
+    );
 
+    const applyUserStateToTreeFn = getApplyUserStateToTreeFn(userState);
+    const trees = createTreeMapFromTreeArray(action.tracing.trees, applyUserStateToTreeFn);
+    let activeNodeId = userState?.activeNodeId ?? action.tracing.activeNodeId;
+
+    const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
     let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
 
     cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
@@ -96,6 +107,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
     const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
       action.tracing.userBoundingBoxes,
+      userState,
     );
     const skeletonTracing: SkeletonTracing = {
       createdTimestamp: action.tracing.createdTimestamp,
@@ -105,7 +117,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       activeTreeId,
       activeGroupId: null,
       trees,
-      treeGroups: action.tracing.treeGroups || [],
+      treeGroups,
       tracingId: action.tracing.id,
       boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
       userBoundingBoxes,
@@ -452,7 +464,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
-    case "SET_TRACING": {
+    case "SET_SKELETON_TRACING": {
       return update(state, {
         annotation: {
           skeleton: {
@@ -933,9 +945,14 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     }
 
     case "ADD_TREES_AND_GROUPS": {
-      const { trees, treeGroups } = action;
+      const { trees, treeGroups, assignNewGroupId } = action;
       const treesWithNames = ensureTreeNames(state, trees);
-      const treesResult = addTreesAndGroups(skeletonTracing, treesWithNames, treeGroups);
+      const treesResult = addTreesAndGroups(
+        skeletonTracing,
+        treesWithNames,
+        treeGroups,
+        assignNewGroupId,
+      );
       if (treesResult == null) {
         return state;
       }

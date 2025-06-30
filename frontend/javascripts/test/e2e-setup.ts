@@ -34,6 +34,8 @@ const tokenUserFInOrgaX =
 
 let currentUserAuthToken = tokenUserA;
 
+const idUserA = "570b9f4d2a7c0e4d008da6ef";
+
 function setUserAuthToken(token: string) {
   currentUserAuthToken = token;
 }
@@ -163,4 +165,5 @@ export {
   tokenUserFInOrgaX,
   tokenUserFInOrgaY,
   setUserAuthToken,
+  idUserA,
 };

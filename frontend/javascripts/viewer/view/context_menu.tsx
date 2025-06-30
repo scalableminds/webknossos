@@ -973,6 +973,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
+        undefined,
       ),
     );
   };

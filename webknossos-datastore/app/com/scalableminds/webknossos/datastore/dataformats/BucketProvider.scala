@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 

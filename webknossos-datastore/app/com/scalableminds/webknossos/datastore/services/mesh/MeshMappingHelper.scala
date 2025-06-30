@@ -7,8 +7,8 @@ import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient
 }
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
-import net.liftweb.common.Full
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId}
+import com.scalableminds.util.tools.Full
 
 import scala.concurrent.ExecutionContext
 
@@ -19,36 +19,28 @@ trait MeshMappingHelper extends FoxImplicits {
   protected val binaryDataServiceHolder: BinaryDataServiceHolder
 
   protected def segmentIdsForAgglomerateIdIfNeeded(
-      organizationId: String,
-      datasetDirectoryName: String,
-      dataLayerName: String,
+      dataSourceId: DataSourceId,
+      dataLayer: DataLayer,
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
-        // No mapping selected, assume id matches meshfile
+        // No mapping selected, assume id matches meshFile
         Fox.successful(List(agglomerateId))
       case (Some(mappingName), None) if mappingNameForMeshFile.contains(mappingName) =>
-        // Mapping selected, but meshfile has the same mapping name in its metadata, assume id matches meshfile
+        // Mapping selected, but meshFile has the same mapping name in its metadata, assume id matches meshFile
         Fox.successful(List(agglomerateId))
       case (Some(mappingName), None) =>
-        // Mapping selected, but meshfile does not have matching mapping name in its metadata,
+        // Mapping selected, but meshFile does not have matching mapping name in its metadata,
         // assume agglomerate id, fetch oversegmentation segment ids for it
         for {
           agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-          segmentIdsBox = agglomerateService.segmentIdsForAgglomerateId(
-            AgglomerateFileKey(
-              organizationId,
-              datasetDirectoryName,
-              dataLayerName,
-              mappingName
-            ),
-            agglomerateId
-          )
+          agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
+          segmentIdsBox <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId).shiftBox
           segmentIds <- segmentIdsBox match {
             case Full(segmentIds) => Fox.successful(segmentIds)
             case _                => if (omitMissing) Fox.successful(List.empty) else segmentIdsBox.toFox
@@ -67,17 +59,8 @@ trait MeshMappingHelper extends FoxImplicits {
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
             for {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              localSegmentIds <- agglomerateService
-                .segmentIdsForAgglomerateId(
-                  AgglomerateFileKey(
-                    organizationId,
-                    datasetDirectoryName,
-                    dataLayerName,
-                    mappingName
-                  ),
-                  agglomerateId
-                )
-                .toFox
+              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
+              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
             } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataFormat,
   DataLayer,
   DataSourceId,
+  DatasetLayerAttachments,
   ElementClass,
   SegmentationLayer
 }
@@ -76,7 +78,7 @@ case class EditableMappingLayer(name: String, // set to tracing id
                                 largestSegmentId: Option[Long],
                                 elementClass: ElementClass.Value,
                                 tracing: VolumeTracing,
-                                annotationId: String,
+                                annotationId: ObjectId,
                                 annotationService: TSAnnotationService,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
@@ -103,6 +105,8 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  override def attachments: Option[DatasetLayerAttachments] = None
 
   def version: Long = tracing.version
 

@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -228,6 +228,8 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
+  def attachments: Option[DatasetLayerAttachments]
+
   // Datasets that are not in the WKW format use mags
   def magsOpt: Option[List[MagLocator]] = this match {
     case layer: AbstractDataLayer         => layer.mags
@@ -324,6 +326,47 @@ trait DataLayer extends DataLayerLike {
     ElementClass.bytesPerElement(elementClass)
 
   def mags: List[MagLocator]
+
+  def withAttachments(attachments: DatasetLayerAttachments): DataLayer = {
+    def mergeAttachments(existingAttachmentsOpt: Option[DatasetLayerAttachments],
+                         newAttachments: DatasetLayerAttachments): Option[DatasetLayerAttachments] =
+      existingAttachmentsOpt match {
+        case None => Some(newAttachments)
+        case Some(existingFiles) =>
+          val segmentIndex = existingFiles.segmentIndex.orElse(newAttachments.segmentIndex)
+          val connectome =
+            if (existingFiles.connectomes.isEmpty) newAttachments.connectomes else existingFiles.connectomes
+          val agglomerateFiles =
+            if (existingFiles.agglomerates.isEmpty) newAttachments.agglomerates else existingFiles.agglomerates
+          val meshFiles =
+            if (existingFiles.meshes.isEmpty) newAttachments.meshes else existingFiles.meshes
+          val cumsumFile =
+            existingFiles.cumsum.orElse(newAttachments.cumsum)
+
+          Some(
+            DatasetLayerAttachments(
+              meshes = meshFiles,
+              agglomerates = agglomerateFiles,
+              segmentIndex = segmentIndex,
+              connectomes = connectome,
+              cumsum = cumsumFile
+            ))
+      }
+
+    this match {
+      case l: N5DataLayer                  => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: N5SegmentationLayer          => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: PrecomputedDataLayer         => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: PrecomputedSegmentationLayer => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: Zarr3DataLayer               => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: Zarr3SegmentationLayer       => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: ZarrDataLayer                => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: ZarrSegmentationLayer        => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: WKWDataLayer                 => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case l: WKWSegmentationLayer         => l.copy(attachments = mergeAttachments(l.attachments, attachments))
+      case _                               => this
+    }
+  }
 }
 
 object DataLayer {
@@ -480,6 +523,7 @@ case class AbstractDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
@@ -499,6 +543,7 @@ object AbstractDataLayer {
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
       layer.additionalAxes,
+      layer.attachments,
       layer.magsOpt,
       layer.numChannelsOpt,
       layer.dataFormatOpt,
@@ -520,6 +565,7 @@ case class AbstractSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    attachments: Option[DatasetLayerAttachments] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
@@ -541,6 +587,7 @@ object AbstractSegmentationLayer {
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
       layer.additionalAxes,
+      layer.attachments,
       layer.magsOpt,
       layer.numChannelsOpt,
       layer.dataFormatOpt,

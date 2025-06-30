@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
@@ -96,9 +96,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         credentialId,
         List(
           // Explorers are ordered to prioritize the explorer reading meta information over raw Zarr, N5, ... data.
+          new WebknossosZarrExplorer,
           new NgffV0_4Explorer,
           new NgffV0_5Explorer,
-          new WebknossosZarrExplorer,
           new Zarr3ArrayExplorer,
           new ZarrArrayExplorer(Vec3Int.ones),
           new N5MultiscalesExplorer,

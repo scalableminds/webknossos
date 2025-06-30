@@ -4,6 +4,8 @@ import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 
+export const VOLUME_TRACING_ID = "volumeTracingId";
+
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
@@ -11,7 +13,7 @@ const volumeTracing = {
   largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],
-  tracingId: "tracingId",
+  tracingId: VOLUME_TRACING_ID,
 };
 const notEmptyViewportRect = {
   top: 0,

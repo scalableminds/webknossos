@@ -17,10 +17,9 @@ const toRadian = (arr: Vector3): Vector3 => [
   THREE.MathUtils.degToRad(arr[2]),
 ];
 
-// All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTesting(context, "skeleton");
+    await setupWebknossosForTesting(context, "skeleton", { dontDispatchWkReady: true });
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {

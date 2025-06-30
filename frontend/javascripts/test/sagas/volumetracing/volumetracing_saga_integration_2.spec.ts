@@ -1,4 +1,3 @@
-import "test/sagas/saga_integration.mock";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants, {
   ContourModeEnum,
@@ -13,12 +12,9 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
 import { V3 } from "libs/mjs";
-import dummyUser from "test/fixtures/dummy_user";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   setActiveCellAction,
   addToLayerAction,
@@ -29,29 +25,13 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  dispatchUndoAsync,
-  dispatchRedoAsync,
-  discardSaveQueuesAction,
-} from "viewer/model/actions/save_actions";
+import { dispatchUndoAsync, dispatchRedoAsync } from "viewer/model/actions/save_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup Webknossos
-    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
-    Store.dispatch(restartSagaAction());
-    Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(setActiveUserAction(dummyUser));
-
     await setupWebknossosForTesting(context, "volume");
-
-    // Ensure the slow compression is disabled by default. Tests may change
-    // this individually.
-    context.setSlowCompression(false);
-    // Dispatch the wkReadyAction, so the sagas are started
-    Store.dispatch(wkReadyAction());
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
@@ -61,6 +41,7 @@ describe("Volume Tracing", () => {
     // occur (e.g., a promise gets resolved which interferes with the next test).
     await context.api.tracing.save();
     expect(hasRootSagaCrashed()).toBe(false);
+    context.tearDownPullQueues();
   });
 
   it<WebknossosTestContext>("Executing a floodfill in mag 1", async ({ api, mocks }) => {

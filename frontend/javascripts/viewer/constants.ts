@@ -132,14 +132,14 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0, "ZYX"),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0, "ZYX"),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler(Math.PI / 2, 0, 0, "ZYX"),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler(Math.PI / 2, 0, 0),
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
 function correctCameraViewingDirection(baseEuler: THREE.Euler): THREE.Euler {
-  const cameraCorrectionEuler = new THREE.Euler(Math.PI, 0, 0, "ZYX");
+  const cameraCorrectionEuler = new THREE.Euler(Math.PI, 0, 0);
   const correctedEuler = new THREE.Euler();
   correctedEuler.setFromRotationMatrix(
     new THREE.Matrix4()

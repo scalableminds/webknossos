@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.06.2](https://github.com/scalableminds/webknossos/releases/tag/25.06.2) - 2025-06-17
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...25.06.2)
+
+### Fixed
+- Fixed a regression that led to incorrect behavior when trying to jump to the last branchpoint even though no branchpoint existed. [#8695](https://github.com/scalableminds/webknossos/pull/8695)
+
+## [25.06.1](https://github.com/scalableminds/webknossos/releases/tag/25.06.1) - 2025-06-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...25.06.1)
+
+### Fixed
+- Fixed viewing the results of volume annotation tasks in compound view. [#8668](https://github.com/scalableminds/webknossos/pull/8668)
+
 ## [25.06.0](https://github.com/scalableminds/webknossos/releases/tag/25.06.0) - 2025-05-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...25.06.0)
 
@@ -22,7 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility for super users to retry manually cancelled jobs from the jobs list. [#8629](https://github.com/scalableminds/webknossos/pull/8629)
 
 ### Changed
-- Remove `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)
+- Removed `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)
 - Updated `View Modes` documentation page with links for mouse and keyboard shortcuts. [#8582](https://github.com/scalableminds/webknossos/pull/8582)
 - Renamed the button to view the compound annotation of all tasks of a tasktype to be more descriptive. [#8565](https://github.com/scalableminds/webknossos/pull/8565)
 - Replaced fixed threshold of 40 meshes by a dynamic limit based on the number of triangles in the mesh for the "Create Animation" job. [#8588](https://github.com/scalableminds/webknossos/pull/8588)

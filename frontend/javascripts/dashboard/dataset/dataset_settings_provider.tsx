@@ -84,7 +84,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     }
   }, []);
 
-  const fetchData = useCallback(async (): Promise<void> => {
+  const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
       let fetchedDataset = await getDataset(datasetId);
@@ -164,8 +164,10 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
       setDatasetDefaultConfiguration(fetchedDatasetDefaultConfiguration);
       setDataset(fetchedDataset);
+      return fetchedDataset.name;
     } catch (error) {
       handleGenericError(error as Error);
+      return undefined;
     } finally {
       setIsLoading(false);
       form.validateFields();
@@ -344,11 +346,12 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
   useEffect(() => {
-    fetchData();
-    sendAnalyticsEvent("open_dataset_settings", {
-      datasetName: dataset ? dataset.name : "Not found dataset",
+    fetchData().then((datasetName) => {
+      sendAnalyticsEvent("open_dataset_settings", {
+        datasetName: datasetName ?? "Not found dataset",
+      });
     });
-  }, [fetchData, dataset]);
+  }, [fetchData]);
 
   const contextValue: DatasetSettingsContextValue = {
     form,

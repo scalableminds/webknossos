@@ -45,8 +45,7 @@ const DatasetSettingsView: React.FC = () => {
     }
 
     // Switch to the earliest, problematic tab
-    const problematicTab =
-      ["data", "general", "defaultConfig"].find(
+    const problematicTab = ["data", "general", "defaultConfig"].find(
       (key) => validationSummary[key],
     );
 
@@ -170,7 +169,7 @@ const DatasetSettingsView: React.FC = () => {
       forceRender: true,
       children: (
         <Hideable hidden={activeTabKey !== "sharing"}>
-          <DatasetSettingsSharingTab  />
+          <DatasetSettingsSharingTab />
         </Hideable>
       ),
     },

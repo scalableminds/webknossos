@@ -79,6 +79,13 @@ export function getVolumeTracingById(
   return volumeTracing;
 }
 
+export function isTracingLayerWithoutFallback(segmentationLayer: APIDataLayer): boolean {
+  const isTracingLayer = "tracingId" in segmentationLayer && segmentationLayer.tracingId != null;
+  const hasFallbackLayer =
+    "fallbackLayer" in segmentationLayer && segmentationLayer.fallbackLayer != null;
+  return isTracingLayer && !hasFallbackLayer;
+}
+
 export function getVolumeTracingLayers(dataset: APIDataset): Array<APISegmentationLayer> {
   const layers = getSegmentationLayers(dataset);
   return layers.filter((layer) => layer.tracingId != null);

@@ -39,25 +39,37 @@ function getQuaternionFromCamera(
   const up = V3.normalize(_up);
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
+  const correctedUp = V3.normalize(V3.cross(forward, right));
 
   // Create a basis matrix
   const rotationMatrix = new THREE.Matrix4();
   rotationMatrix.makeBasis(
     new THREE.Vector3(...right),
-    new THREE.Vector3(...up),
+    new THREE.Vector3(...correctedUp),
     new THREE.Vector3(...forward),
   );
 
+  const alternativeMatrix = new THREE.Matrix4();
+  // biome-ignore format: don't format
+  alternativeMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
+  console.log(rotationMatrix, alternativeMatrix);
+
   // If there's an additional rotation, apply it to the basis matrix
   if (rotation) {
+    console.log("applying rotation", rotation);
     const additionalRotation = new THREE.Matrix4();
     additionalRotation.makeRotationFromEuler(new THREE.Euler(...rotation, "ZYX")); // You mentioned ZYX
     rotationMatrix.premultiply(additionalRotation); // Apply flycamRotation before
   }
 
   // Convert to quaternion
+  const translation = new THREE.Vector3();
+  const scale = new THREE.Vector3();
+  const quat2 = new THREE.Quaternion();
   const quat = new THREE.Quaternion();
+  rotationMatrix.decompose(translation, quat2, scale);
   quat.setFromRotationMatrix(rotationMatrix);
+  console.log(quat, quat2);
   return quat;
 }
 
@@ -298,29 +310,34 @@ export function rotate3DViewTo(
   if (id === OrthoViews.TDView && (height <= 0 || width <= 0)) {
     // This should only be the case when initializing the 3D-viewport.
     const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
-    const datasetCenter = voxelToUnit(dataset.dataSource.scale, getDatasetCenter(dataset));
     // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
     const paddingFactor = 1.1;
     width = Math.sqrt(datasetExtent.width ** 2 + datasetExtent.height ** 2) * paddingFactor;
     height = width / aspectRatio;
-    up = [0, 0, -1];
+  }
+  if (id === OrthoViews.TDView) {
+    const positionOffsetVector = new THREE.Vector3(
+      clippingOffsetFactor,
+      clippingOffsetFactor,
+      -clippingOffsetFactor / 2,
+    );
+    const upVector = new THREE.Vector3(0, 0, -1);
+    // Rotate the positionOffsetVector and upVector by the flycam rotation.
+    const rotatedOffset = positionOffsetVector.applyEuler(
+      new THREE.Euler(...flycamRotation, "ZYX"),
+    );
+    const rotatedUp = upVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
     // The clippingOffsetFactor is added in x and y direction to get a view on the dataset the 3D view that is close to the plane views.
     // Thus the rotation between the 3D view to the eg. XY plane views is much shorter and the interpolated rotation does not look weird.
     position = [
-      datasetCenter[0] + clippingOffsetFactor,
-      datasetCenter[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
+      flycamPos[0] + rotatedOffset.x,
+      flycamPos[1] + rotatedOffset.y,
+      flycamPos[2] + rotatedOffset.z,
     ];
-  } else if (id === OrthoViews.TDView) {
-    position = [
-      flycamPos[0] + clippingOffsetFactor,
-      flycamPos[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
-    ];
-    up = [0, 0, -1];
+    up = [rotatedUp.x, rotatedUp.y, rotatedUp.z];
   } else {
     const positionOffset: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
@@ -351,7 +368,13 @@ export function rotate3DViewTo(
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
   const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
-  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos, flycamRotation);
+  if (id === OrthoViews.TDView) {
+    console.log("calculating td camera from", up, position, flycamPos);
+  }
+  const targetQuaternion =
+    id === OrthoViews.TDView
+      ? getQuaternionFromCamera(up, position, flycamPos)
+      : getQuaternionFromCamera(up, position, currentFlycamPos, flycamRotation);
   const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
   const to: TweenState = {
     left: -width / 2,

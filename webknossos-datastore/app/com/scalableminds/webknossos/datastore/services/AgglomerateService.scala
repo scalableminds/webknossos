@@ -33,7 +33,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
                                    remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends LazyLogging
     with FoxImplicits {
-  private val agglomerateDir = "agglomerates"
+  private val localAgglomeratesDir = "agglomerates"
   private val hdf5AgglomerateFileExtension = "hdf5"
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -46,7 +46,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val scannedAgglomerateFileNames = PathUtils
-      .listFiles(layerDir.resolve(agglomerateDir),
+      .listFiles(layerDir.resolve(localAgglomeratesDir),
                  silent = true,
                  PathUtils.fileExtensionFilter(hdf5AgglomerateFileExtension))
       .map { paths =>
@@ -98,7 +98,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       })
       localFallbackAttachment = LayerAttachment(
         mappingName,
-        localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
+        localDatasetDir.resolve(dataLayer.name).resolve(localAgglomeratesDir).toUri,
         LayerAttachmentDataformat.hdf5
       )
       selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)

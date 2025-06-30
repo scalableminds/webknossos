@@ -35,8 +35,10 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
-      bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
-      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInMag.toSeq, mag, additionalCoordinates)
+      bucketPositionsInRequestedMag = bucketPositionsProtos.map(vec3IntFromProto)
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInRequestedMag.toSeq,
+                                                               mag,
+                                                               additionalCoordinates)
       counts <- Fox.serialCombined(bucketBoxes.toList) {
         case Full(bucketBytes) =>
           tryo(

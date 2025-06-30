@@ -10,10 +10,11 @@ import ch.systemsx.cisd.hdf5.{
   IHDF5StringReader
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
+import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.Path
@@ -22,7 +23,7 @@ import scala.util.Using
 class CachedHdf5File(reader: IHDF5Reader)
     extends SafeCachable
     with AutoCloseable
-    with Hdf5HashedArrayUtils
+    with ArrayArtifactHashing
     with LazyLogging {
 
   override protected def onFinalize(): Unit = reader.close()
@@ -57,6 +58,11 @@ object CachedHdf5File {
 class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, CachedHdf5File] {
   override def onElementRemoval(key: String, value: CachedHdf5File): Unit =
     value.scheduleForRemoval()
+
+  def getCachedHdf5File(attachment: LayerAttachment)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
+    for {
+      localPath <- tryo(attachment.localPath)
+    } yield getCachedHdf5File(localPath)(loadFn)
 
   def getCachedHdf5File(filePath: Path)(loadFn: Path => CachedHdf5File): CachedHdf5File = {
     val fileKey = filePath.toString
@@ -95,5 +101,9 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
     } yield boxedResult
 
   def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
-    withCachedHdf5(Path.of(attachment.path))(block)
+    for {
+      localAttachmentPath <- tryo(attachment.localPath)
+      result <- withCachedHdf5(localAttachmentPath)(block)
+    } yield result
+
 }

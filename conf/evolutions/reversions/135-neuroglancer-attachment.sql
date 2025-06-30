@@ -1,0 +1,1 @@
+-- Removing enum types directly is not possible so no reversion is available for this.

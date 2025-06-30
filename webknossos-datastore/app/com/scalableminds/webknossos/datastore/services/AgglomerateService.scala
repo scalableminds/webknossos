@@ -23,13 +23,14 @@ import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio.file.Paths
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService(config: DataStoreConfig,
-                         zarrAgglomerateService: ZarrAgglomerateService,
-                         hdf5AgglomerateService: Hdf5AgglomerateService,
-                         remoteSourceDescriptorService: RemoteSourceDescriptorService)
+class AgglomerateService @Inject()(config: DataStoreConfig,
+                                   zarrAgglomerateService: ZarrAgglomerateService,
+                                   hdf5AgglomerateService: Hdf5AgglomerateService,
+                                   remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends LazyLogging
     with FoxImplicits {
   private val agglomerateDir = "agglomerates"
@@ -39,12 +40,12 @@ class AgglomerateService(config: DataStoreConfig,
   private val agglomerateFileKeyCache
     : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey
 
-  def listAgglomerates(dataSourceId: DataSourceId, dataLayer: DataLayer): Set[String] = {
-    val attachedAgglomerates = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
+  def listAgglomeratesFiles(dataSourceId: DataSourceId, dataLayer: DataLayer): Set[String] = {
+    val attachedAgglomerateFileNames = dataLayer.attachments.map(_.agglomerates).getOrElse(Seq.empty).map(_.name).toSet
 
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
-    val exploredAgglomerates = PathUtils
+    val scannedAgglomerateFileNames = PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
                  PathUtils.fileExtensionFilter(hdf5AgglomerateFileExtension))
@@ -55,21 +56,22 @@ class AgglomerateService(config: DataStoreConfig,
       .getOrElse(Nil)
       .toSet
 
-    attachedAgglomerates ++ exploredAgglomerates
+    attachedAgglomerateFileNames ++ scannedAgglomerateFileNames
   }
 
-  def clearCaches(dataSourceId: DataSourceId, layerName: Option[String]): Int = {
+  def clearCaches(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
     agglomerateFileKeyCache.clear {
-      case (keyDataSourceId, keyLayerName, _) => dataSourceId == keyDataSourceId && layerName.forall(_ == keyLayerName)
+      case (keyDataSourceId, keyLayerName, _) =>
+        dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)
     }
 
     val clearedHdf5Count = hdf5AgglomerateService.clearCache { agglomerateFileKey =>
-      agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+      agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
     }
 
     val clearedZarrCount = zarrAgglomerateService.clearCache {
       case (agglomerateFileKey, _) =>
-        agglomerateFileKey.dataSourceId == dataSourceId && layerName.forall(agglomerateFileKey.layerName == _)
+        agglomerateFileKey.dataSourceId == dataSourceId && layerNameOpt.forall(agglomerateFileKey.layerName == _)
     }
 
     clearedHdf5Count + clearedZarrCount
@@ -94,17 +96,17 @@ class AgglomerateService(config: DataStoreConfig,
           path =
             remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
       })
+      localFallbackAttachment = LayerAttachment(
+        mappingName,
+        localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
+        LayerAttachmentDataformat.hdf5
+      )
+      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
     } yield
       AgglomerateFileKey(
         dataSourceId,
         dataLayer.name,
-        registeredAttachmentNormalized.getOrElse(
-          LayerAttachment(
-            mappingName,
-            localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
-            LayerAttachmentDataformat.hdf5
-          )
-        )
+        selectedAttachment
       )
   }
 

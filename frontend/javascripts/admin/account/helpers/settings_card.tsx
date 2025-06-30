@@ -1,14 +1,14 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Card, Flex, Popover, Typography } from "antd";
+import { Card, Flex, Tooltip, Typography } from "antd";
 
-interface SettingsCardProps {
+export type SettingsCardProps = {
   title: string;
-  description: React.ReactNode;
-  explanation?: React.ReactNode;
+  content: React.ReactNode;
+  tooltip?: React.ReactNode;
   action?: React.ReactNode;
-}
+};
 
-export function SettingsCard({ title, description, explanation, action }: SettingsCardProps) {
+export function SettingsCard({ title, content, tooltip, action }: SettingsCardProps) {
   return (
     <Card style={{ minHeight: 105 }}>
       <Typography.Text type="secondary" style={{ fontSize: 14 }}>
@@ -16,16 +16,16 @@ export function SettingsCard({ title, description, explanation, action }: Settin
           <div>
             {title}
 
-            {explanation != null ? (
-              <Popover content={explanation}>
+            {tooltip != null ? (
+              <Tooltip title={tooltip}>
                 <InfoCircleOutlined style={{ marginLeft: 4 }} />
-              </Popover>
+              </Tooltip>
             ) : null}
           </div>
           {action}
         </Flex>
       </Typography.Text>
-      <div style={{ fontSize: 16, marginTop: 4 }}>{description}</div>
+      <div style={{ fontSize: 16, marginTop: 4 }}>{content}</div>
     </Card>
   );
 }

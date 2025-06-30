@@ -2,14 +2,12 @@ import {
   CodeSandboxOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
+  ExportOutlined,
   FileTextOutlined,
-  SafetyOutlined,
   SettingOutlined,
   TeamOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
-import features from "features";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
@@ -66,6 +64,17 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         key: "delete",
         icon: <DeleteOutlined />,
         label: "Delete",
+      },
+    ],
+  },
+  { type: "divider" },
+  {
+    type: "group",
+    children: [
+      {
+        key: "open",
+        icon: <ExportOutlined />,
+        label: "Open in WEBKNOSSOS",
       },
     ],
   },

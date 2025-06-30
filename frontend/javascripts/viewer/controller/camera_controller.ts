@@ -10,7 +10,7 @@ import {
   OrthoViewValuesWithoutTDView,
   OrthoViews,
 } from "viewer/constants";
-import { getDatasetCenter, getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
+import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
@@ -30,15 +30,13 @@ type Props = {
   setTargetAndFixPosition: () => void;
 };
 
-function getQuaternionFromCamera(
-  _up: Vector3,
-  position: Vector3,
-  center: Vector3,
-  rotation?: Vector3, // flycamRotation in radians
-) {
+function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector3) {
   const up = V3.normalize(_up);
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
+  // Up might not be completely orthogonal to forward, so we need to correct it.
+  // Such tiny error would else lead to a non-orthogonal basis matrix leading to
+  // potentially very large errors in the calculated quaternion.
   const correctedUp = V3.normalize(V3.cross(forward, right));
 
   // Create a basis matrix
@@ -49,27 +47,9 @@ function getQuaternionFromCamera(
     new THREE.Vector3(...forward),
   );
 
-  const alternativeMatrix = new THREE.Matrix4();
-  // biome-ignore format: don't format
-  alternativeMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
-  console.log(rotationMatrix, alternativeMatrix);
-
-  // If there's an additional rotation, apply it to the basis matrix
-  if (rotation) {
-    console.log("applying rotation", rotation);
-    const additionalRotation = new THREE.Matrix4();
-    additionalRotation.makeRotationFromEuler(new THREE.Euler(...rotation, "ZYX")); // You mentioned ZYX
-    rotationMatrix.premultiply(additionalRotation); // Apply flycamRotation before
-  }
-
   // Convert to quaternion
-  const translation = new THREE.Vector3();
-  const scale = new THREE.Vector3();
-  const quat2 = new THREE.Quaternion();
   const quat = new THREE.Quaternion();
-  rotationMatrix.decompose(translation, quat2, scale);
   quat.setFromRotationMatrix(rotationMatrix);
-  console.log(quat, quat2);
   return quat;
 }
 
@@ -300,8 +280,6 @@ export function rotate3DViewTo(
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
-  let position: Vector3;
-  let up: Vector3;
 
   // Way to calculate the position and rotation of the camera:
   // First, the camera is either positioned at the current center of the flycam or in the dataset center.
@@ -316,66 +294,43 @@ export function rotate3DViewTo(
     width = Math.sqrt(datasetExtent.width ** 2 + datasetExtent.height ** 2) * paddingFactor;
     height = width / aspectRatio;
   }
-  if (id === OrthoViews.TDView) {
-    const positionOffsetVector = new THREE.Vector3(
-      clippingOffsetFactor,
-      clippingOffsetFactor,
-      -clippingOffsetFactor / 2,
-    );
-    const upVector = new THREE.Vector3(0, 0, -1);
-    // Rotate the positionOffsetVector and upVector by the flycam rotation.
-    const rotatedOffset = positionOffsetVector.applyEuler(
-      new THREE.Euler(...flycamRotation, "ZYX"),
-    );
-    const rotatedUp = upVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const positionOffsetMap: OrthoViewMap<Vector3> = {
+    [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
+    [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
+    [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
     // The clippingOffsetFactor is added in x and y direction to get a view on the dataset the 3D view that is close to the plane views.
     // Thus the rotation between the 3D view to the eg. XY plane views is much shorter and the interpolated rotation does not look weird.
-    position = [
-      flycamPos[0] + rotatedOffset.x,
-      flycamPos[1] + rotatedOffset.y,
-      flycamPos[2] + rotatedOffset.z,
-    ];
-    up = [rotatedUp.x, rotatedUp.y, rotatedUp.z];
-  } else {
-    const positionOffset: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
-      [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
-      [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
-      [OrthoViews.TDView]: [0, 0, 0],
-    };
-    const upVector: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, -1, 0],
-      [OrthoViews.PLANE_YZ]: [0, -1, 0],
-      [OrthoViews.PLANE_XZ]: [0, 0, -1],
-      [OrthoViews.TDView]: [0, 0, 0],
-    };
-    up = upVector[id];
-    position = [
-      positionOffset[id][0] + flycamPos[0],
-      positionOffset[id][1] + flycamPos[1],
-      positionOffset[id][2] + flycamPos[2],
-    ];
-  }
+    // The z offset is halved to have a lower viewing angle at the plane.
+    [OrthoViews.TDView]: [clippingOffsetFactor, clippingOffsetFactor, -clippingOffsetFactor / 2],
+  };
+  const upVectorMap: OrthoViewMap<Vector3> = {
+    [OrthoViews.PLANE_XY]: [0, -1, 0],
+    [OrthoViews.PLANE_YZ]: [0, -1, 0],
+    [OrthoViews.PLANE_XZ]: [0, 0, -1],
+    [OrthoViews.TDView]: [0, 0, -1],
+  };
 
-  const currentFlycamPos = voxelToUnit(
-    Store.getState().dataset.dataSource.scale,
-    getPosition(Store.getState().flycam),
-  ) || [0, 0, 0];
+  const positionOffsetVector = new THREE.Vector3(...positionOffsetMap[id]);
+  const upVector = new THREE.Vector3(...upVectorMap[id]);
+  // Rotate the positionOffsetVector and upVector by the flycam rotation.
+  const rotatedOffset = positionOffsetVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const rotatedUp = upVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const position = [
+    flycamPos[0] + rotatedOffset.x,
+    flycamPos[1] + rotatedOffset.y,
+    flycamPos[2] + rotatedOffset.z,
+  ] as Vector3;
+  const up = [rotatedUp.x, rotatedUp.y, rotatedUp.z] as Vector3;
+
   // Compute current and target orientation as quaternion. When tweening between
   // these orientations, we compute the new camera position by keeping the distance
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
-  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
-  if (id === OrthoViews.TDView) {
-    console.log("calculating td camera from", up, position, flycamPos);
-  }
-  const targetQuaternion =
-    id === OrthoViews.TDView
-      ? getQuaternionFromCamera(up, position, flycamPos)
-      : getQuaternionFromCamera(up, position, currentFlycamPos, flycamRotation);
-  const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
+  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, flycamPos);
+  const targetQuaternion = getQuaternionFromCamera(up, position, flycamPos);
+  const centerDistance = V3.length(V3.sub(flycamPos, position));
   const to: TweenState = {
     left: -width / 2,
     right: width / 2,
@@ -390,9 +345,7 @@ export function rotate3DViewTo(
     const tweened = getCameraFromQuaternion(tweenedQuat);
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
-    const newPosition = V3.toArray(
-      V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)),
-    );
+    const newPosition = V3.toArray(V3.sub(flycamPos, V3.scale(tweened.forward, centerDistance)));
     Store.dispatch(
       setTDCameraWithoutTimeTrackingAction({
         position: newPosition,

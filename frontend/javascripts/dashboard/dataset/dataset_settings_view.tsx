@@ -13,14 +13,13 @@ import {
 import { Alert, Button, Card, Form, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";
-import type { UnregisterCallback } from "history";
 import { handleGenericError } from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
@@ -85,23 +84,6 @@ const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
   const [savedDataSourceOnServer, setSavedDataSourceOnServer] = useState<
     APIDataSource | null | undefined
   >(null);
-
-  const unblockRef = useRef<UnregisterCallback | null>(null);
-  const blockTimeoutIdRef = useRef<number | null>(null);
-
-  const unblockHistory = useCallback(() => {
-    window.onbeforeunload = null;
-
-    if (blockTimeoutIdRef.current != null) {
-      clearTimeout(blockTimeoutIdRef.current);
-      blockTimeoutIdRef.current = null;
-    }
-
-    if (unblockRef.current != null) {
-      unblockRef.current();
-      unblockRef.current = null;
-    }
-  }, []);
 
   const fetchData = useCallback(async (): Promise<void> => {
     try {
@@ -384,11 +366,6 @@ const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
     setHasUnsavedChanges(true);
   }, []);
 
-  const handleCancel = useCallback(() => {
-    unblockHistory();
-    onCancel();
-  }, [unblockHistory, onCancel]);
-
   const handleDataSourceEditModeChange = useCallback(
     (activeEditMode: "simple" | "advanced") => {
       syncDataSourceFields(form, activeEditMode);
@@ -611,7 +588,7 @@ const DatasetSettingsView: React.FC<DatasetSettingsViewProps> = ({
               {confirmString}
             </Button>
             {Unicode.NonBreakingSpace}
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Button onClick={onCancel}>Cancel</Button>
           </FormItem>
         </Spin>
       </Card>

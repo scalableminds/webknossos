@@ -1,6 +1,7 @@
 import { getEditableTeams, getTeams } from "admin/rest_api";
 import { Select } from "antd";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import Toast from "libs/toast";
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import type { APITeam } from "types/api_types";
@@ -43,12 +44,13 @@ function TeamSelectionComponent({
     try {
       const possibleTeams = allowNonEditableTeams ? await getTeams() : await getEditableTeams();
       setPossibleTeams(possibleTeams);
-      setIsFetchingData(false);
       if (afterFetchedTeams) {
         afterFetchedTeams(possibleTeams);
       }
     } catch (_exception) {
-      console.error("Could not load teams.");
+      Toast.error("Could not load teams.");
+    } finally {
+      setIsFetchingData(false);
     }
   }
 
@@ -61,11 +63,11 @@ function TeamSelectionComponent({
       ? selectedTeamIdsOrId
       : [selectedTeamIdsOrId];
     const allTeams = getAllTeams();
-    const selected = _.compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
+    const selectedTeams = _.compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
     if (onChange) {
-      onChange(Array.isArray(selectedTeamIdsOrId) ? selected : selected[0]);
+      onChange(Array.isArray(selectedTeamIdsOrId) ? selectedTeams : selectedTeams[0]);
     }
-    setSelectedTeams(selected);
+    setSelectedTeams(selectedTeams);
   };
 
   return (
@@ -78,7 +80,7 @@ function TeamSelectionComponent({
       onChange={onSelectTeams}
       value={selectedTeams.map((t) => t.id)}
       filterOption
-      disabled={disabled ? disabled : false}
+      disabled={disabled ?? false}
       loading={isFetchingData}
     >
       {getAllTeams().map((team) => (

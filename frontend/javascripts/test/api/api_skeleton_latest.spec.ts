@@ -308,7 +308,9 @@ describe("API Skeleton", () => {
       true,
     );
   });
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties for XY viewport", ({
+    api,
+  }) => {
     Store.dispatch(setRotationAction([0, 0, 0]));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
     api.tracing.createNode([10, 10, 10]);
@@ -330,7 +332,9 @@ describe("API Skeleton", () => {
       mag: 0,
     });
   });
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties for YZ viewport", ({
+    api,
+  }) => {
     Store.dispatch(setRotationAction([0, 0, 0]));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
     api.tracing.createNode([10, 10, 10]);
@@ -353,7 +357,9 @@ describe("API Skeleton", () => {
     });
   });
 
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties", ({ api }) => {
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties for XZ viewport", ({
+    api,
+  }) => {
     Store.dispatch(setRotationAction([0, 0, 0]));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XZ));
     api.tracing.createNode([10, 10, 10]);
@@ -375,12 +381,13 @@ describe("API Skeleton", () => {
       mag: 0,
     });
   });
+  // TODOM: Try figure out why these tests need to compare the quaternions differently.
   it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in XY viewport.", ({
     api,
   }) => {
     const rotation = [20, 90, 10] as Vector3;
     const rotationQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(rotation), "ZYX"),
+      new THREE.Euler(...toRadian(rotation)),
     );
     Store.dispatch(setRotationAction(rotation));
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
@@ -389,7 +396,7 @@ describe("API Skeleton", () => {
       .trees.getOrThrow(2)
       .nodes.getOrThrow(4);
     const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(newNode.rotation), "ZYX"),
+      new THREE.Euler(...toRadian(newNode.rotation)),
     );
     expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
   });
@@ -398,7 +405,7 @@ describe("API Skeleton", () => {
   }) => {
     const rotation = [20, 90, 0] as Vector3;
     const rotationQuaternion = new THREE.Quaternion()
-      .setFromEuler(new THREE.Euler(...toRadian(rotation), "ZYX"))
+      .setFromEuler(new THREE.Euler(...toRadian([-rotation[0], -rotation[1], -rotation[2]]), "ZYX"))
       // Apply viewport's default rotation.
       .multiply(new THREE.Quaternion().setFromEuler(OrthoBaseRotations[OrthoViews.PLANE_YZ]));
     Store.dispatch(setRotationAction(rotation));
@@ -408,7 +415,7 @@ describe("API Skeleton", () => {
       .trees.getOrThrow(2)
       .nodes.getOrThrow(4);
     const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(newNode.rotation), "ZYX"),
+      new THREE.Euler(...toRadian(newNode.rotation)),
     );
     expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
   });

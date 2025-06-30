@@ -350,6 +350,13 @@ export function getFlycamRotationWithAppendedRotation(
   rotationToAppend: THREE.Euler,
 ): Vector3 {
   const flycamRotation = getRotationInRadian(flycam, false);
+  if (V3.equals(flycamRotation, [0, 0, 0])) {
+    return map3(THREE.MathUtils.radToDeg, [
+      rotationToAppend.x,
+      rotationToAppend.y,
+      rotationToAppend.z,
+    ]);
+  }
 
   // Perform same operations as the flycam reducer does. First default 180° around z.
   let rotFlycamMatrix = eulerAngleToReducerInternalMatrix(flycamRotation);

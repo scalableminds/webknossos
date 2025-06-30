@@ -39,7 +39,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
-  segmentationPatternOpacity: "Pattern Opacity",
+  segmentationPatternOpacity: "Segmentation Pattern Opacity",
   loadingStrategy: "Loading Strategy",
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
@@ -50,6 +50,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  segmentationPatternOpacity:
+    "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
       (will take longer until you see data) or alternatively,
       improving the quality progressively (data will be loaded faster,
@@ -82,6 +84,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
+
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
   alpha: "Layer opacity",

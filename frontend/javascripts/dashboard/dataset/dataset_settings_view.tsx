@@ -221,7 +221,7 @@ const DatasetSettingsView: React.FC = () => {
     <Layout
       style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "var(--ant-layout-body-bg)" }}
     >
-      <Sider width={200}>
+      <Sider width={300}>
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}

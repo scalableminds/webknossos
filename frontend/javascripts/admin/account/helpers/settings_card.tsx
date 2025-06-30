@@ -18,7 +18,7 @@ export function SettingsCard({ title, content, tooltip, action }: SettingsCardPr
 
             {tooltip != null ? (
               <Tooltip title={tooltip}>
-                <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                <InfoCircleOutlined style={{ marginLeft: 10 }} />
               </Tooltip>
             ) : null}
           </div>

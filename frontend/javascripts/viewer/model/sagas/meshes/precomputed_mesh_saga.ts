@@ -29,6 +29,7 @@ import {
 import {
   getEditableMappingForVolumeTracingId,
   getTracingForSegmentationLayer,
+  isTracingLayerWithoutFallback,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -58,12 +59,8 @@ let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unkn
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
-  // Only an segmentation layer with an existing fallback layer can have meshfiles.
-  if (
-    !segmentationLayer ||
-    !("fallbackLayer" in segmentationLayer) ||
-    segmentationLayer.fallbackLayer == null
-  ) {
+  // Only an segmentation | tracing layer with an existing fallback layer can have meshfiles.
+  if (!segmentationLayer || isTracingLayerWithoutFallback(segmentationLayer)) {
     callback([]);
     return;
   }

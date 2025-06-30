@@ -77,7 +77,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
   private val hdf5MeshFileExtension = "hdf5"
 
   private val meshFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
+    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
 
   def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
       implicit ec: ExecutionContext): Fox[MeshFileKey] =
@@ -100,7 +100,11 @@ class MeshFileService @Inject()(config: DataStoreConfig,
       })
       localFallbackAttachment = LayerAttachment(
         meshFileName,
-        localDatasetDir.resolve(dataLayer.name).resolve(localMeshesDir).toUri,
+        localDatasetDir
+          .resolve(dataLayer.name)
+          .resolve(localMeshesDir)
+          .resolve(meshFileName + "." + hdf5MeshFileExtension)
+          .toUri,
         LayerAttachmentDataformat.hdf5
       )
       selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)

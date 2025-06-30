@@ -118,7 +118,11 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
       })
       localFallbackAttachment = LayerAttachment(
         connectomeFileName,
-        localDatasetDir.resolve(dataLayer.name).resolve(localConnectomesDir).toUri,
+        localDatasetDir
+          .resolve(dataLayer.name)
+          .resolve(localConnectomesDir)
+          .resolve(connectomeFileName + "." + hdf5ConnectomeFileExtension)
+          .toUri,
         LayerAttachmentDataformat.hdf5
       )
       selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)

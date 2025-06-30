@@ -161,56 +161,30 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 }
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
-  const alerts = [];
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAboutToExpire =
     dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);
 
-  if (isAboutToExpire)
-    alerts.push({
-      message:
-        "Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features.",
-      actionButton: (
-        <Button
-          size="small"
-          type="primary"
-          onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
-        >
-          Extend Plan Now
-        </Button>
-      ),
-    });
-  else {
-    alerts.push({
-      message:
-        "Your organization is about to exceed the storage space included in your current plan. Upgrade now to avoid your account from being blocked.",
-      actionButton: (
-        <Button
-          size="small"
-          type="primary"
-          onClick={() => UpgradePricingPlanModal.upgradePricingPlan(organization)}
-        >
-          Upgrade Now
-        </Button>
-      ),
-    });
-  }
+  if (isAboutToExpire) {
+    const actionButton = (
+      <Button
+        size="small"
+        type="primary"
+        onClick={() => UpgradePricingPlanModal.extendPricingPlan(organization)}
+      >
+        Extend Plan Now
+      </Button>
+    );
 
-  return (
-    <>
-      {alerts.map((alert) => (
-        <Alert
-          key={alert.message.slice(0, 10)}
-          showIcon
-          type="warning"
-          message={alert.message}
-          action={
-            activeUser && isUserAllowedToRequestUpgrades(activeUser) ? alert.actionButton : null
-          }
-          style={{ marginBottom: 20 }}
-        />
-      ))}
-    </>
-  );
+    return (
+      <Alert
+        showIcon
+        type="warning"
+        message="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+        action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
+        style={{ marginBottom: 20 }}
+      />
+    );
+  } else return null;
 }

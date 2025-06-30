@@ -77,7 +77,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
   private val hdf5MeshFileExtension = "hdf5"
 
   private val meshFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, attachmentName → MeshFileKey
+    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
 
   def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
       implicit ec: ExecutionContext): Fox[MeshFileKey] =

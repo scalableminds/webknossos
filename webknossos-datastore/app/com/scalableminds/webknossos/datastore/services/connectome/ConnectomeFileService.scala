@@ -94,7 +94,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
   private val hdf5ConnectomeFileExtension = "hdf5"
 
   private val connectomeFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] = AlfuCache() // dataSourceId, layerName, attachmentName → ConnectomeFileKey
+    : AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] = AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey
 
   def lookUpConnectomeFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, connectomeFileName: String)(
       implicit ec: ExecutionContext): Fox[ConnectomeFileKey] =

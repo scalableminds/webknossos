@@ -58,7 +58,12 @@ let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unkn
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
-  if (!segmentationLayer) {
+  // Only an segmentation layer with an existing fallback layer can have meshfiles.
+  if (
+    !segmentationLayer ||
+    !("fallbackLayer" in segmentationLayer) ||
+    segmentationLayer.fallbackLayer == null
+  ) {
     callback([]);
     return;
   }

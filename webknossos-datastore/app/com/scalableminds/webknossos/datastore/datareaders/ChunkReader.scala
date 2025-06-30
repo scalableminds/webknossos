@@ -25,16 +25,21 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) if useSkipTypingShortcut =>
           shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
-        case Empty if useSkipTypingShortcut =>
-          shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
         case Full(chunkBytes) =>
           chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
+          createFromFillValue(chunkShape, useSkipTypingShortcut)
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }
     } yield typed
+
+  def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(
+      implicit ec: ExecutionContext): Fox[MultiArray] =
+    if (useSkipTypingShortcut)
+      shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
+    else
+      chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)

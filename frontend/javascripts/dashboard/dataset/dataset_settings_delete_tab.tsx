@@ -1,23 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
+import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button } from "antd";
-import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
 import { useHistory } from "react-router-dom";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { confirmAsync } from "./helper_components";
 
-type Props = {
-  datasetId: string;
-};
-
-const DatasetSettingsDeleteTab = ({ datasetId }: Props) => {
+const DatasetSettingsDeleteTab = () => {
+  const { dataset } = useDatasetSettingsContext();
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const history = useHistory();
 
-  const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
+  // const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
 
   async function handleDeleteButtonClicked(): Promise<void> {
     if (!dataset) {

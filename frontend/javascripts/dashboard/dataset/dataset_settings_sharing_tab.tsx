@@ -1,7 +1,7 @@
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
-import { Button, Checkbox, Collapse, type FormInstance, Input, Space, Tooltip } from "antd";
+import { Button, Checkbox, Collapse, Input, Space, Tooltip } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -10,19 +10,13 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
-import type React from "react";
 import { useEffect, useState } from "react";
-import type { APIDataset } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { FormItemWithInfo } from "./helper_components";
 
-type Props = {
-  form: FormInstance | null;
-  datasetId: string;
-  dataset: APIDataset | null | undefined;
-};
-
-export default function DatasetSettingsSharingTab({ form, datasetId, dataset }: Props) {
+export default function DatasetSettingsSharingTab() {
+  const { form, datasetId, dataset } = useDatasetSettingsContext();
   const [sharingToken, setSharingToken] = useState("");
   const activeUser = useWkSelector((state) => state.activeUser);
   const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);

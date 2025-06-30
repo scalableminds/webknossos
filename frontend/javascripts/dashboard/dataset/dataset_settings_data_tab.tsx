@@ -1,6 +1,5 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
-import { useStartAndPollJob } from "admin/job/job_hooks";
 import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
@@ -16,6 +15,7 @@ import {
   Switch,
   Tooltip,
 } from "antd";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
   FormItemWithInfo,
   Hideable,
@@ -35,11 +35,12 @@ import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const FormItem = Form.Item;
 
 export const syncDataSourceFields = (
-  form: FormInstance,
+  form: FormInstance, // Keep form as a prop for this utility function
   syncTargetTabKey: "simple" | "advanced",
   // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
   // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
@@ -78,16 +79,14 @@ export const syncDataSourceFields = (
 };
 
 export default function DatasetSettingsDataTab({
-  form,
-  activeDataSourceEditMode,
   onChange,
-  dataset,
 }: {
-  form: FormInstance;
-  activeDataSourceEditMode: "simple" | "advanced";
+  // Form is passed explicitly because syncDataSourceFields is a utility function
+  // that needs the form instance, and it's called from the parent.
+  // The rest of the props are now derived from context.
   onChange: (arg0: "simple" | "advanced") => void;
-  dataset?: APIDataset | null | undefined;
 }) {
+  const { dataset, form, activeDataSourceEditMode } = useDatasetSettingsContext();
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
   Form.useWatch("dataSource", form);

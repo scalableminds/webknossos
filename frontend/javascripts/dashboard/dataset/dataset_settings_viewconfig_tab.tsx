@@ -29,6 +29,7 @@ import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/v
 import { BLEND_MODES } from "viewer/constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
@@ -42,6 +43,7 @@ export default function DatasetSettingsViewConfigTab(props: {
     Record<string, [string[], string[]]>
   >({});
 
+  const { dataset } = useDatasetSettingsContext();
   const validateDefaultMappings = useMemo(
     () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
       let config = {} as DatasetConfiguration["layers"];
@@ -92,7 +94,7 @@ export default function DatasetSettingsViewConfigTab(props: {
         throw new Error("The following mappings are invalid: " + errors.join("\n"));
       }
     },
-    [availableMappingsPerLayerCache],
+    [availableMappingsPerLayerCache, dataset], // Add dataset to dependencies for dataSourceId
   );
 
   const columns = [
@@ -303,6 +305,7 @@ export default function DatasetSettingsViewConfigTab(props: {
               {
                 validator: (_rule, config: string) =>
                   Promise.all([
+                    // Use dataset.dataSource.id for dataSourceId
                     validateLayerViewConfigurationObjectJSON(_rule, config),
                     dataStoreURL
                       ? validateDefaultMappings(config, dataStoreURL, dataSourceId)

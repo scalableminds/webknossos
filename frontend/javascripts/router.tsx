@@ -75,6 +75,7 @@ import type { EmptyObject } from "types/globals";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 
 const { Content } = Layout;
 
@@ -546,12 +547,14 @@ class ReactRouter extends React.Component<Props> {
                     );
                   }
                   return (
-                    <DatasetSettingsView
-                      isEditingMode
-                      datasetId={datasetId || ""}
-                      onComplete={() => window.history.back()}
-                      onCancel={() => window.history.back()}
-                    />
+                    <DatasetSettingsProvider isEditingMode
+                        datasetId={datasetId || ""}
+                        onComplete={() => window.history.back()}
+                        onCancel={() => window.history.back()}>
+                      <DatasetSettingsView
+                        
+                      />
+                    </DatasetSettingsProvider>
                   );
                 }}
               />

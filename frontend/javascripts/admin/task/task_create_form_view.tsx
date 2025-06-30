@@ -42,8 +42,7 @@ import { Vector3Input, Vector6Input } from "libs/vector_input";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
@@ -291,7 +290,6 @@ export function ReloadResourceButton({
 
 type Props = {
   taskId: string | null | undefined;
-  history: RouteComponentProps["history"];
 };
 
 type FormValues = {
@@ -309,7 +307,8 @@ type FormValues = {
   neededExperience: NewTask["neededExperience"];
 };
 
-function TaskCreateFormView({ taskId, history }: Props) {
+function TaskCreateFormView({ taskId }: Props) {
+  const history = useHistory();
   const { modal } = App.useApp();
   const [form] = Form.useForm<FormValues>();
 
@@ -811,4 +810,4 @@ function TaskCreateFormView({ taskId, history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskCreateFormView);
+export default TaskCreateFormView;

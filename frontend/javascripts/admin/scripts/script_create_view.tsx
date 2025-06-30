@@ -2,8 +2,7 @@ import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } fro
 import { Button, Card, Form, Input, Select } from "antd";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import type { WebknossosState } from "viewer/store";
@@ -16,11 +15,9 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
 
-function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
+function ScriptCreateView({ scriptId, activeUser }: Props) {
+  const history = useHistory();
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
@@ -135,4 +132,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(ScriptCreateView));
+export default connector(ScriptCreateView);

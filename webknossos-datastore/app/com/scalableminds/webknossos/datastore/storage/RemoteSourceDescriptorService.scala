@@ -70,7 +70,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
       val localPath = Paths.get(uri.getPath)
       if (localPath.isAbsolute) {
-        if (localPath.toString.startsWith(localDatasetDir.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
+        if (localPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
               .exists(whitelistEntry => localPath.toString.startsWith(whitelistEntry)))
           uri
         else

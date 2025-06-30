@@ -74,9 +74,10 @@ class MeshFileService @Inject()(config: DataStoreConfig,
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val meshesDir = "meshes"
+  private val hdf5MeshFileExtension = "hdf5"
 
   private val meshFileKeyCache
-    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → MeshFileKey
+    : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
 
   def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
       implicit ec: ExecutionContext): Fox[MeshFileKey] =
@@ -99,7 +100,11 @@ class MeshFileService @Inject()(config: DataStoreConfig,
       })
       localFallbackAttachment = LayerAttachment(
         meshFileName,
-        localDatasetDir.resolve(dataLayer.name).resolve(meshesDir).toUri,
+        localDatasetDir
+          .resolve(dataLayer.name)
+          .resolve(meshesDir)
+          .resolve(meshFileName + "." + hdf5MeshFileExtension)
+          .toUri,
         LayerAttachmentDataformat.hdf5
       )
       selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
@@ -119,7 +124,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val scannedMeshFileNames = PathUtils
-      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
+      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5MeshFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

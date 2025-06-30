@@ -98,7 +98,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
       })
       localFallbackAttachment = LayerAttachment(
         mappingName,
-        localDatasetDir.resolve(dataLayer.name).resolve(agglomerateDir).toUri,
+        localDatasetDir
+          .resolve(dataLayer.name)
+          .resolve(agglomerateDir)
+          .resolve(mappingName + "." + hdf5AgglomerateFileExtension)
+          .toUri,
         LayerAttachmentDataformat.hdf5
       )
       selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)

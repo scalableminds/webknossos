@@ -546,13 +546,22 @@ class ReactRouter extends React.Component<Props> {
                     );
                   }
                   return (
-                    <DatasetSettingsProvider isEditingMode
-                        datasetId={datasetId || ""}
-                        onComplete={() => window.history.back()}
-                        onCancel={() => window.history.back()}>
-                      <DatasetSettingsView
-                        
-                      />
+                    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
+                      <DatasetSettingsView />
+                    </DatasetSettingsProvider>
+                  );
+                }}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/datasets/:datasetNameAndId/edit/:tab"
+                render={({ match }: ContextRouter) => {
+                  const { datasetId } = getDatasetIdOrNameFromReadableURLPart(
+                    match.params.datasetNameAndId,
+                  );
+                  return (
+                    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
+                      <DatasetSettingsView />
                     </DatasetSettingsProvider>
                   );
                 }}

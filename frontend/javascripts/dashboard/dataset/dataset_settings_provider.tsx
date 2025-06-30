@@ -40,16 +40,12 @@ type DatasetSettingsProviderProps = {
   children: React.ReactNode;
   datasetId: string;
   isEditingMode: boolean;
-  onComplete: () => void;
-  onCancel: () => void;
 };
 
 export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = ({
   children,
   datasetId,
   isEditingMode,
-  onComplete,
-  onCancel,
 }) => {
   const [form] = Form.useForm<FormData>();
   const queryClient = useQueryClient();
@@ -83,6 +79,10 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       unblockRef.current = null;
     }
   }, []);
+
+  const onComplete = () => window.history.back();
+
+  const onCancel = () => window.history.back();
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {

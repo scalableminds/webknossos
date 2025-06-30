@@ -1,58 +1,113 @@
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Form, Spin, Tabs, Tooltip } from "antd";
+import {
+  CodeSandboxOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  SafetyOutlined,
+  SettingOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
 import features from "features";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
-import { useWkSelector } from "libs/react_hooks";
-import React, { useCallback } from "react";
-import { Link } from "react-router-dom";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
-import { Hideable } from "./helper_components";
+import { useWkSelector } from "libs/react_hooks";
+import type React from "react";
+import { useCallback } from "react";
+import { Link, Route, useHistory, useLocation, Switch } from "react-router-dom";
 import { Unicode } from "viewer/constants";
 import messages from "messages";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import type { MenuItemGroupType } from "antd/es/menu/interface";
 
+const { Sider, Content } = Layout;
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 
-type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
+const BREADCRUMB_LABELS = {
+  data: "Data Source",
+  sharing: "Sharing & Permissions",
+  metadata: "Metadata",
+  defaultConfig: "View Configuration",
+  delete: "Delete Dataset",
+};
+
+const MENU_ITEMS: MenuItemGroupType[] = [
+  {
+    label: "Dataset Settings",
+    type: "group",
+    children: [
+      {
+        key: "data",
+        icon: <CodeSandboxOutlined />,
+        label: "Data Source",
+      },
+      {
+        key: "sharing",
+        icon: <TeamOutlined />,
+        label: "Sharing & Permissions",
+      },
+      {
+        key: "metadata",
+        icon: <FileTextOutlined />,
+        label: "Metadata",
+      },
+      {
+        key: "defaultConfig",
+        icon: <SettingOutlined />,
+        label: "View Configuration",
+      },
+      {
+        key: "delete",
+        icon: <DeleteOutlined />,
+        label: "Delete",
+      },
+    ],
+  },
+];
+
+// if (isUserAdmin && features().allowDeleteDatasets) {
+//   MENU_ITEMS[0].children.push();
+// }
 
 const DatasetSettingsView: React.FC = () => {
   const {
     form,
-    isLoading,
     isEditingMode,
     dataset,
     datasetId,
     handleSubmit,
     handleCancel,
-    handleDataSourceEditModeChange,
     onValuesChange,
     getFormValidationSummary,
   } = useDatasetSettingsContext();
   const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
-  const [activeTabKey, setActiveTabKey] = React.useState<TabKey>("data");
+  const location = useLocation();
+  const history = useHistory();
+  const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "data";
 
-  const switchToProblematicTab = useCallback(() => {
-    const validationSummary = getFormValidationSummary();
+  // const switchToProblematicTab = useCallback(() => {
+  //   const validationSummary = getFormValidationSummary();
 
-    if (validationSummary[activeTabKey]) {
-      // Active tab is already problematic
-      return;
-    }
+  //   if (validationSummary[activeTabKey]) {
+  //     // Active tab is already problematic
+  //     return;
+  //   }
 
-    // Switch to the earliest, problematic tab
-    const problematicTab = ["data", "general", "defaultConfig"].find(
-      (key) => validationSummary[key],
-    );
+  //   // Switch to the earliest, problematic tab
+  //   const problematicTab = ["data", "general", "defaultConfig"].find(
+  //     (key) => validationSummary[key],
+  //   );
 
-    if (problematicTab) {
-      setActiveTabKey(problematicTab as TabKey);
-    }
-  }, [getFormValidationSummary, activeTabKey]);
+  //   if (problematicTab) {
+  //     setActiveTabKey(problematicTab as TabKey);
+  //   }
+  // }, [getFormValidationSummary, activeTabKey]);
 
   const getMessageComponents = useCallback(() => {
     if (dataset == null) {
@@ -144,105 +199,65 @@ const DatasetSettingsView: React.FC = () => {
     </Tooltip>
   );
 
-  const tabs = [
+  const breadcrumbItems = [
     {
-      label: <span> Data {formErrors.data ? errorIcon : ""}</span>,
-      key: "data",
-      forceRender: true,
-      children: (
-        <Hideable hidden={activeTabKey !== "data"}>
-          {
-            // We use the Hideable component here to avoid that the user can "tab"
-            // to hidden form elements.
-          }
-          <DatasetSettingsDataTab
-            key="SimpleAdvancedDataForm"
-            onChange={handleDataSourceEditModeChange}
-          />
-        </Hideable>
-      ),
+      title: "Dataset Settings",
     },
-
     {
-      label: <span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>,
-      key: "sharing",
-      forceRender: true,
-      children: (
-        <Hideable hidden={activeTabKey !== "sharing"}>
-          <DatasetSettingsSharingTab />
-        </Hideable>
-      ),
-    },
-
-    {
-      label: <span>Metadata</span>,
-      key: "general",
-      forceRender: true,
-      children: (
-        <Hideable hidden={activeTabKey !== "general"}>
-          <DatasetSettingsMetadataTab />
-        </Hideable>
-      ),
-    },
-
-    {
-      label: <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>,
-      key: "defaultConfig",
-      forceRender: true,
-      children: (
-        <Hideable hidden={activeTabKey !== "defaultConfig"}>
-          {
-            maybeDataSourceId ? (
-              <DatasetSettingsViewConfigTab
-                dataSourceId={maybeDataSourceId}
-                dataStoreURL={dataset?.dataStore.url}
-              />
-            ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */
-          }
-        </Hideable>
-      ),
+      title: BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS],
     },
   ];
 
-  if (isUserAdmin && features().allowDeleteDatasets)
-    tabs.push({
-      label: <span> Delete Dataset </span>,
-      key: "deleteDataset",
-      forceRender: true,
-      children: (
-        <Hideable hidden={activeTabKey !== "deleteDataset"}>
-          <DatasetSettingsDeleteTab />
-        </Hideable>
-      ),
-    });
-
   return (
-    <Form
-      form={form}
-      className="row container dataset-import"
-      onFinish={handleSubmit}
-      onFinishFailed={handleSubmit}
-      onValuesChange={onValuesChange}
-      layout="vertical"
+    <Layout
+      style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "var(--ant-layout-body-bg)" }}
     >
-      <Card
-        bordered={false}
-        title={
-          <h3>
-            {titleString} Dataset {datasetLinkOrName}
-          </h3>
-        }
-      >
-        <Spin size="large" spinning={isLoading}>
-          {getMessageComponents()}
-
-          <Card>
-            <Tabs
-              activeKey={activeTabKey}
-              onChange={(key) => setActiveTabKey(key as TabKey)} // Update active tab key
-              items={tabs}
+      <Sider width={200}>
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          style={{ height: "100%", padding: 24 }}
+          items={MENU_ITEMS}
+          onClick={({ key }) => history.push(`/datasets/${datasetId}/edit/${key}`)}
+        />
+      </Sider>
+      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
+        <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
+        {getMessageComponents()}
+        <Form
+          form={form}
+          onFinish={handleSubmit}
+          onFinishFailed={handleSubmit}
+          onValuesChange={onValuesChange}
+          layout="vertical"
+        >
+          <Switch>
+            <Route
+              path="/datasets/:datasetNameAndId/edit/data"
+              component={DatasetSettingsDataTab}
             />
-          </Card>
+            <Route
+              path="/datasets/:datasetNameAndId/edit/sharing"
+              component={DatasetSettingsSharingTab}
+            />
+            <Route
+              path="/datasets/:datasetNameAndId/edit/metadata"
+              component={DatasetSettingsMetadataTab}
+            />
+            <Route
+              path="/datasets/:datasetNameAndId/edit/defaultConfig"
+              render={() => (
+                <DatasetSettingsViewConfigTab
+                  dataSourceId={maybeDataSourceId}
+                  dataStoreURL={dataset?.dataStore.url}
+                />
+              )}
+            />
+            <Route
+              path="/datasets/:datasetNameAndId/edit/delete"
+              component={DatasetSettingsDeleteTab}
+            />
+          </Switch>
           <FormItem
             style={{
               marginTop: 8,
@@ -252,11 +267,11 @@ const DatasetSettingsView: React.FC = () => {
               {confirmString}
             </Button>
             {Unicode.NonBreakingSpace}
-            <Button onClick={handleCancel}>Cancel</Button> {/* Use handleCancel from context */}
+            <Button onClick={handleCancel}>Cancel</Button>
           </FormItem>
-        </Spin>
-      </Card>
-    </Form>
+        </Form>
+      </Content>
+    </Layout>
   );
 };
 

@@ -266,7 +266,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateList = agglomerateService.listAgglomerates(dataSource.id, dataLayer)
+        agglomerateList = agglomerateService.listAgglomeratesFiles(dataSource.id, dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }
@@ -450,7 +450,8 @@ class DataSourceController @Inject()(
                                       layerName: Option[String]): InboxDataSource = {
     val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
       binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
-    val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetDirectoryName, layerName)
+    val closedMeshFileHandleCount =
+      meshFileService.clearCache(DataSourceId(organizationId, datasetDirectoryName), layerName)
     val reloadedDataSource: InboxDataSource = dataSourceService.dataSourceFromDir(
       dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
       organizationId)

@@ -11,6 +11,7 @@ import ch.systemsx.cisd.hdf5.{
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.typesafe.scalalogging.LazyLogging
@@ -35,12 +36,15 @@ class CachedHdf5File(reader: IHDF5Reader)
   lazy val stringReader: IHDF5StringReader = reader.string()
   lazy val float64Reader: IHDF5DoubleReader = reader.float64()
 
-  // For Meshfile
+  // For MeshFile
   lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
   lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
+  lazy val mappingName: String = stringReader.getAttr("/", "mapping_name")
 
-  // For Meshfile and SegmentIndexFile
+  // For MeshFile and SegmentIndexFile
   lazy val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
+
+  lazy val artifactSchemaVersion: Long = int64Reader.getAttr("/", "artifact_schema_version")
 }
 
 object CachedHdf5File {
@@ -89,4 +93,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
+
+  def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
+    withCachedHdf5(Path.of(attachment.path))(block)
 }

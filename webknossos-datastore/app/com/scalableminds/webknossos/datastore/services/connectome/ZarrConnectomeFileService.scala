@@ -53,6 +53,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
   private lazy val attributesCache = AlfuCache[ConnectomeFileKey, ConnectomeFileAttributes]()
 
   private val keyCsrIndptr = "CSR_indptr"
+  private val keyCscIndptr = "CSC_indptr"
   private val keyCsrIndices = "CSR_indices"
   private val keyAgglomeratePairOffsets = "agglomerate_pair_offsets"
   private val keyCscAgglomeratePair = "CSC_agglomerate_pair"
@@ -109,7 +110,8 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         for {
           synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3)) // TODO should offset and shape be transposed?
-          synapsePosition <- tryo(synapsePositionMA.getStorage.asInstanceOf[Array[Long]].toSeq).toFox
+          synapsePosition <- tryo(
+            Seq(synapsePositionMA.getLong(0), synapsePositionMA.getLong(1), synapsePositionMA.getLong(2))).toFox
         } yield synapsePosition
       }
     } yield synapsePositions
@@ -132,7 +134,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[Long]] =
     for {
-      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId)
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCscIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
       cscAgglomeratePairArray <- openZarrArray(connectomeFileKey, keyCscAgglomeratePair)
       agglomeratePairsMA <- cscAgglomeratePairArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
@@ -146,10 +148,11 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       }
     } yield synapseIdsNested.flatten
 
-  private def getToAndFromPtr(connectomeFileKey: ConnectomeFileKey,
-                              agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] =
+  private def getToAndFromPtr(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long, arrayKey: String)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Long, Long)] =
     for {
-      csrIndptrArray <- openZarrArray(connectomeFileKey, keyCsrIndptr)
+      csrIndptrArray <- openZarrArray(connectomeFileKey, arrayKey)
       fromAndToPtr <- csrIndptrArray.readAsMultiArray(offset = agglomerateId, shape = 2)
       fromPtr <- tryo(fromAndToPtr.getLong(0)).toFox
       toPtr <- tryo(fromAndToPtr.getLong(1)).toFox
@@ -159,7 +162,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
-      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId)
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCsrIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
       fromMA <- agglomeratePairOffsetsArray.readAsMultiArray(offset = fromPtr, shape = 1)
       from <- tryo(fromMA.getLong(0)).toFox
@@ -172,7 +175,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       tc: TokenContext): Fox[Seq[Long]] =
     for {
       csrIndicesArray <- openZarrArray(connectomeFileKey, keyCsrIndices)
-      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, srcAgglomerateId)
+      (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, srcAgglomerateId, keyCsrIndptr)
       columnValuesMA <- csrIndicesArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       columnValues: Array[Long] <- tryo(columnValuesMA.getStorage.asInstanceOf[Array[Long]]).toFox
       columnOffset = SequenceUtils.searchSorted(columnValues, dstAgglomerateId)

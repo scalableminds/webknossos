@@ -6,11 +6,12 @@ export type SettingsCardProps = {
   content: React.ReactNode;
   tooltip?: React.ReactNode;
   action?: React.ReactNode;
+  style?: React.CSSProperties;
 };
 
-export function SettingsCard({ title, content, tooltip, action }: SettingsCardProps) {
+export function SettingsCard({ title, content, tooltip, action, style }: SettingsCardProps) {
   return (
-    <Card style={{ minHeight: 105 }}>
+    <Card style={{ minHeight: 105, ...style }}>
       <Typography.Text type="secondary" style={{ fontSize: 14 }}>
         <Flex justify="space-between">
           <div>
@@ -18,7 +19,7 @@ export function SettingsCard({ title, content, tooltip, action }: SettingsCardPr
 
             {tooltip != null ? (
               <Tooltip title={tooltip}>
-                <InfoCircleOutlined style={{ marginLeft: 10 }} />
+                <InfoCircleOutlined style={{ marginLeft: 8 }} />
               </Tooltip>
             ) : null}
           </div>

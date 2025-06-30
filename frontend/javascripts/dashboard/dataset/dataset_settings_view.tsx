@@ -84,6 +84,17 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 //   MENU_ITEMS[0].children.push();
 // }
 
+const FIXED_SIDER_STYLE: React.CSSProperties = {
+  overflow: "auto",
+  height: "100vh",
+  position: "sticky",
+  insetInlineStart: 0,
+  top: 0,
+  bottom: 0,
+  scrollbarWidth: "thin",
+  scrollbarGutter: "stable",
+};
+
 const DatasetSettingsView: React.FC = () => {
   const {
     form,
@@ -212,6 +223,7 @@ const DatasetSettingsView: React.FC = () => {
     {
       title: "Dataset Settings",
     },
+    { title: dataset?.name },
     {
       title: BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS],
     },

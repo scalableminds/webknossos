@@ -36,6 +36,8 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { SettingsCard } from "admin/account/helpers/settings_card";
 
 const FormItem = Form.Item;
 
@@ -101,9 +103,9 @@ export default function DatasetSettingsDataTab({
 
   return (
     <div>
-      <div
+      <span
         style={{
-          textAlign: "right",
+          float: "right",
         }}
       >
         <Tooltip
@@ -127,7 +129,8 @@ export default function DatasetSettingsDataTab({
             }}
           />
         </Tooltip>
-      </div>
+      </span>
+      <SettingsTitle title="Data Source" description="Configure the data source" />
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
@@ -190,149 +193,135 @@ function SimpleDatasetForm({
     });
     syncDataSourceFields(form, "advanced");
   };
+
   return (
     <div>
-      <List
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Dataset
-          </div>
-        }
-      >
-        <List.Item>
-          <div
-            style={{
-              width: "100%",
-            }}
-          >
-            <Row gutter={48}>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
-                  // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
-                  name={["dataset", "name"]}
-                  label="Name"
-                  info="The name of the dataset"
-                  validateFirst
-                  rules={getDatasetNameRules(activeUser)}
-                >
+      <SettingsCard
+        title="General Dataset Settings"
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
+                // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
+                name={["dataset", "name"]}
+                label="Name"
+                info="The name of the dataset"
+                validateFirst
+                rules={getDatasetNameRules(activeUser)}
+              >
+                <Input
+                  style={{
+                    width: LEFT_COLUMN_ITEMS_WIDTH,
+                  }}
+                />
+              </FormItemWithInfo>
+              <Space size="large" />
+              <FormItemWithInfo
+                name={["dataset", "id"]}
+                label="Dataset ID"
+                info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
+              >
+                <Space.Compact>
                   <Input
+                    value={dataset?.id}
                     style={{
-                      width: LEFT_COLUMN_ITEMS_WIDTH,
+                      width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
                     }}
+                    readOnly
+                    disabled
                   />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataset", "id"]}
-                  label="Dataset ID"
-                  info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
-                >
-                  <Space.Compact>
-                    <Input
-                      value={dataset?.id}
-                      style={{
-                        width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
-                      }}
-                      readOnly
-                      disabled
-                    />
-                    <Tooltip title="Copy dataset ID">
-                      <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
-                    </Tooltip>
-                  </Space.Compact>
-                </FormItemWithInfo>
-              </Col>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "factor"]}
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a voxel size for the dataset.",
-                    },
-                    {
-                      validator: syncValidator(
-                        (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the voxel size must be greater than 0",
-                      ),
-                    },
-                  ]}
-                >
-                  <Vector3Input
-                    style={{
-                      width: 400,
-                    }}
-                    allowDecimals
-                  />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "unit"]}
-                  label="Unit"
-                  info="The unit in which the voxel size is defined."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a unit for the voxel scale of the dataset.",
-                    },
-                  ]}
-                >
-                  <Select
-                    style={{ width: 120 }}
-                    options={AllUnits.map((unit) => ({
-                      value: unit,
-                      label: (
-                        <span>
-                          <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
-                        </span>
-                      ),
-                    }))}
-                  />
-                </FormItemWithInfo>
-              </Col>
-            </Row>
-            <Row gutter={48}>
-              <Col span={24} xl={12} />
-              <Col span={24} xl={12}>
-                <AxisRotationSettingForDataset form={form} />
-              </Col>
-            </Row>
-          </div>
-        </List.Item>
-      </List>
-
-      <List
-        locale={{ emptyText: "No Layers" }}
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Layers
-          </div>
+                  <Tooltip title="Copy dataset ID">
+                    <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                  </Tooltip>
+                </Space.Compact>
+              </FormItemWithInfo>
+            </Col>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                name={["dataSource", "scale", "factor"]}
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a voxel size for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      (value: Vector3) => value?.every((el) => el > 0),
+                      "Each component of the voxel size must be greater than 0",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                />
+              </FormItemWithInfo>
+              <Space size="large" />
+              <FormItemWithInfo
+                name={["dataSource", "scale", "unit"]}
+                label="Unit"
+                info="The unit in which the voxel size is defined."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a unit for the voxel scale of the dataset.",
+                  },
+                ]}
+              >
+                <Select
+                  style={{ width: 120 }}
+                  options={AllUnits.map((unit) => ({
+                    value: unit,
+                    label: (
+                      <span>
+                        <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
+                      </span>
+                    ),
+                  }))}
+                />
+              </FormItemWithInfo>
+            </Col>
+          </Row>
         }
-      >
-        {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          // the layer name may change in this view, the order does not, so idx is the right key choice here
-          <List.Item key={`layer-${idx}`}>
-            <SimpleLayerForm
-              dataset={dataset}
-              layer={layer}
-              index={idx}
-              onRemoveLayer={onRemoveLayer}
-              form={form}
+        style={{ marginBottom: 24 }}
+      />
+
+      <SettingsCard
+        title="Axis Rotation"
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24}>
+              <AxisRotationSettingForDataset form={form} />
+            </Col>
+          </Row>
+        }
+      />
+
+      {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
+        // the layer name may change in this view, the order does not, so idx is the right key choice here
+        <Row gutter={[24, 24]} key={`layer-${idx}`}>
+          <Col span={24}>
+            <SettingsCard
+              title={`Layer: ${layer.name}`}
+              content={
+                <SimpleLayerForm
+                  dataset={dataset}
+                  layer={layer}
+                  index={idx}
+                  onRemoveLayer={onRemoveLayer}
+                  form={form}
+                />
+              }
             />
-          </List.Item>
-        ))}
-      </List>
+          </Col>
+        </Row>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
-import { doWebAuthnLogin } from "admin/webauthn";
+import { doWebAuthnLogin } from "admin/api/webauthn";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
@@ -46,11 +46,15 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const { openIdConnectEnabled, passkeysEnabled = false } = features();
 
   const webauthnLogin = async () => {
-    const [user, organization] = await doWebAuthnLogin();
-    Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setActiveOrganizationAction(organization));
-    if (onLoggedIn) {
-      onLoggedIn();
+    try {
+      const [user, organization] = await doWebAuthnLogin();
+      Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
+      if (onLoggedIn) {
+        onLoggedIn();
+      }
+    } catch (error) {
+      console.error("webauthn login:", error)
     }
   };
 

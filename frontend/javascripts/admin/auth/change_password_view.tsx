@@ -14,7 +14,7 @@ import {
   doWebAuthnRegistration,
   listWebAuthnKeys,
   removeWebAuthnKey,
-} from "admin/webauthn";
+} from "admin/api/webauthn";
 import { useEffect, useState } from "react";
 
 type Props = {

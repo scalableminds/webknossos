@@ -43,7 +43,7 @@ POST          /auth/webauthn/auth/finalize                                      
 POST          /auth/webauthn/register/start                                                     controllers.AuthenticationController.webauthnRegisterStart()
 POST          /auth/webauthn/register/finalize                                                  controllers.AuthenticationController.webauthnRegisterFinalize()
 GET           /auth/webauthn/keys                                                               controllers.AuthenticationController.webauthnListKeys()
-DELETE        /auth/webauthn/key/:id                                                            controllers.AuthenticationController.webauthnRemoveKey(id: ObjectId)
+DELETE        /auth/webauthn/keys/:id                                                           controllers.AuthenticationController.webauthnRemoveKey(id: ObjectId)
 
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()

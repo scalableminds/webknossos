@@ -633,7 +633,7 @@ class AuthenticationController @Inject()(
         _ <- tryo(webAuthnManager.verify(authData, params)).toFox ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
-        _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
+        _ = credential.credentialRecord.setCounter(newSignCount)
         _ <- webAuthnCredentialDAO.updateSignCount(credential) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
 
         // Sign count is 0 if not used by the authenticator.

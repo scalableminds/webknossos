@@ -35,7 +35,9 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-case class MergedFromIdsRequest(annotationIds: Seq[ObjectId], ownerIds: Seq[ObjectId])
+case class MergedFromIdsRequest(annotationIds: Seq[ObjectId],
+                                ownerIds: Seq[ObjectId],
+                                additionalBoundingBoxes: Seq[NamedBoundingBox])
 
 object MergedFromIdsRequest {
   implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
@@ -194,7 +196,8 @@ class TSAnnotationController @Inject()(
 
   def mergedFromIds(toTemporaryStore: Boolean,
                     newAnnotationId: ObjectId,
-                    requestingUserId: ObjectId): Action[MergedFromIdsRequest] =
+                    requestingUserId: ObjectId,
+                    additionalBoundingBoxes: Seq[NamedBoundingBox]): Action[MergedFromIdsRequest] =
     Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -243,7 +246,11 @@ class TSAnnotationController @Inject()(
                                                                       toTemporaryStore) ?~> "mergeVolumeData.failed"
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
-                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)
+                .merge(volumeTracings,
+                       mergedVolumeStats,
+                       newMappingName,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes)
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))

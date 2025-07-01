@@ -712,7 +712,8 @@ class VolumeTracingService @Inject()(
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
             newEditableMappingIdOpt: Option[String],
-            newVersion: Long): Box[VolumeTracing] = {
+            newVersion: Long,
+            additionalBoundingBoxes: Seq[NamedBoundingBox]): Box[VolumeTracing] = {
     def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
                           tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
       for {

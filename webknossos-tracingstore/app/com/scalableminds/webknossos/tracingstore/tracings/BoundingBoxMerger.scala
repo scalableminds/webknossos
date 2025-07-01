@@ -54,8 +54,9 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
     (newBoxes, idMapA, idMapB)
   }
 
-  protected def addAdditionalBoundingBoxes(originalBoundingBoxes: Seq[NamedBoundingBoxProto],
-                                           additionalBoundingBoxes: Seq[NamedBoundingBox]): Seq[NamedBoundingBoxProto] = {
+  protected def addAdditionalBoundingBoxes(
+      originalBoundingBoxes: Seq[NamedBoundingBoxProto],
+      additionalBoundingBoxes: Seq[NamedBoundingBox]): Seq[NamedBoundingBoxProto] = {
     val idOffset = originalBoundingBoxes.map(_.id).maxOption.getOrElse(-1) + 1
     val additionalAdapted = additionalBoundingBoxes.zipWithIndex.map {
       case (bb, idx) => bb.copy(id = idx + idOffset).toProto

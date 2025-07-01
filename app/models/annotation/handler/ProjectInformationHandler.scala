@@ -2,17 +2,19 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
 import models.user.{User, UserService}
-
 import com.scalableminds.util.objectid.ObjectId
+import models.task.TaskDAO
 
 import scala.concurrent.ExecutionContext
 
 class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                           projectDAO: ProjectDAO,
+                                          taskDAO: TaskDAO,
                                           userService: UserService,
                                           annotationMerger: AnnotationMerger)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
@@ -28,13 +30,15 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       datasetId <- annotations.headOption.map(_._dataset).toFox
+      taskBoundingBoxes <- taskDAO.findUniqueTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(projectId,
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   project._team,
                                                   AnnotationType.CompoundProject,
-                                                  annotations) ?~> "annotation.merge.failed.compound"
+                                                  annotations,
+                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

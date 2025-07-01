@@ -196,8 +196,7 @@ class TSAnnotationController @Inject()(
 
   def mergedFromIds(toTemporaryStore: Boolean,
                     newAnnotationId: ObjectId,
-                    requestingUserId: ObjectId,
-                    additionalBoundingBoxes: Seq[NamedBoundingBox]): Action[MergedFromIdsRequest] =
+                    requestingUserId: ObjectId): Action[MergedFromIdsRequest] =
     Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -250,7 +249,7 @@ class TSAnnotationController @Inject()(
                        mergedVolumeStats,
                        newMappingName,
                        newVersion = newTargetVersion,
-                       additionalBoundingBoxes = additionalBoundingBoxes)
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
@@ -260,9 +259,12 @@ class TSAnnotationController @Inject()(
                 findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
-            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(skeletonTracingService
-              .merge(skeletonTracings, newVersion = newTargetVersion, additionalBoundingBoxes = additionalBoundingBoxes)
-              .toFox)
+            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
+              skeletonTracingService
+                .merge(skeletonTracings,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
+                .toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

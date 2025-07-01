@@ -396,9 +396,9 @@ class PlaneController extends React.PureComponent<Props> {
     ) => {
       const state = Store.getState();
       const invertingFactor = oppositeDirection ? -1 : 1;
-      const rotationAngle = fixedStepRotation
-        ? Math.PI / 2
-        : state.userConfiguration.rotateValue * timeFactor * invertingFactor;
+      const rotationAngle =
+        (fixedStepRotation ? Math.PI / 2 : state.userConfiguration.rotateValue * timeFactor) *
+        invertingFactor;
       const { activeViewport } = state.viewModeData.plane;
       const viewportIndices = Dimensions.getIndices(activeViewport);
       const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
@@ -413,7 +413,6 @@ class PlaneController extends React.PureComponent<Props> {
         event.preventDefault();
       }
     });
-    const ignoredTimeFactor = 0;
     this.input.keyboard = new InputKeyboard({
       // Move
       left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
@@ -421,19 +420,11 @@ class PlaneController extends React.PureComponent<Props> {
       up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
       down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
       "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
-      // Directly rotate by 90 degrees.
-      // TODOM: seems to be buggy when switching between shift + ctrl + left and right. Dont know why.
-      "ctrl + shift + left": () => rotateViewportAware(ignoredTimeFactor, 1, false, true),
       "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
-      "ctrl + shift + right": () => rotateViewportAware(ignoredTimeFactor, 1, true, true),
       "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
-      "ctrl + shift + up": () => rotateViewportAware(ignoredTimeFactor, 0, false, true),
       "shift + down": (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
-      "ctrl + shift + down": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
       "alt + left": (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
-      "ctrl + alt + left": () => rotateViewportAware(ignoredTimeFactor, 2, false, true),
       "alt + right": (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
-      "ctrl + alt + right": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
     });
     const {
       baseControls: notLoopedKeyboardControls,
@@ -467,8 +458,18 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
+    const ignoredTimeFactor = 0;
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(
-      notLoopedKeyboardControls,
+      {
+        ...notLoopedKeyboardControls,
+        // Directly rotate by 90 degrees.
+        "ctrl + shift + left": () => rotateViewportAware(ignoredTimeFactor, 1, false, true),
+        "ctrl + shift + right": () => rotateViewportAware(ignoredTimeFactor, 1, true, true),
+        "ctrl + shift + up": () => rotateViewportAware(ignoredTimeFactor, 0, false, true),
+        "ctrl + shift + down": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
+        "ctrl + alt + left": () => rotateViewportAware(ignoredTimeFactor, 2, false, true),
+        "ctrl + alt + right": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
+      },
       {},
       extendedNotLoopedKeyboardControls,
       keyUpControls,

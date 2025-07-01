@@ -293,6 +293,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                               JOIN webknossos.annotations_ a on a._task = t._id
                               WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)}
                               AND t.boundingBox IS NOT NULL
+                              ORDER BY t._id
                               """.as[String])
       bboxes = bboxLiterals.flatMap(literal => parseBboxOpt(Some(literal))).toSet.toSeq
       named = bboxes.map(NamedBoundingBox(0, Some("Task Bounding Box"), None, None, _))

@@ -6,6 +6,6 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 DROP TABLE webknossos.webauthnCredentials;
 DROP VIEW webknossos.webauthnCredentials_;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 134;
+UPDATE webknossos.releaseInformation SET schemaVersion = 135;
 
 COMMIT TRANSACTION;

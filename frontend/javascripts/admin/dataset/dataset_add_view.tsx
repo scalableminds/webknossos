@@ -4,13 +4,11 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
 import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
-import type { History } from "history";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import React, { useState } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -33,7 +31,8 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
   compose: "created",
 };
 
-function DatasetAddView({ history }: RouteComponentProps) {
+function DatasetAddView() {
+  const history = useHistory();
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetId, setDatasetId] = useState("");
   const [uploadedDatasetName, setUploadedDatasetName] = useState("");
@@ -267,7 +266,7 @@ const mapStateToProps = (state: WebknossosState) => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter(DatasetAddView));
+export default connector(DatasetAddView);
 
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,
@@ -275,7 +274,7 @@ const getPostUploadModal = (
   datasetId: string,
   uploadedDatasetName: string,
   setDatasetId: (arg0: string) => void,
-  history: History<unknown>,
+  history: ReturnType<typeof useHistory>,
 ) => {
   return (
     <Modal

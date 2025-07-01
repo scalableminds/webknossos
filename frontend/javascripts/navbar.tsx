@@ -24,7 +24,6 @@ import {
 import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 import LoginForm from "admin/auth/login_form";
@@ -52,12 +51,11 @@ import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
-  isAnnotationFromDifferentOrganization,
+  isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -772,20 +770,23 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
   );
 }
 
-function Navbar({
-  activeUser,
-  isAuthenticated,
-  isInAnnotationView,
-  hasOrganizations,
-  othersMayEdit,
-  blockedByUser,
-  allowUpdate,
-  annotationOwnerName,
-  isLockedByOwner,
-  isAnnotationFromDifferentOrganization,
-  navbarHeight,
-  isAnnotationOwner,
-}: Props) {
+function Navbar() {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+  const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
+  const blockedByUser = useWkSelector((state) => state.annotation.blockedByUser);
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const annotationOwnerName = useWkSelector((state) =>
+    formatUserName(state.activeUser, state.annotation.owner),
+  );
+  const isAnnotationOwner = useWkSelector((state) => isAnnotationOwnerAccessor(state));
+  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
+    isAnnotationFromDifferentOrganizationAccessor(state),
+  );
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -973,19 +974,4 @@ function GlobalProgressBar() {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: state.activeUser,
-  isInAnnotationView: state.uiInformation.isInAnnotationView,
-  hasOrganizations: state.uiInformation.hasOrganizations,
-  othersMayEdit: state.annotation.othersMayEdit,
-  blockedByUser: state.annotation.blockedByUser,
-  allowUpdate: state.annotation.restrictions.allowUpdate,
-  isLockedByOwner: state.annotation.isLockedByOwner,
-  annotationOwnerName: formatUserName(state.activeUser, state.annotation.owner),
-  isAnnotationOwner: isAnnotationOwnerAccessor(state),
-  isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
-  navbarHeight: state.uiInformation.navbarHeight,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(Navbar);
+export default Navbar;

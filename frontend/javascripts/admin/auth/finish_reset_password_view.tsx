@@ -3,7 +3,7 @@ import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 
 function FinishResetPasswordView(props: Props) {
   const [form] = Form.useForm();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   function onFinish(formValues: Record<string, any>) {
     const data = formValues;
@@ -27,7 +27,7 @@ function FinishResetPasswordView(props: Props) {
       data,
     }).then(() => {
       Toast.success(messages["auth.reset_pw_confirmation"]);
-      history.push("/auth/login");
+      navigate("/auth/login");
     });
   }
 

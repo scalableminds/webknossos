@@ -38,7 +38,7 @@ import {
 } from "libs/format_utils";
 import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -264,7 +264,7 @@ export default function TaskListView({
   const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const { runId } = useSearchParams();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
@@ -433,7 +433,7 @@ export default function TaskListView({
       onOk: async () => {
         try {
           await deleteWorkflow(report.workflow.hash);
-          history.push("/workflows");
+          navigate("/workflows");
           message.success("Workflow report deleted.");
         } catch (error) {
           console.error(error);
@@ -678,10 +678,10 @@ export default function TaskListView({
           <Select
             value={runId ?? ""}
             onChange={(value) =>
-              history.replace(
+              navigate(
                 value === ""
-                  ? removeUrlParam(history.location, "runId")
-                  : addUrlParam(history.location, "runId", value),
+                  ? removeUrlParam(location, "runId")
+                  : addUrlParam(location, "runId", value),
               )
             }
             style={{ maxWidth: "70%" }}

@@ -32,8 +32,6 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import { useHistory } from "react-router-dom";
 import type { APIDataStore, APIUser } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
@@ -41,6 +39,8 @@ import { Unicode } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
 import { Hint } from "viewer/view/action-bar/download_modal_view";
 import { dataPrivacyInfo } from "./dataset_upload_view";
+import { useWkSelector } from "libs/react_hooks";
+import { useNavigate } from "react-router-dom";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -179,8 +179,11 @@ export function GoogleAuthFormItem({
   );
 }
 
-function DatasetAddRemoteView(props: Props) {
-  const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
+function DatasetAddRemoteView(props: OwnProps) {
+  const { activeUser } = useWkSelector((state) => ({
+    activeUser: state.activeUser,
+  }));
+  const { onAdded, datastores, defaultDatasetUrl } = props;
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
   const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
@@ -192,7 +195,7 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
-  const history = useHistory();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -213,7 +216,7 @@ function DatasetAddRemoteView(props: Props) {
       .getFieldError("datasetName")
       .filter((error) => error === messages["dataset.name.already_taken"]);
     if (maybeDSNameError == null) return;
-    history.push(
+    navigate(
       `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
     );
   };
@@ -729,9 +732,4 @@ function AddRemoteLayer({
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(DatasetAddRemoteView);
+export default DatasetAddRemoteView;

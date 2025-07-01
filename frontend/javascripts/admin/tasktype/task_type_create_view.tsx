@@ -9,7 +9,7 @@ import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   type APIAllowedMode,
   type APIMagRestrictions,
@@ -74,7 +74,7 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
 }
 
 function TaskTypeCreateView({ taskTypeId }: Props) {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
   const [isFetchingData, setIsFetchingData] = useState(true);
   const [form] = Form.useForm<FormValues>();
@@ -165,7 +165,7 @@ function TaskTypeCreateView({ taskTypeId }: Props) {
       await createTaskType(newTaskType);
     }
 
-    history.push("/taskTypes");
+    navigate("/taskTypes");
   }
 
   function onChangeUseRecommendedConfiguration(useRecommendedConfiguration: boolean) {

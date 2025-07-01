@@ -7,7 +7,7 @@ import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 
 const { Content } = Layout;
@@ -19,7 +19,7 @@ export default function AcceptInviteView({
   token: string;
   activeUser: APIUser | null | undefined;
 }) {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {
@@ -46,7 +46,7 @@ export default function AcceptInviteView({
     targetOrganization != null ? targetOrganization.name || targetOrganization.id : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
-    history.push("/dashboard");
+    navigate("/dashboard");
 
     if (userJustRegistered) {
       // Since the user just registered, the organization is already active.

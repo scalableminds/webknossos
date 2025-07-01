@@ -42,7 +42,7 @@ import { Vector3Input, Vector6Input } from "libs/vector_input";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
@@ -308,7 +308,7 @@ type FormValues = {
 };
 
 function TaskCreateFormView({ taskId }: Props) {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { modal } = App.useApp();
   const [form] = Form.useForm<FormValues>();
 
@@ -381,7 +381,7 @@ function TaskCreateFormView({ taskId }: Props) {
         boundingBox,
       };
       const confirmedTask = await updateTask(taskId, newTask);
-      history.push(`/tasks/${confirmedTask.id}`);
+      navigate(`/tasks/${confirmedTask.id}`);
     } else {
       setIsUploading(true);
       // or create a new one either from the form values or with an NML file

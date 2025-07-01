@@ -557,7 +557,6 @@ export function getPlaneExtentInVoxel(
   return [width * zoomStep, height * zoomStep];
 }
 
-// TODOM: Investigate why these values are different to OrthoBaseRotations.
 export type Area = {
   left: number;
   top: number;

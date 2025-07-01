@@ -176,26 +176,16 @@ class CameraController extends React.PureComponent<Props> {
     const globalPosition = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
     const cameraPosition = voxelToUnit(state.dataset.dataSource.scale, globalPosition);
-    this.props.cameras[OrthoViews.PLANE_XY].position.set(
-      cameraPosition[0],
-      cameraPosition[1],
-      cameraPosition[2],
-    );
-    this.props.cameras[OrthoViews.PLANE_YZ].position.set(
-      cameraPosition[0],
-      cameraPosition[1],
-      cameraPosition[2],
-    );
-    this.props.cameras[OrthoViews.PLANE_XZ].position.set(
-      cameraPosition[0],
-      cameraPosition[1],
-      cameraPosition[2],
-    );
     // Now set rotation for all cameras respecting the base rotation of each camera.
     const globalRotation = getRotationInRadian(state.flycam);
     this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
     this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
     for (const viewport of OrthoViewValuesWithoutTDView) {
+      this.props.cameras[viewport].position.set(
+        cameraPosition[0],
+        cameraPosition[1],
+        cameraPosition[2],
+      );
       this.baseRotationMatrix.makeRotationFromEuler(OrthoCamerasBaseRotations[viewport]);
       this.props.cameras[viewport].setRotationFromMatrix(
         this.totalRotationMatrix
@@ -238,7 +228,7 @@ class CameraController extends React.PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    tdCamera.position.set(...(cameraData.position as Vector3));
+    tdCamera.position.set(...cameraData.position);
     tdCamera.left = cameraData.left;
     tdCamera.right = cameraData.right;
     tdCamera.top = cameraData.top;

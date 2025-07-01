@@ -597,7 +597,6 @@ class PlaneMaterialFactory {
         },
       ),
       listenToStoreProperty(
-        // TODOM: Fix rotating pattern. Rotation around z is also not fixed
         // TODOM: Fix rotation direction. Seems to be in different direction than actual rotation.
         (storeState) => getRotationInRadian(storeState.flycam),
         (rotation) => {
@@ -607,15 +606,7 @@ class PlaneMaterialFactory {
           const toOrigin = new THREE.Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
           const backToFlycamCenter = new THREE.Matrix4().makeTranslation(...position);
           const invertRotation = new THREE.Matrix4()
-            .makeRotationFromEuler(
-              // TODOM: Investigate why the + Math.PI solves the Streching error
-              new THREE.Euler(
-                rotation[0], // + Math.PI,
-                rotation[1], // + Math.PI,
-                rotation[2], // + Math.PI,
-                "ZYX",
-              ),
-            )
+            .makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
             .invert();
           const inverseFlycamRotationMatrix = toOrigin
             .multiply(invertRotation)

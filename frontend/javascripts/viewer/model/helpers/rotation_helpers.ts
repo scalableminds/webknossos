@@ -30,10 +30,10 @@ const rotationFromMatrix = new THREE.Euler();
 
 // The companion function of eulerAngleToReducerInternalMatrix converting a rotation back from the flycam reducer space.
 // The output is in radian and should be interpreted as if in ZYX order.
-// Note: The matrix must be a rotation only matrix
+// Note: The matrix must be a rotation only matrix.
 export function reducerInternalMatrixToEulerAngle(matrixInReducerFormat: THREE.Matrix4): Vector3 {
   const localRotationFromMatrix = rotationFromMatrix.setFromRotationMatrix(
-    matrixInReducerFormat.transpose(),
+    matrixInReducerFormat.clone().transpose(),
     "XYZ",
   );
   return [

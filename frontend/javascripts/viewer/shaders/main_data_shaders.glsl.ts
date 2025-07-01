@@ -524,7 +524,6 @@ void main() {
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-  // TODOM: ask why this special case calculation is needed anyway.
     transWorldCoord.x =
       (
         // Left border of left-most bucket (probably outside of visible plane)

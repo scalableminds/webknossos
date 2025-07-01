@@ -63,9 +63,6 @@ function rotateOnAxisWithDistance(
 
 function keepRotationInBounds(rotation: Vector3): Vector3 {
   const rotationInBounds = Utils.map3((v) => Utils.mod(Math.round(v), 360), rotation);
-  if (rotationInBounds[1] === 90) {
-    rotationInBounds[1] += 10 ** -5;
-  }
   return rotationInBounds;
 }
 

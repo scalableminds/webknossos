@@ -23,7 +23,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
-import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/update_actions";
+import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/volume/update_actions";
 import type { Tree, TreeGroup } from "../types/tree_types";
 
 function convertServerBoundingBoxToBoundingBoxMinMaxType(

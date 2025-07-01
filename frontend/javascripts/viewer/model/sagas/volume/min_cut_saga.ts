@@ -18,12 +18,12 @@ import type { Action } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { finishAnnotationStrokeAction } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { takeEveryUnlessBusy } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type { MagInfo } from "../helpers/mag_info";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box

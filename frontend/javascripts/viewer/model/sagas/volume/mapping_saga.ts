@@ -69,11 +69,11 @@ import type {
   NumberLike,
   NumberLikeMap,
 } from "viewer/store";
-import type { Action } from "../actions/actions";
-import { updateSegmentAction } from "../actions/volumetracing_actions";
-import type DataCube from "../bucket_data_handling/data_cube";
-import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { ensureWkReady } from "./ready_sagas";
+import type { Action } from "../../actions/actions";
+import { updateSegmentAction } from "../../actions/volumetracing_actions";
+import type DataCube from "../../bucket_data_handling/data_cube";
+import { listenToStoreProperty } from "../../helpers/listener_helpers";
+import { ensureWkReady } from "../ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };

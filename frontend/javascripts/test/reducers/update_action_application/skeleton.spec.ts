@@ -24,7 +24,7 @@ import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import type {
   ApplicableSkeletonUpdateAction,
   UpdateActionWithoutIsolationRequirement,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, expect, test, it, afterAll } from "vitest";

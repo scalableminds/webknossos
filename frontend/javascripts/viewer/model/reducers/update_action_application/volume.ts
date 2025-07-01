@@ -4,7 +4,7 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/update_actions";
+import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Segment, WebknossosState } from "viewer/store";
 import type { VolumeTracingReducerAction } from "../volumetracing_reducer";
 import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";

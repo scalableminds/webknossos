@@ -17,7 +17,7 @@ import type {
   TracingStats,
   VolumeTracingStats,
 } from "viewer/model/accessors/annotation_accessor";
-import type { ServerUpdateAction } from "viewer/model/sagas/update_actions";
+import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,

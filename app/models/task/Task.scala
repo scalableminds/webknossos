@@ -290,8 +290,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       bboxLiterals <- run(q"""SELECT t.boundingBox
                               FROM webknossos.tasks_ t
-                              JOIN webknossos.annotations_ on a._task = t._id
-                              WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)})
+                              JOIN webknossos.annotations_ a on a._task = t._id
+                              WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)}
                               AND t.boundingBox IS NOT NULL
                               """.as[String])
       bboxes = bboxLiterals.flatMap(literal => parseBboxOpt(Some(literal))).toSet.toSeq

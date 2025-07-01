@@ -78,7 +78,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "optInTabs": [
     "ConnectomeView",
   ],
-  "passkeysEnabled": true,
+  "passkeysEnabled": false,
   "publicDemoDatasetUrl": "https://webknossos.org/datasets/scalable_minds/l4dense_motta_et_al_demo",
   "recommendWkorgInstance": true,
   "segmentAnythingEnabled": false,

@@ -361,7 +361,7 @@ class TracingApi {
    * coordinates [x, y, z] helps maintain a consistent viewing slice. This prevents the viewports from jumping
    * between slices due to the animation.
    *
-   * In scenarios without raseotation or centering animation, rounded integer coordinates are sufficient.
+   * In scenarios without rotation or centering animation, rounded integer coordinates are sufficient.
    */
   createNode(
     position: Vector3,

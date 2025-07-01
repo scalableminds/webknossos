@@ -34,7 +34,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import {
   type APIProject,
   type APIProjectWithStatus,
@@ -46,10 +46,6 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 const { Column } = Table;
 const { Search } = Input;
 
-type Props = {
-  taskTypeId?: string;
-};
-
 const persistence = new Persistence<{ searchQuery: string }>(
   {
     searchQuery: PropTypes.string,
@@ -57,7 +53,9 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "projectList",
 );
 
-function ProjectListView({ taskTypeId }: Props) {
+function ProjectListView() {
+  const { taskTypeId } = useParams();
+
   const { modal } = App.useApp();
   const location = useLocation();
   const initialSearchValue = location.hash.slice(1);
@@ -89,10 +87,6 @@ function ProjectListView({ taskTypeId }: Props) {
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
-
-  useEffect(() => {
-    fetchData(taskTypeId);
-  }, [taskTypeId]);
 
   async function fetchData(taskTypeId?: string): Promise<void> {
     let projects;

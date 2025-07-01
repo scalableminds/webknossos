@@ -7,18 +7,17 @@ import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 
 const { Content } = Layout;
 
 export default function AcceptInviteView({
-  token,
   activeUser,
 }: {
-  token: string;
   activeUser: APIUser | null | undefined;
 }) {
+  const { token = "" } = useParams();
   const navigate = useNavigate();
   const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(

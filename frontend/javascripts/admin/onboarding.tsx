@@ -24,7 +24,8 @@ import features from "features";
 import Toast from "libs/toast";
 import React, { useState } from "react";
 import { connect } from "react-redux";
-import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import type { APIDataStore, APIUser } from "types/api_types";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -408,7 +409,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     if (this.props.activeUser != null) {
-      this.props.history.push("/dashboard");
+      this.props.navigate("/dashboard");
     }
   }
 
@@ -733,4 +734,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(OnboardingView));
+export default connector(withRouter<RouteComponentProps & Props>(OnboardingView));

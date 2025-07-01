@@ -3,26 +3,28 @@ import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getUrlParamsObjectFromString } from "libs/utils";
+
 const FormItem = Form.Item;
 const { Password } = Input;
-type Props = {
-  resetToken: string;
-};
 
-function FinishResetPasswordView(props: Props) {
+function FinishResetPasswordView() {
+  const location = useLocation();
+  const { token } = getUrlParamsObjectFromString(location.search);
+
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   function onFinish(formValues: Record<string, any>) {
     const data = formValues;
 
-    if (props.resetToken === "") {
+    if (token == null) {
       Toast.error(messages["auth.reset_token_not_supplied"]);
       return;
     }
 
-    data.token = props.resetToken;
+    data.token = token;
     Request.sendJSONReceiveJSON("/api/auth/resetPassword", {
       data,
     }).then(() => {

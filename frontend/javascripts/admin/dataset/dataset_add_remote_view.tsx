@@ -32,7 +32,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import type { APIDataStore, APIUser } from "types/api_types";
+import type { APIDataStore } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { Unicode } from "viewer/constants";

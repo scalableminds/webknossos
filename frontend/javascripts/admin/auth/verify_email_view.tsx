@@ -4,7 +4,7 @@ import { useFetch } from "libs/react_helpers";
 import type { ServerErrorMessage } from "libs/request";
 import Toast from "libs/toast";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Store } from "viewer/singletons";
 
 export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
@@ -44,7 +44,8 @@ export function showVerificationReminderToast() {
   );
 }
 
-export default function VerifyEmailView({ token }: { token: string }) {
+export default function VerifyEmailView() {
+  const { token = "" } = useParams();
   const navigate = useNavigate();
   const [result, exception] = useFetch(
     async () => {

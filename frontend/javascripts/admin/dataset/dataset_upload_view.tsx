@@ -23,7 +23,6 @@ import {
   Tooltip,
 } from "antd";
 import dayjs from "dayjs";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import React from "react";
 import { connect } from "react-redux";
 
@@ -60,8 +59,8 @@ import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
-import { Link, type RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import {
   type APIDataStore,
   APIJobType,
@@ -97,7 +96,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
-  history: RouteComponentProps["history"];
+  navigate: RouteComponentProps["navigate"];
 };
 type State = {
   isUploading: boolean;
@@ -1376,4 +1375,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetUploadView));
+export default connector(withRouter<RouteComponentProps & OwnProps>(DatasetUploadView));

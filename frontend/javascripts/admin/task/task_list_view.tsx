@@ -56,9 +56,15 @@ const persistence = new Persistence<{ searchQuery: string }>(
 
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
-  const { taskId } = useParams();
+  // TODO test this properly
+  const { taskId = "", projectId = "", taskTypeId = "" } = useParams();
 
-  initialFieldValues = { ...initialFieldValues, taskId: taskId || "" };
+  initialFieldValues = {
+    ...initialFieldValues,
+    taskId,
+    projectId,
+    taskTypeId,
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);

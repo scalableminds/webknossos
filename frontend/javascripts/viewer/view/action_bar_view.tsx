@@ -7,11 +7,11 @@ import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import * as React from "react";
-import { connect, useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
-import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import type { APISegmentationLayer } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
-import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
+import { MappingStatusEnum } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
 import {
   doesSupportVolumeWithFallback,
@@ -41,7 +41,7 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import { StartAIJobModal } from "./action-bar/starting_job_modals";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
@@ -55,21 +55,9 @@ const VersionRestoreWarning = (
     type="info"
   />
 );
-type StateProps = {
-  dataset: APIDataset;
-  activeUser: APIUser | null | undefined;
-  controlMode: ControlMode;
-  showVersionRestore: boolean;
-  is2d: boolean;
-  viewMode: ViewMode;
-  aiJobModalState: StartAIJobModalState;
-};
-type OwnProps = {
+
+type Props = {
   layoutProps: LayoutProps;
-};
-type Props = OwnProps & StateProps;
-type State = {
-  isNewLayoutModalOpen: boolean;
 };
 
 function AdditionalCoordinatesInputView() {
@@ -139,7 +127,7 @@ function AdditionalCoordinatesInputView() {
 }
 
 function CreateAnnotationButton() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const activeUser = useWkSelector((state) => state.activeUser);
   const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
   const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
@@ -174,7 +162,7 @@ function CreateAnnotationButton() {
       fallbackLayerName,
       maybeMappingName,
     );
-    history.push(`/annotations/${annotation.id}${location.hash}`);
+    navigate(`/annotations/${annotation.id}${location.hash}`);
   };
 
   const getFallbackLayerName = (segmentationLayer: APISegmentationLayer | null | undefined) => {
@@ -257,38 +245,45 @@ function ModesView() {
   );
 }
 
-class ActionBarView extends React.PureComponent<Props, State> {
-  state: State = {
-    isNewLayoutModalOpen: false,
+function ActionBarView(props: Props) {
+  const { layoutProps } = props;
+  const dataset = useWkSelector((state: WebknossosState) => state.dataset);
+  const activeUser = useWkSelector((state: WebknossosState) => state.activeUser);
+  const controlMode = useWkSelector(
+    (state: WebknossosState) => state.temporaryConfiguration.controlMode,
+  );
+  const showVersionRestore = useWkSelector(
+    (state: WebknossosState) => state.uiInformation.showVersionRestore,
+  );
+  const is2d = useWkSelector((state: WebknossosState) => is2dDataset(state.dataset));
+  const viewMode = useWkSelector((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const aiJobModalState = useWkSelector(
+    (state: WebknossosState) => state.uiInformation.aIJobModalState,
+  );
+
+  const [isNewLayoutModalOpen, setIsNewLayoutModalOpen] = React.useState(false);
+
+  const handleResetLayout = () => {
+    layoutEmitter.emit("resetLayout", layoutProps.layoutKey, layoutProps.activeLayout);
   };
 
-  handleResetLayout = () => {
-    layoutEmitter.emit(
-      "resetLayout",
-      this.props.layoutProps.layoutKey,
-      this.props.layoutProps.activeLayout,
-    );
+  const handleLayoutDeleted = (layoutName: string) => {
+    deleteLayout(layoutProps.layoutKey, layoutName);
   };
 
-  handleLayoutDeleted = (layoutName: string) => {
-    deleteLayout(this.props.layoutProps.layoutKey, layoutName);
-  };
+  const handleAddNewLayout = (layoutName: string) => {
+    setIsNewLayoutModalOpen(false);
+    const configForLayout = getLayoutConfig(layoutProps.layoutKey, layoutProps.activeLayout);
 
-  addNewLayout = (layoutName: string) => {
-    this.setState({
-      isNewLayoutModalOpen: false,
-    });
-    const configForLayout = getLayoutConfig(
-      this.props.layoutProps.layoutKey,
-      this.props.layoutProps.activeLayout,
-    );
-
-    if (addNewLayout(this.props.layoutProps.layoutKey, layoutName, configForLayout)) {
-      this.props.layoutProps.setCurrentLayout(layoutName);
+    if (addNewLayout(layoutProps.layoutKey, layoutName, configForLayout)) {
+      layoutProps.setCurrentLayout(layoutName);
     }
   };
 
-  renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
+  const renderStartAIJobButton = (
+    disabled: boolean,
+    tooltipTextIfDisabled: string,
+  ): React.ReactNode => {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
       <ButtonComponent
@@ -302,94 +297,72 @@ class ActionBarView extends React.PureComponent<Props, State> {
         AI Analysis
       </ButtonComponent>
     );
-  }
+  };
 
-  renderStartTracingButton(): React.ReactNode {
+  const renderStartTracingButton = (): React.ReactNode => {
     return <CreateAnnotationButton />;
+  };
+
+  const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const getIsAIAnalysisEnabled = () => {
+    const jobsEnabled =
+      dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+      dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
+      dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
+    return jobsEnabled;
+  };
+
+  const layoutMenu = getLayoutMenu({
+    ...layoutProps,
+    addNewLayout: () => {
+      setIsNewLayoutModalOpen(true);
+    },
+    onResetLayout: handleResetLayout,
+    onSelectLayout: layoutProps.setCurrentLayout,
+    onDeleteLayout: handleLayoutDeleted,
+  });
+
+  const colorLayers = getColorLayers(dataset);
+  const datasetHasNoColorLayer = colorLayers.length === 0;
+  const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
+  const is2DOrNDDataset = isNd || is2d;
+  const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
+  const shouldDisableAIJobButton =
+    isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
+  let tooltip = "AI analysis is not enabled for this dataset.";
+  if (datasetHasNoColorLayer) {
+    tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
+  } else if (is2DOrNDDataset) {
+    tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
   }
 
-  render() {
-    const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
-      this.props;
-    const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
-    const isViewMode = controlMode === ControlModeEnum.VIEW;
-    const getIsAIAnalysisEnabled = () => {
-      const jobsEnabled =
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
-      return jobsEnabled;
-    };
-
-    const layoutMenu = getLayoutMenu({
-      ...layoutProps,
-      addNewLayout: () => {
-        this.setState({
-          isNewLayoutModalOpen: true,
-        });
-      },
-      onResetLayout: this.handleResetLayout,
-      onSelectLayout: layoutProps.setCurrentLayout,
-      onDeleteLayout: this.handleLayoutDeleted,
-    });
-
-    const colorLayers = getColorLayers(dataset);
-    const datasetHasNoColorLayer = colorLayers.length === 0;
-    const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
-    const is2DOrNDDataset = isNd || is2d;
-    const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
-    const shouldDisableAIJobButton =
-      isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
-    let tooltip = "AI analysis is not enabled for this dataset.";
-    if (datasetHasNoColorLayer) {
-      tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
-    } else if (is2DOrNDDataset) {
-      tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
-    }
-
-    return (
-      <React.Fragment>
-        <div className="action-bar">
-          {isViewMode || showVersionRestore ? (
-            <ViewDatasetActionsView layoutMenu={layoutMenu} />
-          ) : (
-            <TracingActionsView layoutMenu={layoutMenu} />
-          )}
-          {showVersionRestore ? VersionRestoreWarning : null}
-          <DatasetPositionView />
-          <AdditionalCoordinatesInputView />
-          <ModesView />
-          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
-            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
-            : null}
-          {isViewMode ? this.renderStartTracingButton() : null}
-          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
-        </div>
-        <AddNewLayoutModal
-          addLayout={this.addNewLayout}
-          isOpen={this.state.isNewLayoutModalOpen}
-          onCancel={() =>
-            this.setState({
-              isNewLayoutModalOpen: false,
-            })
-          }
-        />
-        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
-      </React.Fragment>
-    );
-  }
+  return (
+    <React.Fragment>
+      <div className="action-bar">
+        {isViewMode || showVersionRestore ? (
+          <ViewDatasetActionsView layoutMenu={layoutMenu} />
+        ) : (
+          <TracingActionsView layoutMenu={layoutMenu} />
+        )}
+        {showVersionRestore ? VersionRestoreWarning : null}
+        <DatasetPositionView />
+        <AdditionalCoordinatesInputView />
+        <ModesView />
+        {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+          ? renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
+          : null}
+        {isViewMode ? renderStartTracingButton() : null}
+        {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
+      </div>
+      <AddNewLayoutModal
+        addLayout={handleAddNewLayout}
+        isOpen={isNewLayoutModalOpen}
+        onCancel={() => setIsNewLayoutModalOpen(false)}
+      />
+      <StartAIJobModal aIJobModalState={aiJobModalState} />
+    </React.Fragment>
+  );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  dataset: state.dataset,
-  activeUser: state.activeUser,
-  controlMode: state.temporaryConfiguration.controlMode,
-  showVersionRestore: state.uiInformation.showVersionRestore,
-  is2d: is2dDataset(state.dataset),
-  viewMode: state.temporaryConfiguration.viewMode,
-  aiJobModalState: state.uiInformation.aIJobModalState,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(ActionBarView);
+export default ActionBarView;

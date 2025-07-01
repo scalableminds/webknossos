@@ -6,7 +6,7 @@ import {
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { isUserAdminOrManager } from "libs/utils";
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { Route, useLocation } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 import { useWkSelector } from "libs/react_hooks";
 
@@ -35,7 +35,7 @@ function SecuredRoute(props: SecuredRouteProps) {
     fetchData();
   }, [props.isAuthenticated, props.serverAuthenticationCallback]);
 
-  const { element, isAuthenticated, serverAuthenticationCallback, ...rest } = props;
+  const { isAuthenticated, serverAuthenticationCallback, ...rest } = props;
   const isCompletelyAuthenticated = serverAuthenticationCallback
     ? isAuthenticated || isAdditionallyAuthenticated
     : isAuthenticated;
@@ -55,7 +55,7 @@ function SecuredRoute(props: SecuredRouteProps) {
     return <PageNotAvailableToNormalUser />;
   }
 
-  return <>{element}</>;
+  return <Route {...rest} />;
 }
 
 export default SecuredRoute;

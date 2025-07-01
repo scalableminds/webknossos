@@ -1,17 +1,16 @@
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { useWkSelector } from "libs/react_hooks";
 
 const FormItem = Form.Item;
-type Props = {
-  scriptId?: string | null | undefined;
-};
 
-function ScriptCreateView({ scriptId }: Props) {
+function ScriptCreateView() {
+  const { scriptId } = useParams();
+
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [users, setUsers] = useState<APIUser[]>([]);

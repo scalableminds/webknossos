@@ -770,7 +770,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
   );
 }
 
-function Navbar() {
+function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);

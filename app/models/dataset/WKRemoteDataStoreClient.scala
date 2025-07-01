@@ -115,4 +115,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
         ExploreRemoteDatasetRequest(layerParameters, organizationId))
 
+  def updateDatasetInDSCache(datasetId: String): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/wkDatasets/$datasetId")
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .delete()
+    } yield ()
+
 }

@@ -20,8 +20,8 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -392,7 +392,7 @@ class AuthenticationController @Inject()(
     } yield result
 
   def accessibleBySwitching(datasetId: Option[ObjectId],
-                            annotationId: Option[String],
+                            annotationId: Option[ObjectId],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {

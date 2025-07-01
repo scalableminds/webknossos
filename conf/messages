@@ -149,6 +149,7 @@ zarr.invalidFirstChunkCoord=First Channel must be 0
 zarr.chunkNotFound=Could not find the requested chunk
 zarr.notEnoughCoordinates=Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0.
 zarr.invalidAdditionalCoordinates=Invalid additional coordinates for this data layer.
+zarr.readShardIndex.failed=Failed to read shard information for zarr data. This may indicate missing data.
 
 nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Could not extract NML file
@@ -264,6 +265,10 @@ mesh.file.listChunks.failed=Failed to load chunk list for segment {0} from mesh 
 mesh.file.loadChunk.failed=Failed to load mesh chunk for segment
 mesh.file.open.failed=Failed to open mesh file for reading
 mesh.file.readEncoding.failed=Failed to read encoding from mesh file
+mesh.file.lookup.failed=Failed to look up mesh file “{0}”
+mesh.file.readVersion.failed=Failed to read format version from file “{0}”
+mesh.file.readMappingName.failed=Failed to read mapping name from mesh file “{0}”
+mesh.meshFileName.required=Trying to load mesh from mesh file, but mesh file name was not supplied.
 
 task.create.noTasks=Zero tasks were requested
 task.create.failed=Failed to create Task
@@ -346,7 +351,9 @@ job.trainModel.notAllowed.organization = Training AI models is only allowed for 
 job.runInference.notAllowed.organization = Running inference is only allowed for datasets of your own organization.
 job.paidJob.notAllowed.noPaidPlan = You are not allowed to run this job because your organization does not have a paid plan.
 job.notEnoughCredits = Your organization does not have enough WEBKNOSSOS credits to run this job.
-creditTransaction.notPaidPlan = Your organization does not have a paid plan.
+job.updateStatus.failed = Failed to update long-running job’s status
+job.creditTransaction.failed = Failed to perform credit transaction
+job.creditTransaction.refund.failed = Failed to perform credit transaction refund
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found
@@ -367,10 +374,10 @@ folder.notFound=Could not find the requested folder
 folder.delete.root=Cannot delete the organization’s root folder
 folder.move.root=Cannot move the organization’s root folder
 folder.update.notAllowed=No write access on this folder
+folder.noWriteAccess=No write access in this folder
 folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location
-folder.noWriteAccess=No write access in this folder
 folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.

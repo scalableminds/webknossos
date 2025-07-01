@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -10,20 +10,24 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 
 case class DatasetLayerAttachments(
-    meshes: Seq[LayerAttachment],
-    agglomerates: Seq[LayerAttachment],
-    segmentIndex: Option[LayerAttachment],
-    connectomes: Seq[LayerAttachment],
-    cumsum: Option[LayerAttachment]
-)
+    meshes: Seq[LayerAttachment] = Seq.empty,
+    agglomerates: Seq[LayerAttachment] = Seq.empty,
+    segmentIndex: Option[LayerAttachment] = None,
+    connectomes: Seq[LayerAttachment] = Seq.empty,
+    cumsum: Option[LayerAttachment] = None
+) {
+  def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
+  def isEmpty: Boolean = allAttachments.isEmpty
+}
 
 object DatasetLayerAttachments {
-  implicit val jsonFormat: Format[DatasetLayerAttachments] = Json.format[DatasetLayerAttachments]
+  implicit val jsonFormat: Format[DatasetLayerAttachments] =
+    Json.using[Json.WithDefaultValues].format[DatasetLayerAttachments]
 }
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
-  val hdf5, json, zarr3 = Value
+  val hdf5, json, zarr3, neuroglancerPrecomputed = Value
 }
 
 object LayerAttachmentType extends ExtendedEnumeration {
@@ -31,7 +35,10 @@ object LayerAttachmentType extends ExtendedEnumeration {
   val mesh, agglomerate, segmentIndex, connectome, cumsum = Value
 }
 
-case class LayerAttachment(name: String, path: URI, dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat)
+case class LayerAttachment(name: String,
+                           path: URI,
+                           dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
+                           credentialId: Option[String] = None)
 
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]
@@ -54,6 +61,7 @@ object LayerAttachment {
       Seq.empty
     }
   }
+
 }
 
 object MeshFileInfo {

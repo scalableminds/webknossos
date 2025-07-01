@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
@@ -27,14 +28,14 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-case class MergedFromIdsRequest(annotationIds: Seq[String], ownerIds: Seq[String])
+case class MergedFromIdsRequest(annotationIds: Seq[ObjectId], ownerIds: Seq[ObjectId])
 
 object MergedFromIdsRequest {
   implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
@@ -51,7 +52,7 @@ class TSAnnotationController @Inject()(
     extends Controller
     with KeyValueStoreImplicits {
 
-  def save(annotationId: String, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
+  def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -62,7 +63,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def update(annotationId: String): Action[List[UpdateActionGroup]] =
+  def update(annotationId: ObjectId): Action[List[UpdateActionGroup]] =
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -75,7 +76,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def updateActionLog(annotationId: String,
+  def updateActionLog(annotationId: ObjectId,
                       newestVersion: Option[Long] = None,
                       oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
@@ -90,7 +91,7 @@ class TSAnnotationController @Inject()(
     }
   }
 
-  def newestVersion(annotationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def newestVersion(annotationId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
@@ -100,7 +101,7 @@ class TSAnnotationController @Inject()(
     }
   }
 
-  def get(annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -113,10 +114,10 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def duplicate(annotationId: String,
-                newAnnotationId: String,
-                ownerId: String,
-                requestingUserId: String,
+  def duplicate(annotationId: ObjectId,
+                newAnnotationId: ObjectId,
+                ownerId: ObjectId,
+                requestingUserId: ObjectId,
                 version: Option[Long],
                 isFromTask: Boolean,
                 datasetBoundingBox: Option[String]): Action[AnyContent] =
@@ -139,7 +140,7 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def resetToBase(annotationId: String): Action[AnyContent] =
+  def resetToBase(annotationId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -155,8 +156,10 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  private def findAndAdaptVolumesForAnnotation(annotation: AnnotationProto, requestingUserId: String, ownerId: String)(
-      implicit tc: TokenContext): Fox[Seq[VolumeTracing]] = {
+  private def findAndAdaptVolumesForAnnotation(
+      annotation: AnnotationProto,
+      requestingUserId: ObjectId,
+      ownerId: ObjectId)(implicit tc: TokenContext): Fox[Seq[VolumeTracing]] = {
     val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume)
     for {
       volumeTracings <- annotationService
@@ -173,8 +176,8 @@ class TSAnnotationController @Inject()(
 
   private def findAndAdaptSkeletonsForAnnotation(
       annotation: AnnotationProto,
-      requestingUserId: String,
-      ownerId: String)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
+      requestingUserId: ObjectId,
+      ownerId: ObjectId)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
     val skeletonLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
     for {
       skeletonTracings <- annotationService
@@ -190,8 +193,8 @@ class TSAnnotationController @Inject()(
   }
 
   def mergedFromIds(toTemporaryStore: Boolean,
-                    newAnnotationId: String,
-                    requestingUserId: String): Action[MergedFromIdsRequest] =
+                    newAnnotationId: ObjectId,
+                    requestingUserId: ObjectId): Action[MergedFromIdsRequest] =
     Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {

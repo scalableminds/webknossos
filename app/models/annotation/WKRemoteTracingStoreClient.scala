@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 
@@ -172,7 +172,7 @@ class WKRemoteTracingStoreClient(
       .postEmpty()
   }
 
-  def mergeAnnotationsByIds(annotationIds: List[String],
+  def mergeAnnotationsByIds(annotationIds: List[ObjectId],
                             ownerIds: List[ObjectId],
                             newAnnotationId: ObjectId,
                             toTemporaryStore: Boolean,
@@ -183,8 +183,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("requestingUserId" -> requestingUserId.toString)
-      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
-        MergedFromIdsRequest(annotationIds, ownerIds.map(_.toString)))(AnnotationProto)
+      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](MergedFromIdsRequest(annotationIds, ownerIds))(
+        AnnotationProto)
   }
 
   def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {

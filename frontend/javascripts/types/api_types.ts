@@ -680,7 +680,7 @@ export type APIPricingPlanStatus = {
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
 };
 
-export type APIBuildInfo = {
+export type APIBuildInfoWk = {
   webknossos: {
     name: string;
     commitHash: string;
@@ -702,7 +702,14 @@ export type APIBuildInfo = {
     sbtVersion: string;
     builtAtString: string;
   };
-  webknossosDatastore?: {
+  schemaVersion: number;
+  httpApiVersioning: { currentApiVersion: number; oldestSupportedApiVersion: number };
+  localDataStoreEnabled: boolean;
+  localTracingStoreEnabled: boolean;
+};
+
+export type APIBuildInfoDatastore = {
+  webknossosDatastore: {
     name: string;
     commitHash: string;
     scalaVersion: string;
@@ -711,13 +718,25 @@ export type APIBuildInfo = {
     commitDate: string;
     ciTag: string;
     ciBuild: string;
-    gitTag: string;
     datastoreApiVersion: string;
   };
-  schemaVersion: number;
-  localDataStoreEnabled: boolean;
-  localTracingStoreEnabled: boolean;
 };
+
+export type APIBuildInfoTracingstore = {
+  webknossosTracingstore: {
+    name: string;
+    commitHash: string;
+    scalaVersion: string;
+    version: string;
+    sbtVersion: string;
+    commitDate: string;
+    ciTag: string;
+    ciBuild: string;
+  };
+};
+
+export type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
+
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
@@ -987,12 +1006,10 @@ export type ServerEditableMapping = {
 
 export type APIMeshFileInfo = {
   name: string;
-  path: string | null | undefined;
-  fileType: string | null | undefined;
   mappingName?: string | null | undefined;
-  // 0   - is the first mesh file version
-  // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
-  // 3   - is the newer version with draco encoding.
+  // 0   - unsupported (is the first mesh file version)
+  // 1-2 - unsupported (the format should behave as v0; refer to voxelytics for actual differences)
+  // 3+  - is the newer version with draco encoding.
   formatVersion: number;
 };
 export type APIConnectomeFile = {

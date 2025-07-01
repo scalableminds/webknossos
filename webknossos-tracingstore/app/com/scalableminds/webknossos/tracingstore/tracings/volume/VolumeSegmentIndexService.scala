@@ -19,8 +19,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore
 }
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

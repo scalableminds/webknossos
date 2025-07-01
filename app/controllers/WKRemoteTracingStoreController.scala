@@ -82,16 +82,15 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
-          annotationId <- ObjectId.fromString(report.annotationId)
-          annotation <- annotationDAO.findOne(annotationId)
+          annotation <- annotationDAO.findOne(report.annotationId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           _ = report.statistics.map(statistics => annotationService.updateStatistics(annotation._id, statistics))
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).shiftBox
           trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
-          _ <- Fox.runOptional(userBox)(user =>
+          _ <- Fox.runOptional(userBox.toOption)(user =>
             Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
-          _ <- Fox.runOptional(userBox)(user =>
+          _ <- Fox.runOptional(userBox.toOption)(user =>
             Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
           _ = userBox.map { user =>
             userDAO.updateLastActivity(user._id)

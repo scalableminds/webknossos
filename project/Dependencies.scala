@@ -19,8 +19,6 @@ object Dependencies {
     "commons-io" % "commons-io" % "2.19.0",
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.17.0",
-    // Box/Tryo. import net.liftweb
-    "net.liftweb" %% "lift-common" % "3.5.0",
     // ObjectIds. import reactivemongo.api.bson
     "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
     // Protocol buffers. import scalapb
@@ -112,8 +110,6 @@ object Dependencies {
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
     // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
-    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0",
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
   )
-
 }

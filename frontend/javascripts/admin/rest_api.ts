@@ -15,7 +15,9 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfo,
+  type APIBuildInfoDatastore,
+  type APIBuildInfoTracingstore,
+  type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
   type APIDataSource,
@@ -148,6 +150,10 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
+export async function logoutUser(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logout");
+}
+
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);
@@ -232,6 +238,12 @@ export async function getAuthToken(): Promise<string> {
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
+  });
+}
+
+export async function changePassword(data: Record<string, string>): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
+    data: data,
   });
 }
 
@@ -1066,10 +1078,12 @@ export function getDatasetDefaultConfiguration(datasetId: string): Promise<Datas
 export function updateDatasetDefaultConfiguration(
   datasetId: string,
   datasetConfiguration: DatasetConfiguration,
+  options?: RequestOptions,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
     method: "PUT",
     data: datasetConfiguration,
+    ...options,
   });
 }
 
@@ -1718,13 +1732,23 @@ export async function updateOrganization(
   name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
-    method: "PATCH",
-    data: {
-      name,
-      newUserMailingList,
+  const updatedOrganization = await Request.sendJSONReceiveJSON(
+    `/api/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      data: {
+        name,
+        newUserMailingList,
+      },
     },
-  });
+  );
+
+  return {
+    ...updatedOrganization,
+    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function isDatasetAccessibleBySwitching(
@@ -1789,17 +1813,31 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 
 export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
 
-// ### BuildInfo webknossos
-export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo", {
+// ### Health
+export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
+  const healthEndpoint = `${url}/${path}/health`;
+  return Request.triggerRequest(healthEndpoint, {
     doNotInvestigate: true,
+    mode: "cors",
+    timeout: 5000,
   });
 }
 
-// ### BuildInfo datastore
-export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, {
+// ### BuildInfo webknossos
+export function getBuildInfo(): Promise<APIBuildInfoWk> {
+  return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
+    mode: "cors",
+  });
+}
+
+// ### BuildInfo datastore/tracingstore
+export function getDataOrTracingStoreBuildInfo(
+  dataOrTracingStoreUrl: string,
+): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
+  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
+    doNotInvestigate: true,
+    mode: "cors",
   });
 }
 

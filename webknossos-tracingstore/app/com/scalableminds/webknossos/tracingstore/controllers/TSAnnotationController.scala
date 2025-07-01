@@ -250,7 +250,7 @@ class TSAnnotationController @Inject()(
                        mergedVolumeStats,
                        newMappingName,
                        newVersion = newTargetVersion,
-                       additionalBoundingBoxes)
+                       additionalBoundingBoxes = additionalBoundingBoxes)
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
@@ -260,8 +260,9 @@ class TSAnnotationController @Inject()(
                 findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
-            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
+            mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(skeletonTracingService
+              .merge(skeletonTracings, newVersion = newTargetVersion, additionalBoundingBoxes = additionalBoundingBoxes)
+              .toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

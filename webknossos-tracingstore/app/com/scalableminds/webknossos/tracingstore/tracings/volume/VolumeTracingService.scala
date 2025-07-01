@@ -731,7 +731,8 @@ class VolumeTracingService @Inject()(
         createdTimestamp = System.currentTimeMillis(),
         version = newVersion,
         mappingName = newEditableMappingIdOpt,
-        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex)
+        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
+        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
       )
   }
 

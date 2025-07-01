@@ -183,8 +183,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("requestingUserId" -> requestingUserId.toString)
-      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](MergedFromIdsRequest(annotationIds, ownerIds))(
-        AnnotationProto)
+      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
+        MergedFromIdsRequest(annotationIds, ownerIds, Seq.empty))(AnnotationProto)
   }
 
   def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {

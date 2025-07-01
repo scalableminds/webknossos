@@ -11,6 +11,7 @@ import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 import { useWkSelector } from "libs/react_hooks";
 
 export type SecuredRouteProps = {
+  path: string;
   element: React.ReactNode;
   isAuthenticated: boolean;
   requiredPricingPlan?: PricingPlanEnum;

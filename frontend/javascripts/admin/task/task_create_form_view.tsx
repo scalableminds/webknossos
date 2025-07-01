@@ -42,7 +42,7 @@ import { Vector3Input, Vector6Input } from "libs/vector_input";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
@@ -288,10 +288,6 @@ export function ReloadResourceButton({
   );
 }
 
-type Props = {
-  taskId: string | null | undefined;
-};
-
 type FormValues = {
   baseAnnotation: NewTask["baseAnnotation"];
   boundingBox: Vector6 | null;
@@ -307,7 +303,8 @@ type FormValues = {
   neededExperience: NewTask["neededExperience"];
 };
 
-function TaskCreateFormView({ taskId }: Props) {
+function TaskCreateFormView() {
+  const { taskId } = useParams();
   const navigate = useNavigate();
   const { modal } = App.useApp();
   const [form] = Form.useForm<FormValues>();

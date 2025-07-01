@@ -100,7 +100,7 @@ function LinkWithDisabled({
   style?: React.CSSProperties;
   to: string;
   children: React.ReactNode;
-} & LinkProps) {
+}) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =
     rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
@@ -113,7 +113,7 @@ function LinkWithDisabled({
     <Link
       {...rest}
       style={adaptedStyle || undefined}
-      onClick={(e) => (disabled ? e.preventDefault() : onClick)}
+      onClick={(e) => (disabled ? e.preventDefault() : onClick?.())}
     />
   );
 }

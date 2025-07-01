@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { doWebAuthnLogin } from "admin/api/webauthn";
+import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
@@ -54,7 +54,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         onLoggedIn();
       }
     } catch (error) {
-      console.error("webauthn login:", error)
+      console.error("webauthn login:", error);
     }
   };
 

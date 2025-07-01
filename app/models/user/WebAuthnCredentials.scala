@@ -13,7 +13,7 @@ import com.webauthn4j.data.extension.authenticator.{
   AuthenticationExtensionsAuthenticatorOutputs,
   RegistrationExtensionAuthenticatorOutput
 }
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 

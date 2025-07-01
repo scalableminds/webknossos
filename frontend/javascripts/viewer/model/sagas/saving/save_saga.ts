@@ -25,7 +25,7 @@ import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
 
 export function* setupSavingToServer(): Saga<void> {
-  // This saga continously drains the save queue by sending its content to the server.
+  // This saga continuously drains the save queue by sending its content to the server.
   yield* fork(pushSaveQueueAsync);
   // The following sagas are responsible for filling the save queue with the update actions.
   yield* takeEvery("INITIALIZE_ANNOTATION_WITH_TRACINGS", setupSavingForAnnotation);

@@ -104,6 +104,141 @@ function PageNotFoundView() {
   );
 }
 
+function TracingView() {
+  const { type, id } = useParams();
+  const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
+
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={initialMaybeCompoundType}
+      initialCommandType={{
+        type: ControlModeEnum.TRACE,
+        annotationId: id || "",
+      }}
+    />
+  );
+}
+
+function TracingSandboxLegacy() {
+  const { type, datasetName = "", organizationId = "" } = useParams();
+
+  const tracingType = coalesce(TracingTypeEnum, type);
+  if (tracingType == null) {
+    return <h3>Invalid annotation URL.</h3>;
+  }
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  return (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetId = await getDatasetIdFromNameAndOrganization(
+          datasetName,
+          organizationId,
+          getParams.token,
+        );
+        return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+      }}
+    />
+  );
+}
+
+function TracingSandbox() {
+  const { type, datasetNameAndId } = useParams();
+  const tracingType = coalesce(TracingTypeEnum, type);
+  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+
+  if (tracingType == null) {
+    return <h3>Invalid annotation URL.</h3>;
+  }
+  if (datasetName) {
+    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+    // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
+        }}
+      />
+    );
+  }
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={null}
+      initialCommandType={{
+        type: ControlModeEnum.SANDBOX,
+        tracingType,
+        datasetId: datasetId || "",
+      }}
+    />
+  );
+}
+
+function TracingViewModeLegacy() {
+  const { datasetName = "", organizationId = "" } = useParams();
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  return (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetId = await getDatasetIdFromNameAndOrganization(
+          datasetName,
+          organizationId,
+          getParams.token,
+        );
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+      }}
+    />
+  );
+}
+
+const TracingViewMode = () => {
+  const { datasetNameAndId = "" } = useParams();
+  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  if (datasetName) {
+    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+    // The schema is something like <authority>/datasets/:datasetName/view
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+        }}
+      />
+    );
+  }
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={null}
+      initialCommandType={{
+        type: ControlModeEnum.VIEW,
+        datasetId: datasetId || "",
+      }}
+    />
+  );
+};
+
+const serverAuthenticationCallback = async (id: string) => {
+  try {
+    const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+    return annotationInformation.visibility === "Public";
+  } catch (_ex) {
+    // Annotation could not be found
+  }
+
+  return false;
+};
+
 const RouteWithErrorBoundary: React.FC<RouteProps> = (props) => {
   const location = useLocation();
   return (
@@ -122,145 +257,38 @@ const SecuredRouteWithErrorBoundary: React.FC<SecuredRouteProps> = (props) => {
   );
 };
 
+function RootRoute({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+  if (!hasOrganizations && !features().isWkorgInstance) {
+    return <Navigate to="/onboarding" />;
+  }
+
+  if (isAuthenticated) {
+    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+  }
+
+  return <Navigate to="/auth/login" />;
+}
+
+function DashboardRoute() {
+  // Imperatively access store state to avoid race condition when logging in.
+  // The `isAuthenticated` prop could be outdated for a short time frame which
+  // would lead to an unnecessary browser refresh.
+  const { activeUser } = Store.getState();
+  if (activeUser) {
+    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+  }
+
+  // Hard navigate so that webknossos.org is shown for the wkorg instance.
+  window.location.href = "/";
+  return null;
+}
+
 function ReactRouter() {
   const activeUser = useWkSelector((state) => state.activeUser);
-  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
 
   const location = useLocation();
-
-  const tracingView = (type?: string, id?: string) => {
-    const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
-
-    return (
-      <TracingLayoutView
-        initialMaybeCompoundType={initialMaybeCompoundType}
-        initialCommandType={{
-          type: ControlModeEnum.TRACE,
-          annotationId: id || "",
-        }}
-      />
-    );
-  };
-
-  const tracingSandboxLegacy = (
-    type: string,
-    datasetName: string = "",
-    organizationId: string = "",
-  ) => {
-    const tracingType = coalesce(TracingTypeEnum, type);
-    if (tracingType == null) {
-      return <h3>Invalid annotation URL.</h3>;
-    }
-    const getParams = Utils.getUrlParamsObjectFromString(location.search);
-    return (
-      <AsyncRedirect
-        redirectTo={async () => {
-          const datasetId = await getDatasetIdFromNameAndOrganization(
-            datasetName,
-            organizationId,
-            getParams.token,
-          );
-          return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
-        }}
-      />
-    );
-  };
-
-  const tracingSandbox = (type: string, datasetNameAndId: string) => {
-    const tracingType = coalesce(TracingTypeEnum, type);
-    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-    const getParams = Utils.getUrlParamsObjectFromString(location.search);
-
-    if (tracingType == null) {
-      return <h3>Invalid annotation URL.</h3>;
-    }
-    if (datasetName) {
-      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
-      // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
-      return (
-        <AsyncRedirect
-          redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
-            const datasetId = await getDatasetIdFromNameAndOrganization(
-              datasetName,
-              organizationId,
-              getParams.token,
-            );
-            return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
-          }}
-        />
-      );
-    }
-    return (
-      <TracingLayoutView
-        initialMaybeCompoundType={null}
-        initialCommandType={{
-          type: ControlModeEnum.SANDBOX,
-          tracingType,
-          datasetId: datasetId || "",
-        }}
-      />
-    );
-  };
-
-  const tracingViewModeLegacy = (datasetName: string = "", organizationId: string = "") => {
-    const getParams = Utils.getUrlParamsObjectFromString(location.search);
-    return (
-      <AsyncRedirect
-        redirectTo={async () => {
-          const datasetId = await getDatasetIdFromNameAndOrganization(
-            datasetName,
-            organizationId,
-            getParams.token,
-          );
-          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
-        }}
-      />
-    );
-  };
-
-  const tracingViewMode = (datasetNameAndId: string) => {
-    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-    const getParams = Utils.getUrlParamsObjectFromString(location.search);
-    if (datasetName) {
-      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
-      // The schema is something like <authority>/datasets/:datasetName/view
-      return (
-        <AsyncRedirect
-          redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
-            const datasetId = await getDatasetIdFromNameAndOrganization(
-              datasetName,
-              organizationId,
-              getParams.token,
-            );
-            return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
-          }}
-        />
-      );
-    }
-    return (
-      <TracingLayoutView
-        initialMaybeCompoundType={null}
-        initialCommandType={{
-          type: ControlModeEnum.VIEW,
-          datasetId: datasetId || "",
-        }}
-      />
-    );
-  };
-
-  const serverAuthenticationCallback = async (id: string) => {
-    try {
-      const annotationInformation = await getUnversionedAnnotationInformation(id || "");
-      return annotationInformation.visibility === "Public";
-    } catch (_ex) {
-      // Annotation could not be found
-    }
-
-    return false;
-  };
 
   const isAuthenticated = activeUser !== null;
   return (
@@ -279,17 +307,7 @@ function ReactRouter() {
           <Routes>
             <RouteWithErrorBoundary
               path="/"
-              element={(() => {
-                if (!hasOrganizations && !features().isWkorgInstance) {
-                  return <Navigate to="/onboarding" />;
-                }
-
-                if (isAuthenticated) {
-                  return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-                }
-
-                return <Navigate to="/auth/login" />;
-              })()}
+              element={<RootRoute isAuthenticated={isAuthenticated} />}
             />
             <SecuredRouteWithErrorBoundary
               isAuthenticated={isAuthenticated}
@@ -312,22 +330,7 @@ function ReactRouter() {
               }
             />
 
-            <RouteWithErrorBoundary
-              path="/dashboard"
-              element={(() => {
-                // Imperatively access store state to avoid race condition when logging in.
-                // The `isAuthenticated` prop could be outdated for a short time frame which
-                // would lead to an unnecessary browser refresh.
-                const { activeUser } = Store.getState();
-                if (activeUser) {
-                  return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-                }
-
-                // Hard navigate so that webknossos.org is shown for the wkorg instance.
-                window.location.href = "/";
-                return null;
-              })()}
-            />
+            <RouteWithErrorBoundary path="/dashboard" element={<DashboardRoute />} />
             <SecuredRouteWithErrorBoundary
               isAuthenticated={isAuthenticated}
               path="/users/:userId/details"
@@ -460,10 +463,7 @@ function ReactRouter() {
             <SecuredRouteWithErrorBoundary
               isAuthenticated={isAuthenticated}
               path="/annotations/:id"
-              element={(() => {
-                const { id } = useParams();
-                return tracingView({ id });
-              })()}
+              element={<TracingView />}
               serverAuthenticationCallback={serverAuthenticationCallback}
             />
             <SecuredRouteWithErrorBoundary
@@ -634,20 +634,20 @@ function ReactRouter() {
             {/* legacy view mode route */}
             <RouteWithErrorBoundary
               path="/datasets/:organizationId/:datasetName/view"
-              element={tracingViewModeLegacy(useParams())}
+              element={<TracingViewModeLegacy />}
             />
             <RouteWithErrorBoundary
               path="/datasets/:datasetNameAndId/view"
-              element={tracingViewMode(useParams())}
+              element={<TracingViewMode />}
             />
             <RouteWithErrorBoundary
               path="/datasets/:datasetNameAndId/sandbox/:type"
-              element={tracingSandbox(useParams())}
+              element={<TracingSandbox />}
             />
             {/* legacy sandbox route */}
             <RouteWithErrorBoundary
               path="/datasets/:organizationId/:datasetName/sandbox/:type"
-              element={tracingSandboxLegacy(useParams())}
+              element={<TracingSandboxLegacy />}
             />
             <SecuredRouteWithErrorBoundary
               isAuthenticated={isAuthenticated}
@@ -706,11 +706,11 @@ function ReactRouter() {
             {/*legacy view mode route */}
             <RouteWithErrorBoundary
               path="/datasets/:organizationId/:datasetName"
-              element={tracingViewModeLegacy(useParams())}
+              element={<TracingViewModeLegacy />}
             />
             <RouteWithErrorBoundary
               path="/datasets/:datasetNameAndId"
-              element={tracingViewMode(useParams())}
+              element={<TracingViewMode />}
             />
             <RouteWithErrorBoundary path="/publications/:id" element={<PublicationDetailView />} />
             <Route path="/publication/:id">

@@ -11,13 +11,12 @@ import {
 } from "admin/rest_api";
 import { Form } from "antd";
 import dayjs from "dayjs";
-import type { UnregisterCallback } from "history";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
@@ -35,20 +34,26 @@ import { syncDataSourceFields } from "./dataset_settings_data_tab";
 import type { FormData } from "./dataset_settings_context";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
+import { useHistory } from "react-router-dom";
 
 type DatasetSettingsProviderProps = {
   children: React.ReactNode;
   datasetId: string;
   isEditingMode: boolean;
+  onComplete?: () => void;
+  onCancel?: () => void;
 };
 
 export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = ({
   children,
   datasetId,
   isEditingMode,
+  onComplete,
+  onCancel,
 }) => {
   const [form] = Form.useForm<FormData>();
   const queryClient = useQueryClient();
+  const history = useHistory();
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
@@ -63,26 +68,8 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     APIDataSource | null | undefined
   >(null);
 
-  const unblockRef = useRef<UnregisterCallback | null>(null);
-  const blockTimeoutIdRef = useRef<number | null>(null);
-
-  const unblockHistory = useCallback(() => {
-    window.onbeforeunload = null;
-
-    if (blockTimeoutIdRef.current != null) {
-      clearTimeout(blockTimeoutIdRef.current);
-      blockTimeoutIdRef.current = null;
-    }
-
-    if (unblockRef.current != null) {
-      unblockRef.current();
-      unblockRef.current = null;
-    }
-  }, []);
-
-  const onComplete = () => window.history.back();
-
-  const onCancel = () => window.history.back();
+  onComplete = onComplete ? onComplete : () => history.push("/dashboard");
+  onCancel = onCancel ? onCancel : () => history.push("/dashboard");
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
@@ -109,6 +96,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
           isPublic: fetchedDataset.isPublic || false,
           description: fetchedDataset.description || undefined,
           allowedTeams: fetchedDataset.allowedTeams || [],
+          // @ts-ignore: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
           sortingKey: dayjs(fetchedDataset.sortingKey),
         },
       });
@@ -172,7 +160,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setIsLoading(false);
       form.validateFields();
     }
-  }, [datasetId, form]);
+  }, [datasetId]);
 
   const getFormValidationSummary = useCallback((): Record<string, any> => {
     const err = form.getFieldsError();
@@ -236,76 +224,72 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     return false;
   }, [getFormValidationSummary, form, didDatasourceChange]);
 
-  const submitForm = useCallback(
-    async (formValues: FormData) => {
-      const datasetChangeValues = { ...formValues.dataset };
+  const submitForm = useCallback(async () => {
+    // Call getFieldsValue() with "True" to get all values from form not just those that are visible in the current view
+    const formValues: FormData = form.getFieldsValue(true);
+    const datasetChangeValues = { ...formValues.dataset };
 
-      if (datasetChangeValues.sortingKey != null) {
-        datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
+    if (datasetChangeValues.sortingKey != null) {
+      datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
+    }
+
+    const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
+    await updateDatasetPartial(datasetId, datasetChangeValues);
+
+    if (datasetDefaultConfiguration != null) {
+      await updateDatasetDefaultConfiguration(
+        datasetId,
+        _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+          layers: JSON.parse(formValues.defaultConfigurationLayersJson),
+        }),
+      );
+    }
+
+    await updateDatasetTeams(datasetId, teamIds);
+    const dataSource = JSON.parse(formValues.dataSourceJson);
+
+    if (dataset != null && didDatasourceChange(dataSource)) {
+      if (didDatasourceIdChange(dataSource)) {
+        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
       }
+      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
+      setSavedDataSourceOnServer(dataSource);
+    }
 
-      const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
-      await updateDatasetPartial(datasetId, datasetChangeValues);
+    const verb = isEditingMode ? "updated" : "imported";
+    Toast.success(`Successfully ${verb} ${datasetChangeValues?.name || datasetId}.`);
+    setHasUnsavedChanges(false);
 
-      if (datasetDefaultConfiguration != null) {
-        await updateDatasetDefaultConfiguration(
-          datasetId,
-          _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
-            layers: JSON.parse(formValues.defaultConfigurationLayersJson),
-          }),
-        );
-      }
+    if (dataset && queryClient) {
+      queryClient.invalidateQueries({
+        queryKey: ["datasetsByFolder", dataset.folderId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    }
 
-      await updateDatasetTeams(datasetId, teamIds);
-      const dataSource = JSON.parse(formValues.dataSourceJson);
+    onComplete();
+  }, [
+    datasetId,
+    datasetDefaultConfiguration,
+    dataset,
+    didDatasourceChange,
+    didDatasourceIdChange,
+    isEditingMode,
+    queryClient,
+    onComplete,
+  ]);
 
-      if (dataset != null && didDatasourceChange(dataSource)) {
-        if (didDatasourceIdChange(dataSource)) {
-          Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
-        }
-        await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
-        setSavedDataSourceOnServer(dataSource);
-      }
+  const handleValidationFailed = useCallback(() => {
+    const isOnlyDatasourceIncorrectAndNotEditedResult = isOnlyDatasourceIncorrectAndNotEdited();
 
-      const verb = isEditingMode ? "updated" : "imported";
-      Toast.success(`Successfully ${verb} ${dataset?.name || datasetId}.`);
-      setHasUnsavedChanges(false);
-
-      if (dataset && queryClient) {
-        queryClient.invalidateQueries({
-          queryKey: ["datasetsByFolder", dataset.folderId],
-        });
-        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-      }
-
-      onComplete();
-    },
-    [
-      datasetId,
-      datasetDefaultConfiguration,
-      dataset,
-      didDatasourceChange,
-      didDatasourceIdChange,
-      isEditingMode,
-      queryClient,
-      onComplete,
-    ],
-  );
-
-  const handleValidationFailed = useCallback(
-    ({ values }: { values: FormData }) => {
-      const isOnlyDatasourceIncorrectAndNotEditedResult = isOnlyDatasourceIncorrectAndNotEdited();
-
-      if (!isOnlyDatasourceIncorrectAndNotEditedResult || !dataset) {
-        // TODO: Add logic to switch to problematic tab
-        console.warn("Validation failed, switching to problematic tab logic needed.");
-        Toast.warning(messages["dataset.import.invalid_fields"]);
-      } else {
-        submitForm(values);
-      }
-    },
-    [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm],
-  );
+    if (!isOnlyDatasourceIncorrectAndNotEditedResult || !dataset) {
+      // TODO: Add logic to switch to problematic tab
+      console.warn("Validation failed, switching to problematic tab logic needed.");
+      Toast.warning(messages["dataset.import.invalid_fields"]);
+    } else {
+      submitForm();
+    }
+  }, [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm]);
 
   const handleSubmit = useCallback(() => {
     syncDataSourceFields(form, activeDataSourceEditMode === "simple" ? "advanced" : "simple");
@@ -315,7 +299,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         () =>
           form
             .validateFields()
-            .then((formValues) => submitForm(formValues))
+            .then(submitForm)
             .catch((errorInfo) => handleValidationFailed(errorInfo)),
         0,
       );
@@ -330,9 +314,8 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, []);
 
   const handleCancel = useCallback(() => {
-    unblockHistory();
     onCancel();
-  }, [unblockHistory, onCancel]);
+  }, [onCancel]);
 
   const handleDataSourceEditModeChange = useCallback(
     (activeEditMode: "simple" | "advanced") => {
@@ -353,24 +336,23 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     });
   }, [fetchData]);
 
-  const contextValue: DatasetSettingsContextValue = {
-    form,
-    isLoading,
-    hasUnsavedChanges,
-    dataset,
-    datasetId,
-    datasetDefaultConfiguration,
-    activeDataSourceEditMode,
-    savedDataSourceOnServer,
-    isEditingMode,
-    onComplete,
-    onCancel,
-    handleSubmit,
-    handleCancel,
-    handleDataSourceEditModeChange,
-    onValuesChange,
-    getFormValidationSummary,
-  };
+  const contextValue: DatasetSettingsContextValue = useMemo(
+    () => ({
+      form,
+      isLoading,
+      dataset,
+      datasetId,
+      datasetDefaultConfiguration,
+      activeDataSourceEditMode,
+      isEditingMode,
+      handleSubmit,
+      handleCancel,
+      handleDataSourceEditModeChange,
+      onValuesChange,
+      getFormValidationSummary,
+    }),
+    [isEditingMode, isLoading, datasetDefaultConfiguration, dataset, activeDataSourceEditMode],
+  );
 
   return (
     <DatasetSettingsContext.Provider value={contextValue}>

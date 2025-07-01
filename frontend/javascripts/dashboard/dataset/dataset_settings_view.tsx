@@ -17,11 +17,19 @@ import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
-import { Link, Route, useHistory, useLocation, Switch } from "react-router-dom";
+import {
+  Route,
+  useHistory,
+  useLocation,
+  Switch,
+  Redirect,
+  type RouteComponentProps,
+} from "react-router-dom";
 import { Unicode } from "viewer/constants";
 import messages from "messages";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
+import features from "features";
 
 const { Sider, Content } = Layout;
 const FormItem = Form.Item;
@@ -34,55 +42,6 @@ const BREADCRUMB_LABELS = {
   defaultConfig: "View Configuration",
   delete: "Delete Dataset",
 };
-
-const MENU_ITEMS: MenuItemGroupType[] = [
-  {
-    label: "Dataset Settings",
-    type: "group",
-    children: [
-      {
-        key: "data",
-        icon: <CodeSandboxOutlined />,
-        label: "Data Source",
-      },
-      {
-        key: "sharing",
-        icon: <TeamOutlined />,
-        label: "Sharing & Permissions",
-      },
-      {
-        key: "metadata",
-        icon: <FileTextOutlined />,
-        label: "Metadata",
-      },
-      {
-        key: "defaultConfig",
-        icon: <SettingOutlined />,
-        label: "View Configuration",
-      },
-      {
-        key: "delete",
-        icon: <DeleteOutlined />,
-        label: "Delete",
-      },
-    ],
-  },
-  { type: "divider" },
-  {
-    type: "group",
-    children: [
-      {
-        key: "open",
-        icon: <ExportOutlined />,
-        label: "Open in WEBKNOSSOS",
-      },
-    ],
-  },
-];
-
-// if (isUserAdmin && features().allowDeleteDatasets) {
-//   MENU_ITEMS[0].children.push();
-// }
 
 const FIXED_SIDER_STYLE: React.CSSProperties = {
   overflow: "auto",
@@ -189,22 +148,9 @@ const DatasetSettingsView: React.FC = () => {
     );
   }, [dataset, isEditingMode]);
 
+  const titleString = isEditingMode ? "Dataset Settings" : "Import";
   const maybeStoredDatasetName = dataset?.name || datasetId;
-  const maybeDataSourceId = dataset
-    ? {
-        owningOrganization: dataset.owningOrganization,
-        directoryName: dataset.directoryName,
-      }
-    : null;
 
-  const titleString = isEditingMode ? "Settings for" : "Import";
-  const datasetLinkOrName = isEditingMode ? (
-    <Link to={`/datasets/${dataset ? getReadableURLPart(dataset) : datasetId}/view`}>
-      {maybeStoredDatasetName}
-    </Link>
-  ) : (
-    maybeStoredDatasetName
-  );
   const confirmString =
     isEditingMode || (dataset != null && dataset.dataSource.status == null) ? "Save" : "Import";
   const formErrors = getFormValidationSummary();
@@ -219,11 +165,66 @@ const DatasetSettingsView: React.FC = () => {
     </Tooltip>
   );
 
+  const menuItems: MenuItemGroupType[] = [
+    {
+      label: titleString,
+      type: "group",
+      children: [
+        {
+          key: "data",
+          icon: <CodeSandboxOutlined />,
+          label: "Data Source",
+        },
+        {
+          key: "sharing",
+          icon: <TeamOutlined />,
+          label: "Sharing & Permissions",
+        },
+        {
+          key: "metadata",
+          icon: <FileTextOutlined />,
+          label: "Metadata",
+        },
+        {
+          key: "defaultConfig",
+          icon: <SettingOutlined />,
+          label: "View Configuration",
+        },
+        isUserAdmin && features().allowDeleteDatasets
+          ? {
+              key: "delete",
+              icon: <DeleteOutlined />,
+              label: "Delete",
+            }
+          : null,
+      ],
+    },
+    { type: "divider" },
+    {
+      type: "group",
+      children: isEditingMode
+        ? [
+            {
+              key: "open",
+              icon: <ExportOutlined />,
+              label: "Open in WEBKNOSSOS",
+              onClick: () =>
+                window.open(
+                  `/datasets/${dataset ? getReadableURLPart(dataset) : datasetId}/view`,
+                  "_blank",
+                  "noopener",
+                ),
+            },
+          ]
+        : [],
+    },
+  ];
+
   const breadcrumbItems = [
     {
-      title: "Dataset Settings",
+      title: titleString,
     },
-    { title: dataset?.name },
+    { title: maybeStoredDatasetName },
     {
       title: BREADCRUMB_LABELS[selectedKey as keyof typeof BREADCRUMB_LABELS],
     },
@@ -238,7 +239,7 @@ const DatasetSettingsView: React.FC = () => {
           mode="inline"
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
-          items={MENU_ITEMS}
+          items={menuItems}
           onClick={({ key }) => history.push(`/datasets/${datasetId}/edit/${key}`)}
         />
       </Sider>
@@ -267,16 +268,17 @@ const DatasetSettingsView: React.FC = () => {
             />
             <Route
               path="/datasets/:datasetNameAndId/edit/defaultConfig"
-              render={() => (
-                <DatasetSettingsViewConfigTab
-                  dataSourceId={maybeDataSourceId}
-                  dataStoreURL={dataset?.dataStore.url}
-                />
-              )}
+              component={DatasetSettingsViewConfigTab}
             />
             <Route
               path="/datasets/:datasetNameAndId/edit/delete"
               component={DatasetSettingsDeleteTab}
+            />
+            <Route
+              path="/datasets/:datasetNameAndId/edit"
+              render={({ match }: RouteComponentProps<{ datasetNameAndId: string }>) => (
+                <Redirect to={`/datasets/${match.params.datasetNameAndId}/edit/data`} />
+              )}
             />
           </Switch>
           <FormItem

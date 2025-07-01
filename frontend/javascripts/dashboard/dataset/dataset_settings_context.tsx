@@ -13,19 +13,14 @@ export type FormData = {
   datasetRotation?: DatasetRotationAndMirroringSettings;
 };
 
-
 export type DatasetSettingsContextValue = {
   form: FormInstance<FormData>;
   isLoading: boolean;
-  hasUnsavedChanges: boolean;
   dataset: APIDataset | null | undefined;
   datasetId: string;
   datasetDefaultConfiguration: DatasetConfiguration | null | undefined;
   activeDataSourceEditMode: "simple" | "advanced";
-  savedDataSourceOnServer: APIDataSource | null | undefined;
   isEditingMode: boolean;
-  onComplete: () => void;
-  onCancel: () => void;
   handleSubmit: () => void;
   handleCancel: () => void;
   handleDataSourceEditModeChange: (activeEditMode: "simple" | "advanced") => void;
@@ -40,9 +35,7 @@ export const DatasetSettingsContext = createContext<DatasetSettingsContextValue 
 export const useDatasetSettingsContext = () => {
   const context = useContext(DatasetSettingsContext);
   if (!context) {
-    throw new Error(
-      "useDatasetSettingsContext must be used within a DatasetSettingsProvider",
-    );
+    throw new Error("useDatasetSettingsContext must be used within a DatasetSettingsProvider");
   }
   return context;
 };

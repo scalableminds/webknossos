@@ -80,15 +80,9 @@ export const syncDataSourceFields = (
   }
 };
 
-export default function DatasetSettingsDataTab({
-  onChange,
-}: {
-  // Form is passed explicitly because syncDataSourceFields is a utility function
-  // that needs the form instance, and it's called from the parent.
-  // The rest of the props are now derived from context.
-  onChange: (arg0: "simple" | "advanced") => void;
-}) {
-  const { dataset, form, activeDataSourceEditMode } = useDatasetSettingsContext();
+export default function DatasetSettingsDataTab() {
+  const { dataset, form, activeDataSourceEditMode, handleDataSourceEditModeChange } =
+    useDatasetSettingsContext();
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
   Form.useWatch("dataSource", form);
@@ -98,7 +92,6 @@ export default function DatasetSettingsDataTab({
   const datasetStoredLocationInfo = dataset
     ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
     : "";
-
   const isJSONValid = isValidJSON(dataSourceJson);
 
   return (
@@ -125,7 +118,7 @@ export default function DatasetSettingsDataTab({
             }}
             onChange={(bool) => {
               const key = bool ? "advanced" : "simple";
-              onChange(key);
+              handleDataSourceEditModeChange(key);
             }}
           />
         </Tooltip>
@@ -193,11 +186,15 @@ function SimpleDatasetForm({
     });
     syncDataSourceFields(form, "advanced");
   };
+  const marginBottom: React.CSSProperties = {
+    marginBottom: 24,
+  };
 
   return (
     <div>
       <SettingsCard
         title="General Dataset Settings"
+        style={marginBottom}
         content={
           <Row gutter={[24, 24]}>
             <Col span={24} xl={12}>
@@ -289,11 +286,11 @@ function SimpleDatasetForm({
             </Col>
           </Row>
         }
-        style={{ marginBottom: 24 }}
       />
 
       <SettingsCard
         title="Axis Rotation"
+        style={marginBottom}
         content={
           <Row gutter={[24, 24]}>
             <Col span={24}>
@@ -309,6 +306,7 @@ function SimpleDatasetForm({
           <Col span={24}>
             <SettingsCard
               title={`Layer: ${layer.name}`}
+              style={marginBottom}
               content={
                 <SimpleLayerForm
                   dataset={dataset}
@@ -349,8 +347,8 @@ function SimpleLayerForm({
 }) {
   const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
-  const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
-  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
+  const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
   const isSegmentation = category === "segmentation";
   const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
 
@@ -457,11 +455,11 @@ function SimpleLayerForm({
               </Select>
             </FormItemWithInfo>
             <FormItemWithInfo
-              label="Element Class"
+              label="Data Type"
               style={{
                 marginBottom: 24,
               }}
-              info="The element class (data type) of the layer."
+              info="The data type (sometimes called dtype) of the layer."
             >
               <Select disabled value={layer.elementClass} style={{ width: 120 }}>
                 <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>

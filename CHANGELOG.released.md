@@ -7,6 +7,51 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.07.0](https://github.com/scalableminds/webknossos/releases/tag/25.07.0) - 2025-07-01
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.2...25.07.0)
+
+### Highlights
+- Added the ability to duplicate trees in skeleton annotations. Users can create a copy of any tree (including all nodes, edges, and properties) via the context menu in the skeleton tab. [#8662](https://github.com/scalableminds/webknossos/pull/8662)
+- Added a new Account Settings page for managing user preferences, passwords and authentication methods. [#8672](https://github.com/scalableminds/webknossos/pull/8672)
+- Improved efficiency of saving bounding box related annotation changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)
+
+### Added
+- In shared annotations with multiple authors, some changes are now stored per user. This means that other users won’t see all those changes if their own diverge. This includes the current position and zoom, visibilities of trees, bounding boxes, and segments (as specified with the checkboxes in the lists), as well as which groups are expanded in the lists. The annotation owner’s user state is used as a fallback for users who haven’t explicitly changed these values themselves. [#8542](https://github.com/scalableminds/webknossos/pull/8542)
+- Meshes are now reloaded using their previous opacity value. [#8622](https://github.com/scalableminds/webknossos/pull/8622)
+- Agglomerate Mappings can now also be read from the new zarr3-based format, and from remote object storage. [#8633](https://github.com/scalableminds/webknossos/pull/8633)
+- Added the ability to duplicate trees in skeleton annotations. Users can create a copy of any tree (including all nodes, edges, and properties) via the context menu in the skeleton tab. [#8662](https://github.com/scalableminds/webknossos/pull/8662)
+- Added a new Account Settings page for managing user preferences, passwords and authentication methods. [#8672](https://github.com/scalableminds/webknossos/pull/8672)
+- Precomputed Meshes can now also be read from the new zarr3-based format, and from remote object storage. [#8682](https://github.com/scalableminds/webknossos/pull/8682)
+- Added Zstandard support for N5 [#8703](https://github.com/scalableminds/webknossos/pull/8703)
+- WKW datasets can now also have custom paths in their datasource-properties.json. [#8725](https://github.com/scalableminds/webknossos/pull/8725)
+
+### Changed
+- The datasource-properties.json as exposed in zarr streaming routes and volume annotation download now includes an explicit “path” attribute for every mag. The supplied path is relative to the location of the datasource-properties.json itself, e.g. `./color/2-2-1`. [#8518](https://github.com/scalableminds/webknossos/pull/8518)
+- When creating an annotation from the dataset view mode, and more than one segmentation layer is visible or multiple segmentation layers are invisible but available, a selection modal now appears allowing users to choose which segmentation layer to use for the newly created volume annotation. Per default, annotations are still based on the visible segmentation layer. [#8677](https://github.com/scalableminds/webknossos/pull/8677)
+- Updated the UI for the organizations settings page. [#8679](https://github.com/scalableminds/webknossos/pull/8679)
+- Changed the process for adding changelog and migration guide items to avoid merge conflicts. Instead of editing the "*.unreleased.md" files, developers should run `python3 tools/create-changelog-entry.py`. This will create a md file within `unreleased_changes` with the number of the current pull request. The file will contain the correct format with dummy values for the changelog and migration guide. The developer should adapt the template and commit it. When bundling a release, these changelog files will be read and written into the released changelog/migration guide. [#8698](https://github.com/scalableminds/webknossos/pull/8698)
+- The HTTP API of tracing store and data store endpoints now also support versioning for better compatibility across webknossos-libs python clients. [#8705](https://github.com/scalableminds/webknossos/pull/8705)
+- Replaced withRouter HOC with useHistory hook for several components. [#8721](https://github.com/scalableminds/webknossos/pull/8721)
+
+### Fixed
+- Improved efficiency of saving bounding box related annotation changes. [#8492](https://github.com/scalableminds/webknossos/pull/8492)
+- When deleting a dataset, its caches are cleared, so that if a new dataset by the same name is uploaded afterwards, only new data is loaded. [#8638](https://github.com/scalableminds/webknossos/pull/8638)
+- Fixed a race condition when starting proofreading with a split action. [#8676](https://github.com/scalableminds/webknossos/pull/8676)
+- Fixed that the healthcheck for a dedicated tracing store would fail sometimes. [#8683](https://github.com/scalableminds/webknossos/pull/8683)
+- Fixed that activating a mapping got stuck when a dataset was opened in "view" mode. [#8687](https://github.com/scalableminds/webknossos/pull/8687)
+- Fixed the contrast of the WelcomeToast buttons. Updated `antd` to version `5.22`. [#8688](https://github.com/scalableminds/webknossos/pull/8688)
+- Fixed a regression that led to incorrect behavior when trying to jump to the last branchpoint even though no branchpoint existed. [#8695](https://github.com/scalableminds/webknossos/pull/8695)
+- Fixed the sandbox mode for annotations. [#8702](https://github.com/scalableminds/webknossos/pull/8702)
+- Fixed the nightly screenshot tests. [#8702](https://github.com/scalableminds/webknossos/pull/8702)
+- Fixed that one could not scroll to the last item in the segments and trees tab. [#8709](https://github.com/scalableminds/webknossos/pull/8709)
+- Fixed that WEBKNOSSOS could crash when mappings were requested for a volume layer that is not based on another segmentation layer. [#8710](https://github.com/scalableminds/webknossos/pull/8710)
+- Fixed a crash when an ad-hoc mesh could not be loaded for some reason. [#8716](https://github.com/scalableminds/webknossos/pull/8716)
+- Fixed a bug where the checks on relative paths were too strict when editing dataset settings. [#8720](https://github.com/scalableminds/webknossos/pull/8720)
+- Fixed a bug when loading mesh files for segmentation layer without fallback data. Such layer cannot have mesh files. [#8726](https://github.com/scalableminds/webknossos/pull/8726)
+- Fixed reading chunks from arrays where the whole shard is missing (should return fill_value) [#8727](https://github.com/scalableminds/webknossos/pull/8727)
+- Fixed fetching mesh files in view only mode. Bug introduced by #8726 [#8728](https://github.com/scalableminds/webknossos/pull/8728)
+- Fixed that on dataset upload the storage usage would get scanned even if it is disabled in config for that particular data store server. [#8733](https://github.com/scalableminds/webknossos/pull/8733)
+
 ## [25.06.2](https://github.com/scalableminds/webknossos/releases/tag/25.06.2) - 2025-06-17
 [Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...25.06.2)
 

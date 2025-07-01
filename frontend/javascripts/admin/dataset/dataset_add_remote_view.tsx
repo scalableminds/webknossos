@@ -36,7 +36,6 @@ import type { APIDataStore, APIUser } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { Unicode } from "viewer/constants";
-import type { WebknossosState } from "viewer/store";
 import { Hint } from "viewer/view/action-bar/download_modal_view";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { useWkSelector } from "libs/react_hooks";
@@ -48,7 +47,7 @@ const { Password } = Input;
 
 type FileList = UploadFile<any>[];
 
-type OwnProps = {
+type Props = {
   onAdded: (
     uploadedDatasetId: string,
     updatedDatasetName: string,
@@ -61,11 +60,6 @@ type OwnProps = {
   // the exploration and import.
   defaultDatasetUrl?: string | null | undefined;
 };
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-};
-type Props = OwnProps & StateProps;
-
 function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
   for (const layer of datasource.dataLayers) {
     if (layer.category === "color" || layer.largestSegmentId != null) {
@@ -179,7 +173,7 @@ export function GoogleAuthFormItem({
   );
 }
 
-function DatasetAddRemoteView(props: OwnProps) {
+function DatasetAddRemoteView(props: Props) {
   const { activeUser } = useWkSelector((state) => ({
     activeUser: state.activeUser,
   }));

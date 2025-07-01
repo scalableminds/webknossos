@@ -1,7 +1,7 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Redirect, Route, Switch, useHistory, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import AccountAuthTokenView from "./account_auth_token_view";
 import AccountPasswordView from "./account_password_view";
 import AccountProfileView from "./account_profile_view";
@@ -46,7 +46,7 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 
 function AccountSettingsView() {
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "profile";
 
   const breadcrumbItems = [
@@ -68,17 +68,17 @@ function AccountSettingsView() {
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
           items={MENU_ITEMS}
-          onClick={({ key }) => history.push(`/account/${key}`)}
+          onClick={({ key }) => navigate(`/account/${key}`)}
         />
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
-        <Switch>
-          <Route path="/account/profile" component={AccountProfileView} />
-          <Route path="/account/password" component={AccountPasswordView} />
-          <Route path="/account/token" component={AccountAuthTokenView} />
-          <Route path="/account" render={() => <Redirect to="/account/profile" />} />
-        </Switch>
+        <Routes>
+          <Route path="profile" element={<AccountProfileView />} />
+          <Route path="password" element={<AccountPasswordView />} />
+          <Route path="token" element={<AccountAuthTokenView />} />
+          <Route path="*" element={<Navigate to="profile" />} />
+        </Routes>
       </Content>
     </Layout>
   );

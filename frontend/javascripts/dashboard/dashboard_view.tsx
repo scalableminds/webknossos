@@ -16,8 +16,7 @@ import _ from "lodash";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { Dispatch } from "redux";
 import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -43,7 +42,7 @@ type DispatchProps = {
 };
 type Props = OwnProps & StateProps & DispatchProps;
 type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
+  navigate: RouteComponentProps["navigate"];
 };
 type State = {
   activeTabKey: string;
@@ -138,7 +137,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         createGroupForEachFile,
       },
     });
-    this.props.history.push(`/annotations/${response.annotation.id}`);
+    this.props.navigate(`/annotations/${response.annotation.id}`);
   };
 
   getValidTabKeys() {
@@ -244,7 +243,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         UserLocalStorage.setItem("lastUsedDashboardTab", activeTabKey);
 
         if (!this.props.isAdminView) {
-          this.props.history.push(`/dashboard/${url}`);
+          this.props.navigate(`/dashboard/${url}`);
         }
       }
 
@@ -311,4 +310,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardView));
+export default connector(withRouter<RouteComponentProps & Props>(DashboardView));

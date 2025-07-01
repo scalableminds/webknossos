@@ -13,11 +13,6 @@ import {
 import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";
-import type {
-  Action as HistoryAction,
-  Location as HistoryLocation,
-  UnregisterCallback,
-} from "history";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
@@ -25,8 +20,8 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
+import { Link } from "react-router-dom";
 import type { APIDataSource, APIDataset, APIMessage, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import { Unicode } from "viewer/constants";
@@ -58,7 +53,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
-  history: RouteComponentProps["history"];
+  navigate: RouteComponentProps["navigate"];
 };
 type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
 type State = {
@@ -714,4 +709,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetSettingsView));
+export default connector(withRouter<RouteComponentProps & OwnProps>(DatasetSettingsView));

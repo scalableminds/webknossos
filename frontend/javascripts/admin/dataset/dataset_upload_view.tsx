@@ -201,7 +201,7 @@ export const dataPrivacyInfo = (
   </Space>
 );
 
-class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
+class DatasetUploadView extends React.Component<Props, State> {
   state: State = {
     isUploading: false,
     isFinishing: false,

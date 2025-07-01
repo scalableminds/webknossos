@@ -8,7 +8,7 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
@@ -68,7 +68,7 @@ type DispatchProps = {
 type PropsWithRouter = OwnProps &
   StateProps &
   DispatchProps & {
-    history: RouteComponentProps["history"];
+    navigate: RouteComponentProps["navigate"];
   };
 type State = {
   activeLayoutName: string;
@@ -330,7 +330,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           datasetId: this.props.datasetId,
         },
       });
-      this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+      this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
     };
 
     return (
@@ -451,4 +451,4 @@ function mapStateToProps(state: WebknossosState) {
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(TracingLayoutView));
+export default connector(withRouter<RouteComponentProps & OwnProps>(TracingLayoutView));

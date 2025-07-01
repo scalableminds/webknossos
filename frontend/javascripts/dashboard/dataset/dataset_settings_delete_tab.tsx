@@ -4,17 +4,16 @@ import { Button } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { APIDataset } from "types/api_types";
 import { confirmAsync } from "./helper_components";
 
 type Props = {
   datasetId: string;
-  history: RouteComponentProps["history"];
+  navigate: RouteComponentProps["navigate"];
 };
 
-const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
+const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
   const queryClient = useQueryClient();
@@ -61,7 +60,7 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     });
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
-    history.push("/dashboard");
+    navigate("/dashboard");
   }
 
   return (
@@ -76,4 +75,4 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
   );
 };
 
-export default withRouter<RouteComponentProps & Props, any>(DatasetSettingsDeleteTab);
+export default withRouter<RouteComponentProps & Props>(DatasetSettingsDeleteTab);

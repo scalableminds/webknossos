@@ -10,8 +10,7 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
@@ -356,4 +355,4 @@ function mapStateToProps(state: WebknossosState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<PropsWithRouter, any>(Controller));
+export default connector(withRouter<PropsWithRouter>(Controller));

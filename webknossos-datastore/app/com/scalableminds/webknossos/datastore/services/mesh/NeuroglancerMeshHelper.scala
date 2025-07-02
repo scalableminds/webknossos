@@ -108,12 +108,12 @@ object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(chunkInfos: List[List[MeshLodInfo]],
-                               encoding: String,
+                               meshFormat: String,
                                chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Box[WebknossosSegmentInfo] =
     Box(chunkInfos.headOption).flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
-          meshFormat = encoding,
+          meshFormat = meshFormat,
           lods = chunkInfos.transpose.map(mergeLod),
           chunkScale = chunkScale
         )
@@ -126,6 +126,7 @@ object WebknossosSegmentInfo {
   }
 
 }
+
 trait NeuroglancerMeshHelper {
 
   def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,

@@ -9,8 +9,7 @@ import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import {
   type APIAllowedMode,
   type APIMagRestrictions,
@@ -27,7 +26,6 @@ const { TextArea } = Input;
 
 type Props = {
   taskTypeId?: string | null | undefined;
-  history: RouteComponentProps["history"];
 };
 
 type FormValues = {
@@ -75,7 +73,8 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
   );
 }
 
-function TaskTypeCreateView({ taskTypeId, history }: Props) {
+function TaskTypeCreateView({ taskTypeId }: Props) {
+  const history = useHistory();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
   const [isFetchingData, setIsFetchingData] = useState(true);
   const [form] = Form.useForm<FormValues>();
@@ -502,4 +501,4 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskTypeCreateView);
+export default TaskTypeCreateView;

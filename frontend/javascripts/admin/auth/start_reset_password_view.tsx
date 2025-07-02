@@ -3,14 +3,12 @@ import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 const FormItem = Form.Item;
-type Props = {
-  history: RouteComponentProps["history"];
-};
 
-function StartResetPasswordView({ history }: Props) {
+function StartResetPasswordView() {
   const [form] = Form.useForm();
+  const history = useHistory();
 
   const onFinish = (formValues: Record<string, any>) => {
     Request.sendJSONReceiveJSON("/api/auth/startResetPassword", {
@@ -67,4 +65,4 @@ function StartResetPasswordView({ history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(StartResetPasswordView);
+export default StartResetPasswordView;

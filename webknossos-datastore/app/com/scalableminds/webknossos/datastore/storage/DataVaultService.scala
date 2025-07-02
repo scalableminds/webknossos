@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   S3DataVault,
   VaultPath
 }
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Full
 import play.api.libs.ws.WSClient
@@ -33,6 +34,9 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
 
   private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
     AlfuCache(maxCapacity = 100)
+
+  def getVaultPath(layerAttachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[VaultPath] =
+    getVaultPath(RemoteSourceDescriptor(layerAttachment.path, None))
 
   def getVaultPath(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {

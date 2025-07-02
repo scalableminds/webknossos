@@ -206,7 +206,7 @@ export const getColorForCoords: ShaderModule = {
 
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
-      bool beSafe = isFlycamRotated;
+      bool beSafe = isFlycamRotated || !<%= isOrthogonal %>;
       {
         renderedMagIdx = outputMagIdx[globalLayerIndex];
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));

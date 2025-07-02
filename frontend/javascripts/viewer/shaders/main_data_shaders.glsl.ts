@@ -484,7 +484,7 @@ void main() {
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   // Early return shader as optimized vertex positioning at bucket borders currently does not work while rotations are active.
   // This shouldn't really impact the performance as isFlycamRotated is a uniform.
-  if(isFlycamRotated){
+  if(isFlycamRotated || !<%= isOrthogonal %>) {
     return;
   }
   // Remember the original z position, since it can subtly diverge in the

@@ -23,10 +23,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import com.scalableminds.webknossos.datastore.services.{
-  ArrayArtifactHashing,
-  BinaryDataServiceHolder
-}
+import com.scalableminds.webknossos.datastore.services.{ArrayArtifactHashing, BinaryDataServiceHolder}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 
 import java.nio.file.{Path, Paths}

@@ -149,13 +149,13 @@ function ReactRouter() {
               {/* <Route
     
     path="/dashboard/:tab"
-    element={(()<SecuredRoute> => </SecuredRoute>{
+    element={(() => {
       const { tab } = useParams();
       const initialTabKey =
         // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
         tab ? urlTokenToTabKeyMap[tab] : null;
       return (
-        <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />
+        <SecuredRoute><DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} /></SecuredRoute>
       );
     })()}
   /> */}
@@ -171,30 +171,27 @@ function ReactRouter() {
 
               <Route path="/dashboard" element={<DashboardRoute />} />
               {/* <Route
-    
-    path="/users/:userId/details"
-    
-    
-    element={(() => {
-      const { userId } = useParams();
-      return (
-      <SecuredRoute requiresAdminOrManagerRole>
-        <DashboardView
-          userId={userId}
-          isAdminView={userId !== null}
-          initialTabKey={null}
-        /></SecuredRoute>
-      );
-    })()}
-  /> */}
+                path="/users/:userId/details"
+                element={(() => {
+                  const { userId } = useParams();
+                  return (
+                    <SecuredRoute requiresAdminOrManagerRole>
+                      <DashboardView
+                        userId={userId}
+                        isAdminView={userId !== null}
+                        initialTabKey={null}
+                      />
+                    </SecuredRoute>
+                  );
+                })()}
+              /> */}
               <Route
                 path="/users"
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute requiresAdminOrManagerRole>
                     <UserListView />
                   </SecuredRoute>
                 }
-                requiresAdminOrManagerRole
               />
               <Route
                 path="/import"
@@ -207,11 +204,10 @@ function ReactRouter() {
               <Route
                 path="/teams"
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute requiresAdminOrManagerRole>
                     <TeamListView />
                   </SecuredRoute>
                 }
-                requiresAdminOrManagerRole
               />
               <Route
                 path="/timetracking"
@@ -222,97 +218,115 @@ function ReactRouter() {
                 }
               />
               <Route
-                requiredPricingPlan={PricingPlanEnum.Team}
-                path="/report<SecuredRoute>s/projectProgress</SecuredRoute>"
-                element={<ProjectProgressReportView />}
-                requiresAdminOrManagerRole
+                path="/reports/projectProgress"
+                element={
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
+                    <ProjectProgressReportView />
+                  </SecuredRoute>
+                }
               />
               <Route
                 path="/reports/openTasks"
                 element={<Navigate to="/reports/availableTasks" />}
               />
               <Route
-                requiredPricingPlan={PricingPlanEnum.Team}
-                path="/report<SecuredRoute>s/availableTasks</SecuredRoute>"
-                element={<AvailableTasksReportView />}
-                requiresAdminOrManagerRole
+                path="/reports/availableTasks"
+                element={
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
+                    <AvailableTasksReportView />
+                  </SecuredRoute>
+                }
               />
               <Route
                 path="/tasks"
-                requiredPricingPlan={PricingPlanEnum.Team}
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <TaskListView />
                   </SecuredRoute>
                 }
-                requiresAdminOrManagerRole
               />
               <Route
                 path="/tasks/create"
-                requiredPricingPlan={PricingPlanEnum.Team}
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <TaskCreateView />
                   </SecuredRoute>
                 }
-                requiresAdminOrManagerRole
               />
               <Route
                 path="/tasks/:taskId/edit"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <TaskCreateFormView />
                   </SecuredRoute>
                 }
               />
               <Route
                 path="/tasks/:taskId"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <TaskListView />
                   </SecuredRoute>
                 }
               />
               <Route
                 path="/projects"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <ProjectListView />
                   </SecuredRoute>
                 }
               />
               <Route
                 path="/projects/create"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <ProjectCreateView />
                   </SecuredRoute>
                 }
               />
               <Route
                 path="/projects/:projectId/tasks"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <TaskListView />
                   </SecuredRoute>
                 }
               />
               <Route
                 path="/projects/:projectId/edit"
-                requiredPricingPlan={PricingPlanEnum.Team}
-                requiresAdminOrManagerRole
                 element={
-                  <SecuredRoute>
+                  <SecuredRoute
+                    requiredPricingPlan={PricingPlanEnum.Team}
+                    requiresAdminOrManagerRole
+                  >
                     <ProjectCreateView />
                   </SecuredRoute>
                 }
@@ -353,8 +367,8 @@ function ReactRouter() {
               />
               {/* <Route
     
-    path="/datasets/:datasetNameAndId/edit"<SecuredRoute</SecuredRoute>>
-    requiresAdminOrManagerRole
+    path="/datasets/:datasetNameAndId/edit"
+    
     element={(() => {
       const { datasetNameAndId } = useParams();
       const { datasetId, datasetName } =
@@ -364,6 +378,7 @@ function ReactRouter() {
         // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
         // The schema is something like <authority>/datasets/:datasetName/edit
         return (
+        <SecuredRoute>
           <AsyncRedirect
             redirectTo={async () => {
               const organizationId = await getOrganizationForDataset(
@@ -381,12 +396,14 @@ function ReactRouter() {
         );
       }
       return (
+      <SecuredRoute requiresAdminOrManagerRole>
         <DatasetSettingsView
           isEditingMode
           datasetId={datasetId || ""}
           onComplete={() => window.history.back()}
           onCancel={() => window.history.back()}
         />
+        </SecuredRoute>
       );
     })()}
   /> */}
@@ -500,7 +517,9 @@ function ReactRouter() {
                   <Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />
                 }
               />
+              {/* Backwards compatibility for old auth token URLs */}
               <Route path="/auth/token" element={<Navigate to="/account/token" />} />
+              {/* Backwards compatibility for old password change URLs */}
               <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
               <Route path="/login" element={<Navigate to="/auth/login" />} />
 
@@ -543,9 +562,10 @@ function ReactRouter() {
               {/* <Route
     
     path="/datasets/:datasetId/createExplorative/:type"
-    element={(()<SecuredRoute> => </SecuredRoute>{
+    element={(() => 
       const { datasetId, type } = useParams();
       return (
+      <SecuredRoute>
         <AsyncRedirect
           pushToHistory={false}
           redirectTo={async () => {
@@ -586,7 +606,7 @@ function ReactRouter() {
             );
             return `/annotations/${annotation.id}`;
           }}
-        />
+        /></SecuredRoute>
       );
     })()}
   /> */}
@@ -601,7 +621,7 @@ function ReactRouter() {
               />
               <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
               <Route path="/publications/:id" element={<PublicationDetailView />} />
-              <Route path="/publication/:id" elememnt={<Navigate to="/publications/:id" />} />
+              <Route path="/publication/:id" element={<Navigate to="/publications/:id" />} />
               <Route
                 path="/workflows"
                 element={

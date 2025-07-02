@@ -1,25 +1,19 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayer,
-  DataSourceId,
-  LayerAttachment,
-  LayerAttachmentDataformat
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachment, LayerAttachmentDataformat}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio.file.Paths

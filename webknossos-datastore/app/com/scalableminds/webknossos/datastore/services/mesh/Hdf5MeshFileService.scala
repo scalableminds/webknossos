@@ -12,7 +12,10 @@ import play.api.i18n.{Messages, MessagesProvider}
 import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 
-class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends NeuroglancerMeshHelper with FoxImplicits {
+class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
+    extends NeuroglancerMeshHelper
+    with MeshFileUtils
+    with FoxImplicits {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -31,8 +34,8 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   private def readMeshFileMetadata(meshFileKey: MeshFileKey): Box[(String, Double, Array[Array[Double]])] =
     fileHandleCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
-      val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", "lod_scale_multiplier")
-      val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", "transform")
+      val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", attrKeyLodScaleMultiplier)
+      val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", attrKeyTransform)
       (cachedMeshFile.meshFormat, lodScaleMultiplier, transform)
     }
 
@@ -66,13 +69,13 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   private def getNeuroglancerSegmentManifestOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
     val bucketIndex = cachedMeshFile.hashFunction(segmentId) % cachedMeshFile.nBuckets
-    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
+    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
 
     if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
 
-    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset("buckets",
+    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(keyBuckets,
                                                                         (bucketEnd - bucketStart + 1).toInt,
                                                                         3,
                                                                         bucketStart,
@@ -125,7 +128,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
     val data: List[(Array[Byte], Int)] = requestsReordered.map { requestAndIndex =>
       val meshChunkDataRequest = requestAndIndex._1
       val data =
-        cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
+        cachedMeshFile.uint8Reader.readArrayBlockWithOffset(keyNeuroglancer,
                                                             meshChunkDataRequest.byteSize,
                                                             meshChunkDataRequest.byteOffset)
       (data, requestAndIndex._2)

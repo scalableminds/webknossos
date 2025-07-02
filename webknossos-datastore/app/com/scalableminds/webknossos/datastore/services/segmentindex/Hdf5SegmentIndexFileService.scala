@@ -11,7 +11,7 @@ import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends FoxImplicits {
+class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends FoxImplicits with SegmentIndexFileUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -21,10 +21,10 @@ class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends Fox
       implicit ec: ExecutionContext): Fox[Array[Vec3Int]] =
     for {
       segmentIndex <- fileHandleCache.getCachedHdf5File(segmentIndexFileKey.attachment)(CachedHdf5File.fromPath).toFox
-      nBuckets = segmentIndex.uint64Reader.getAttr("/", "n_hash_buckets")
+      nBuckets = segmentIndex.uint64Reader.getAttr("/", attrKeyNHashBuckets)
 
       bucketIndex = segmentIndex.hashFunction(segmentId) % nBuckets
-      bucketOffsets = segmentIndex.uint64Reader.readArrayBlockWithOffset("hash_bucket_offsets", 2, bucketIndex)
+      bucketOffsets = segmentIndex.uint64Reader.readArrayBlockWithOffset(keyHashBucketOffsets, 2, bucketIndex)
       bucketStart = bucketOffsets(0)
       bucketEnd = bucketOffsets(1)
 
@@ -41,7 +41,7 @@ class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends Fox
       implicit ec: ExecutionContext): Fox[Option[Array[Array[Short]]]] =
     for {
       _ <- Fox.successful(())
-      buckets = segmentIndex.uint64Reader.readMatrixBlockWithOffset("hash_buckets",
+      buckets = segmentIndex.uint64Reader.readMatrixBlockWithOffset(keyHashBuckets,
                                                                     (bucketEnd - bucketStart + 1).toInt,
                                                                     3,
                                                                     bucketStart,
@@ -51,10 +51,10 @@ class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends Fox
         _ <- Fox.successful(())
         topLeftStart = buckets(bucketLocalOffset)(1)
         topLeftEnd = buckets(bucketLocalOffset)(2)
-        bucketEntriesDtype <- tryo(segmentIndex.stringReader.getAttr("/", "dtype_bucket_entries")).toFox
+        bucketEntriesDtype <- tryo(segmentIndex.stringReader.getAttr("/", attrKeyDtypeBucketEntries)).toFox
         _ <- Fox
           .fromBool(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
-        topLefts = segmentIndex.uint16Reader.readMatrixBlockWithOffset("top_lefts",
+        topLefts = segmentIndex.uint16Reader.readMatrixBlockWithOffset(keyTopLefts,
                                                                        (topLeftEnd - topLeftStart).toInt,
                                                                        3,
                                                                        topLeftStart,

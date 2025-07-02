@@ -1,20 +1,21 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
-import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiArrayUtils}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
+import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiArrayUtils}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, DataConverter}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
@@ -26,6 +27,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                        chunkCacheService: ChunkCacheService)
     extends DataConverter
+    with AgglomerateFileUtils
     with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(AgglomerateFileKey, String), DatasetArray]()
@@ -34,14 +36,6 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     openArraysCache.clear(predicate)
 
   protected lazy val bucketScanner = new NativeBucketScanner()
-
-  private val keySegmentToAgglomerate = "segment_to_agglomerate"
-  private val keyAgglomerateToSegmentsOffsets = "agglomerate_to_segments_offsets"
-  private val keyAgglomerateToSegments = "agglomerate_to_segments"
-  private val keyAgglomerateToPositions = "agglomerate_to_positions"
-  private val keyAgglomerateToEdges = "agglomerate_to_edges"
-  private val keyAgglomerateToEdgesOffsets = "agglomerate_to_edges_offsets"
-  private val keyAgglomerateToAffinities = "agglomerate_to_affinities"
 
   private def mapSingleSegment(segmentToAgglomerate: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
                                                                                     tc: TokenContext): Fox[Long] =

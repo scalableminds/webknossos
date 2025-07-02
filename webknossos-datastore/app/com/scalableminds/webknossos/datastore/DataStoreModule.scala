@@ -4,18 +4,9 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.services.mesh.{
-  AdHocMeshServiceHolder,
-  Hdf5MeshFileService,
-  MeshFileService,
-  NeuroglancerPrecomputedMeshFileService,
-  ZarrMeshFileService
-}
-import com.scalableminds.webknossos.datastore.services.segmentindex.{
-  Hdf5SegmentIndexFileService,
-  SegmentIndexFileService,
-  ZarrSegmentIndexFileService
-}
+import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, Hdf5AgglomerateService, MappingService, ZarrAgglomerateService}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshServiceHolder, Hdf5MeshFileService, MeshFileService, NeuroglancerPrecomputedMeshFileService, ZarrMeshFileService}
+import com.scalableminds.webknossos.datastore.services.segmentindex.{Hdf5SegmentIndexFileService, SegmentIndexFileService, ZarrSegmentIndexFileService}
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 

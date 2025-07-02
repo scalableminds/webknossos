@@ -11,16 +11,13 @@ import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}

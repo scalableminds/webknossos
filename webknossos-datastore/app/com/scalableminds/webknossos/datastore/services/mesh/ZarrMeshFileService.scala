@@ -8,7 +8,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, ArrayArtifactHashing}
+import com.scalableminds.webknossos.datastore.services.{
+  ArrayArtifactHashing,
+  ChunkCacheService,
+  VoxelyticsZarrArtifactUtils
+}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
@@ -29,24 +33,18 @@ case class MeshFileAttributes(
   lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
 }
 
-object MeshFileAttributes {
-  val FILENAME_ZARR_JSON = "zarr.json"
-
+object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils {
   implicit object MeshFileAttributesZarr3GroupHeaderReads extends Reads[MeshFileAttributes] {
     override def reads(json: JsValue): JsResult[MeshFileAttributes] = {
-      val keyAttributes = "attributes"
-      val keyVx = "voxelytics"
-      val keyFormatVersion = "artifact_schema_version"
-      val keyArtifactAttrs = "artifact_attributes"
-      val meshFileAttrs = json \ keyAttributes \ keyVx \ keyArtifactAttrs
+      val meshFileAttrs = lookUpArtifactAttributes(json)
       for {
-        formatVersion <- (json \ keyAttributes \ keyVx \ keyFormatVersion).validate[Long]
-        meshFormat <- (meshFileAttrs \ "mesh_format").validate[String]
-        lodScaleMultiplier <- (meshFileAttrs \ "lod_scale_multiplier").validate[Double]
-        transform <- (meshFileAttrs \ "transform").validate[Array[Array[Double]]]
-        hashFunction <- (meshFileAttrs \ "hash_function").validate[String]
-        nBuckets <- (meshFileAttrs \ "n_buckets").validate[Int]
-        mappingName <- (meshFileAttrs \ "mapping_name").validateOpt[String]
+        formatVersion <- readArtifactSchemaVersion(json)
+        meshFormat <- (meshFileAttrs \ attrKeyMeshFormat).validate[String]
+        lodScaleMultiplier <- (meshFileAttrs \ attrKeyLodScaleMultiplier).validate[Double]
+        transform <- (meshFileAttrs \ attrKeyTransform).validate[Array[Array[Double]]]
+        hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validate[String]
+        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Int]
+        mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
       } yield
         MeshFileAttributes(
           formatVersion,
@@ -64,11 +62,8 @@ object MeshFileAttributes {
 class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
                                     remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
+    with MeshFileUtils
     with NeuroglancerMeshHelper {
-
-  private val keyBucketOffsets = "bucket_offsets"
-  private val keyBuckets = "buckets"
-  private val keyNeuroglancer = "neuroglancer"
 
   private lazy val openArraysCache = AlfuCache[(MeshFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshFileKey, MeshFileAttributes]()

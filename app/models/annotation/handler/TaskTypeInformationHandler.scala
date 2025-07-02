@@ -1,21 +1,27 @@
 package models.annotation.handler
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation._
 import models.task.{TaskDAO, TaskTypeDAO}
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
-class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
-                                           taskDAO: TaskDAO,
-                                           userService: UserService,
-                                           annotationDAO: AnnotationDAO,
-                                           annotationMerger: AnnotationMerger)(implicit val ec: ExecutionContext)
+class TaskTypeInformationHandler @Inject()(
+    taskTypeDAO: TaskTypeDAO,
+    taskDAO: TaskDAO,
+    userService: UserService,
+    annotationDAO: AnnotationDAO,
+    annotationMerger: AnnotationMerger,
+    val datasetService: DatasetService,
+    val datasetDAO: DatasetDAO,
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with FoxImplicits {
 
@@ -32,6 +38,7 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
       user <- userOpt.toFox ?~> "user.notAuthorised"
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
+      _ <- registerDataSourceInTemporaryStore(taskTypeId, datasetId)
       mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
                                                   toTemporaryStore = true,
                                                   user._id,

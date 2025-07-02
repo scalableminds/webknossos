@@ -42,5 +42,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
     bind(classOf[ChunkCacheService]).asEagerSingleton()
     bind(classOf[DatasetCache]).asEagerSingleton()
+    bind(classOf[ZarrStreamingService]).asEagerSingleton()
   }
 }

@@ -67,9 +67,7 @@ type DispatchProps = {
 };
 type PropsWithRouter = OwnProps &
   StateProps &
-  DispatchProps & {
-    navigate: RouteComponentProps["navigate"];
-  };
+  DispatchProps & RouteComponentProps
 type State = {
   activeLayoutName: string;
   hasError: boolean;
@@ -451,4 +449,4 @@ function mapStateToProps(state: WebknossosState) {
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps>(TracingLayoutView));
+export default connector(withRouter(TracingLayoutView));

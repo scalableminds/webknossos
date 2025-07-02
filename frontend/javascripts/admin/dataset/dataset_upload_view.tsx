@@ -94,10 +94,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   organization: APIOrganization;
 };
-type Props = OwnProps & StateProps;
-type PropsWithFormAndRouter = Props & {
-  navigate: RouteComponentProps["navigate"];
-};
+type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps;
 type State = {
   isUploading: boolean;
   isFinishing: boolean;
@@ -201,7 +198,7 @@ export const dataPrivacyInfo = (
   </Space>
 );
 
-class DatasetUploadView extends React.Component<Props, State> {
+class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
     isUploading: false,
     isFinishing: false,
@@ -298,8 +295,8 @@ class DatasetUploadView extends React.Component<Props, State> {
     });
 
     const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
+      newLocation,
+      action,
     ): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
@@ -323,7 +320,6 @@ class DatasetUploadView extends React.Component<Props, State> {
     };
     const { unfinishedUploadToContinue } = this.state;
 
-    this.unblock = this.props.history.block(beforeUnload);
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
 
@@ -1375,4 +1371,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps>(DatasetUploadView));
+export default connector(withRouter<PropsWithFormAndRouter>(DatasetUploadView));

@@ -318,7 +318,7 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 }
 
 export default function WorkflowView() {
-  const { workflowName } = useParams<{ workflowName: string }>();
+  const { workflowName="" } = useParams();
   const { metatask } = useSearchParams();
   const user = useWkSelector((state) => state.activeUser);
 

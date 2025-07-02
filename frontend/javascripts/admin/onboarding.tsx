@@ -734,4 +734,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props>(OnboardingView));
+export default connector(withRouter<Props>(OnboardingView));

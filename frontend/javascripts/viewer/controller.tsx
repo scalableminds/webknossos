@@ -1,6 +1,5 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
@@ -131,8 +130,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   modelFetchDone() {
     const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
+      newLocation,
+      action,
     ): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
@@ -161,7 +160,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       return;
     };
 
-    this.props.history.block(beforeUnload);
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
     UrlManager.startUrlUpdater();

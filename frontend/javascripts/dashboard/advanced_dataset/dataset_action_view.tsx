@@ -100,6 +100,7 @@ function LinkWithDisabled({
   style?: React.CSSProperties;
   to: string;
   children: React.ReactNode;
+  title?: string;
 }) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =

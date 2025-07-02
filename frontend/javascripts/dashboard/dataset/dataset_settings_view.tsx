@@ -52,9 +52,7 @@ type StateProps = {
   isUserAdmin: boolean;
 };
 type Props = OwnProps & StateProps;
-type PropsWithFormAndRouter = Props & {
-  navigate: RouteComponentProps["navigate"];
-};
+type PropsWithFormAndRouter = Props & RouteComponentProps;
 type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
 type State = {
   hasUnsavedChanges: boolean;
@@ -77,7 +75,6 @@ export type FormData = {
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<FormInstance>();
-  unblock: UnregisterCallback | null | undefined;
   blockTimeoutId: number | null | undefined;
   static contextType = defaultContext;
   declare context: React.ContextType<typeof defaultContext>;
@@ -98,51 +95,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     sendAnalyticsEvent("open_dataset_settings", {
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
-
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        const { hasUnsavedChanges } = this.state;
-
-        if (hasUnsavedChanges) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-
-          this.blockTimeoutId = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["dataset.leave_with_unsaved_changes"];
-        }
-      }
-      return;
-    };
-
-    this.unblock = this.props.history.block(beforeUnload);
-    // @ts-ignore
-    window.onbeforeunload = beforeUnload;
-  }
-
-  componentWillUnmount() {
-    this.unblockHistory();
-  }
-
-  unblockHistory() {
-    window.onbeforeunload = null;
-
-    if (this.blockTimeoutId != null) {
-      clearTimeout(this.blockTimeoutId);
-      this.blockTimeoutId = null;
-    }
-
-    if (this.unblock != null) {
-      this.unblock();
-    }
   }
 
   async fetchData(): Promise<void> {
@@ -517,7 +469,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   };
 
   onCancel = () => {
-    this.unblockHistory();
     this.props.onCancel();
   };
 
@@ -709,4 +660,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps>(DatasetSettingsView));
+export default connector(withRouter<PropsWithFormAndRouter>(DatasetSettingsView));

@@ -142,7 +142,7 @@ function TracingSandboxLegacy() {
 }
 
 function TracingSandbox() {
-  const { type, datasetNameAndId } = useParams();
+  const { type, datasetNameAndId =""} = useParams();
   const tracingType = coalesce(TracingTypeEnum, type);
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);

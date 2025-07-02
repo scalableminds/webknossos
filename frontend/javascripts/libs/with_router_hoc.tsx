@@ -18,12 +18,12 @@ export type RouteComponentProps = {
  * @returns A function component that passes router props to the wrapped component.
  */
 export function withRouter<P extends RouteComponentProps>(Component: React.ComponentType<P>) {
-  function ComponentWithRouterProp(props: P) {
+  function ComponentWithRouterProp(props: Omit<P, keyof RouteComponentProps>) {
     const location = useLocation();
     const navigate = useNavigate();
     const params = useParams();
 
-    return <Component {...props} navigate={navigate} location={location} params={params} />;
+    return <Component {...props as P} navigate={navigate} location={location} params={params} />;
   }
 
   return ComponentWithRouterProp;

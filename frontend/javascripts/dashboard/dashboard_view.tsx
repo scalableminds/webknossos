@@ -41,9 +41,7 @@ type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRouter = Props & {
-  navigate: RouteComponentProps["navigate"];
-};
+type PropsWithRouter = Props &  RouteComponentProps
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
@@ -310,4 +308,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & Props>(DashboardView));
+export default connector(withRouter(DashboardView));

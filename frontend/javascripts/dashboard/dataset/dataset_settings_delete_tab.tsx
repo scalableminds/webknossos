@@ -10,8 +10,7 @@ import { confirmAsync } from "./helper_components";
 
 type Props = {
   datasetId: string;
-  navigate: RouteComponentProps["navigate"];
-};
+} & RouteComponentProps;
 
 const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -75,4 +74,4 @@ const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
   );
 };
 
-export default withRouter<RouteComponentProps & Props>(DatasetSettingsDeleteTab);
+export default withRouter(DatasetSettingsDeleteTab);

@@ -97,89 +97,90 @@ function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-function ExplorativeAnnotationsView(props: Props) {
-  const [shouldShowArchivedAnnotations, setShouldShowArchivedAnnotations] = React.useState(false);
-  const [archivedModeState, setArchivedModeState] = React.useState<AnnotationModeState>({
-    annotations: [],
-    lastLoadedPage: -1,
-    loadedAllAnnotations: false,
-  });
-  const [unarchivedModeState, setUnarchivedModeState] = React.useState<AnnotationModeState>({
-    annotations: [],
-    lastLoadedPage: -1,
-    loadedAllAnnotations: false,
-  });
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [tags, setTags] = React.useState<Array<string>>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
+class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+  state: State = {
+    shouldShowArchivedAnnotations: false,
+    archivedModeState: {
+      annotations: [],
+      lastLoadedPage: -1,
+      loadedAllAnnotations: false,
+    },
+    unarchivedModeState: {
+      annotations: [],
+      lastLoadedPage: -1,
+      loadedAllAnnotations: false,
+    },
+    searchQuery: "",
+    tags: [],
+    isLoading: false,
+  };
 
-  const currentPageData = React.useRef<Readonly<APIAnnotationInfo[]>>([]);
+  // This attribute is not part of the state, since it is only set in the
+  // summary-prop of <Table /> which is called by antd on render.
+  // Other than that, the value should not be changed. It can be used to
+  // retrieve the items of the currently rendered page (while respecting
+  // the active search and filters).
+  currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
-  React.useEffect(() => {
-    const persistedState = persistence.load() as PartialState;
-    if (persistedState) {
-      setSearchQuery(persistedState.searchQuery);
-      setShouldShowArchivedAnnotations(persistedState.shouldShowArchivedAnnotations);
+  componentDidMount() {
+    this.setState(persistence.load() as PartialState, () => {
+      this.fetchNextPage(0);
+    });
+  }
+
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    persistence.persist(this.state);
+
+    if (this.state.shouldShowArchivedAnnotations !== prevState.shouldShowArchivedAnnotations) {
+      this.fetchNextPage(0);
     }
-    fetchNextPage(0);
-  }, []);
+  }
 
-  React.useEffect(() => {
-    persistence.persist({ searchQuery, shouldShowArchivedAnnotations });
-  }, [searchQuery, shouldShowArchivedAnnotations]);
+  getCurrentModeState = () => this.getModeState(this.state.shouldShowArchivedAnnotations);
 
-  React.useEffect(() => {
-    if (getModeState(shouldShowArchivedAnnotations).lastLoadedPage === -1) {
-      fetchNextPage(0);
-    }
-  }, [shouldShowArchivedAnnotations]);
-
-  const getCurrentModeState = () => getModeState(shouldShowArchivedAnnotations);
-
-  const getModeState = (useArchivedAnnotations: boolean) => {
+  getModeState = (useArchivedAnnotations: boolean) => {
     if (useArchivedAnnotations) {
-      return archivedModeState;
+      return this.state.archivedModeState;
     } else {
-      return unarchivedModeState;
+      return this.state.unarchivedModeState;
     }
   };
 
-  const updateAnnotationInLocalState = (
+  updateAnnotationInLocalState = (
     annotation: APIAnnotationInfo,
     callback: (arg0: APIAnnotationInfo) => APIAnnotationInfo,
   ) => {
-    const annotations = getCurrentAnnotations();
+    const annotations = this.getCurrentAnnotations();
     const newAnnotations = annotations.map((currentAnnotation) =>
       currentAnnotation.id !== annotation.id ? currentAnnotation : callback(currentAnnotation),
     );
-    setModeState({ annotations: newAnnotations }, shouldShowArchivedAnnotations);
+    this.setModeState({ annotations: newAnnotations }, this.state.shouldShowArchivedAnnotations);
   };
 
-  const setModeState = (modeShape: Partial<AnnotationModeState>, useArchivedAnnotations: boolean) =>
-    addToShownAnnotations(modeShape, useArchivedAnnotations);
+  setModeState = (modeShape: Partial<AnnotationModeState>, useArchivedAnnotations: boolean) =>
+    this.addToShownAnnotations(modeShape, useArchivedAnnotations);
 
-  const addToShownAnnotations = (
+  addToShownAnnotations = (
     modeShape: Partial<AnnotationModeState>,
     useArchivedAnnotations: boolean,
   ) => {
     const mode = useArchivedAnnotations ? "archivedModeState" : "unarchivedModeState";
-    if (useArchivedAnnotations) {
-      setArchivedModeState((prevState) => ({
-        ...prevState,
+    this.setState((prevState) => {
+      const newSubState = {
+        ...prevState[mode],
         ...modeShape,
-      }));
-    } else {
-      setUnarchivedModeState((prevState) => ({
+      };
+      return {
         ...prevState,
-        ...modeShape,
-      }));
-    }
+        [mode]: newSubState,
+      };
+    });
   };
 
-  const fetchNextPage = async (pageNumber: number) => {
+  fetchNextPage = async (pageNumber: number) => {
     // this does not refer to the pagination of antd but to the pagination of querying data from SQL
-    const showArchivedAnnotations = shouldShowArchivedAnnotations;
-    const currentModeState = getCurrentModeState();
+    const showArchivedAnnotations = this.state.shouldShowArchivedAnnotations;
+    const currentModeState = this.getCurrentModeState();
     const previousAnnotations = currentModeState.annotations;
 
     if (currentModeState.loadedAllAnnotations || pageNumber <= currentModeState.lastLoadedPage) {
@@ -187,19 +188,21 @@ function ExplorativeAnnotationsView(props: Props) {
     }
 
     try {
-      setIsLoading(true);
+      this.setState({
+        isLoading: true,
+      });
 
       const annotations =
-        props.userId != null
+        this.props.userId != null
           ? // If an administrator views the dashboard of a specific user, we only fetch the annotations of that user.
             await getCompactAnnotationsForUser(
-              props.userId,
+              this.props.userId,
               showArchivedAnnotations,
               pageNumber,
             )
           : await getReadableAnnotations(showArchivedAnnotations, pageNumber);
 
-      setModeState(
+      this.setModeState(
         {
           // If the user archives a annotation, the annotation is already moved to the archived
           // state. Switching to the archived tab for the first time, will download the annotation
@@ -216,15 +219,24 @@ function ExplorativeAnnotationsView(props: Props) {
     } catch (error) {
       handleGenericError(error as Error);
     } finally {
-      setIsLoading(false);
+      this.setState({
+        isLoading: false,
+      });
     }
   };
 
-  const toggleShowArchived = () => {
-    setShouldShowArchivedAnnotations((prev) => !prev);
+  toggleShowArchived = () => {
+    this.setState(
+      (prevState) => ({
+        shouldShowArchivedAnnotations: !prevState.shouldShowArchivedAnnotations,
+      }),
+      () => {
+        if (this.getCurrentModeState().lastLoadedPage === -1) this.fetchNextPage(0);
+      },
+    );
   };
 
-  const finishOrReopenAnnotation = async (type: "finish" | "reopen", annotation: APIAnnotationInfo) => {
+  finishOrReopenAnnotation = async (type: "finish" | "reopen", annotation: APIAnnotationInfo) => {
     const shouldFinish = type === "finish";
     const newAnnotation = annotationToCompact(
       shouldFinish
@@ -240,10 +252,10 @@ function ExplorativeAnnotationsView(props: Props) {
 
     // If the annotation was finished, update the not finished list
     // (and vice versa).
-    const newAnnotations = getModeState(!shouldFinish).annotations.filter(
+    const newAnnotations = this.getModeState(!shouldFinish).annotations.filter(
       (t) => t.id !== annotation.id,
     );
-    setModeState(
+    this.setModeState(
       {
         annotations: newAnnotations,
       },
@@ -252,8 +264,8 @@ function ExplorativeAnnotationsView(props: Props) {
 
     // If the annotation was finished, add it to the finished list
     // (and vice versa).
-    const existingAnnotations = getModeState(shouldFinish).annotations;
-    setModeState(
+    const existingAnnotations = this.getModeState(shouldFinish).annotations;
+    this.setModeState(
       {
         annotations: [newAnnotation].concat(existingAnnotations),
       },
@@ -261,7 +273,7 @@ function ExplorativeAnnotationsView(props: Props) {
     );
   };
 
-  const _updateAnnotationWithArchiveAction = (
+  _updateAnnotationWithArchiveAction = (
     annotation: APIAnnotationInfo,
     type: "finish" | "reopen",
   ): APIAnnotationInfo => ({
@@ -269,21 +281,21 @@ function ExplorativeAnnotationsView(props: Props) {
     state: type === "reopen" ? "Active" : "Finished",
   });
 
-  const setLockedState = async (annotation: APIAnnotationInfo, locked: boolean) => {
+  setLockedState = async (annotation: APIAnnotationInfo, locked: boolean) => {
     try {
       const newAnnotation = await editLockedState(annotation.id, annotation.typ, locked);
       Toast.success(messages["annotation.was_edited"]);
-      updateAnnotationInLocalState(annotation, (_t) => newAnnotation);
+      this.updateAnnotationInLocalState(annotation, (_t) => newAnnotation);
     } catch (error) {
       handleGenericError(error as Error, "Could not update the annotation lock state.");
     }
   };
 
-  const renderActions = (annotation: APIAnnotationInfo) => {
+  renderActions = (annotation: APIAnnotationInfo) => {
     if (annotation.typ !== "Explorational") {
       return null;
     }
-    const isActiveUserOwner = annotation.owner?.id === props.activeUser.id;
+    const isActiveUserOwner = annotation.owner?.id === this.props.activeUser.id;
 
     const { typ, id, state } = annotation;
 
@@ -305,12 +317,12 @@ function ExplorativeAnnotationsView(props: Props) {
           >
             Download
           </AsyncLink>
-          {isAnnotationEditable(annotation) ? (
+          {this.isAnnotationEditable(annotation) ? (
             <>
               <br />
               <AsyncLink
                 href="#"
-                onClick={() => finishOrReopenAnnotation("finish", annotation)}
+                onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
                 icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
                 disabled={annotation.isLockedByOwner}
                 title={
@@ -326,7 +338,7 @@ function ExplorativeAnnotationsView(props: Props) {
               <br />
               <AsyncLink
                 href="#"
-                onClick={() => setLockedState(annotation, !annotation.isLockedByOwner)}
+                onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
                 icon={
                   annotation.isLockedByOwner ? (
                     <LockOutlined key="lock" className="icon-margin-right" />
@@ -346,7 +358,7 @@ function ExplorativeAnnotationsView(props: Props) {
         <div>
           <AsyncLink
             href="#"
-            onClick={() => finishOrReopenAnnotation("reopen", annotation)}
+            onClick={() => this.finishOrReopenAnnotation("reopen", annotation)}
             icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
@@ -357,28 +369,30 @@ function ExplorativeAnnotationsView(props: Props) {
     }
   };
 
-  const getCurrentAnnotations = (): Array<APIAnnotationInfo> => {
-    return getCurrentModeState().annotations;
+  getCurrentAnnotations(): Array<APIAnnotationInfo> {
+    return this.getCurrentModeState().annotations;
+  }
+
+  handleSearchChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    this.setState({
+      searchQuery: event.target.value,
+    });
   };
 
-  const handleSearchChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setSearchQuery(event.target.value);
-  };
-
-  const renameAnnotation = (annotation: APIAnnotationInfo, name: string) => {
+  renameAnnotation(annotation: APIAnnotationInfo, name: string) {
     editAnnotation(annotation.id, annotation.typ, { name })
       .then(() => {
         Toast.success(messages["annotation.was_edited"]);
-        updateAnnotationInLocalState(annotation, (t) => update(t, { name: { $set: name } }));
+        this.updateAnnotationInLocalState(annotation, (t) => update(t, { name: { $set: name } }));
       })
       .catch((error) => {
         handleGenericError(error as Error, "Could not update the annotation name.");
       });
-  };
+  }
 
-  const archiveAll = () => {
-    const selectedAnnotations = currentPageData.current.filter(
-      (annotation: APIAnnotationInfo) => annotation.owner?.id === props.activeUser.id,
+  archiveAll = () => {
+    const selectedAnnotations = this.currentPageData.filter(
+      (annotation: APIAnnotationInfo) => annotation.owner?.id === this.props.activeUser.id,
     );
 
     if (selectedAnnotations.length === 0) {
@@ -394,32 +408,36 @@ function ExplorativeAnnotationsView(props: Props) {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);
         Toast.messages(data.messages);
-        setArchivedModeState((prevState) => ({
-          ...prevState,
-          annotations: prevState.annotations.concat(
-            selectedAnnotations.map((annotation) =>
-              _updateAnnotationWithArchiveAction(annotation, "finish"),
+        this.setState((prevState) => ({
+          archivedModeState: {
+            ...prevState.archivedModeState,
+            annotations: prevState.archivedModeState.annotations.concat(
+              selectedAnnotations.map((annotation) =>
+                this._updateAnnotationWithArchiveAction(annotation, "finish"),
+              ),
             ),
-          ),
-        }));
-        setUnarchivedModeState((prevState) => ({
-          ...prevState,
-          annotations: _.without(
-            prevState.annotations,
-            ...selectedAnnotations,
-          ),
+          },
+          unarchivedModeState: {
+            ...prevState.unarchivedModeState,
+            annotations: _.without(
+              prevState.unarchivedModeState.annotations,
+              ...selectedAnnotations,
+            ),
+          },
         }));
       },
     });
   };
 
-  const addTagToSearch = (tag: string): void => {
-    if (!tags.includes(tag)) {
-      setTags((prevTags) => [...prevTags, tag]);
+  addTagToSearch = (tag: string): void => {
+    if (!this.state.tags.includes(tag)) {
+      this.setState((prevState) => ({
+        tags: [...prevState.tags, tag],
+      }));
     }
   };
 
-  const editTagFromAnnotation = (
+  editTagFromAnnotation = (
     annotation: APIAnnotationInfo,
     shouldAddTag: boolean,
     tag: string,
@@ -427,8 +445,8 @@ function ExplorativeAnnotationsView(props: Props) {
   ): void => {
     event?.stopPropagation(); // prevent the onClick event
 
-    setUnarchivedModeState((prevState) => {
-      const newAnnotations = prevState.annotations.map((t) => {
+    this.setState((prevState) => {
+      const newAnnotations = prevState.unarchivedModeState.annotations.map((t) => {
         let newAnnotation = t;
 
         if (t.id === annotation.id) {
@@ -461,13 +479,13 @@ function ExplorativeAnnotationsView(props: Props) {
         return newAnnotation;
       });
       return {
-        ...prevState, annotations: newAnnotations
+        unarchivedModeState: { ...prevState.unarchivedModeState, annotations: newAnnotations },
       };
     });
   };
 
-  const getEmptyListPlaceholder = () => {
-    return isLoading ? null : (
+  getEmptyListPlaceholder = () => {
+    return this.state.isLoading ? null : (
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
           <Card
@@ -499,35 +517,37 @@ function ExplorativeAnnotationsView(props: Props) {
     );
   };
 
-  const handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
+  handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
-      addTagToSearch(value);
-      setSearchQuery("");
+      this.addTagToSearch(value);
+      this.setState({
+        searchQuery: "",
+      });
     }
   };
 
-  const _getSearchFilteredAnnotations = () => {
+  _getSearchFilteredAnnotations() {
     // Note, this method should only be used to pass annotations
     // to the antd table. Antd itself can apply additional filters
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
     const filteredAnnotations = Utils.filterWithSearchQueryAND(
-      getCurrentAnnotations(),
+      this.getCurrentAnnotations(),
       ["id", "name", "modified", "tags", "owner"],
-      searchQuery,
+      this.state.searchQuery,
     );
 
-    if (tags.length === 0) {
+    if (this.state.tags.length === 0) {
       // This check is not strictly necessary, but serves
       // as an early-out to save some computations.
       return filteredAnnotations;
     }
 
-    return filteredAnnotations.filter((el) => _.intersection(tags, el.tags).length > 0);
-  };
+    return filteredAnnotations.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
+  }
 
-  const renderIdAndCopyButton = (annotation: APIAnnotationInfo) => {
+  renderIdAndCopyButton(annotation: APIAnnotationInfo) {
     const copyIdToClipboard = async () => {
       await navigator.clipboard.writeText(annotation.id);
       Toast.success("ID copied to clipboard");
@@ -549,32 +569,32 @@ function ExplorativeAnnotationsView(props: Props) {
         {formatHash(annotation.id)}
       </div>
     );
-  };
+  }
 
-  const renderNameWithDescription = (annotation: APIAnnotationInfo) => {
+  renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
       <div style={{ color: annotation.name ? "inherit" : "#7c7c7c" }}>
         <TextWithDescription
-          isEditable={isAnnotationEditable(annotation)}
+          isEditable={this.isAnnotationEditable(annotation)}
           value={annotation.name ? annotation.name : "Unnamed Annotation"}
-          onChange={(newName) => renameAnnotation(annotation, newName)}
+          onChange={(newName) => this.renameAnnotation(annotation, newName)}
           label="Annotation Name"
           description={annotation.description}
         />
       </div>
     );
-  };
+  }
 
-  const isAnnotationEditable = (annotation: APIAnnotationInfo): boolean => {
-    return annotation.owner?.id === props.activeUser.id || annotation.othersMayEdit;
-  };
+  isAnnotationEditable(annotation: APIAnnotationInfo): boolean {
+    return annotation.owner?.id === this.props.activeUser.id || annotation.othersMayEdit;
+  }
 
-  const renderTable = () => {
-    const filteredAndSortedAnnotations = _getSearchFilteredAnnotations().sort(
+  renderTable() {
+    const filteredAndSortedAnnotations = this._getSearchFilteredAnnotations().sort(
       Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
-      if (!props.isAdminView && owner.id === props.activeUser.id) {
+      if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
         return (
           <span>
             {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
@@ -587,7 +607,7 @@ function ExplorativeAnnotationsView(props: Props) {
     const ownerFilters = _.uniqBy(
       // Prepend user's name to the front so that this is listed at the top
       [
-        { formattedName: formatUserName(props.activeUser), id: props.activeUser.id },
+        { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
       ].concat(
         _.compact(
           filteredAndSortedAnnotations.map((annotation) =>
@@ -618,7 +638,7 @@ function ExplorativeAnnotationsView(props: Props) {
     ];
 
     if (filteredAndSortedAnnotations.length === 0) {
-      return getEmptyListPlaceholder();
+      return this.getEmptyListPlaceholder();
     }
 
     const disabledColor = { color: "var(--ant-color-text-disabled)" };
@@ -629,9 +649,9 @@ function ExplorativeAnnotationsView(props: Props) {
         width: 100,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <>
-            <div className="monospace-id">{renderIdAndCopyButton(annotation)}</div>
+            <div className="monospace-id">{this.renderIdAndCopyButton(annotation)}</div>
 
-            {!isAnnotationEditable(annotation) ? (
+            {!this.isAnnotationEditable(annotation) ? (
               <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>
             ) : null}
             {annotation.isLockedByOwner ? (
@@ -649,7 +669,7 @@ function ExplorativeAnnotationsView(props: Props) {
         dataIndex: "name",
         sorter: Utils.localeCompareBy((annotation) => annotation.name),
         render: (_name: string, annotation: APIAnnotationInfo) =>
-          renderNameWithDescription(annotation),
+          this.renderNameWithDescription(annotation),
       },
       {
         title: "Owner & Teams",
@@ -708,19 +728,19 @@ function ExplorativeAnnotationsView(props: Props) {
               <CategorizationLabel
                 key={tag}
                 kind="annotations"
-                onClick={_.partial(addTagToSearch, tag)}
-                onClose={_.partial(editTagFromAnnotation, annotation, false, tag)}
+                onClick={_.partial(this.addTagToSearch, tag)}
+                onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                 tag={tag}
                 closable={
                   !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                  !shouldShowArchivedAnnotations
+                  !this.state.shouldShowArchivedAnnotations
                 }
               />
             ))}
-            {shouldShowArchivedAnnotations ? null : (
+            {this.state.shouldShowArchivedAnnotations ? null : (
               <EditableTextIcon
                 icon={<PlusOutlined />}
-                onChange={_.partial(editTagFromAnnotation, annotation, true)}
+                onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
           </div>
@@ -739,7 +759,7 @@ function ExplorativeAnnotationsView(props: Props) {
         title: "Actions",
         className: "nowrap",
         key: "action",
-        render: (__: any, annotation: APIAnnotationInfo) => renderActions(annotation),
+        render: (__: any, annotation: APIAnnotationInfo) => this.renderActions(annotation),
       },
     ];
 
@@ -761,56 +781,62 @@ function ExplorativeAnnotationsView(props: Props) {
           // the table (while respecting the active filters).
           // Using <Table onChange={...} /> is not a solution. See this explanation:
           // https://github.com/ant-design/ant-design/issues/24022#issuecomment-691842572
-          currentPageData.current = currentPageData;
+          this.currentPageData = currentPageData;
           return null;
         }}
         columns={columns}
       />
     );
-  };
+  }
 
-  const renderSearchTags = () => {
+  renderSearchTags() {
     return (
       <CategorizationSearch
         itemName="annotations"
-        searchTags={tags}
-        setTags={setTags}
+        searchTags={this.state.tags}
+        setTags={(tags) =>
+          this.setState({
+            tags,
+          })
+        }
         localStorageSavingKey="lastDashboardSearchTags"
       />
     );
-  };
+  }
 
-  return (
-    <div>
-      <TopBar
-        isAdminView={props.isAdminView}
-        handleOnSearch={handleOnSearch}
-        handleSearchChanged={handleSearchChanged}
-        searchQuery={searchQuery}
-        toggleShowArchived={toggleShowArchived}
-        shouldShowArchivedAnnotations={shouldShowArchivedAnnotations}
-        archiveAll={archiveAll}
-      />
-      {renderSearchTags()}
-      <Spin spinning={isLoading} size="large" style={{ marginTop: 4 }}>
-        {renderTable()}
-      </Spin>
-      <div
-        style={{
-          textAlign: "right",
-        }}
-      >
-        {!getCurrentModeState().loadedAllAnnotations ? (
-          <Link
-            to="#"
-            onClick={() => fetchNextPage(getCurrentModeState().lastLoadedPage + 1)}
-          >
-            Load more Annotations
-          </Link>
-        ) : null}
+  render() {
+    return (
+      <div>
+        <TopBar
+          isAdminView={this.props.isAdminView}
+          handleOnSearch={this.handleOnSearch}
+          handleSearchChanged={this.handleSearchChanged}
+          searchQuery={this.state.searchQuery}
+          toggleShowArchived={this.toggleShowArchived}
+          shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
+          archiveAll={this.archiveAll}
+        />
+        {this.renderSearchTags()}
+        <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
+          {this.renderTable()}
+        </Spin>
+        <div
+          style={{
+            textAlign: "right",
+          }}
+        >
+          {!this.getCurrentModeState().loadedAllAnnotations ? (
+            <Link
+              to="#"
+              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+            >
+              Load more Annotations
+            </Link>
+          ) : null}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
 
 function TopBar({
@@ -878,4 +904,4 @@ function TopBar({
   );
 }
 
-
+export default ExplorativeAnnotationsView;

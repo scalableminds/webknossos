@@ -28,7 +28,7 @@ import _ from "lodash";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
+import type { RouteComponentProps } from "libs/with_router_hoc";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";

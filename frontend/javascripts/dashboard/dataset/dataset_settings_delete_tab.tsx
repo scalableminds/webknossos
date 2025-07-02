@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { APIDataset } from "types/api_types";
 import { confirmAsync } from "./helper_components";
 

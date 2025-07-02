@@ -23,7 +23,7 @@ export function withRouter<P extends RouteComponentProps>(Component: React.Compo
     const navigate = useNavigate();
     const params = useParams();
 
-    return <Component {...props as P} navigate={navigate} location={location} params={params} />;
+    return <Component {...(props as P)} navigate={navigate} location={location} params={params} />;
   }
 
   return ComponentWithRouterProp;

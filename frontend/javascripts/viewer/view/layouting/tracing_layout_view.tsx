@@ -4,11 +4,11 @@ import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { document, location } from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
@@ -65,9 +65,7 @@ type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
 };
-type PropsWithRouter = OwnProps &
-  StateProps &
-  DispatchProps & RouteComponentProps
+type PropsWithRouter = OwnProps & StateProps & DispatchProps & RouteComponentProps;
 type State = {
   activeLayoutName: string;
   hasError: boolean;

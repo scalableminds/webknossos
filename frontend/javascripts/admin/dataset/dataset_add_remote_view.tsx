@@ -25,6 +25,7 @@ import DatasetSettingsDataTab, {
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { formatScale } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
@@ -32,14 +33,13 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { Unicode } from "viewer/constants";
 import { Hint } from "viewer/view/action-bar/download_modal_view";
 import { dataPrivacyInfo } from "./dataset_upload_view";
-import { useWkSelector } from "libs/react_hooks";
-import { useNavigate } from "react-router-dom";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;

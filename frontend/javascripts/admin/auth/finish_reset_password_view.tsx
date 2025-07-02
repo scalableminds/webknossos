@@ -2,9 +2,9 @@ import { LockOutlined } from "@ant-design/icons";
 import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
+import { getUrlParamsObjectFromString } from "libs/utils";
 import messages from "messages";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getUrlParamsObjectFromString } from "libs/utils";
 
 const FormItem = Form.Item;
 const { Password } = Input;

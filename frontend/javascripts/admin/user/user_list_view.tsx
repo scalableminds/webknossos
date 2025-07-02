@@ -24,11 +24,11 @@ import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
 import { connect } from "react-redux";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -656,4 +656,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter(UserListView)); 
+export default connector(withRouter(UserListView));

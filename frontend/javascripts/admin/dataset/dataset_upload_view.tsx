@@ -55,12 +55,12 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { Link } from "react-router-dom";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import {
   type APIDataStore,
   APIJobType,
@@ -294,10 +294,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    const beforeUnload = (
-      newLocation,
-      action,
-    ): string | false | void => {
+    // TODO doublecheck this
+    // @ts-ignore newLocation, action are implicit any
+    const beforeUnload = (newLocation, action): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed

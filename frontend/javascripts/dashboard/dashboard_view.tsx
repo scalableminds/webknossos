@@ -12,11 +12,11 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import type { Dispatch } from "redux";
 import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -41,7 +41,7 @@ type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRouter = Props &  RouteComponentProps
+type PropsWithRouter = Props & RouteComponentProps;
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;

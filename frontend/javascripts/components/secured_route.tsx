@@ -4,11 +4,11 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
-import { useWkSelector } from "libs/react_hooks";
 
 export type SecuredRouteProps = {
   children: React.ReactNode;

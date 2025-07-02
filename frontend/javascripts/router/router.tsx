@@ -10,11 +10,7 @@ import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
-import {
-  createExplorational,
-  getShortLink,
-  getUnversionedAnnotationInformation,
-} from "admin/rest_api";
+import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
@@ -29,35 +25,16 @@ import UserListView from "admin/user/user_list_view";
 import { Layout } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
-import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
 import features from "features";
-import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
 import Navbar from "navbar";
-import type React from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-  useParams,
-  type RouteProps,
-} from "react-router-dom";
-import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import HelpButton from "viewer/view/help_modal";
 
 import AccountSettingsView from "admin/account/account_settings_view";
-import {
-  getDatasetIdFromNameAndOrganization,
-  getOrganizationForDataset,
-} from "admin/api/disambiguate_legacy_routes";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
@@ -67,20 +44,25 @@ import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
-import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
 import { useWkSelector } from "libs/react_hooks";
+import { PageNotFoundView } from "./page_not_found_view";
 import {
+  AnnotationsRouteWrapper,
+  CreateExplorativeRouteWrapper,
+  DashboardRouteWrapper,
+  DatasetSettingsRouteWrapper,
+  LinksRouteWrapper,
   TracingSandboxLegacyRouteWrapper,
   TracingSandboxRouteWrapper,
   TracingViewModeLegacyWrapper,
   TracingViewModeRouteWrapper,
   TracingViewRouteWrapper,
-} from "./tracing_view_route_wrappers";
-import { PageNotFoundView } from "./page_not_found_view";
+  UserDetailsRouteWrapper,
+} from "./route_wrappers";
 
 const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
 const AsyncWorkflowListView = loadable<EmptyObject>(
@@ -145,20 +127,8 @@ function ReactRouter() {
         <Content>
           <Routes>
             <Route errorElement={<ErrorBoundary />}>
-              <Route path="/" exact element={<RootRoute isAuthenticated={isAuthenticated} />} />
-              {/* <Route
-    
-    path="/dashboard/:tab"
-    element={(() => {
-      const { tab } = useParams();
-      const initialTabKey =
-        // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
-        tab ? urlTokenToTabKeyMap[tab] : null;
-      return (
-        <SecuredRoute><DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} /></SecuredRoute>
-      );
-    })()}
-  /> */}
+              <Route path="/" element={<RootRoute isAuthenticated={isAuthenticated} />} />
+              <Route path="/dashboard/:tab" element={<DashboardRouteWrapper />} />
 
               <Route
                 path="/dashboard/datasets/:folderIdWithName"
@@ -170,21 +140,7 @@ function ReactRouter() {
               />
 
               <Route path="/dashboard" element={<DashboardRoute />} />
-              {/* <Route
-                path="/users/:userId/details"
-                element={(() => {
-                  const { userId } = useParams();
-                  return (
-                    <SecuredRoute requiresAdminOrManagerRole>
-                      <DashboardView
-                        userId={userId}
-                        isAdminView={userId !== null}
-                        initialTabKey={null}
-                      />
-                    </SecuredRoute>
-                  );
-                })()}
-              /> */}
+              <Route path="/users/:userId/details" element={<UserDetailsRouteWrapper />} />
               <Route
                 path="/users"
                 element={
@@ -331,24 +287,7 @@ function ReactRouter() {
                   </SecuredRoute>
                 }
               />
-              {/* <Route
-    
-    path="/annotations/:type/:id"
-    element={(()<SecuredRoute> => </SecuredRoute>{
-      const { type, id } = useParams();
-      const location = useLocation();
-      const initialMaybeCompoundType =
-        type != null ? coalesce(APICompoundTypeEnum, type) : null;
-
-      if (initialMaybeCompoundType == null) {
-        const { hash, search } = location;
-        return <Navigate to={`/annotations/${id}${search}${hash}`} />;
-      }
-
-      return tracingView({ type, id });
-    })()}
-    serverAuthenticationCallback={serverAuthenticationCallback}
-  /> */}
+              <Route path="/annotations/:type/:id" element={<AnnotationsRouteWrapper />} />
               <Route
                 path="/annotations/:id"
                 element={
@@ -365,48 +304,10 @@ function ReactRouter() {
                   </SecuredRoute>
                 }
               />
-              {/* <Route
-    
-    path="/datasets/:datasetNameAndId/edit"
-    
-    element={(() => {
-      const { datasetNameAndId } = useParams();
-      const { datasetId, datasetName } =
-        getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-      const getParams = Utils.getUrlParamsObjectFromString(location.search);
-      if (datasetName) {
-        // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
-        // The schema is something like <authority>/datasets/:datasetName/edit
-        return (
-        <SecuredRoute>
-          <AsyncRedirect
-            redirectTo={async () => {
-              const organizationId = await getOrganizationForDataset(
-                datasetName,
-                getParams.token,
-              );
-              const datasetId = await getDatasetIdFromNameAndOrganization(
-                datasetName,
-                organizationId,
-                getParams.token,
-              );
-              return `/datasets/${datasetName}-${datasetId}/edit`;
-            }}
-          />
-        );
-      }
-      return (
-      <SecuredRoute requiresAdminOrManagerRole>
-        <DatasetSettingsView
-          isEditingMode
-          datasetId={datasetId || ""}
-          onComplete={() => window.history.back()}
-          onCancel={() => window.history.back()}
-        />
-        </SecuredRoute>
-      );
-    })()}
-  /> */}
+              <Route
+                path="/datasets/:datasetNameAndId/edit"
+                element={<DatasetSettingsRouteWrapper />}
+              />
               <Route
                 path="/taskTypes"
                 element={
@@ -559,57 +460,10 @@ function ReactRouter() {
                 path="/datasets/:organizationId/:datasetName/sandbox/:type"
                 element={<TracingSandboxLegacyRouteWrapper />}
               />
-              {/* <Route
-    
-    path="/datasets/:datasetId/createExplorative/:type"
-    element={(() => 
-      const { datasetId, type } = useParams();
-      return (
-      <SecuredRoute>
-        <AsyncRedirect
-          pushToHistory={false}
-          redirectTo={async () => {
-            if (!datasetId || !type) {
-              // Typehint for TS
-              throw new Error("Invalid URL");
-            }
-
-            const tracingType =
-              coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
-            const getParams = Utils.getUrlParamsObjectFromString(location.search);
-            const { autoFallbackLayer, fallbackLayerName } = getParams;
-            const magRestrictions: APIMagRestrictions = {};
-
-            if (getParams.minMag !== undefined) {
-              magRestrictions.min = Number.parseInt(getParams.minMag);
-
-              if (!_.isNumber(magRestrictions.min)) {
-                throw new Error("Invalid minMag parameter");
-              }
-
-              if (getParams.maxMag !== undefined) {
-                magRestrictions.max = Number.parseInt(getParams.maxMag);
-
-                if (!_.isNumber(magRestrictions.max)) {
-                  throw new Error("Invalid maxMag parameter");
-                }
-              }
-            }
-
-            const annotation = await createExplorational(
-              datasetId,
-              tracingType,
-              !!autoFallbackLayer,
-              fallbackLayerName,
-              null,
-              magRestrictions,
-            );
-            return `/annotations/${annotation.id}`;
-          }}
-        /></SecuredRoute>
-      );
-    })()}
-  /> */}
+              <Route
+                path="/datasets/:datasetId/createExplorative/:type"
+                element={<CreateExplorativeRouteWrapper />}
+              />
               {
                 // Note that this route has to be beneath all others sharing the same prefix,
                 // to avoid url mismatching
@@ -648,20 +502,7 @@ function ReactRouter() {
               />
               <Route path="/imprint" element={<Imprint />} />
               <Route path="/privacy" element={<Privacy />} />
-              {/* <Route
-    path="/links/:key"
-    element={(() => {
-      const { key } = useParams();
-      return (
-        <AsyncRedirect
-          redirectTo={async () => {
-            const shortLink = await getShortLink(key);
-            return shortLink.longLink;
-          }}
-        />
-      );
-    })()}
-  /> */}
+              <Route path="/links/:key" element={<LinksRouteWrapper />} />
               {!features().isWkorgInstance && <Route path="/onboarding" element={<Onboarding />} />}
               <Route
                 path="/account"

@@ -5,11 +5,11 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { document, location } from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import { withRouter, type RouteComponentProps } from "libs/with_router_hoc";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
@@ -129,10 +129,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = (
-      newLocation,
-      action,
-    ): string | false | void => {
+    // @ts-ignore newLocation, action are implicit any
+    const beforeUnload = (newLocation, action): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed

@@ -69,23 +69,6 @@ const MAX_RENDERED_ORGANIZATION = 20;
 // exist.
 const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
-type OwnProps = {
-  isAuthenticated: boolean;
-};
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-  isInAnnotationView: boolean;
-  hasOrganizations: boolean;
-  othersMayEdit: boolean;
-  allowUpdate: boolean;
-  isLockedByOwner: boolean;
-  isAnnotationFromDifferentOrganization: boolean;
-  isAnnotationOwner: boolean;
-  annotationOwnerName: string;
-  blockedByUser: APIUserCompact | null | undefined;
-  navbarHeight: number;
-};
-type Props = OwnProps & StateProps;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 

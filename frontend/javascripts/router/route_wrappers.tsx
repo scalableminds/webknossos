@@ -1,0 +1,279 @@
+import {
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
+import { createExplorational, getShortLink } from "admin/rest_api";
+import AsyncRedirect from "components/redirect";
+import SecuredRoute from "components/secured_route";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { Navigate, useLocation, useParams } from "react-router-dom";
+import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
+import { ControlModeEnum } from "viewer/constants";
+import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
+
+export function DashboardRouteWrapper() {
+  const { tab } = useParams();
+  const initialTabKey =
+    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+    tab ? urlTokenToTabKeyMap[tab] : null;
+  return (
+    <SecuredRoute>
+      <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />
+    </SecuredRoute>
+  );
+}
+
+export function UserDetailsRouteWrapper() {
+  const { userId } = useParams();
+  return (
+    <SecuredRoute requiresAdminOrManagerRole>
+      <DashboardView userId={userId} isAdminView={userId !== null} initialTabKey={null} />
+    </SecuredRoute>
+  );
+}
+
+export function AnnotationsRouteWrapper() {
+  const { type, id } = useParams();
+  const location = useLocation();
+  const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
+
+  if (initialMaybeCompoundType == null) {
+    const { hash, search } = location;
+    return (
+      <SecuredRoute>
+        <Navigate to={`/annotations/${id}${search}${hash}`} />
+      </SecuredRoute>
+    );
+  }
+
+  return (
+    <SecuredRoute>
+      <TracingViewRouteWrapper />
+    </SecuredRoute>
+  );
+}
+
+export function DatasetSettingsRouteWrapper() {
+  const { datasetNameAndId = "" } = useParams();
+  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  if (datasetName) {
+    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+    // The schema is something like <authority>/datasets/:datasetName/edit
+    return (
+      <SecuredRoute requiresAdminOrManagerRole>
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+              getParams.token,
+            );
+            return `/datasets/${datasetName}-${datasetId}/edit`;
+          }}
+        />{" "}
+      </SecuredRoute>
+    );
+  }
+  return (
+    <SecuredRoute requiresAdminOrManagerRole>
+      <DatasetSettingsView
+        isEditingMode
+        datasetId={datasetId || ""}
+        onComplete={() => window.history.back()}
+        onCancel={() => window.history.back()}
+      />
+    </SecuredRoute>
+  );
+}
+
+export function CreateExplorativeRouteWrapper() {
+  const { datasetId, type } = useParams();
+  return (
+    <SecuredRoute>
+      <AsyncRedirect
+        pushToHistory={false}
+        redirectTo={async () => {
+          if (!datasetId || !type) {
+            // Typehint for TS
+            throw new Error("Invalid URL");
+          }
+
+          const tracingType = coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
+          const getParams = Utils.getUrlParamsObjectFromString(location.search);
+          const { autoFallbackLayer, fallbackLayerName } = getParams;
+          const magRestrictions: APIMagRestrictions = {};
+
+          if (getParams.minMag !== undefined) {
+            magRestrictions.min = Number.parseInt(getParams.minMag);
+
+            if (!_.isNumber(magRestrictions.min)) {
+              throw new Error("Invalid minMag parameter");
+            }
+
+            if (getParams.maxMag !== undefined) {
+              magRestrictions.max = Number.parseInt(getParams.maxMag);
+
+              if (!_.isNumber(magRestrictions.max)) {
+                throw new Error("Invalid maxMag parameter");
+              }
+            }
+          }
+
+          const annotation = await createExplorational(
+            datasetId,
+            tracingType,
+            !!autoFallbackLayer,
+            fallbackLayerName,
+            null,
+            magRestrictions,
+          );
+          return `/annotations/${annotation.id}`;
+        }}
+      />
+    </SecuredRoute>
+  );
+}
+
+export function LinksRouteWrapper() {
+  const { key = "" } = useParams();
+  return (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const shortLink = await getShortLink(key);
+        return shortLink.longLink;
+      }}
+    />
+  );
+}
+
+export function TracingViewRouteWrapper() {
+  const { type, id } = useParams();
+  const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
+
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={initialMaybeCompoundType}
+      initialCommandType={{
+        type: ControlModeEnum.TRACE,
+        annotationId: id || "",
+      }}
+    />
+  );
+}
+
+export function TracingSandboxLegacyRouteWrapper() {
+  const { type, datasetName = "", organizationId = "" } = useParams();
+
+  const tracingType = coalesce(TracingTypeEnum, type);
+  if (tracingType == null) {
+    return <h3>Invalid annotation URL.</h3>;
+  }
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  return (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetId = await getDatasetIdFromNameAndOrganization(
+          datasetName,
+          organizationId,
+          getParams.token,
+        );
+        return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+      }}
+    />
+  );
+}
+
+export function TracingSandboxRouteWrapper() {
+  const { type, datasetNameAndId = "" } = useParams();
+  const tracingType = coalesce(TracingTypeEnum, type);
+  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+
+  if (tracingType == null) {
+    return <h3>Invalid annotation URL.</h3>;
+  }
+  if (datasetName) {
+    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+    // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
+        }}
+      />
+    );
+  }
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={null}
+      initialCommandType={{
+        type: ControlModeEnum.SANDBOX,
+        tracingType,
+        datasetId: datasetId || "",
+      }}
+    />
+  );
+}
+
+export function TracingViewModeLegacyWrapper() {
+  const { datasetName = "", organizationId = "" } = useParams();
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  return (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetId = await getDatasetIdFromNameAndOrganization(
+          datasetName,
+          organizationId,
+          getParams.token,
+        );
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+      }}
+    />
+  );
+}
+
+export function TracingViewModeRouteWrapper() {
+  const { datasetNameAndId = "" } = useParams();
+  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
+  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  if (datasetName) {
+    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+    // The schema is something like <authority>/datasets/:datasetName/view
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+        }}
+      />
+    );
+  }
+  return (
+    <TracingLayoutView
+      initialMaybeCompoundType={null}
+      initialCommandType={{
+        type: ControlModeEnum.VIEW,
+        datasetId: datasetId || "",
+      }}
+    />
+  );
+}

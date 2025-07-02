@@ -2,7 +2,7 @@ import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
-import { Route, Routes, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import constants from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { OrganizationDangerZoneView } from "./organization_danger_zone_view";

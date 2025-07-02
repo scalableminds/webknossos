@@ -56,8 +56,7 @@ const persistence = new Persistence<{ searchQuery: string }>(
 
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
-  // TODO test this properly
-  const { taskId = "", projectId = "", taskTypeId = "" } = useParams();
+  const { taskId, projectId, taskTypeId } = useParams();
 
   initialFieldValues = {
     ...initialFieldValues,

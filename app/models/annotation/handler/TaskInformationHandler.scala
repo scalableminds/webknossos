@@ -31,7 +31,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       user <- userOpt.toFox ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
-      taskBoundingBoxes <- taskDAO.findUniqueTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
+      taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(task._id,
                                                   toTemporaryStore = true,
                                                   user._id,

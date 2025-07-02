@@ -30,7 +30,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       datasetId <- annotations.headOption.map(_._dataset).toFox
-      taskBoundingBoxes <- taskDAO.findUniqueTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
+      taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(projectId,
                                                   toTemporaryStore = true,
                                                   user._id,

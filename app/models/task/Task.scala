@@ -286,18 +286,21 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String])
     } yield rowsRaw.toList
 
-  def findUniqueTaskBoundingBoxesByAnnotationIds(annotationIds: Seq[ObjectId]): Fox[Seq[NamedBoundingBox]] =
+  def findTaskBoundingBoxesByAnnotationIds(annotationIds: Seq[ObjectId]): Fox[Seq[NamedBoundingBox]] =
     for {
-      bboxLiterals <- run(q"""SELECT t.boundingBox
-                              FROM webknossos.tasks_ t
-                              JOIN webknossos.annotations_ a on a._task = t._id
-                              WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)}
-                              AND t.boundingBox IS NOT NULL
-                              ORDER BY t._id
-                              """.as[String])
-      bboxes = bboxLiterals.flatMap(literal => parseBboxOpt(Some(literal))).toSet.toSeq
-      named = bboxes.map(NamedBoundingBox(0, Some("Task Bounding Box"), None, None, _))
-    } yield named
+      rowsRaw <- run(q"""SELECT t.boundingBox, t._id, a._id
+                         FROM webknossos.tasks_ t
+                         JOIN webknossos.annotations_ a on a._task = t._id
+                         WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)}
+                         AND t.boundingBox IS NOT NULL
+                         ORDER BY t._id
+                         """.as[(String, ObjectId, ObjectId)])
+      namedBboxes = rowsRaw.flatMap {
+        case (bboxLiteral, taskId, annotationId) =>
+          parseBboxOpt(Some(bboxLiteral)).map(bbox =>
+            NamedBoundingBox(0, Some(s"Task bounding box of instance $annotationId of task $taskId"), None, None, bbox))
+      }
+    } yield namedBboxes
 
   def insertOne(t: Task): Fox[Unit] =
     for {

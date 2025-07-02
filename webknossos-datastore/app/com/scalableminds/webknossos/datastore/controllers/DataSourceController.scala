@@ -392,6 +392,7 @@ class DataSourceController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
         for {
+          _ <- Fox.fromBool(request.body.allExplicitPaths.forall(_ => true)) // TODO check
           reservedAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "", // Set by core backend

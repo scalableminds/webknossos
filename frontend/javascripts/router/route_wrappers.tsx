@@ -7,6 +7,8 @@ import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
 import window from "libs/window";
@@ -15,7 +17,37 @@ import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { Store } from "viewer/singletons";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
+
+export function RootRouteWrapper() {
+  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+
+  if (!hasOrganizations && !features()?.isWkorgInstance) {
+    return <Navigate to="/onboarding" />;
+  }
+
+  if (isAuthenticated) {
+    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+  }
+
+  return <Navigate to="/auth/login" />;
+}
+
+export function DashboardRouteRootWrapper() {
+  // Imperatively access store state to avoid race condition when logging in.
+  // The `isAuthenticated` prop could be outdated for a short time frame which
+  // would lead to an unnecessary browser refresh.
+  const { activeUser } = Store.getState();
+  if (activeUser) {
+    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+  }
+
+  // Hard navigate so that webknossos.org is shown for the wkorg instance.
+  window.location.href = "/";
+  return null;
+}
 
 export function DashboardRouteWrapper() {
   const { tab } = useParams();
@@ -142,7 +174,7 @@ export function CreateExplorativeRouteWrapper() {
   );
 }
 
-export function LinksRouteWrapper() {
+export function ShortLinksRouteWrapper() {
   const { key = "" } = useParams();
   return (
     <AsyncRedirect

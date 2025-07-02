@@ -29,9 +29,14 @@ import SecuredRoute from "components/secured_route";
 import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
 import features from "features";
-import window from "libs/window";
 import Navbar from "navbar";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  createBrowserRouter,
+  createRoutesFromElements,
+} from "react-router-dom";
 import HelpButton from "viewer/view/help_modal";
 
 import AccountSettingsView from "admin/account/account_settings_view";
@@ -44,7 +49,6 @@ import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
-import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
@@ -53,9 +57,11 @@ import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
   CreateExplorativeRouteWrapper,
+  DashboardRouteRootWrapper,
   DashboardRouteWrapper,
   DatasetSettingsRouteWrapper,
-  LinksRouteWrapper,
+  RootRouteWrapper,
+  ShortLinksRouteWrapper,
   TracingSandboxLegacyRouteWrapper,
   TracingSandboxRouteWrapper,
   TracingViewModeLegacyWrapper,
@@ -80,453 +86,365 @@ const serverAuthenticationCallback = async (id: string) => {
   return false;
 };
 
-function RootRoute({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
-  if (!hasOrganizations && !features().isWkorgInstance) {
-    return <Navigate to="/onboarding" />;
-  }
-
-  if (isAuthenticated) {
-    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-  }
-
-  return <Navigate to="/auth/login" />;
-}
-
-function DashboardRoute() {
-  // Imperatively access store state to avoid race condition when logging in.
-  // The `isAuthenticated` prop could be outdated for a short time frame which
-  // would lead to an unnecessary browser refresh.
-  const { activeUser } = Store.getState();
-  if (activeUser) {
-    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-  }
-
-  // Hard navigate so that webknossos.org is shown for the wkorg instance.
-  window.location.href = "/";
-  return null;
-}
-
-function ReactRouter() {
-  const activeUser = useWkSelector((state) => state.activeUser);
+function RootLayout() {
+  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
   const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
 
-  const isAuthenticated = activeUser !== null;
   return (
-    <BrowserRouter>
-      <Layout>
-        <DisableGenericDnd />
-        <CheckCertificateModal />
-        {
-          /* within tracing view, the command palette is rendered in the status bar. */
-          isAuthenticated && isAdminView && <CommandPalette label={null} />
-        }
-        <CheckTermsOfServices />
-        <Navbar isAuthenticated={isAuthenticated} />
-        <HelpButton />
-        <Content>
-          <Routes>
-            <Route errorElement={<ErrorBoundary />}>
-              <Route path="/" element={<RootRoute isAuthenticated={isAuthenticated} />} />
-              <Route path="/dashboard/:tab" element={<DashboardRouteWrapper />} />
-
-              <Route
-                path="/dashboard/datasets/:folderIdWithName"
-                element={
-                  <SecuredRoute>
-                    <DashboardView userId={null} isAdminView={false} initialTabKey={"datasets"} />
-                  </SecuredRoute>
-                }
-              />
-
-              <Route path="/dashboard" element={<DashboardRoute />} />
-              <Route path="/users/:userId/details" element={<UserDetailsRouteWrapper />} />
-              <Route
-                path="/users"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <UserListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/import"
-                element={
-                  <SecuredRoute>
-                    <DatasetURLImport />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/teams"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <TeamListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/timetracking"
-                element={
-                  <SecuredRoute>
-                    <TimeTrackingOverview />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/reports/projectProgress"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <ProjectProgressReportView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/reports/openTasks"
-                element={<Navigate to="/reports/availableTasks" />}
-              />
-              <Route
-                path="/reports/availableTasks"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <AvailableTasksReportView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/tasks"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/tasks/create"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/tasks/:taskId/edit"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskCreateFormView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/tasks/:taskId"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/projects"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <ProjectListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/projects/create"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <ProjectCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/projects/:projectId/tasks"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/projects/:projectId/edit"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <ProjectCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route path="/annotations/:type/:id" element={<AnnotationsRouteWrapper />} />
-              <Route
-                path="/annotations/:id"
-                element={
-                  <SecuredRoute serverAuthenticationCallback={serverAuthenticationCallback}>
-                    <TracingViewRouteWrapper />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/datasets/upload"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <DatasetAddView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/datasets/:datasetNameAndId/edit"
-                element={<DatasetSettingsRouteWrapper />}
-              />
-              <Route
-                path="/taskTypes"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <TaskTypeListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/taskTypes/create"
-                element={
-                  <SecuredRoute
-                    requiresAdminOrManagerRole
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                  >
-                    <TaskTypeCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/taskTypes/:taskTypeId/edit"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskTypeCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/taskTypes/:taskTypeId/tasks"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <TaskListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/taskTypes/:taskTypeId/projects"
-                element={
-                  <SecuredRoute
-                    requiredPricingPlan={PricingPlanEnum.Team}
-                    requiresAdminOrManagerRole
-                  >
-                    <ProjectListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/scripts/create"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <ScriptCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/scripts/:scriptId/edit"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <ScriptCreateView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/scripts"
-                element={
-                  <SecuredRoute requiresAdminOrManagerRole>
-                    <ScriptListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/jobs"
-                element={
-                  <SecuredRoute>
-                    <JobListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/organizations/:organizationId"
-                element={<Navigate to="/organization" />}
-              />
-              <Route
-                path="/organization"
-                element={
-                  <SecuredRoute>
-                    <OrganizationView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/organization/:tab"
-                element={
-                  <SecuredRoute>
-                    <OrganizationView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/help/keyboardshortcuts"
-                element={
-                  <Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />
-                }
-              />
-              {/* Backwards compatibility for old auth token URLs */}
-              <Route path="/auth/token" element={<Navigate to="/account/token" />} />
-              {/* Backwards compatibility for old password change URLs */}
-              <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
-              <Route path="/login" element={<Navigate to="/auth/login" />} />
-
-              <Route path="/invite/:token" element={<AcceptInviteView activeUser={activeUser} />} />
-
-              <Route path="/verifyEmail/:token" element={<VerifyEmailView />} />
-
-              <Route path="/signup" element={<Navigate to="/auth/signup" />} />
-              <Route path="/register" element={<Navigate to="/auth/signup" />} />
-              <Route path="/auth/register" element={<Navigate to="/auth/signup" />} />
-              <Route
-                path="/auth/login"
-                element={isAuthenticated ? <Navigate to="/" /> : <LoginView />}
-              />
-              <Route
-                path="/auth/signup"
-                element={isAuthenticated ? <Navigate to="/" /> : <RegistrationView />}
-              />
-
-              <Route path="/auth/resetPassword" element={<StartResetPasswordView />} />
-              <Route path="/auth/finishResetPassword" element={<FinishResetPasswordView />} />
-              {/* legacy view mode route */}
-              <Route
-                path="/datasets/:organizationId/:datasetName/view"
-                element={<TracingViewModeLegacyWrapper />}
-              />
-              <Route
-                path="/datasets/:datasetNameAndId/view"
-                element={<TracingViewModeRouteWrapper />}
-              />
-              <Route
-                path="/datasets/:datasetNameAndId/sandbox/:type"
-                element={<TracingSandboxRouteWrapper />}
-              />
-              {/* legacy sandbox route */}
-              <Route
-                path="/datasets/:organizationId/:datasetName/sandbox/:type"
-                element={<TracingSandboxLegacyRouteWrapper />}
-              />
-              <Route
-                path="/datasets/:datasetId/createExplorative/:type"
-                element={<CreateExplorativeRouteWrapper />}
-              />
-              {
-                // Note that this route has to be beneath all others sharing the same prefix,
-                // to avoid url mismatching
-              }
-              {/*legacy view mode route */}
-              <Route
-                path="/datasets/:organizationId/:datasetName"
-                element={<TracingViewModeLegacyWrapper />}
-              />
-              <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
-              <Route path="/publications/:id" element={<PublicationDetailView />} />
-              <Route path="/publication/:id" element={<Navigate to="/publications/:id" />} />
-              <Route
-                path="/workflows"
-                element={
-                  <SecuredRoute>
-                    <AsyncWorkflowListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/aiModels"
-                element={
-                  <SecuredRoute>
-                    <AiModelListView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/workflows/:workflowName"
-                element={
-                  <SecuredRoute>
-                    <AsyncWorkflowView />
-                  </SecuredRoute>
-                }
-              />
-              <Route path="/imprint" element={<Imprint />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/links/:key" element={<LinksRouteWrapper />} />
-              {!features().isWkorgInstance && <Route path="/onboarding" element={<Onboarding />} />}
-              <Route
-                path="/account"
-                element={
-                  <SecuredRoute>
-                    <AccountSettingsView />
-                  </SecuredRoute>
-                }
-              />
-              <Route
-                path="/account/:tab"
-                element={
-                  <SecuredRoute>
-                    <AccountSettingsView />
-                  </SecuredRoute>
-                }
-              />
-              <Route path="*" element={<PageNotFoundView />} />
-            </Route>
-          </Routes>
-        </Content>
-      </Layout>
-    </BrowserRouter>
+    <Layout>
+      <DisableGenericDnd />
+      <CheckCertificateModal />
+      {/* TODO: always show command pallete; remove logic from router
+      within tracing view, the command palette is rendered in the status bar. */}
+      {isAuthenticated && isAdminView && <CommandPalette label={null} />}
+      <CheckTermsOfServices />
+      <Navbar isAuthenticated={isAuthenticated} />
+      <HelpButton />
+      <Content>
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </Content>
+    </Layout>
   );
 }
 
-export default ReactRouter;
+const routes = createRoutesFromElements(
+  <Route element={<RootLayout />}>
+    <Route path="/" element={<RootRouteWrapper />} />
+    <Route path="/dashboard/:tab" element={<DashboardRouteWrapper />} />
+
+    <Route
+      path="/dashboard/datasets/:folderIdWithName"
+      element={
+        <SecuredRoute>
+          <DashboardView userId={null} isAdminView={false} initialTabKey={"datasets"} />
+        </SecuredRoute>
+      }
+    />
+
+    <Route path="/dashboard" element={<DashboardRouteRootWrapper />} />
+    <Route path="/users/:userId/details" element={<UserDetailsRouteWrapper />} />
+    <Route
+      path="/users"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <UserListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/import"
+      element={
+        <SecuredRoute>
+          <DatasetURLImport />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/teams"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <TeamListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/timetracking"
+      element={
+        <SecuredRoute>
+          <TimeTrackingOverview />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/reports/projectProgress"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <ProjectProgressReportView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="/reports/openTasks" element={<Navigate to="/reports/availableTasks" />} />
+    <Route
+      path="/reports/availableTasks"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <AvailableTasksReportView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/tasks"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/tasks/create"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/tasks/:taskId/edit"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskCreateFormView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/tasks/:taskId"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/projects"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <ProjectListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/projects/create"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <ProjectCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/projects/:projectId/tasks"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/projects/:projectId/edit"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <ProjectCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="/annotations/:type/:id" element={<AnnotationsRouteWrapper />} />
+    <Route
+      path="/annotations/:id"
+      element={
+        <SecuredRoute serverAuthenticationCallback={serverAuthenticationCallback}>
+          <TracingViewRouteWrapper />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/datasets/upload"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <DatasetAddView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="/datasets/:datasetNameAndId/edit" element={<DatasetSettingsRouteWrapper />} />
+    <Route
+      path="/taskTypes"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <TaskTypeListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/taskTypes/create"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
+          <TaskTypeCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/taskTypes/:taskTypeId/edit"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskTypeCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/taskTypes/:taskTypeId/tasks"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <TaskListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/taskTypes/:taskTypeId/projects"
+      element={
+        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+          <ProjectListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/scripts/create"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <ScriptCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/scripts/:scriptId/edit"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <ScriptCreateView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/scripts"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <ScriptListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/jobs"
+      element={
+        <SecuredRoute>
+          <JobListView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="/organizations/:organizationId" element={<Navigate to="/organization" />} />
+    <Route
+      path="/organization"
+      element={
+        <SecuredRoute>
+          <OrganizationView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/organization/:tab"
+      element={
+        <SecuredRoute>
+          <OrganizationView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/help/keyboardshortcuts"
+      element={<Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />}
+    />
+    {/* Backwards compatibility for old auth token URLs */}
+    <Route path="/auth/token" element={<Navigate to="/account/token" />} />
+    {/* Backwards compatibility for old password change URLs */}
+    <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
+    <Route path="/login" element={<Navigate to="/auth/login" />} />
+
+    <Route path="/invite/:token" element={<AcceptInviteView />} />
+
+    <Route path="/verifyEmail/:token" element={<VerifyEmailView />} />
+
+    <Route path="/signup" element={<Navigate to="/auth/signup" />} />
+    <Route path="/register" element={<Navigate to="/auth/signup" />} />
+    <Route path="/auth/register" element={<Navigate to="/auth/signup" />} />
+    <Route path="/auth/login" element={<LoginView />} />
+    <Route path="/auth/signup" element={<RegistrationView />} />
+
+    <Route path="/auth/resetPassword" element={<StartResetPasswordView />} />
+    <Route path="/auth/finishResetPassword" element={<FinishResetPasswordView />} />
+    {/* legacy view mode route */}
+    <Route
+      path="/datasets/:organizationId/:datasetName/view"
+      element={<TracingViewModeLegacyWrapper />}
+    />
+    <Route path="/datasets/:datasetNameAndId/view" element={<TracingViewModeRouteWrapper />} />
+    <Route
+      path="/datasets/:datasetNameAndId/sandbox/:type"
+      element={<TracingSandboxRouteWrapper />}
+    />
+    {/* legacy sandbox route */}
+    <Route
+      path="/datasets/:organizationId/:datasetName/sandbox/:type"
+      element={<TracingSandboxLegacyRouteWrapper />}
+    />
+    <Route
+      path="/datasets/:datasetId/createExplorative/:type"
+      element={<CreateExplorativeRouteWrapper />}
+    />
+    {
+      // Note that this route has to be beneath all others sharing the same prefix,
+      // to avoid url mismatching
+    }
+    {/*legacy view mode route */}
+    <Route
+      path="/datasets/:organizationId/:datasetName"
+      element={<TracingViewModeLegacyWrapper />}
+    />
+    <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
+    <Route path="/publications/:id" element={<PublicationDetailView />} />
+    <Route path="/publication/:id" element={<Navigate to="/publications/:id" />} />
+    <Route
+      path="/workflows"
+      element={
+        <SecuredRoute>
+          <AsyncWorkflowListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/aiModels"
+      element={
+        <SecuredRoute>
+          <AiModelListView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/workflows/:workflowName"
+      element={
+        <SecuredRoute>
+          <AsyncWorkflowView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="/imprint" element={<Imprint />} />
+    <Route path="/privacy" element={<Privacy />} />
+    <Route path="/links/:key" element={<ShortLinksRouteWrapper />} />
+    {!features()?.isWkorgInstance && <Route path="/onboarding" element={<Onboarding />} />}
+    <Route
+      path="/account"
+      element={
+        <SecuredRoute>
+          <AccountSettingsView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/account/:tab"
+      element={
+        <SecuredRoute>
+          <AccountSettingsView />
+        </SecuredRoute>
+      }
+    />
+    <Route path="*" element={<PageNotFoundView />} />
+  </Route>,
+);
+
+const router = createBrowserRouter(routes);
+export default router;

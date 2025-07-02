@@ -4,21 +4,19 @@ import { getOrganizationByInvite, joinOrganization, switchToOrganization } from 
 import { Button, Layout, Result, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { APIUser } from "types/api_types";
 
 const { Content } = Layout;
 
-export default function AcceptInviteView({
-  activeUser,
-}: {
-  activeUser: APIUser | null | undefined;
-}) {
+export default function AcceptInviteView() {
+  const activeUser = useWkSelector((state) => state.activeUser);
   const { token = "" } = useParams();
   const navigate = useNavigate();
+
   const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {

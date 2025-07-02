@@ -18,7 +18,6 @@ import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import Router from "router/router";
 import { setupApi } from "viewer/api/internal_api";
 import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -28,6 +27,8 @@ import { setModel, setStore } from "viewer/singletons";
 import Store from "viewer/throttled_store";
 
 import "../stylesheets/main.less";
+import { RouterProvider } from "react-router-dom";
+import router from "router/router";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
@@ -132,7 +133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
                 <RootForFastTooltips />
-                <Router />
+                <RouterProvider router={router} />
               </GlobalThemeProvider>
             </DndProvider>
           </QueryClientProvider>

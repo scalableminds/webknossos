@@ -18,9 +18,9 @@ export function getDemoDatasetUrl() {
   return features.publicDemoDatasetUrl;
 }
 export default () => {
-  if (features == null) {
-    throw new Error("Features not yet loaded.");
-  }
+  // if (features == null) {
+  //   throw new Error("Features not yet loaded.");
+  // }
 
   return features;
 };

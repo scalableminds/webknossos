@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings._
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 
 import scala.concurrent.ExecutionContext
 
@@ -146,7 +146,7 @@ class SkeletonTracingService @Inject()(
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
+  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Option[TreeBody] =
     for {
       tree <- tracing.trees.find(_.treeId == treeId)
     } yield TreeBody(nodes = tree.nodes, edges = tree.edges)

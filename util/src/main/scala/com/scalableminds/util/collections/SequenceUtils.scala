@@ -1,4 +1,4 @@
-package collections
+package com.scalableminds.util.collections
 
 object SequenceUtils {
   def findUniqueElement[T](list: Seq[T]): Option[T] = {

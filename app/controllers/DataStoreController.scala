@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.MultiUserDAO
-import net.liftweb.common.Empty
+import com.scalableminds.util.tools.Empty
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

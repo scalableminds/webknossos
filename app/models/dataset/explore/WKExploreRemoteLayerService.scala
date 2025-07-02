@@ -1,7 +1,7 @@
 package models.dataset.explore
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
@@ -16,7 +16,7 @@ import models.dataset.{DataStore, DataStoreDAO, DatasetService, WKRemoteDataStor
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
 import com.scalableminds.util.objectid.ObjectId

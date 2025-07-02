@@ -22,8 +22,8 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
@@ -266,7 +266,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
-        agglomerateList = agglomerateService.listAgglomerates(dataSource.id, dataLayer)
+        agglomerateList = agglomerateService.listAgglomeratesFiles(dataSource.id, dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }
@@ -435,7 +435,8 @@ class DataSourceController @Inject()(
                                       layerName: Option[String]): InboxDataSource = {
     val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
       binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetDirectoryName, layerName)
-    val closedMeshFileHandleCount = meshFileService.clearCache(organizationId, datasetDirectoryName, layerName)
+    val closedMeshFileHandleCount =
+      meshFileService.clearCache(DataSourceId(organizationId, datasetDirectoryName), layerName)
     val reloadedDataSource: InboxDataSource = dataSourceService.dataSourceFromDir(
       dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
       organizationId)

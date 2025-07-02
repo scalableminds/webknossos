@@ -26,7 +26,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io._
@@ -241,7 +241,7 @@ class VolumeTracingService @Inject()(
                     segmentIndexBuffer,
                     bucketPosition,
                     filteredBytes,
-                    Some(data),
+                    Full(data),
                     editableMappingTracingId(volumeTracing, tracingId)
                   )
                 } yield ()

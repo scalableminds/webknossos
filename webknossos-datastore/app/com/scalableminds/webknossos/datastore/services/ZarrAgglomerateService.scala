@@ -12,18 +12,19 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
+import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.ExecutionContext
 
-class ZarrAgglomerateService(config: DataStoreConfig,
-                             dataVaultService: DataVaultService,
-                             sharedChunkContentsCache: AlfuCache[String, MultiArray])
+class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
+                                       remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                       chunkCacheService: ChunkCacheService)
     extends DataConverter
     with LazyLogging {
 
@@ -56,7 +57,7 @@ class ZarrAgglomerateService(config: DataStoreConfig,
   private def openZarrArray(agglomerateFileKey: AgglomerateFileKey,
                             zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(agglomerateFileKey.attachment.path, None))
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(agglomerateFileKey.attachment)
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
                                    DataSourceId("dummy", "unused"),
@@ -64,7 +65,7 @@ class ZarrAgglomerateService(config: DataStoreConfig,
                                    None,
                                    None,
                                    None,
-                                   sharedChunkContentsCache)
+                                   chunkCacheService.sharedChunkContentsCache)
     } yield zarrArray
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(

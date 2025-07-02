@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {

@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,9 +11,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 import ucar.ma2.{Array => MultiArray}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext

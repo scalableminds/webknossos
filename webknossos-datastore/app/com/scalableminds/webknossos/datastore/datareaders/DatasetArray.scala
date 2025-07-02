@@ -3,12 +3,12 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.ByteOrder
@@ -248,10 +248,15 @@ class DatasetArray(vaultPath: VaultPath,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[MultiArray] =
     if (header.isSharded) {
+      val chunkShape = chunkShapeAtIndex(chunkIndex)
       for {
-        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
-        chunkShape = chunkShapeAtIndex(chunkIndex)
-        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
+        shardPathAndChunkRangeBox <- getShardedChunkPathAndRange(chunkIndex).shiftBox
+        multiArray <- shardPathAndChunkRangeBox match {
+          case Full((shardPath, chunkRange)) =>
+            chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
+          case Empty      => chunkReader.createFromFillValue(chunkShape, useSkipTypingShortcut)
+          case f: Failure => f.toFox
+        }
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)

@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -35,7 +36,6 @@ import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO

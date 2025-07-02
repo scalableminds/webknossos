@@ -37,8 +37,8 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, EmptyBox, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf

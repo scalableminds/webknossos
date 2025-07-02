@@ -9,8 +9,13 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
-case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
-
+case class WKWResolution(resolution: Vec3Int,
+                         cubeLength: Int,
+                         path: Option[String] = None,
+                         credentialId: Option[String] = None) {
+  def toMagLocator: MagLocator =
+    MagLocator(mag = resolution, path = path, credentialId = credentialId)
+}
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
 }
@@ -26,12 +31,12 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
-
   def defaultCubeSize = 32
 
+  def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
+
   def lengthOfUnderlyingCubes(mag: Vec3Int): Int =
-    wkwResolutions.find(_.resolution == mag).map(_ => defaultCubeSize).getOrElse(0)
+    wkwResolutions.find(_.resolution == mag).map(_.cubeLength).getOrElse(0)
 
 }
 
@@ -72,7 +77,7 @@ object WKWDataLayer {
     def reads(json: JsValue): JsResult[WKWDataLayer] =
       for {
         mag: List[MagLocator] <- (json \ "wkwResolutions").validate[List[WKWResolution]] match {
-          case JsSuccess(value, _) => JsSuccess(value.map(resolution => MagLocator(resolution.resolution)))
+          case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
           case JsError(_)          => (json \ "mags").validate[List[MagLocator]]
         }
         name <- (json \ "name").validate[String]
@@ -145,7 +150,7 @@ object WKWSegmentationLayer {
     def reads(json: JsValue): JsResult[WKWSegmentationLayer] =
       for {
         mag: List[MagLocator] <- (json \ "wkwResolutions").validate[List[WKWResolution]] match {
-          case JsSuccess(value, _) => JsSuccess(value.map(resolution => MagLocator(resolution.resolution)))
+          case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
           case JsError(_)          => (json \ "mags").validate[List[MagLocator]]
         }
         name <- (json \ "name").validate[String]

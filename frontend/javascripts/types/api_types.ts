@@ -1005,12 +1005,10 @@ export type ServerEditableMapping = {
 
 export type APIMeshFileInfo = {
   name: string;
-  path: string | null | undefined;
-  fileType: string | null | undefined;
   mappingName?: string | null | undefined;
-  // 0   - is the first mesh file version
-  // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
-  // 3   - is the newer version with draco encoding.
+  // 0   - unsupported (is the first mesh file version)
+  // 1-2 - unsupported (the format should behave as v0; refer to voxelytics for actual differences)
+  // 3+  - is the newer version with draco encoding.
   formatVersion: number;
 };
 export type APIConnectomeFile = {

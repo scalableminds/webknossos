@@ -113,6 +113,7 @@ export const NumberToOrthoView: Record<number, OrthoView> = {
   1: OrthoViews.PLANE_YZ,
   2: OrthoViews.PLANE_XZ,
   3: OrthoViews.TDView,
+  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
 };
 
 const PINK = 0xeb4b98;

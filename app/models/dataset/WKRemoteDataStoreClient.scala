@@ -9,14 +9,12 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
-import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -81,18 +79,6 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryStringOptional("datasetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
-
-  def addDataSource(organizationId: String,
-                    datasetName: String,
-                    dataSource: GenericDataSource[DataLayer],
-                    folderId: Option[ObjectId],
-                    userToken: String): Fox[Unit] =
-    for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
-        .addQueryString("token" -> userToken)
-        .addQueryStringOptional("folderId", folderId.map(_.toString))
-        .postJson(dataSource)
-    } yield ()
 
   def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(
       implicit ec: ExecutionContext): Fox[Boolean] = {

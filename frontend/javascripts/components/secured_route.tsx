@@ -6,14 +6,12 @@ import {
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { isUserAdminOrManager } from "libs/utils";
 import React from "react";
-import { Route, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 import { useWkSelector } from "libs/react_hooks";
 
 export type SecuredRouteProps = {
-  path: string;
-  element: React.ReactNode;
-  isAuthenticated: boolean;
+  children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;
   serverAuthenticationCallback?: (...args: Array<any>) => any;
@@ -23,19 +21,20 @@ function SecuredRoute(props: SecuredRouteProps) {
   const location = useLocation();
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
+  const isAuthenticated = activeUser !== null;
   const [isAdditionallyAuthenticated, setIsAdditionallyAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
     async function fetchData() {
-      if (!props.isAuthenticated && props.serverAuthenticationCallback != null) {
+      if (!isAuthenticated && props.serverAuthenticationCallback != null) {
         const isAdditionallyAuthenticated = await props.serverAuthenticationCallback();
         setIsAdditionallyAuthenticated(isAdditionallyAuthenticated);
       }
     }
     fetchData();
-  }, [props.isAuthenticated, props.serverAuthenticationCallback]);
+  }, [isAuthenticated, props.serverAuthenticationCallback]);
 
-  const { isAuthenticated, serverAuthenticationCallback, ...rest } = props;
+  const { serverAuthenticationCallback, children, ..._rest } = props;
   const isCompletelyAuthenticated = serverAuthenticationCallback
     ? isAuthenticated || isAdditionallyAuthenticated
     : isAuthenticated;
@@ -55,7 +54,7 @@ function SecuredRoute(props: SecuredRouteProps) {
     return <PageNotAvailableToNormalUser />;
   }
 
-  return <Route {...rest} />;
+  return children;
 }
 
-export default SecuredRoute;
+export default React.memo(SecuredRoute);

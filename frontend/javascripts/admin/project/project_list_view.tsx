@@ -388,10 +388,10 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                 <span>
                   <Link
                     to={`/annotations/CompoundProject/${project.id}`}
-                    title="View all Finished Annotations"
+                    title="Show a compound annotation of all finished instances for this project"
                   >
                     <EyeOutlined className="icon-margin-right" />
-                    View
+                    View merged
                   </Link>
                   <br />
                   <Link to={`/projects/${project.id}/edit`} title="Edit Project">

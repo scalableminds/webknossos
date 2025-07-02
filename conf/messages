@@ -216,7 +216,6 @@ annotation.notActive=The annotation is not active and cannot be finished
 annotation.reset.failed=Could not reset annotation to base
 annotation.merge.success=Merging successfully done
 annotation.merge.failed=Merging failed
-annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.merge.failed.compound=Couldn’t merge annotations for compound view
 annotation.transferee.noDatasetAccess=Cannot transfer annotation to a user who has no access to the dataset

@@ -52,6 +52,12 @@ import type { EmptyObject } from "types/globals";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
+import AccountAuthTokenView from "admin/account/account_auth_token_view";
+import AccountPasswordView from "admin/account/account_password_view";
+import AccountProfileView from "admin/account/account_profile_view";
+import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
+import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
+import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
 import { useWkSelector } from "libs/react_hooks";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
@@ -336,15 +342,12 @@ const routes = createRoutesFromElements(
           <OrganizationView />
         </SecuredRoute>
       }
-    />
-    <Route
-      path="/organization/:tab"
-      element={
-        <SecuredRoute>
-          <OrganizationView />
-        </SecuredRoute>
-      }
-    />
+    >
+      <Route index element={<Navigate to="overview" />} />
+      <Route path="overview" element={<OrganizationOverviewView />} />
+      <Route path="notifications" element={<OrganizationNotificationsView />} />
+      <Route path="delete" element={<OrganizationDangerZoneView />} />
+    </Route>
     <Route
       path="/help/keyboardshortcuts"
       element={<Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />}
@@ -433,15 +436,12 @@ const routes = createRoutesFromElements(
           <AccountSettingsView />
         </SecuredRoute>
       }
-    />
-    <Route
-      path="/account/:tab"
-      element={
-        <SecuredRoute>
-          <AccountSettingsView />
-        </SecuredRoute>
-      }
-    />
+    >
+      <Route index element={<Navigate to="profile" />} />
+      <Route path="profile" element={<AccountProfileView />} />
+      <Route path="password" element={<AccountPasswordView />} />
+      <Route path="token" element={<AccountAuthTokenView />} />
+    </Route>
     <Route path="*" element={<PageNotFoundView />} />
   </Route>,
 );

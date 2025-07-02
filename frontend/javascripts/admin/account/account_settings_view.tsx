@@ -1,10 +1,7 @@
 import { SafetyOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import AccountAuthTokenView from "./account_auth_token_view";
-import AccountPasswordView from "./account_password_view";
-import AccountProfileView from "./account_profile_view";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 const { Sider, Content } = Layout;
 
@@ -73,12 +70,7 @@ function AccountSettingsView() {
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
-        <Routes>
-          <Route path="profile" element={<AccountProfileView />} />
-          <Route path="password" element={<AccountPasswordView />} />
-          <Route path="token" element={<AccountAuthTokenView />} />
-          <Route path="*" element={<Navigate to="profile" />} />
-        </Routes>
+        <Outlet />
       </Content>
     </Layout>
   );

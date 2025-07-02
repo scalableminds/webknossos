@@ -3,9 +3,11 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
 import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
+import type { APIPricingPlanStatus } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 import { SettingsCard } from "../account/helpers/settings_card";
@@ -20,7 +22,10 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 
-export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
+export function OrganizationOverviewView() {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const [isFetchingData, setIsFetchingData] = useState(true);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
   const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);

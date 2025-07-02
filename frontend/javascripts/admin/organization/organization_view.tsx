@@ -1,13 +1,8 @@
 import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { useWkSelector } from "libs/react_hooks";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import constants from "viewer/constants";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { OrganizationDangerZoneView } from "./organization_danger_zone_view";
-import { OrganizationNotificationsView } from "./organization_notifications_view";
-import { OrganizationOverviewView } from "./organization_overview_view";
 
 const { Sider, Content } = Layout;
 
@@ -42,9 +37,6 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 ];
 
 const OrganizationView = () => {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
   const location = useLocation();
   const navigate = useNavigate();
   const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "overview";
@@ -76,21 +68,7 @@ const OrganizationView = () => {
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
-        <Routes>
-          <Route
-            path="overview"
-            element={<OrganizationOverviewView organization={organization} />}
-          />
-          <Route
-            path="notifications"
-            element={<OrganizationNotificationsView organization={organization} />}
-          />
-          <Route
-            path="delete"
-            element={<OrganizationDangerZoneView organization={organization} />}
-          />
-          <Route path="*" element={<Navigate to="overview" />} />
-        </Routes>
+        <Outlet />
       </Content>
     </Layout>
   );

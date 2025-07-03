@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
@@ -35,7 +35,6 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.net.URI
-import java.nio.file.{Path, Paths}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,6 +50,7 @@ class DataSourceController @Inject()(
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
@@ -390,7 +390,9 @@ class DataSourceController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
         for {
-          _ <- Fox.fromBool(request.body.allExplicitPaths.forall(_ => true)) // TODO check
+          _ <- Fox.fromBool(
+            request.body.allExplicitPaths
+              .forall(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)) ?~> "dataSource.add.pathsNotAllowed"
           reservedAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "", // Set by core backend

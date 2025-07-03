@@ -126,6 +126,7 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
+dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS object storage.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.

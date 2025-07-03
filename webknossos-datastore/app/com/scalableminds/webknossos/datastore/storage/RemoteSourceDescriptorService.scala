@@ -148,6 +148,12 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
         findGlobalCredentialFor(Some(attachment.path.toString)).toFox
     }
 
+  def pathIsAllowedToAddDirectly(pathLiteral: String): Boolean =
+    if (pathIsLocal(pathLiteral))
+      pathIsDataSourceLocal(pathLiteral)
+    else
+      !pathMatchesGlobalCredentials(pathLiteral)
+
   private def pathIsLocal(pathLiteral: String): Boolean = {
     val uri = new URI(pathLiteral)
     uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile

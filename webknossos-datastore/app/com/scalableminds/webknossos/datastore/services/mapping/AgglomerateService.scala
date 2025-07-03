@@ -1,11 +1,12 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mapping
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -18,8 +19,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio.file.Paths
@@ -33,7 +32,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
                                    remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends LazyLogging
     with FoxImplicits {
-  private val agglomerateDir = "agglomerates"
+  private val localAgglomeratesDir = "agglomerates"
   private val hdf5AgglomerateFileExtension = "hdf5"
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -46,7 +45,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val scannedAgglomerateFileNames = PathUtils
-      .listFiles(layerDir.resolve(agglomerateDir),
+      .listFiles(layerDir.resolve(localAgglomeratesDir),
                  silent = true,
                  PathUtils.fileExtensionFilter(hdf5AgglomerateFileExtension))
       .map { paths =>
@@ -100,7 +99,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
         mappingName,
         localDatasetDir
           .resolve(dataLayer.name)
-          .resolve(agglomerateDir)
+          .resolve(localAgglomeratesDir)
           .resolve(mappingName + "." + hdf5AgglomerateFileExtension)
           .toUri,
         LayerAttachmentDataformat.hdf5

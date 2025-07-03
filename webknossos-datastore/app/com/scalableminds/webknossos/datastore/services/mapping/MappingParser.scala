@@ -1,14 +1,14 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mapping
 
-import java.io._
-import java.nio.file.Path
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure}
 
+import java.io._
+import java.nio.file.Path
 import scala.collection.mutable
 
 object MappingParser extends LazyLogging {

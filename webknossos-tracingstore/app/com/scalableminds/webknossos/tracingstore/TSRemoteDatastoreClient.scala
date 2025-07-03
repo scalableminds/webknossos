@@ -11,12 +11,10 @@ import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
-  GetSegmentIndexParameters,
   MissingBucketHeaders,
   ProtoGeometryImplicits,
   SegmentIndexData
 }
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -115,25 +113,6 @@ class TSRemoteDatastoreClient @Inject()(
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       hasIndexFile <- rpc(s"$remoteLayerUri/hasSegmentIndex").withTokenFromContext.silent.getWithJsonResponse[Boolean]
     } yield hasIndexFile
-
-  def querySegmentIndex(remoteFallbackLayer: RemoteFallbackLayer,
-                        segmentId: Long,
-                        mag: Vec3Int,
-                        mappingName: Option[String], // should be the baseMappingName in case of editable mappings
-                        editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[Vec3Int]] =
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      positions <- rpc(s"$remoteLayerUri/segmentIndex/$segmentId").withTokenFromContext.silent
-        .postJsonWithJsonResponse[GetSegmentIndexParameters, Seq[Vec3Int]](GetSegmentIndexParameters(
-          mag,
-          cubeSize = Vec3Int.ones, // Don't use the cubeSize parameter here (since we want to calculate indices later anyway)
-          additionalCoordinates = None,
-          mappingName = mappingName,
-          editableMappingTracingId = editableMappingTracingId
-        ))
-
-      indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
-    } yield indices
 
   def querySegmentIndexForMultipleSegments(
       remoteFallbackLayer: RemoteFallbackLayer,

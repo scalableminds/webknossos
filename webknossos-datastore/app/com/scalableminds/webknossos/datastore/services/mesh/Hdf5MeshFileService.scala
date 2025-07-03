@@ -12,14 +12,17 @@ import play.api.i18n.{Messages, MessagesProvider}
 import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 
-class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends NeuroglancerMeshHelper with FoxImplicits {
+class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
+    extends NeuroglancerMeshHelper
+    with MeshFileUtils
+    with FoxImplicits {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
-  private lazy val meshFileCache = new Hdf5FileCache(30)
+  private lazy val fileHandleCache = new Hdf5FileCache(30)
 
   def mappingNameForMeshFile(meshFileKey: MeshFileKey): Box[Option[String]] = tryo {
-    meshFileCache
+    fileHandleCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
         cachedMeshFile.mappingName
       }
@@ -30,9 +33,9 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
   }
 
   private def readMeshFileMetadata(meshFileKey: MeshFileKey): Box[(String, Double, Array[Array[Double]])] =
-    meshFileCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
-      val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", "lod_scale_multiplier")
-      val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", "transform")
+    fileHandleCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+      val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", attrKeyLodScaleMultiplier)
+      val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", attrKeyTransform)
       (cachedMeshFile.meshFormat, lodScaleMultiplier, transform)
     }
 
@@ -40,7 +43,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
                                               segmentIds: Seq[Long],
                                               lodScaleMultiplier: Double,
                                               transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
-    meshFileCache
+    fileHandleCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile: CachedHdf5File =>
         segmentIds.toList.flatMap(segmentId =>
           listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
@@ -66,13 +69,13 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
 
   private def getNeuroglancerSegmentManifestOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
     val bucketIndex = cachedMeshFile.hashFunction(segmentId) % cachedMeshFile.nBuckets
-    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
+    val bucketOffsets = cachedMeshFile.uint64Reader.readArrayBlockWithOffset(keyBucketOffsets, 2, bucketIndex)
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
 
     if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
 
-    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset("buckets",
+    val buckets = cachedMeshFile.uint64Reader.readMatrixBlockWithOffset(keyBuckets,
                                                                         (bucketEnd - bucketStart + 1).toInt,
                                                                         3,
                                                                         bucketStart,
@@ -99,7 +102,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
                                lod: Int): Array[Array[Double]] = transform
 
   def versionForMeshFile(meshFileKey: MeshFileKey): Long =
-    meshFileCache
+    fileHandleCache
       .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
         cachedMeshFile.artifactSchemaVersion
       }
@@ -109,7 +112,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
   def readMeshChunk(meshFileKey: MeshFileKey,
                     meshChunkDataRequests: Seq[MeshChunkDataRequest]): Box[(Array[Byte], String)] =
     for {
-      resultBox <- meshFileCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+      resultBox <- fileHandleCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
         readMeshChunkFromCachedMeshFile(cachedMeshFile, meshChunkDataRequests)
       }
       (output, encoding) <- resultBox
@@ -125,7 +128,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
     val data: List[(Array[Byte], Int)] = requestsReordered.map { requestAndIndex =>
       val meshChunkDataRequest = requestAndIndex._1
       val data =
-        cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
+        cachedMeshFile.uint8Reader.readArrayBlockWithOffset(keyNeuroglancer,
                                                             meshChunkDataRequest.byteSize,
                                                             meshChunkDataRequest.byteOffset)
       (data, requestAndIndex._2)
@@ -153,6 +156,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig) extends Neuroglance
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
     val datasetPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
-    meshFileCache.clear(key => key.startsWith(relevantPath.toString))
+    fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
   }
+
 }

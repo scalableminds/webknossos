@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
 import java.net.URI
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
@@ -46,10 +46,10 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
 
-  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-  private val logFileName = Paths.get("datasource-properties-backups.log")
+  private val propertiesFileName = Path.of(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+  private val logFileName = Path.of("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
 
@@ -138,7 +138,7 @@ class DataSourceService @Inject()(
     if (isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
     } else {
-      val magPath = Paths.get(magURI)
+      val magPath = Path.of(magURI)
       val realPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
       val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)

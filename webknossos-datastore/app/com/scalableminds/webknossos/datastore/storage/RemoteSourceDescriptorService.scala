@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 
 import java.net.URI
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -68,7 +68,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     if (DataVaultService.isRemoteScheme(uri.getScheme)) {
       uri
     } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
-      val localPath = Paths.get(uri.getPath)
+      val localPath = Path.of(uri.getPath)
       if (localPath.isAbsolute) {
         if (localPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
               .exists(whitelistEntry => localPath.toString.startsWith(whitelistEntry)))
@@ -114,7 +114,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     if (DataVaultService.isRemoteScheme(uri.getScheme)) {
       uri
     } else {
-      Paths.get(uri.getPath).toAbsolutePath.toUri
+      Path.of(uri.getPath).toAbsolutePath.toUri
     }
   }
 

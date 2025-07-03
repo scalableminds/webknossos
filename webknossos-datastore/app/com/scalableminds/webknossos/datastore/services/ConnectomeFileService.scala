@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -84,7 +84,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     extends FoxImplicits
     with LazyLogging {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
   private val connectomesDir = "connectomes"
   private val connectomeFileExtension = "hdf5"
 
@@ -253,7 +253,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     } yield SynapseTypesWithLegend(synapseTypes, typeNames)
 
   private def typeNamesForSynapsesOrEmpty(connectomeFilePath: Path): List[String] = {
-    val typeNamesPath = Paths.get(s"${connectomeFilePath.toString.dropRight(connectomeFileExtension.length)}json")
+    val typeNamesPath = Path.of(s"${connectomeFilePath.toString.dropRight(connectomeFileExtension.length)}json")
     if (new File(typeNamesPath.toString).exists()) {
       JsonHelper.parseFromFileAs[ConnectomeLegend](typeNamesPath, typeNamesPath.getParent) match {
         case Full(connectomeLegend) => connectomeLegend.synapse_type_names

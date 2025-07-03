@@ -19,7 +19,7 @@ import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -72,7 +72,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     extends FoxImplicits
     with ArrayArtifactHashing {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
   private val localMeshesDir = "meshes"
   private val hdf5MeshFileExtension = "hdf5"
 

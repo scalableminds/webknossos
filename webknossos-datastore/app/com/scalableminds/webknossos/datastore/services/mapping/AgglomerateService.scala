@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, Remot
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FilenameUtils
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -34,7 +34,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig,
     with FoxImplicits {
   private val localAgglomeratesDir = "agglomerates"
   private val hdf5AgglomerateFileExtension = "hdf5"
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
 
   private val agglomerateFileKeyCache
     : AlfuCache[(DataSourceId, String, String), AgglomerateFileKey] = AlfuCache() // dataSourceId, layerName, mappingName → AgglomerateFileKey

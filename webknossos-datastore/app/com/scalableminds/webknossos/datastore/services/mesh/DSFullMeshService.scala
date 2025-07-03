@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, Voxe
 import com.scalableminds.webknossos.datastore.services._
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 

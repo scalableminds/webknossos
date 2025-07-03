@@ -43,7 +43,7 @@ case class LayerAttachment(name: String,
   def localPath: Path = {
     if (path.getScheme.nonEmpty && path.getScheme != "file") {
       throw new Exception(
-        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system")
+        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system.")
     }
     Path.of(path)
   }

@@ -22,11 +22,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
-import com.scalableminds.webknossos.datastore.services.{
-  AgglomerateService,
-  ArrayArtifactHashing,
-  BinaryDataServiceHolder
-}
+import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.services.{ArrayArtifactHashing, BinaryDataServiceHolder}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 
 import java.nio.file.{Path, Paths}
@@ -179,7 +176,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     } yield (bucketData, dataLayer.elementClass)
   }
 
-  // Reads bucket positions froms egment index file. Returns target-mag bucket positions
+  // Reads bucket positions from segment index file. Returns target-mag bucket positions
   // (even though the file stores mag1 bucket positions)
   private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
                                  agglomerateFileKeyOpt: Option[AgglomerateFileKey])(

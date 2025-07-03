@@ -1,7 +1,9 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mapping
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -9,34 +11,18 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.storage.{
-  AgglomerateFileCache,
-  AgglomerateFileKey,
-  AgglomerateIdCache,
-  BoundingBoxCache,
-  CachedAgglomerateFile,
-  CumsumParser
-}
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.services.DataConverter
+import com.scalableminds.webknossos.datastore.storage._
 
-import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Files, Path}
+import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 
-class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter {
+class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with AgglomerateFileUtils {
 
   private val cumsumFileName = "cumsum.json"
-
-  private val keySegmentToAgglomerate = "/segment_to_agglomerate"
-  private val keyAgglomerateToSegmentsOffsets = "/agglomerate_to_segments_offsets"
-  private val keyAgglomerateToSegments = "/agglomerate_to_segments"
-  private val keyAgglomerateToPositions = "/agglomerate_to_positions"
-  private val keyAgglomerateToEdges = "/agglomerate_to_edges"
-  private val keyAgglomerateToEdgesOffsets = "/agglomerate_to_edges_offsets"
-  private val keyAgglomerateToAffinities = "/agglomerate_to_affinities"
 
   private lazy val agglomerateFileCache = new AgglomerateFileCache(
     config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
@@ -101,9 +87,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     }
   }
 
-  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] = {
-    val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] =
     tryo {
+      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
       val agglomerateIds = segmentIds.map { segmentId: Long =>
         cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
                                                            cachedAgglomerateFile.reader,
@@ -112,7 +98,6 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       cachedAgglomerateFile.finishAccess()
       agglomerateIds
     }
-  }
 
   def generateSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
     try {
@@ -237,9 +222,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       segmentIds.toSeq
     }
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
-    val reader: IHDF5Reader = openHdf5(agglomerateFileKey)
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] =
     for {
+      reader: IHDF5Reader <- tryo(openHdf5(agglomerateFileKey))
       agglomerateIdArr: Array[Long] <- tryo(
         reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
       agglomerateId = agglomerateIdArr(0)
@@ -248,7 +233,6 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
       position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
     } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
-  }
 
   @tailrec
   private def binarySearchForSegment(rangeStart: Long,

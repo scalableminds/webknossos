@@ -9,6 +9,12 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   Hdf5ConnectomeFileService,
   ZarrConnectomeFileService
 }
+import com.scalableminds.webknossos.datastore.services.mapping.{
+  AgglomerateService,
+  Hdf5AgglomerateService,
+  MappingService,
+  ZarrAgglomerateService
+}
 import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshServiceHolder,
   Hdf5MeshFileService,

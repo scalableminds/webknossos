@@ -8,7 +8,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.{ArrayArtifactHashing, ChunkCacheService}
+import com.scalableminds.webknossos.datastore.services.{
+  ArrayArtifactHashing,
+  ChunkCacheService,
+  VoxelyticsZarrArtifactUtils
+}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{JsResult, JsValue, Reads}
@@ -18,7 +22,6 @@ import scala.concurrent.ExecutionContext
 
 case class SegmentIndexFileAttributes(
     formatVersion: Long,
-    mag: Vec3Int,
     nHashBuckets: Long,
     hashFunction: String,
     dtypeBucketEntries: String,
@@ -26,26 +29,18 @@ case class SegmentIndexFileAttributes(
   lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
 }
 
-object SegmentIndexFileAttributes {
-  val FILENAME_ZARR_JSON = "zarr.json"
-
+object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZarrArtifactUtils {
   implicit object SegmentIndexFileAttributesZarr3GroupHeaderReads extends Reads[SegmentIndexFileAttributes] {
     override def reads(json: JsValue): JsResult[SegmentIndexFileAttributes] = {
-      val keyAttributes = "attributes"
-      val keyVx = "voxelytics"
-      val keyFormatVersion = "artifact_schema_version"
-      val keyArtifactAttrs = "artifact_attributes"
-      val segmentIndexFileAttrs = json \ keyAttributes \ keyVx \ keyArtifactAttrs
+      val attrs = lookUpArtifactAttributes(json)
       for {
-        formatVersion <- (json \ keyAttributes \ keyVx \ keyFormatVersion).validate[Long]
-        mag <- (segmentIndexFileAttrs \ "mag").validate[Vec3Int]
-        nHashBuckets <- (segmentIndexFileAttrs \ "n_hash_buckets").validate[Long]
-        hashFunction <- (segmentIndexFileAttrs \ "hash_function").validate[String]
-        dtypeBucketEntries <- (segmentIndexFileAttrs \ "dtype_bucket_entries").validate[String]
+        formatVersion <- readArtifactSchemaVersion(json)
+        nHashBuckets <- (attrs \ attrKeyNHashBuckets).validate[Long]
+        hashFunction <- (attrs \ attrKeyHashFunction).validate[String]
+        dtypeBucketEntries <- (attrs \ attrKeyDtypeBucketEntries).validate[String]
       } yield
         SegmentIndexFileAttributes(
           formatVersion,
-          mag,
           nHashBuckets,
           hashFunction,
           dtypeBucketEntries
@@ -56,11 +51,8 @@ object SegmentIndexFileAttributes {
 
 class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                             chunkCacheService: ChunkCacheService)
-    extends FoxImplicits {
-
-  private val keyHashBucketOffsets = "hash_bucket_offsets"
-  private val keyHashBuckets = "hash_buckets"
-  private val keyTopLefts = "top_lefts"
+    extends FoxImplicits
+    with SegmentIndexFileUtils {
 
   private lazy val openArraysCache = AlfuCache[(SegmentIndexFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[SegmentIndexFileKey, SegmentIndexFileAttributes]()

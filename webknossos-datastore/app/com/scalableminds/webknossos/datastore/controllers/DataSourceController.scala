@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   ConnectomeFileService,
   SynapticPartnerDirection
 }
+import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages

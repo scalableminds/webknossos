@@ -12,7 +12,7 @@ type Props = {
   onSelect?: (arg0: string) => void;
   onChange?: () => void;
   allowCreation: boolean;
-  alreadyUsedDomains: ExperienceDomainList;
+  alreadyUsedDomains?: ExperienceDomainList;
 };
 
 const SelectExperienceDomain: React.FC<Props> = ({
@@ -24,7 +24,7 @@ const SelectExperienceDomain: React.FC<Props> = ({
   onSelect,
   onChange,
   allowCreation,
-  alreadyUsedDomains,
+  alreadyUsedDomains = [],
 }) => {
   const [domains, setDomains] = React.useState<ExperienceDomainList>([]);
   const [currentlyEnteredDomain, setCurrentlyEnteredDomain] = React.useState("");

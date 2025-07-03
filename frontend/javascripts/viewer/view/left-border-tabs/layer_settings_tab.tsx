@@ -111,7 +111,10 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { addLayerToAnnotation, deleteAnnotationLayer } from "viewer/model/sagas/update_actions";
+import {
+  addLayerToAnnotation,
+  deleteAnnotationLayer,
+} from "viewer/model/sagas/volume/update_actions";
 import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,

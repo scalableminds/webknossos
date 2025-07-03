@@ -69,14 +69,16 @@ import type {
   NumberLike,
   NumberLikeMap,
 } from "viewer/store";
-import type { Action } from "../actions/actions";
-import { updateSegmentAction } from "../actions/volumetracing_actions";
-import type DataCube from "../bucket_data_handling/data_cube";
-import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { ensureWkReady } from "./ready_sagas";
+import type { Action } from "../../actions/actions";
+import { updateSegmentAction } from "../../actions/volumetracing_actions";
+import type DataCube from "../../bucket_data_handling/data_cube";
+import { listenToStoreProperty } from "../../helpers/listener_helpers";
+import { ensureWkReady } from "../ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
+
+const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
 
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
@@ -226,38 +228,49 @@ function createBucketRetrievalSourceChannel(layerName: string) {
 }
 
 function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
+  /*
+   * This saga listens for changed bucket data and then triggers the updateLocalHdf5Mapping
+   * saga in an interruptible manner. See comments below for some rationale.
+   */
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
+  // Also update the local hdf5 mapping by inspecting all already existing
+  // buckets (likely, there are none yet because all buckets were reloaded, but
+  // it's still safer to do this here).
+  yield* call(startInterruptibleUpdateMapping);
+
   while (true) {
     yield take(bucketChannel);
-    // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
+    // We received a BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
+    // to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
-    yield* call(sleep, 500);
+
+    yield* call(sleep, BUCKET_WATCHING_THROTTLE_DELAY);
     yield flush(bucketChannel);
-    // After flushing and while the handler below is running,
+    // After flushing and while the startInterruptibleUpdateMapping below is running,
     // the bucketChannel might fill up again. This means, the
     // next loop will immediately take from the channel which
     // is what we need.
-    yield* call(handler);
+    yield* call(startInterruptibleUpdateMapping);
 
     // Addendum:
     // ¹ We don't use redux-saga's throttle, because that would
-    //   call `handler` in parallel if enough events are
+    //   call `startInterruptibleUpdateMapping` in parallel if enough events are
     //   consumed over the throttling duration.
-    //   However, running `handler` in parallel would be a waste
-    //   of computation. Therefore, we invoke `handler` strictly
+    //   However, running `startInterruptibleUpdateMapping` in parallel would be a waste
+    //   of computation. Therefore, we invoke `startInterruptibleUpdateMapping` strictly
     //   sequentially.
   }
 
-  function* handler() {
+  function* startInterruptibleUpdateMapping() {
     const dataset = yield* select((state) => state.dataset);
     const layerInfo = getLayerByName(dataset, layerName);
     const mappingInfo = yield* select((state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
     );
-    const { mappingName, mappingType, mappingStatus } = mappingInfo;
+    const { mappingName, mappingStatus } = mappingInfo;
 
     if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
       return;
@@ -271,7 +284,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
       let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       if (!isBusy) {
         const { cancel } = yield* race({
-          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
+          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName),
           cancel: take(
             ((action: Action) =>
               action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -407,7 +420,6 @@ function* handleSetMapping(
       layerName,
       layerInfo,
       mappingName,
-      mappingType,
       action,
       oldActiveMappingByLayer,
     );
@@ -418,23 +430,21 @@ function* handleSetHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
   action: SetMappingAction,
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
 ): Saga<void> {
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
-    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
   } else {
     // An HDF5 mapping was set that is applied remotely. A reload is necessary.
     yield* call(reloadData, oldActiveMappingByLayer, action);
   }
 }
 
-function* updateLocalHdf5Mapping(
+export function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.annotation);
@@ -500,7 +510,12 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
+  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+  if (process.env.IS_TESTING) {
+    // in test context, the mapping.ts code is not executed (which is usually responsible
+    // for finishing the initialization).
+    yield put(finishMappingInitializationAction(layerName));
+  }
 }
 
 function* handleSetJsonMapping(

@@ -73,7 +73,9 @@ export function getVolumeTracingById(
   const volumeTracing = annotation.volumes.find((t) => t.tracingId === tracingId);
 
   if (volumeTracing == null) {
-    throw new Error(`Could not find volume tracing with id ${tracingId}`);
+    throw new Error(
+      `Could not find volume tracing with id ${tracingId}. Only found: ${annotation.volumes.map((t) => t.tracingId)}`,
+    );
   }
 
   return volumeTracing;

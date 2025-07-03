@@ -1,5 +1,5 @@
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
 import { idUserA } from "test/e2e-setup";
 import dummyUser from "test/fixtures/dummy_user";
@@ -23,15 +23,11 @@ export function createSaveQueueFromUpdateActions(
   }));
 }
 
-export function withoutUpdateTracing(
+export function withoutUpdateActiveItemTracing(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter(
-    (item) =>
-      item.name !== "updateSkeletonTracing" &&
-      item.name !== "updateVolumeTracing" &&
-      item.name !== "updateActiveNode" &&
-      item.name !== "updateActiveSegmentId",
+    (item) => item.name !== "updateActiveNode" && item.name !== "updateActiveSegmentId",
   );
 }
 

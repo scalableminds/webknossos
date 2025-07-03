@@ -7,10 +7,10 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateTreeGroupVisibility,
   updateTreeVisibility,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import {
   withoutUpdateSegment,
-  withoutUpdateTracing,
+  withoutUpdateActiveItemTracing,
   withoutUpdateTree,
 } from "test/helpers/saveHelpers";
 import DiffableMap from "libs/diffable_map";
@@ -162,7 +162,7 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateTree(
-    withoutUpdateTracing(
+    withoutUpdateActiveItemTracing(
       Array.from(
         diffSkeletonTracing(
           enforceSkeletonTracing(prevState.annotation),
@@ -179,7 +179,7 @@ function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosStat
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateSegment(
-    withoutUpdateTracing(
+    withoutUpdateActiveItemTracing(
       Array.from(
         diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
       ),

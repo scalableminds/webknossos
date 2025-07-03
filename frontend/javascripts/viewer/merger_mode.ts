@@ -17,7 +17,7 @@ import type {
   DeleteNodeUpdateAction,
   NodeWithTreeId,
   UpdateActionNode,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, StoreType, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";

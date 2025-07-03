@@ -151,8 +151,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
         bbox.id === action.id
           ? {
-              // @ts-expect-error ts-migrate(2783) FIXME: 'id' is specified more than once, so this usage wi... Remove this comment to see the full error message
-              id: bbox.id,
               ...bbox,
               ...action.newProps,
             }
@@ -210,7 +208,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       // Only update the bounding box if the bounding box overlaps with the dataset bounds.
       // Else the bounding box is completely outside the dataset bounds -> in that case just keep the bounding box and let the user cook.
       if (newBoundingBoxWithinDataset.getVolume() > 0) {
-        newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset.toBoundingBoxType();
+        newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset.toBoundingBoxMinMaxType();
       }
 
       const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];

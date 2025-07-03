@@ -23,7 +23,6 @@ import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import UserListView from "admin/user/user_list_view";
 import { Layout } from "antd";
-import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import SecuredRoute from "components/secured_route";
 import DashboardView from "dashboard/dashboard_view";
@@ -37,16 +36,13 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
 } from "react-router-dom";
-import HelpButton from "viewer/view/help_modal";
 
 import AccountSettingsView from "admin/account/account_settings_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import { CheckCertificateModal } from "components/check_certificate_modal";
 import ErrorBoundary from "components/error_boundary";
-import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { CommandPalette } from "viewer/view/components/command_palette";
@@ -98,14 +94,10 @@ function RootLayout() {
 
   return (
     <Layout>
-      <DisableGenericDnd />
-      <CheckCertificateModal />
       {/* TODO: always show command pallete; remove logic from router
       within tracing view, the command palette is rendered in the status bar. */}
       {isAuthenticated && isAdminView && <CommandPalette label={null} />}
-      <CheckTermsOfServices />
       <Navbar isAuthenticated={isAuthenticated} />
-      <HelpButton />
       <Content>
         <ErrorBoundary>
           <Outlet />

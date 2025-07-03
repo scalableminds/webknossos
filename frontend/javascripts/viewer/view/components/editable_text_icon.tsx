@@ -1,5 +1,5 @@
 import { Button, Input } from "antd";
-import React from "react";
+import React, { useState } from "react";
 
 type Props = {
   icon: React.ReactElement;
@@ -7,73 +7,54 @@ type Props = {
   onChange: (value: string, event: React.SyntheticEvent<HTMLInputElement>) => void;
 };
 
-type State = {
-  isEditing: boolean;
-  value: string;
-};
+function EditableTextIcon(props: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState("");
 
-class EditableTextIcon extends React.PureComponent<Props, State> {
-  state = {
-    isEditing: false,
-    value: "",
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value);
   };
 
-  handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    this.setState({
-      value: event.target.value,
-    });
-  };
-
-  handleInputSubmit = (event: React.SyntheticEvent<HTMLInputElement>) => {
-    const { value } = this.state;
-
+  const handleInputSubmit = (event: React.FormEvent<HTMLInputElement>) => {
     if (value !== "") {
-      this.props.onChange(this.state.value, event);
+      props.onChange(value, event);
     }
 
-    this.setState({
-      isEditing: false,
-      value: "",
-    });
+    setIsEditing(false);
+    setValue("");
   };
 
-  render() {
-    if (this.state.isEditing) {
-      return (
-        <Input
-          value={this.state.value}
-          onChange={this.handleInputChange}
-          onPressEnter={this.handleInputSubmit}
-          onBlur={this.handleInputSubmit}
-          style={{
-            width: 75,
-          }}
-          size="small"
-          autoFocus
-        />
-      );
-    }
-
+  if (isEditing) {
     return (
-      <Button
-        size="small"
-        icon={this.props.icon}
+      <Input
+        value={value}
+        onChange={handleInputChange}
+        onPressEnter={handleInputSubmit}
+        onBlur={handleInputSubmit}
         style={{
-          height: 22,
-          width: this.props.label ? "initial" : 22,
-          fontSize: "12px",
-          color: "#7c7c7c",
+          width: 75,
         }}
-        onClick={() =>
-          this.setState({
-            isEditing: true,
-          })
-        }
-      >
-        {this.props.label ? <span style={{ marginLeft: 0 }}>{this.props.label}</span> : null}
-      </Button>
+        size="small"
+        autoFocus
+      />
     );
   }
+
+  return (
+    <Button
+      size="small"
+      icon={props.icon}
+      style={{
+        height: 22,
+        width: props.label ? "initial" : 22,
+        fontSize: "12px",
+        color: "#7c7c7c",
+      }}
+      onClick={() => setIsEditing(true)}
+    >
+      {props.label ? <span style={{ marginLeft: 0 }}>{props.label}</span> : null}
+    </Button>
+  );
 }
 
 export default EditableTextIcon;

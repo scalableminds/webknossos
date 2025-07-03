@@ -74,10 +74,10 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
       from <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, fromPtr)
-      }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
+      }.flatMap(_.headOption.toFox) ?~> "Could not read synapses from connectome file"
       to <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, toPtr)
-      }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
+      }.flatMap(_.headOption.toFox) ?~> "Could not read synapses from connectome file"
     } yield Seq.range(from, to)
 
   def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey,

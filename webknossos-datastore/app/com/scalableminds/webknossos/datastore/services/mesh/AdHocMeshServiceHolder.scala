@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, MappingService}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject

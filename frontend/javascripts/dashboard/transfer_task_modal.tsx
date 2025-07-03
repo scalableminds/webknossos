@@ -28,6 +28,7 @@ const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, on
     try {
       const updatedAnnotation = await transferTask(annotationId, currentUserIdValue);
       onChange(updatedAnnotation);
+      setCurrentUserIdValue("");
     } catch (error) {
       handleGenericError(error as Error);
     }
@@ -42,14 +43,14 @@ const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, on
       title="Transfer a Task"
       open={isOpen}
       onCancel={onCancel}
-      footer={
-        <div>
+      footer={() => (
+        <>
           <Button type="primary" onClick={transfer} disabled={currentUserIdValue === ""}>
             Transfer
           </Button>
           <Button onClick={onCancel}>Close</Button>
-        </div>
-      }
+        </>
+      )}
     >
       <div className="control-group">
         <div className="form-group">

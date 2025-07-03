@@ -2,11 +2,12 @@
 import { Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { fetchGistContent } from "libs/gist";
-import { makeComponentLazy } from "libs/react_helpers";
+import { makeComponentLazy, useGuardedFetch } from "libs/react_helpers";
 import Request from "libs/request";
 import { alert } from "libs/window";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { memo, useCallback, useState } from "react";
 import type { Script } from "viewer/store";
 
 const { TextArea } = Input;
@@ -17,37 +18,27 @@ type UserScriptsModalViewProps = {
 };
 
 const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOpen }) => {
-  const [code, setCode] = React.useState("");
-  const [isCodeChanged, setIsCodeChanged] = React.useState(false);
-  const [scripts, setScripts] = React.useState<Script[]>([]);
-  const [selectedScript, setSelectedScript] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [code, setCode] = useState("");
+  const [isCodeChanged, setIsCodeChanged] = useState(false);
+  // Needs to be undefined so the placeholder is displayed in the beginning
+  const [selectedScript, setSelectedScript] = useState<string | null | undefined>(undefined);
+  const [isLoadingScriptContent, setIsLoadingScriptContent] = useState(false);
 
-  React.useEffect(() => {
-    Request.receiveJSON("/api/scripts", {
-      showErrorToast: false,
-    })
-      .then((scripts) => {
-        setIsLoading(false);
+  const [scripts, isLoadingScripts] = useGuardedFetch<Script[]>(
+    () => Request.receiveJSON("/api/scripts", { showErrorToast: false }),
+    [],
+    [],
+    "Could not load user scripts.",
+  );
 
-        if (scripts.length) {
-          setScripts(scripts);
-        }
-      })
-      .catch((e) => {
-        console.error(e);
-        setIsLoading(false);
-      });
-  }, []);
-
-  const handleCodeChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleCodeChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCode(event.target.value);
     setIsCodeChanged(true);
   }, []);
 
-  const loadScript = React.useCallback(async (script: Script) => {
+  const loadScript = useCallback(async (script: Script) => {
     try {
-      setIsLoading(true);
+      setIsLoadingScriptContent(true);
       const content = await fetchGistContent(script.gist, script.name);
       setSelectedScript(script.id);
       setCode(content);
@@ -55,11 +46,11 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
     } catch (error) {
       handleGenericError(error as Error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingScriptContent(false);
     }
   }, []);
 
-  const handleScriptChange = React.useCallback(
+  const handleScriptChange = useCallback(
     async (scriptId: string) => {
       const script = scripts.find((s) => s.id === scriptId);
       if (script == null) return;
@@ -76,7 +67,7 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
     [scripts, isCodeChanged, loadScript],
   );
 
-  const handleClick = React.useCallback(() => {
+  const handleClick = useCallback(() => {
     try {
       // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
       eval(code);
@@ -87,6 +78,8 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
       return alert(error);
     }
   }, [code, onOK]);
+
+  const isLoading = isLoadingScripts || isLoadingScriptContent;
 
   return (
     <Modal
@@ -122,6 +115,6 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
   );
 };
 
-const UserScriptsModalView = makeComponentLazy(React.memo(_UserScriptsModalView));
+const UserScriptsModalView = makeComponentLazy(memo(_UserScriptsModalView));
 
 export default UserScriptsModalView;

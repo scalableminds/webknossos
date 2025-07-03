@@ -65,6 +65,7 @@ package object datasource {
 
     def withUpdatedId(newId: DataSourceId): GenericDataSource[T] = copy(id = newId)
 
+    def allExplicitPaths: Seq[String] = dataLayers.flatMap(_.allExplicitPaths)
   }
 
   object GenericDataSource {

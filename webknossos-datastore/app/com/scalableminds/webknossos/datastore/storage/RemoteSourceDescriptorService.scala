@@ -126,11 +126,8 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     res
   }
 
-  private def findGlobalCredentialFor(pathOpt: Option[String])(implicit ec: ExecutionContext) =
-    pathOpt match {
-      case Some(magPath) => globalCredentials.find(c => magPath.startsWith(c.name)).toFox
-      case None          => Fox.empty
-    }
+  private def findGlobalCredentialFor(pathOpt: Option[String]): Option[DataVaultCredential] =
+    pathOpt.flatMap(path => globalCredentials.find(c => path.startsWith(c.name)))
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {
@@ -139,7 +136,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)
-          case None             => findGlobalCredentialFor(magLocator.path)
+          case None             => findGlobalCredentialFor(magLocator.path).toFox
         }
     }
 
@@ -148,6 +145,22 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       case Some(credentialId) =>
         dSRemoteWebknossosClient.getCredential(credentialId)
       case None =>
-        findGlobalCredentialFor(Some(attachment.path.toString))
+        findGlobalCredentialFor(Some(attachment.path.toString)).toFox
     }
+
+  private def pathIsLocal(pathLiteral: String): Boolean = {
+    val uri = new URI(pathLiteral)
+    uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile
+  }
+
+  private def pathIsDataSourceLocal(pathLiteral: String): Boolean =
+    pathIsLocal(pathLiteral) && {
+      val path = Path.of(pathLiteral)
+      val workingDir = Path.of(".").toAbsolutePath.normalize
+      val inWorkingDir = workingDir.resolve(path).toAbsolutePath.normalize
+      !path.isAbsolute && inWorkingDir.startsWith(workingDir)
+    }
+
+  private def pathMatchesGlobalCredentials(pathLiteral: String): Boolean =
+    findGlobalCredentialFor(Some(pathLiteral)).isDefined
 }

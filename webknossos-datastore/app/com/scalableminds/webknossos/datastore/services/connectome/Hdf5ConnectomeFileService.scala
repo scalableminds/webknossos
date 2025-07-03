@@ -68,7 +68,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, agglomerateId)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCsrIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
       fromPtr <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
       toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
@@ -129,7 +129,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, srcAgglomerateId)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCsrIndptr, 2, srcAgglomerateId)
       } ?~> "Could not read offsets from connectome file"
       fromPtr <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
       toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"

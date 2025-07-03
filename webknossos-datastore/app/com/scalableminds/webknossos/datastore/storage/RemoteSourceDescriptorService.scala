@@ -150,7 +150,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   def pathIsAllowedToAddDirectly(pathLiteral: String): Boolean =
     if (pathIsLocal(pathLiteral))
-      pathIsDataSourceLocal(pathLiteral)
+      pathIsDataSourceLocal(pathLiteral) || pathIsInLocalDirectoryWhitelist(pathLiteral)
     else
       !pathMatchesGlobalCredentials(pathLiteral)
 
@@ -169,4 +169,9 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   private def pathMatchesGlobalCredentials(pathLiteral: String): Boolean =
     findGlobalCredentialFor(Some(pathLiteral)).isDefined
+
+  private def pathIsInLocalDirectoryWhitelist(pathLiteral: String): Boolean =
+    pathIsLocal(pathLiteral) &&
+      dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry => pathLiteral.startsWith(whitelistEntry))
+
 }

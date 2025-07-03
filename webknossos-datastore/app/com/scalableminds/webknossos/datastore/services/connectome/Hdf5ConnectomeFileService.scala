@@ -12,7 +12,7 @@ import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxImplicits {
+class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxImplicits with ConnectomeFileUtils {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -24,7 +24,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       mappingName <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.stringReader.getAttr("/", "metadata/mapping_name")
+        cachedConnectomeFile.stringReader.getAttr("/", attrKeyMetadataMappingName)
       } ?~> "connectome.file.readEncoding.failed"
       _ = cachedConnectomeFile.finishAccess()
     } yield mappingName
@@ -36,7 +36,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSC_indptr", 2, agglomerateId)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
       from <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
       to <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
@@ -44,15 +44,15 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       agglomeratePairs: Array[Long] <- if (to - from == 0L) Fox.successful(Array.empty[Long])
       else
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSC_agglomerate_pair", (to - from).toInt, from)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscAgglomeratePair, (to - from).toInt, from)
         } ?~> "Could not read agglomerate pairs from connectome file"
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
         for {
           from <- finishAccessOnFailure(cachedConnectomeFile) {
-            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets", 1, agglomeratePair)
+            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, agglomeratePair)
           }.flatMap(_.headOption.toFox)
           to <- finishAccessOnFailure(cachedConnectomeFile) {
-            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets",
+            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets,
                                                                        1,
                                                                        agglomeratePair + 1)
           }.flatMap(_.headOption.toFox)
@@ -68,15 +68,15 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSR_indptr", 2, agglomerateId)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
       fromPtr <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
       toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
       from <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets", 1, fromPtr)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, fromPtr)
       }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
       to <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets", 1, toPtr)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, toPtr)
       }.flatMap(_.headOption.toFox) ?~> "Could not synapses from connectome file"
     } yield Seq.range(from, to)
 
@@ -89,9 +89,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .toFox ?~> "connectome.file.open.failed"
       agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(s"/synapse_to_${direction.toString}_agglomerate",
-                                                                     1,
-                                                                     synapseId)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(synapticPartnerKey(direction), 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
     } yield agglomerateIds
@@ -104,7 +102,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .toFox ?~> "connectome.file.open.failed"
       synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readMatrixBlockWithOffset("/synapse_positions", 1, 3, synapseId, 0)
+          cachedConnectomeFile.uint64Reader.readMatrixBlockWithOffset(keySynapsePositions, 1, 3, synapseId, 0)
         }.flatMap(_.headOption.toFox)
       }
     } yield synapsePositions.map(_.toList)
@@ -119,7 +117,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       typeNames = List("dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse")
       synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/synapse_types", 1, synapseId)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keySynapseTypes, 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
     } yield SynapseTypesWithLegend(synapseTypes, typeNames)
@@ -131,14 +129,14 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSR_indptr", 2, srcAgglomerateId)
+        cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, srcAgglomerateId)
       } ?~> "Could not read offsets from connectome file"
       fromPtr <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
       toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
       columnValues: Array[Long] <- if (toPtr - fromPtr == 0L) Fox.successful(Array.empty[Long])
       else
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/CSR_indices", (toPtr - fromPtr).toInt, fromPtr)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCsrIndices, (toPtr - fromPtr).toInt, fromPtr)
         } ?~> "Could not read agglomerate pairs from connectome file"
       columnOffset = SequenceUtils.searchSorted(columnValues, dstAgglomerateId)
       pairIndex = fromPtr + columnOffset
@@ -147,7 +145,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       else
         for {
           fromAndTo <- finishAccessOnFailure(cachedConnectomeFile) {
-            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset("/agglomerate_pair_offsets", 2, pairIndex)
+            cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 2, pairIndex)
           }
           from <- fromAndTo.lift(0).toFox
           to <- fromAndTo.lift(1).toFox

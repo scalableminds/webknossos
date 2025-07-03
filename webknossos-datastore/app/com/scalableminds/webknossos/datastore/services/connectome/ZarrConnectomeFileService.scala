@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.ChunkCacheService
+import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, VoxelyticsZarrArtifactUtils}
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import jakarta.inject.Inject
@@ -22,20 +22,15 @@ case class ConnectomeFileAttributes(
     synapseTypeNames: Seq[String]
 )
 
-object ConnectomeFileAttributes {
-  val FILENAME_ZARR_JSON = "zarr.json"
+object ConnectomeFileAttributes extends VoxelyticsZarrArtifactUtils with ConnectomeFileUtils {
 
   implicit object ConnectomeFileAttributesZarr3GroupHeaderReads extends Reads[ConnectomeFileAttributes] {
     override def reads(json: JsValue): JsResult[ConnectomeFileAttributes] = {
-      val keyAttributes = "attributes"
-      val keyVx = "voxelytics"
-      val keyFormatVersion = "artifact_schema_version"
-      val keyArtifactAttrs = "artifact_attributes"
-      val connectomeFileAttrs = json \ keyAttributes \ keyVx \ keyArtifactAttrs
+      val connectomeFileAttrs = lookUpArtifactAttributes(json)
       for {
-        formatVersion <- (json \ keyAttributes \ keyVx \ keyFormatVersion).validate[Long]
-        mappingName <- (connectomeFileAttrs \ "metadata/mapping_name").validate[String]
-        synapseTypeNames <- (connectomeFileAttrs \ "synapse_type_names").validate[Seq[String]]
+        formatVersion <- readArtifactSchemaVersion(json)
+        mappingName <- (connectomeFileAttrs \ attrKeyMetadataMappingName).validate[String]
+        synapseTypeNames <- (connectomeFileAttrs \ attrKeySynapseTypeNames).validate[Seq[String]]
       } yield
         ConnectomeFileAttributes(
           formatVersion,
@@ -48,19 +43,10 @@ object ConnectomeFileAttributes {
 
 class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                           chunkCacheService: ChunkCacheService)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with ConnectomeFileUtils {
   private lazy val openArraysCache = AlfuCache[(ConnectomeFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[ConnectomeFileKey, ConnectomeFileAttributes]()
-
-  private val keyCsrIndptr = "CSR_indptr"
-  private val keyCscIndptr = "CSC_indptr"
-  private val keyCsrIndices = "CSR_indices"
-  private val keyAgglomeratePairOffsets = "agglomerate_pair_offsets"
-  private val keyCscAgglomeratePair = "CSC_agglomerate_pair"
-  private val keySynapseTypes = "synapse_types"
-  private val keySynapsePositions = "synapse_positions"
-  private val keySynapseToSrcAgglomerate = "synapse_to_src_agglomerate"
-  private val keySynapseToDstAgglomerate = "synapse_to_dst_agglomerate"
 
   private def readConnectomeFileAttributes(connectomeFileKey: ConnectomeFileKey)(
       implicit ec: ExecutionContext,
@@ -86,13 +72,9 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
   def synapticPartnerForSynapses(
       connectomeFileKey: ConnectomeFileKey,
       synapseIds: List[Long],
-      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] = {
-    val arrayKey = direction match {
-      case SynapticPartnerDirection.src => keySynapseToSrcAgglomerate
-      case SynapticPartnerDirection.dst => keySynapseToDstAgglomerate
-    }
+      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     for {
-      synapseToPartnerAgglomerateArray <- openZarrArray(connectomeFileKey, arrayKey)
+      synapseToPartnerAgglomerateArray <- openZarrArray(connectomeFileKey, synapticPartnerKey(direction))
       agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         for {
           agglomerateIdMA <- synapseToPartnerAgglomerateArray.readAsMultiArray(offset = synapseId, shape = 1)
@@ -100,7 +82,6 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
         } yield agglomerateId
       }
     } yield agglomerateIds
-  }
 
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
       implicit ec: ExecutionContext,

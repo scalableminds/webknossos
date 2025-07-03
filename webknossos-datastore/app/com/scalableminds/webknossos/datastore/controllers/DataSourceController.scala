@@ -33,6 +33,7 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -386,6 +387,15 @@ class DataSourceController @Inject()(
         } yield Ok
       }
     }
+
+  private def pathIsLocal(pathLiteral: String) = {
+    val uri = new URI(pathLiteral)
+    uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile
+  }
+
+  private def pathIsDataSourceLocal(pathLiteral: String) =
+    pathIsLocal(pathLiteral) && Path.of(pathLiteral).normalize()
+  private def pathMatchesGlobalCredentials(path: String) = ???
 
   // Stores a remote dataset in the database.
   def add(organizationId: String, datasetName: String, folderId: Option[String]): Action[DataSource] =

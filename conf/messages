@@ -127,6 +127,7 @@ dataVault.getPath.failed=Failed to get remote path
 
 dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
 dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS object storage.
+dataSource.update.newExplicitPaths=Cannot update a dataset with new explicit paths. To add mags or layers, please use the compose functionality.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.

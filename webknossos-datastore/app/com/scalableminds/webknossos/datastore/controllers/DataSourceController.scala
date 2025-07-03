@@ -380,7 +380,9 @@ class DataSourceController @Inject()(
         for {
           dataSource <- dataSourceRepository.get(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id),
+                                                  expectExisting = true,
+                                                  preventNewPaths = true)
         } yield Ok
       }
     }
@@ -408,7 +410,9 @@ class DataSourceController @Inject()(
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId), expectExisting = false)
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = datasourceId),
+                                                  expectExisting = false,
+                                                  preventNewPaths = false)
           uploadedDatasetId <- dsRemoteWebknossosClient.reportUpload(datasourceId,
                                                                      0L,
                                                                      needsConversion = false,

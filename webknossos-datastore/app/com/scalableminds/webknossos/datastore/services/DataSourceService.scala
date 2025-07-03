@@ -269,7 +269,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] = {
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {
@@ -277,10 +277,28 @@ class DataSourceService @Inject()(
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting && preventNewPaths)(assertNoNewPaths(dataSourcePath, dataSource)) ?~> "dataSource.update.newExplicitPaths"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+  }
+
+  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: DataSource): Fox[Unit] = {
+    val propertiesPath = dataSourcePath.resolve(propertiesFileName)
+    if (Files.exists(propertiesPath)) {
+      Fox
+        .runOptional(newDataSource.toUsable) { newUsableDataSource =>
+          Fox.runOptional(dataSourceFromDir(dataSourcePath, newDataSource.id.organizationId).toUsable) {
+            oldUsableDataSource =>
+              val oldPaths = oldUsableDataSource.allExplicitPaths.toSet
+              Fox.fromBool(newUsableDataSource.allExplicitPaths.forall(oldPaths.contains))
+          }
+        }
+        .map(_ => ())
+    } else {
+      Fox.successful(())
+    }
   }
 
   private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {

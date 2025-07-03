@@ -31,13 +31,15 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       user <- userOpt.toFox ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
+      taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(task._id,
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   project._team,
                                                   AnnotationType.CompoundTask,
-                                                  finishedAnnotations) ?~> "annotation.merge.failed.compound"
+                                                  finishedAnnotations,
+                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

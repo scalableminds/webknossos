@@ -6,6 +6,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
 import javax.inject.Inject
 import models.annotation._
@@ -59,7 +60,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.totalinstances,
         r.pendinginstances,
         r.tracingtime,
-        r.boundingbox.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
+        parseBboxOpt(r.boundingbox),
         editPosition,
         editRotation,
         r.creationinfo,
@@ -67,6 +68,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       )
     }
+
+  private def parseBboxOpt(bboxLiteral: Option[String]): Option[BoundingBox] =
+    bboxLiteral.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL)
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
@@ -281,6 +285,22 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       rowsRaw <- run(
         q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String])
     } yield rowsRaw.toList
+
+  def findTaskBoundingBoxesByAnnotationIds(annotationIds: Seq[ObjectId]): Fox[Seq[NamedBoundingBox]] =
+    for {
+      rowsRaw <- run(q"""SELECT t.boundingBox, t._id, a._id
+                         FROM webknossos.tasks_ t
+                         JOIN webknossos.annotations_ a on a._task = t._id
+                         WHERE a._id IN ${SqlToken.tupleFromList(annotationIds)}
+                         AND t.boundingBox IS NOT NULL
+                         ORDER BY t._id
+                         """.as[(String, ObjectId, ObjectId)])
+      namedBboxes = rowsRaw.flatMap {
+        case (bboxLiteral, taskId, annotationId) =>
+          parseBboxOpt(Some(bboxLiteral)).map(bbox =>
+            NamedBoundingBox(0, Some(s"Task bounding box of instance $annotationId of task $taskId"), None, None, bbox))
+      }
+    } yield namedBboxes
 
   def insertOne(t: Task): Fox[Unit] =
     for {

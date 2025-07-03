@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.controllers.MergedFromIdsRequest
-import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
@@ -176,15 +176,16 @@ class WKRemoteTracingStoreClient(
                             ownerIds: List[ObjectId],
                             newAnnotationId: ObjectId,
                             toTemporaryStore: Boolean,
-                            requestingUserId: ObjectId): Fox[AnnotationProto] = {
+                            requestingUserId: ObjectId,
+                            additionalBoundingBoxes: Seq[NamedBoundingBox]): Fox[AnnotationProto] = {
     logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("requestingUserId" -> requestingUserId.toString)
-      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](MergedFromIdsRequest(annotationIds, ownerIds))(
-        AnnotationProto)
+      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
+        MergedFromIdsRequest(annotationIds, ownerIds, additionalBoundingBoxes))(AnnotationProto)
   }
 
   def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {

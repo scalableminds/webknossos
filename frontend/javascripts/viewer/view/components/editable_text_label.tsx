@@ -3,7 +3,8 @@ import { Input, type InputProps, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
-import * as React from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
 
@@ -53,10 +54,10 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     onRenameEnd,
   } = props;
 
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [value, setValue] = React.useState(propValue);
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(propValue);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setValue(propValue);
   }, [propValue]);
 

@@ -1,6 +1,6 @@
 import type { ButtonProps } from "antd";
-import * as React from "react";
-const { useState } = React;
+import type React from "react";
+import { useState } from "react";
 
 export type HoverButtonProps = Omit<ButtonProps, "icon"> & {
   icon: React.ReactElement<any>;

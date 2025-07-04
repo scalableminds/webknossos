@@ -208,7 +208,7 @@ export function TracingViewRouteWrapper() {
 
 export function TracingSandboxLegacyRouteWrapper() {
   const { type, datasetName = "", organizationId = "" } = useParams();
-  const { location } = useLocation();
+  const location = useLocation();
 
   const tracingType = coalesce(TracingTypeEnum, type);
   if (tracingType == null) {

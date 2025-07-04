@@ -52,10 +52,10 @@ type NumberSliderSettingProps = {
   value: number;
   label: string | React.ReactNode;
   max: number;
-  min: number;
-  step: number;
-  disabled: boolean;
-  spans: Vector3;
+  min?: number;
+  step?: number;
+  disabled?: boolean;
+  spans?: Vector3;
   defaultValue?: number;
   wheelFactor?: number;
 };
@@ -131,7 +131,7 @@ type LogSliderSettingProps = {
   min: number;
   roundTo: number;
   disabled?: boolean;
-  spans: Vector3;
+  spans?: Vector3;
   precision?: number;
   defaultValue?: number;
 };
@@ -237,11 +237,11 @@ type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
-  disabled: boolean;
-  tooltipText: string | null | undefined;
-  loading: boolean;
+  disabled?: boolean;
+  tooltipText?: string | null | undefined;
+  loading?: boolean;
   labelSpan?: number | null;
-  postSwitchIcon: React.ReactNode | null | undefined;
+  postSwitchIcon?: React.ReactNode | null | undefined;
   disabledReason?: string | null;
 }>;
 
@@ -694,7 +694,7 @@ export default connector;
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;
-  disabled: boolean;
+  disabled?: boolean;
   style?: Record<string, any>;
 };
 

@@ -45,7 +45,7 @@ function InputComponent(props: InputProps) {
 
       // Restore selection after re-render
       if (selectionStart !== null && selectionEnd !== null) {
-        inputRef.current.input?.setSelectionRange(selectionStart, selectionEnd);
+        inputRef.current.input?.setSelectionRange(selectionStart ?? null, selectionEnd ?? null);
       }
     }
   }, [currentValue]); // Re-run when currentValue changes

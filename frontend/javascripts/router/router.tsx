@@ -419,7 +419,7 @@ const routes = createRoutesFromElements(
     <Route path="/imprint" element={<Imprint />} />
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/links/:key" element={<ShortLinksRouteWrapper />} />
-    <Route path="/onboarding" element={<OnboardingRouteWrapper />} />}
+    <Route path="/onboarding" element={<OnboardingRouteWrapper />} />
     <Route
       path="/account"
       element={

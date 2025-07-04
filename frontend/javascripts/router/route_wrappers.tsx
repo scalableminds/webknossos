@@ -131,7 +131,7 @@ export function DatasetSettingsRouteWrapper() {
 
 export function CreateExplorativeRouteWrapper() {
   const { datasetId, type } = useParams();
-  const { location } = useLocation();
+  const location = useLocation();
 
   return (
     <SecuredRoute>
@@ -231,7 +231,7 @@ export function TracingSandboxLegacyRouteWrapper() {
 
 export function TracingSandboxRouteWrapper() {
   const { type, datasetNameAndId = "" } = useParams();
-  const { location } = useLocation();
+  conslocati = useLocation();
 
   const tracingType = coalesce(TracingTypeEnum, type);
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
@@ -271,7 +271,7 @@ export function TracingSandboxRouteWrapper() {
 
 export function TracingViewModeLegacyWrapper() {
   const { datasetName = "", organizationId = "" } = useParams();
-  const { location } = useLocation();
+  const location = useLocation();
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
 
   return (

@@ -2,11 +2,12 @@
 import { Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { fetchGistContent } from "libs/gist";
-import { makeComponentLazy } from "libs/react_helpers";
+import { makeComponentLazy, useGuardedFetch } from "libs/react_helpers";
 import Request from "libs/request";
 import { alert } from "libs/window";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { memo, useCallback, useState } from "react";
 import type { Script } from "viewer/store";
 
 const { TextArea } = Input;
@@ -15,140 +16,105 @@ type UserScriptsModalViewProps = {
   onOK: (...args: Array<any>) => any;
   isOpen: boolean;
 };
-type State = {
-  code: string;
-  isCodeChanged: boolean;
-  scripts: Array<Script>;
-  selectedScript: string | null | undefined;
-  isLoading: boolean;
-};
 
-class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps, State> {
-  state: State = {
-    code: "",
-    isCodeChanged: false,
-    scripts: [],
-    // Needs to be undefined so the placeholder is displayed in the beginning
-    selectedScript: undefined,
-    isLoading: true,
-  };
+const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOpen }) => {
+  const [code, setCode] = useState("");
+  const [isCodeChanged, setIsCodeChanged] = useState(false);
+  // Needs to be undefined so the placeholder is displayed in the beginning
+  const [selectedScript, setSelectedScript] = useState<string | null | undefined>(undefined);
+  const [isLoadingScriptContent, setIsLoadingScriptContent] = useState(false);
 
-  componentDidMount() {
-    this.fetchData();
-  }
+  const [scripts, isLoadingScripts] = useGuardedFetch<Script[]>(
+    () => Request.receiveJSON("/api/scripts", { showErrorToast: false }),
+    [],
+    [],
+    "Could not load user scripts.",
+  );
 
-  fetchData() {
-    Request.receiveJSON("/api/scripts", {
-      showErrorToast: false,
-    })
-      .then((scripts) => {
-        this.setState({
-          isLoading: false,
-        });
+  const handleCodeChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCode(event.target.value);
+    setIsCodeChanged(true);
+  }, []);
 
-        if (scripts.length) {
-          this.setState({
-            scripts,
-          });
-        }
-      })
-      .catch((e) => {
-        console.error(e);
-        this.setState({
-          isLoading: false,
-        });
-      });
-  }
-
-  handleCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    this.setState({
-      code: event.target.value,
-      isCodeChanged: true,
-    });
-  };
-
-  handleScriptChange = async (scriptId: string) => {
-    const script = this.state.scripts.find((s) => s.id === scriptId);
-    if (script == null) return;
-
-    if (!this.state.isCodeChanged) {
-      this.loadScript(script);
-    } else {
-      Modal.confirm({
-        content: messages["add_script.confirm_change"],
-        onOk: () => this.loadScript(script),
-      });
-    }
-  };
-
-  loadScript = async (script: Script) => {
+  const loadScript = useCallback(async (script: Script) => {
     try {
-      this.setState({
-        isLoading: true,
-      });
+      setIsLoadingScriptContent(true);
       const content = await fetchGistContent(script.gist, script.name);
-      this.setState({
-        selectedScript: script.id,
-        code: content,
-        isCodeChanged: false,
-      });
+      setSelectedScript(script.id);
+      setCode(content);
+      setIsCodeChanged(false);
     } catch (error) {
       handleGenericError(error as Error);
     } finally {
-      this.setState({
-        isLoading: false,
-      });
+      setIsLoadingScriptContent(false);
     }
-  };
+  }, []);
 
-  handleClick = () => {
+  const handleScriptChange = useCallback(
+    async (scriptId: string) => {
+      const script = scripts.find((s) => s.id === scriptId);
+      if (script == null) return;
+
+      if (!isCodeChanged) {
+        void loadScript(script);
+      } else {
+        Modal.confirm({
+          content: messages["add_script.confirm_change"],
+          onOk: () => loadScript(script),
+        });
+      }
+    },
+    [scripts, isCodeChanged, loadScript],
+  );
+
+  const handleClick = useCallback(() => {
     try {
       // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
-      eval(this.state.code);
+      eval(code);
       // close modal if the script executed successfully
-      return this.props.onOK();
+      return onOK();
     } catch (error) {
       console.error(error);
       return alert(error);
     }
-  };
+  }, [code, onOK]);
 
-  render() {
-    return (
-      <Modal
-        open={this.props.isOpen}
-        title="Add User Script"
-        okText="Add"
-        cancelText="Close"
-        onOk={this.handleClick}
-        onCancel={this.props.onOK}
-      >
-        <Spin spinning={this.state.isLoading}>
-          <Select
-            value={this.state.isCodeChanged ? "Modified Script" : this.state.selectedScript}
-            style={{
-              width: 200,
-              marginBottom: 10,
-            }}
-            onChange={this.handleScriptChange}
-            placeholder="Select an existing user script"
-            options={this.state.scripts.map((script) => ({
-              value: script.id,
-              label: script.name,
-            }))}
-          />
-          <TextArea
-            rows={15}
-            onChange={this.handleCodeChange}
-            value={this.state.code}
-            placeholder="Choose an existing user script from the dropdown above or add WEBKNOSSOS frontend script code here"
-          />
-        </Spin>
-      </Modal>
-    );
-  }
-}
+  const isLoading = isLoadingScripts || isLoadingScriptContent;
 
-const UserScriptsModalView = makeComponentLazy(_UserScriptsModalView);
+  return (
+    <Modal
+      open={isOpen}
+      title="Add User Script"
+      okText="Add"
+      cancelText="Close"
+      onOk={handleClick}
+      onCancel={onOK}
+    >
+      <Spin spinning={isLoading}>
+        <Select
+          value={isCodeChanged ? "Modified Script" : selectedScript}
+          style={{
+            width: 200,
+            marginBottom: 10,
+          }}
+          onChange={handleScriptChange}
+          placeholder="Select an existing user script"
+          options={scripts.map((script) => ({
+            value: script.id,
+            label: script.name,
+          }))}
+        />
+        <TextArea
+          rows={15}
+          onChange={handleCodeChange}
+          value={code}
+          placeholder="Choose an existing user script from the dropdown above or add WEBKNOSSOS frontend script code here"
+        />
+      </Spin>
+    </Modal>
+  );
+};
+
+const UserScriptsModalView = makeComponentLazy(memo(_UserScriptsModalView));
 
 export default UserScriptsModalView;

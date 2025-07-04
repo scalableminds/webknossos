@@ -42,7 +42,9 @@ import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
 import * as React from "react";
-import { connect } from "react-redux";
+
+import { useWkSelector } from "libs/react_hooks";
+import { useEffect, useState } from "react";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_types";
@@ -67,12 +69,7 @@ import {
 } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import { api } from "viewer/singletons";
-import type {
-  BusyBlockingInfo,
-  RestrictionsAndSettings,
-  Task,
-  WebknossosState,
-} from "viewer/store";
+import type { RestrictionsAndSettings, Task } from "viewer/store";
 import Store from "viewer/store";
 import DownloadModalView from "viewer/view/action-bar/download_modal_view";
 import MergeModalView from "viewer/view/action-bar/merge_modal_view";
@@ -93,21 +90,10 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
   AsyncButton,
 );
 
-type OwnProps = {
+type Props = {
   layoutMenu: SubMenuType | null;
 };
-type StateProps = {
-  hasTracing: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
-  annotationTags: string[];
-  isRenderAnimationModalOpen: boolean;
-  isShareModalOpen: boolean;
-  isDownloadModalOpen: boolean;
-  isMergeModalOpen: boolean;
-  isUserScriptsModalOpen: boolean;
-  isZarrPrivateLinksModalOpen: boolean;
-} & TracingViewMenuProps;
-type Props = OwnProps & StateProps;
+
 export type TracingViewMenuProps = {
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
@@ -116,9 +102,6 @@ export type TracingViewMenuProps = {
   activeUser: APIUser | null | undefined;
   isAnnotationLockedByUser: boolean;
   annotationOwner: APIUserBase | null | undefined;
-};
-type State = {
-  isReopenAllowed: boolean;
 };
 
 export type LayoutProps = {
@@ -481,49 +464,64 @@ export const getTracingViewMenuItems = (
   return menuItems;
 };
 
-class TracingActionsView extends React.PureComponent<Props, State> {
-  state: State = {
-    isReopenAllowed: false,
-  };
+function TracingActionsView({ layoutMenu }: Props) {
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const task = useWkSelector((state) => state.task);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const hasTracing = useWkSelector(
+    (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
+  );
+  const isDownloadModalOpen = useWkSelector((state) => state.uiInformation.showDownloadModal);
+  const isShareModalOpen = useWkSelector((state) => state.uiInformation.showShareModal);
+  const isRenderAnimationModalOpen = useWkSelector(
+    (state) => state.uiInformation.showRenderAnimationModal,
+  );
+  const busyBlockingInfo = useWkSelector((state) => state.uiInformation.busyBlockingInfo);
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const isMergeModalOpen = useWkSelector((state) => state.uiInformation.showMergeAnnotationModal);
+  const isUserScriptsModalOpen = useWkSelector((state) => state.uiInformation.showAddScriptModal);
+  const isZarrPrivateLinksModalOpen = useWkSelector(
+    (state) => state.uiInformation.showZarrPrivateLinksModal,
+  );
 
-  reopenTimeout: ReturnType<typeof setTimeout> | null | undefined;
+  const [isReopenAllowed, setIsReopenAllowed] = useState(false);
+  const reopenTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  componentDidUpdate() {
+  useEffect(() => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
 
-    if (this.props.task && localStorageEntry) {
+    if (task && localStorageEntry) {
       const { finishedTime } = JSON.parse(localStorageEntry);
       const timeSinceFinish = Date.now() - finishedTime;
       const reopenAllowedTime = features().taskReopenAllowedInSeconds * 1000;
 
       if (timeSinceFinish < reopenAllowedTime) {
-        this.setState({
-          isReopenAllowed: true,
-        });
+        setIsReopenAllowed(true);
 
-        if (this.reopenTimeout != null) {
-          clearTimeout(this.reopenTimeout);
-          this.reopenTimeout = null;
+        if (reopenTimeout.current != null) {
+          clearTimeout(reopenTimeout.current);
+          reopenTimeout.current = null;
         }
 
-        this.reopenTimeout = setTimeout(() => {
-          this.setState({
-            isReopenAllowed: false,
-          });
+        reopenTimeout.current = setTimeout(() => {
+          setIsReopenAllowed(false);
           UserLocalStorage.removeItem("lastFinishedTask");
-          this.reopenTimeout = null;
+          reopenTimeout.current = null;
         }, reopenAllowedTime - timeSinceFinish);
       }
     }
-  }
 
-  componentWillUnmount() {
-    if (this.reopenTimeout != null) {
-      clearTimeout(this.reopenTimeout);
-    }
-  }
+    return () => {
+      if (reopenTimeout.current != null) {
+        clearTimeout(reopenTimeout.current);
+      }
+    };
+  }, [task]);
 
-  handleSave = async (event?: React.SyntheticEvent) => {
+  const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
     if (event != null) {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
       event.target.blur();
@@ -532,19 +530,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Model.forceSave();
   };
 
-  handleUndo = () => dispatchUndoAsync(Store.dispatch);
-  handleRedo = () => dispatchRedoAsync(Store.dispatch);
+  const handleUndo = () => dispatchUndoAsync(Store.dispatch);
+  const handleRedo = () => dispatchRedoAsync(Store.dispatch);
 
-  handleCopyToAccount = async () => {
+  const handleCopyToAccount = async () => {
     // duplicates the annotation in the current user account
-    const newAnnotation = await duplicateAnnotation(
-      this.props.annotationId,
-      this.props.annotationType,
-    );
+    const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
     location.href = `/annotations/${newAnnotation.id}`;
   };
 
-  handleCopySandboxToAccount = async () => {
+  const handleCopySandboxToAccount = async () => {
     const { annotation: sandboxAnnotation, dataset } = Store.getState();
     const tracingType = getTracingType(sandboxAnnotation);
 
@@ -577,11 +572,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     location.reload();
   };
 
-  handleFinishAndGetNextTask = async () => {
+  const handleFinishAndGetNextTask = async () => {
     api.tracing.finishAndGetNextTask();
   };
 
-  handleReopenTask = async () => {
+  const handleReopenTask = async () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (!localStorageEntry) return;
     const { annotationId } = JSON.parse(localStorageEntry);
@@ -601,21 +596,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getTracingViewModals() {
+  const getTracingViewModals = () => {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const {
-      restrictions,
-      annotationType,
-      annotationId,
-      activeUser,
-      isZarrPrivateLinksModalOpen,
-      isUserScriptsModalOpen,
-      isMergeModalOpen,
-      isShareModalOpen,
-      isRenderAnimationModalOpen,
-      isDownloadModalOpen,
-    } = this.props;
     const modals = [];
 
     modals.push(
@@ -670,162 +653,139 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     return modals;
-  }
+  };
 
-  render() {
-    const {
-      hasTracing,
-      restrictions,
-      task,
-      activeUser,
-      busyBlockingInfo,
-      annotationOwner,
-      layoutMenu,
-    } = this.props;
+  const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+  const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
-    const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
-    const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
-
-    const saveButton = restrictions.allowUpdate
-      ? [
-          hasTracing
-            ? [
-                <AsyncButton
-                  className="narrow undo-redo-button"
-                  key="undo-button"
-                  title="Undo (Ctrl+Z)"
-                  onClick={this.handleUndo}
-                  disabled={busyBlockingInfo.isBusy}
-                  hideContentWhenLoading
-                >
-                  <i className="fas fa-undo" aria-hidden="true" />
-                </AsyncButton>,
-                <AsyncButton
-                  className="narrow undo-redo-button hide-on-small-screen"
-                  key="redo-button"
-                  title="Redo (Ctrl+Y)"
-                  onClick={this.handleRedo}
-                  disabled={busyBlockingInfo.isBusy}
-                  hideContentWhenLoading
-                >
-                  <i className="fas fa-redo" aria-hidden="true" />
-                </AsyncButton>,
-              ]
-            : null,
-          restrictions.allowSave ? (
-            <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
-          ) : (
-            [
-              <Tooltip
-                placement="bottom"
-                title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
-                key="sandbox-tooltip"
+  const saveButton = restrictions.allowUpdate
+    ? [
+        hasTracing
+          ? [
+              <AsyncButton
+                className="narrow undo-redo-button"
+                key="undo-button"
+                title="Undo (Ctrl+Z)"
+                onClick={handleUndo}
+                disabled={busyBlockingInfo.isBusy}
+                hideContentWhenLoading
               >
-                <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-                  <span className="hide-on-small-screen">Sandbox</span>
-                </Button>
-              </Tooltip>,
-              <AsyncButtonWithAuthentication
-                activeUser={activeUser}
-                authenticationMessage="Please register or login to copy the sandbox tracing to your account."
-                key="copy-sandbox-button"
-                icon={<FileAddOutlined />}
-                onClick={this.handleCopySandboxToAccount}
-                title={copyAnnotationText}
+                <i className="fas fa-undo" aria-hidden="true" />
+              </AsyncButton>,
+              <AsyncButton
+                className="narrow undo-redo-button hide-on-small-screen"
+                key="redo-button"
+                title="Redo (Ctrl+Y)"
+                onClick={handleRedo}
+                disabled={busyBlockingInfo.isBusy}
+                hideContentWhenLoading
               >
-                <span className="hide-on-small-screen">Copy To My Account</span>
-              </AsyncButtonWithAuthentication>,
+                <i className="fas fa-redo" aria-hidden="true" />
+              </AsyncButton>,
             ]
-          ),
-        ]
-      : [
-          <ButtonComponent
-            key="read-only-button"
-            danger
-            disabled
-            style={{
-              backgroundColor: "var(--ant-color-warning)",
-            }}
-          >
-            Read only
-          </ButtonComponent>,
-          <AsyncButtonWithAuthentication
-            activeUser={activeUser}
-            authenticationMessage="Please register or login to copy the tracing to your account."
-            key="copy-button"
-            icon={<FileAddOutlined />}
-            onClick={this.handleCopyToAccount}
-            title={copyAnnotationText}
-          >
-            <span className="hide-on-small-screen">{copyAnnotationText}</span>
-          </AsyncButtonWithAuthentication>,
-        ];
-    const finishAndNextTaskButton =
-      restrictions.allowFinish && task ? (
+          : null,
+        restrictions.allowSave ? (
+          <SaveButton className="narrow" key="save-button" onClick={handleSave} />
+        ) : (
+          [
+            <Tooltip
+              placement="bottom"
+              title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
+              key="sandbox-tooltip"
+            >
+              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+                <span className="hide-on-small-screen">Sandbox</span>
+              </Button>
+            </Tooltip>,
+            <AsyncButtonWithAuthentication
+              activeUser={activeUser}
+              authenticationMessage="Please register or login to copy the sandbox tracing to your account."
+              key="copy-sandbox-button"
+              icon={<FileAddOutlined />}
+              onClick={handleCopySandboxToAccount}
+              title={copyAnnotationText}
+            >
+              <span className="hide-on-small-screen">Copy To My Account</span>
+            </AsyncButtonWithAuthentication>,
+          ]
+        ),
+      ]
+    : [
         <ButtonComponent
-          key="next-button"
-          icon={<VerticalLeftOutlined />}
-          onClick={this.handleFinishAndGetNextTask}
+          key="read-only-button"
+          danger
+          disabled
+          style={{
+            backgroundColor: "var(--ant-color-warning)",
+          }}
         >
-          Finish and Get Next Task
-        </ButtonComponent>
-      ) : null;
-    const reopenTaskButton = this.state.isReopenAllowed ? (
+          Read only
+        </ButtonComponent>,
+        <AsyncButtonWithAuthentication
+          activeUser={activeUser}
+          authenticationMessage="Please register or login to copy the tracing to your account."
+          key="copy-button"
+          icon={<FileAddOutlined />}
+          onClick={handleCopyToAccount}
+          title={copyAnnotationText}
+        >
+          <span className="hide-on-small-screen">{copyAnnotationText}</span>
+        </AsyncButtonWithAuthentication>,
+      ];
+  const finishAndNextTaskButton =
+    restrictions.allowFinish && task ? (
       <ButtonComponent
-        key="reopen-button"
-        icon={<VerticalRightOutlined />}
-        onClick={this.handleReopenTask}
-        danger
+        key="next-button"
+        icon={<VerticalLeftOutlined />}
+        onClick={handleFinishAndGetNextTask}
       >
-        Undo Finish
+        Finish and Get Next Task
       </ButtonComponent>
     ) : null;
+  const reopenTaskButton = isReopenAllowed ? (
+    <ButtonComponent
+      key="reopen-button"
+      icon={<VerticalRightOutlined />}
+      onClick={handleReopenTask}
+      danger
+    >
+      Undo Finish
+    </ButtonComponent>
+  ) : null;
 
-    const modals = this.getTracingViewModals();
-    const menuItems = getTracingViewMenuItems(this.props, layoutMenu);
-    const userTheme = getThemeFromUser(activeUser);
+  const modals = getTracingViewModals();
+  const menuItems = getTracingViewMenuItems(
+    {
+      restrictions,
+      task,
+      annotationType,
+      annotationId,
+      activeUser,
+      isAnnotationLockedByUser,
+      annotationOwner,
+    },
+    layoutMenu,
+  );
+  const userTheme = getThemeFromUser(activeUser);
 
-    return (
-      <>
-        <Space.Compact>
-          {saveButton}
-          {finishAndNextTaskButton}
-          {reopenTaskButton}
-        </Space.Compact>
-        <ConfigProvider theme={getAntdTheme(userTheme)}>{modals}</ConfigProvider>
-        <div>
-          <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-            <ButtonComponent className="narrow">
-              Menu
-              <DownOutlined />
-            </ButtonComponent>
-          </Dropdown>
-        </div>
-      </>
-    );
-  }
+  return (
+    <>
+      <Space.Compact>
+        {saveButton}
+        {finishAndNextTaskButton}
+        {reopenTaskButton}
+      </Space.Compact>
+      <ConfigProvider theme={getAntdTheme(userTheme)}>{modals}</ConfigProvider>
+      <div>
+        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+          <ButtonComponent className="narrow">
+            Menu
+            <DownOutlined />
+          </ButtonComponent>
+        </Dropdown>
+      </div>
+    </>
+  );
 }
 
-function mapStateToProps(state: WebknossosState): StateProps {
-  return {
-    annotationType: state.annotation.annotationType,
-    annotationId: state.annotation.annotationId,
-    restrictions: state.annotation.restrictions,
-    annotationOwner: state.annotation.owner,
-    task: state.task,
-    activeUser: state.activeUser,
-    hasTracing: state.annotation.skeleton != null || state.annotation.volumes.length > 0,
-    isDownloadModalOpen: state.uiInformation.showDownloadModal,
-    isShareModalOpen: state.uiInformation.showShareModal,
-    isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
-    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    isAnnotationLockedByUser: state.annotation.isLockedByOwner,
-    annotationTags: state.annotation.tags,
-    isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
-    isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
-    isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(TracingActionsView);
+export default TracingActionsView;

@@ -9,7 +9,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsCard } from "./helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
 function AccountProfileView() {
@@ -56,29 +56,29 @@ function AccountProfileView() {
     },
   ];
 
-  const profileItems = [
+  const profileItems: SettingsCardProps[] = [
     {
       title: "Name",
-      value: formatUserName(activeUser, activeUser),
+      content: formatUserName(activeUser, activeUser),
     },
     {
       title: "Email",
-      value: activeUser.email,
+      content: activeUser.email,
     },
     {
       title: "Organization",
-      value: activeOrganization?.name || activeUser.organization,
+      content: activeOrganization?.name || activeUser.organization,
     },
     {
       title: "Role",
-      value: role,
-      explanation: (
+      content: role,
+      tooltip: (
         <a href="https://docs.webknossos.org/webknossos/users/access_rights.html">Learn More</a>
       ),
     },
     {
       title: "Theme",
-      value: (
+      content: (
         <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
           {themeItems.find((item) => item.key === selectedTheme)?.label}
         </Dropdown.Button>
@@ -95,11 +95,7 @@ function AccountProfileView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {profileItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard
-              title={item.title}
-              description={item.value}
-              explanation={item.explanation}
-            />
+            <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
           </Col>
         ))}
       </Row>

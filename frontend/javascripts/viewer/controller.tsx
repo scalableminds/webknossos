@@ -1,17 +1,15 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { document, location } from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
@@ -131,10 +129,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
+    // @ts-ignore newLocation, action are implicit any
+    const beforeUnload = (newLocation, action): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -162,7 +158,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       return;
     };
 
-    this.props.history.block(beforeUnload);
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
     UrlManager.startUrlUpdater();
@@ -356,4 +351,4 @@ function mapStateToProps(state: WebknossosState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<PropsWithRouter, any>(Controller));
+export default connector(withRouter<PropsWithRouter>(Controller));

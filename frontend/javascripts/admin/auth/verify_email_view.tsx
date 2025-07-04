@@ -4,7 +4,7 @@ import { useFetch } from "libs/react_helpers";
 import type { ServerErrorMessage } from "libs/request";
 import Toast from "libs/toast";
 import { useEffect } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Store } from "viewer/singletons";
 
 export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
@@ -44,8 +44,9 @@ export function showVerificationReminderToast() {
   );
 }
 
-export default function VerifyEmailView({ token }: { token: string }) {
-  const history = useHistory();
+export default function VerifyEmailView() {
+  const { token = "" } = useParams();
+  const navigate = useNavigate();
   const [result, exception] = useFetch(
     async () => {
       try {
@@ -62,7 +63,7 @@ export default function VerifyEmailView({ token }: { token: string }) {
     Toast.close(VERIFICATION_ERROR_TOAST_KEY);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: history.push is not needed as a dependency.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: navigate is not needed as a dependency.
   useEffect(() => {
     if (result) {
       Toast.success("Successfully verified your email.");
@@ -80,7 +81,7 @@ export default function VerifyEmailView({ token }: { token: string }) {
     }
 
     if (result || exception) {
-      history.push("/");
+      navigate("/");
     }
   }, [result, exception]);
   return (

@@ -336,7 +336,7 @@ function useManagedUrlParams(
 
       // Use folderName-folderId in path or only folderId if name is empty (e.g., because
       // not loaded yet).
-      // Don't use useHistory because this would lose the input search
+      // Don't use useNavigate because this would lose the input search
       // focus.
       window.history.replaceState(
         {},
@@ -364,7 +364,7 @@ function useManagedUrlParams(
       }
       const paramStr = params.toString();
 
-      // Don't use useHistory because this would lose the input search
+      // Don't use useNavigate because this would lose the input search
       // focus.
       window.history.replaceState(
         {},

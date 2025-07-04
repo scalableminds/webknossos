@@ -18,7 +18,7 @@ import window from "libs/window";
 import messages from "messages";
 import type * as React from "react";
 import { useState } from "react";
-import { Link, type LinkProps } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { APIDataset, APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu";
@@ -100,7 +100,8 @@ function LinkWithDisabled({
   style?: React.CSSProperties;
   to: string;
   children: React.ReactNode;
-} & LinkProps) {
+  title?: string;
+}) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =
     rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
@@ -113,7 +114,7 @@ function LinkWithDisabled({
     <Link
       {...rest}
       style={adaptedStyle || undefined}
-      onClick={(e) => (disabled ? e.preventDefault() : onClick)}
+      onClick={(e) => (disabled ? e.preventDefault() : onClick?.())}
     />
   );
 }

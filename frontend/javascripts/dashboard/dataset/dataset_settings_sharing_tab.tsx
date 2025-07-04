@@ -9,10 +9,10 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import type { WebknossosState } from "viewer/store";
@@ -167,4 +167,4 @@ const mapStateToProps = (state: WebknossosState) => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DatasetSettingsSharingTab));
+export default connector(withRouter<RouteComponentProps & Props>(DatasetSettingsSharingTab));

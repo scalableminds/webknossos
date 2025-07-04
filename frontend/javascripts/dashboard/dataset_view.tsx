@@ -41,6 +41,7 @@ import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_t
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -100,6 +101,9 @@ function DatasetView(props: Props) {
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const { data: folder } = useFolderQuery(context.activeFolderId);
+
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -274,8 +278,9 @@ function DatasetView(props: Props) {
 
   return (
     <div>
-      <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-
+      <RenderToPortal portalId="dashboard-TabBarExtraContent">
+        {activeTab === renderingTab ? adminHeader : null}
+      </RenderToPortal>
       {searchQuery && (
         <GlobalSearchHeader
           searchQuery={searchQuery}

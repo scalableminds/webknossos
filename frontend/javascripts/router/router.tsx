@@ -5,7 +5,6 @@ import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
-import Onboarding from "admin/onboarding";
 import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
@@ -27,7 +26,6 @@ import { Imprint, Privacy } from "components/legal";
 import SecuredRoute from "components/secured_route";
 import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
-import features from "features";
 import Navbar from "navbar";
 import {
   Navigate,
@@ -62,6 +60,7 @@ import {
   DashboardRouteRootWrapper,
   DashboardRouteWrapper,
   DatasetSettingsRouteWrapper,
+  OnboardingRouteWrapper,
   RootRouteWrapper,
   ShortLinksRouteWrapper,
   TracingSandboxLegacyRouteWrapper,
@@ -420,7 +419,7 @@ const routes = createRoutesFromElements(
     <Route path="/imprint" element={<Imprint />} />
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/links/:key" element={<ShortLinksRouteWrapper />} />
-    {!features()?.isWkorgInstance && <Route path="/onboarding" element={<Onboarding />} />}
+    <Route path="/onboarding" element={<OnboardingRouteWrapper />} />}
     <Route
       path="/account"
       element={

@@ -2,6 +2,7 @@ import {
   getDatasetIdFromNameAndOrganization,
   getOrganizationForDataset,
 } from "admin/api/disambiguate_legacy_routes";
+import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
@@ -19,6 +20,7 @@ import { ControlModeEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
+import { PageNotFoundView } from "./page_not_found_view";
 
 export function RootRouteWrapper() {
   const isAuthenticated = useWkSelector((state) => state.activeUser != null);
@@ -308,4 +310,8 @@ export function TracingViewModeRouteWrapper() {
       }}
     />
   );
+}
+
+export function OnboardingRouteWrapper() {
+  return !features()?.isWkorgInstance ? <Onboarding /> : <PageNotFoundView />;
 }

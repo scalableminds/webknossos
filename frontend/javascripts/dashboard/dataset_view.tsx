@@ -41,13 +41,13 @@ import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_t
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 type Props = {
   user: APIUser;

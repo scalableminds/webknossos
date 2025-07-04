@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
@@ -100,6 +101,21 @@ export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_XZ,
 ];
 
+export const OrthoViewToNumber: OrthoViewMap<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
+
+export const NumberToOrthoView: Record<number, OrthoView> = {
+  0: OrthoViews.PLANE_XY,
+  1: OrthoViews.PLANE_YZ,
+  2: OrthoViews.PLANE_XZ,
+  3: OrthoViews.TDView,
+  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
+};
+
 const PINK = 0xeb4b98;
 const BLUE = 0x5660ff;
 const TURQUOISE = 0x59f8e8;
@@ -116,6 +132,35 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
+export const OrthoBaseRotations = {
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler(Math.PI / 2, 0, 0),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
+function correctCameraViewingDirection(baseEuler: THREE.Euler): THREE.Euler {
+  const cameraCorrectionEuler = new THREE.Euler(Math.PI, 0, 0);
+  const correctedEuler = new THREE.Euler();
+  correctedEuler.setFromRotationMatrix(
+    new THREE.Matrix4()
+      .makeRotationFromEuler(baseEuler)
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
+    "ZYX",
+  );
+
+  return correctedEuler;
+}
+
+// The orthographic cameras point towards negative z direction per default. To make it look into positive direction of the z axis,
+// an additional rotation around x axis by 180° is needed. Th
+export const OrthoCamerasBaseRotations = {
+  [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
+  [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),
+  [OrthoViews.PLANE_XZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XZ]),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
 export type BorderTabType = {
   id: string;
   name: string;

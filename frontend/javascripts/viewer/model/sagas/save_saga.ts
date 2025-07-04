@@ -55,7 +55,7 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
-import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
+import { getFlooredPosition, getRotationInDegrees } from "../accessors/flycam_accessor";
 import type { Action } from "../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
@@ -370,7 +370,7 @@ export function performDiffAnnotation(
       updateCameraAnnotation(
         getFlooredPosition(flycam),
         flycam.additionalCoordinates,
-        getRotation(flycam),
+        getRotationInDegrees(flycam),
         flycam.zoomStep,
       ),
     );

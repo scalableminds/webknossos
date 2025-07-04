@@ -30,6 +30,7 @@ export const getWorldCoordUVW: ShaderModule = {
   code: `
     vec3 getWorldCoordUVW() {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
+      vec3 positionOffsetUVW = transDim(positionOffset);
 
       if (isFlightMode()) {
         vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
@@ -44,27 +45,51 @@ export const getWorldCoordUVW: ShaderModule = {
         worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
       }
 
-      vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+      vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
 
-      worldCoordUVW = vec3(
-        // For u and w we need to divide by voxelSizeFactor because the threejs scene is scaled
-        worldCoordUVW.x / voxelSizeFactorUVW.x,
-        worldCoordUVW.y / voxelSizeFactorUVW.y,
+      // We subtract the potential offset of the plane and then
+      // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
+      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
 
-        // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
-        // each plane. Since w (e.g., z for xy plane) is
-        // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-        <% if (isOrthogonal) { %>
-          getW(globalPosition)
-        <% } else { %>
-          worldCoordUVW.z / voxelSizeFactorUVW.z
-        <% } %>
-      );
 
       return worldCoordUVW;
     }
   `,
 };
+
+// TODOM: refactor me
+export const getUnrotatedWorldCoordUVW: ShaderModule = {
+  requirements: [getW, isFlightMode],
+  code: `
+    vec3 getUnrotatedWorldCoordUVW() {
+      vec3 worldCoordUVW = transDim((inverseFlycamRotationMatrix * worldCoord).xyz);
+      vec3 positionOffsetUVW = transDim(positionOffset);
+
+      if (isFlightMode()) {
+        vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
+        float sphericalRadius = sphericalCapRadius;
+
+        vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
+        modelCoords.z = 0.0;
+        modelCoords += centerVertex;
+        modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
+        modelCoords -= centerVertex;
+
+        worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
+      }
+
+      vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
+
+      // We subtract the potential offset of the plane and then
+      // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
+      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
+
+
+      return worldCoordUVW;
+    }
+  `,
+};
+
 export const isOutsideOfBoundingBox: ShaderModule = {
   code: `
     bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {

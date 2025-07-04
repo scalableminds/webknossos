@@ -5,9 +5,13 @@ import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
-import { getDatasetCenter, getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import {
+  OrthoCamerasBaseRotations,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+} from "viewer/constants";
+import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -30,9 +34,20 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   const up = V3.normalize(_up);
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
+  // Up might not be completely orthogonal to forward, so we need to correct it.
+  // Such tiny error would else lead to a non-orthogonal basis matrix leading to
+  // potentially very large errors in the calculated quaternion.
+  const correctedUp = V3.normalize(V3.cross(forward, right));
+
+  // Create a basis matrix
   const rotationMatrix = new THREE.Matrix4();
-  // biome-ignore format: don't format
-  rotationMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
+  rotationMatrix.makeBasis(
+    new THREE.Vector3(...right),
+    new THREE.Vector3(...correctedUp),
+    new THREE.Vector3(...forward),
+  );
+
+  // Convert to quaternion
   const quat = new THREE.Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
   return quat;
@@ -66,6 +81,11 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
 class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  // Properties are only created here to avoid creating new objects for each update call.
+  flycamRotationEuler = new THREE.Euler();
+  flycamRotationMatrix = new THREE.Matrix4();
+  baseRotationMatrix = new THREE.Matrix4();
+  totalRotationMatrix = new THREE.Matrix4();
 
   componentDidMount() {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
@@ -153,12 +173,28 @@ class CameraController extends React.PureComponent<Props> {
 
   update(): void {
     const state = Store.getState();
-    const gPos = getPosition(state.flycam);
+    const globalPosition = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cPos = voxelToUnit(state.dataset.dataSource.scale, gPos);
-    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
+    const cameraPosition = voxelToUnit(state.dataset.dataSource.scale, globalPosition);
+    // Now set rotation for all cameras respecting the base rotation of each camera.
+    const globalRotation = getRotationInRadian(state.flycam);
+    this.flycamRotationEuler.set(globalRotation[0], globalRotation[1], globalRotation[2], "ZYX");
+    this.flycamRotationMatrix.makeRotationFromEuler(this.flycamRotationEuler);
+    for (const viewport of OrthoViewValuesWithoutTDView) {
+      this.props.cameras[viewport].position.set(
+        cameraPosition[0],
+        cameraPosition[1],
+        cameraPosition[2],
+      );
+      this.baseRotationMatrix.makeRotationFromEuler(OrthoCamerasBaseRotations[viewport]);
+      this.props.cameras[viewport].setRotationFromMatrix(
+        this.totalRotationMatrix
+          .identity()
+          .multiply(this.flycamRotationMatrix)
+          .multiply(this.baseRotationMatrix),
+      );
+      this.props.cameras[viewport].updateProjectionMatrix();
+    }
   }
 
   bindToEvents() {
@@ -222,6 +258,7 @@ export function rotate3DViewTo(
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
   const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
+  const flycamRotation = getRotationInRadian(state.flycam);
   const datasetExtent = getDatasetExtentInUnit(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
@@ -233,8 +270,6 @@ export function rotate3DViewTo(
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
-  let position: Vector3;
-  let up: Vector3;
 
   // Way to calculate the position and rotation of the camera:
   // First, the camera is either positioned at the current center of the flycam or in the dataset center.
@@ -243,61 +278,49 @@ export function rotate3DViewTo(
   if (id === OrthoViews.TDView && (height <= 0 || width <= 0)) {
     // This should only be the case when initializing the 3D-viewport.
     const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
-    const datasetCenter = voxelToUnit(dataset.dataSource.scale, getDatasetCenter(dataset));
     // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
     const paddingFactor = 1.1;
     width = Math.sqrt(datasetExtent.width ** 2 + datasetExtent.height ** 2) * paddingFactor;
     height = width / aspectRatio;
-    up = [0, 0, -1];
+  }
+  const positionOffsetMap: OrthoViewMap<Vector3> = {
+    [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
+    [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
+    [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
     // The clippingOffsetFactor is added in x and y direction to get a view on the dataset the 3D view that is close to the plane views.
     // Thus the rotation between the 3D view to the eg. XY plane views is much shorter and the interpolated rotation does not look weird.
-    position = [
-      datasetCenter[0] + clippingOffsetFactor,
-      datasetCenter[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
-    ];
-  } else if (id === OrthoViews.TDView) {
-    position = [
-      flycamPos[0] + clippingOffsetFactor,
-      flycamPos[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
-    ];
-    up = [0, 0, -1];
-  } else {
-    const positionOffset: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
-      [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
-      [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
-      [OrthoViews.TDView]: [0, 0, 0],
-    };
-    const upVector: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, -1, 0],
-      [OrthoViews.PLANE_YZ]: [0, -1, 0],
-      [OrthoViews.PLANE_XZ]: [0, 0, -1],
-      [OrthoViews.TDView]: [0, 0, 0],
-    };
-    up = upVector[id];
-    position = [
-      positionOffset[id][0] + flycamPos[0],
-      positionOffset[id][1] + flycamPos[1],
-      positionOffset[id][2] + flycamPos[2],
-    ];
-  }
+    // The z offset is halved to have a lower viewing angle at the plane.
+    [OrthoViews.TDView]: [clippingOffsetFactor, clippingOffsetFactor, -clippingOffsetFactor / 2],
+  };
+  const upVectorMap: OrthoViewMap<Vector3> = {
+    [OrthoViews.PLANE_XY]: [0, -1, 0],
+    [OrthoViews.PLANE_YZ]: [0, -1, 0],
+    [OrthoViews.PLANE_XZ]: [0, 0, -1],
+    [OrthoViews.TDView]: [0, 0, -1],
+  };
 
-  const currentFlycamPos = voxelToUnit(
-    Store.getState().dataset.dataSource.scale,
-    getPosition(Store.getState().flycam),
-  ) || [0, 0, 0];
+  const positionOffsetVector = new THREE.Vector3(...positionOffsetMap[id]);
+  const upVector = new THREE.Vector3(...upVectorMap[id]);
+  // Rotate the positionOffsetVector and upVector by the flycam rotation.
+  const rotatedOffset = positionOffsetVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const rotatedUp = upVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const position = [
+    flycamPos[0] + rotatedOffset.x,
+    flycamPos[1] + rotatedOffset.y,
+    flycamPos[2] + rotatedOffset.z,
+  ] as Vector3;
+  const up = [rotatedUp.x, rotatedUp.y, rotatedUp.z] as Vector3;
+
   // Compute current and target orientation as quaternion. When tweening between
   // these orientations, we compute the new camera position by keeping the distance
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
-  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
-  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos);
-  const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
+  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, flycamPos);
+  const targetQuaternion = getQuaternionFromCamera(up, position, flycamPos);
+  const centerDistance = V3.length(V3.sub(flycamPos, position));
   const to: TweenState = {
     left: -width / 2,
     right: width / 2,
@@ -312,9 +335,7 @@ export function rotate3DViewTo(
     const tweened = getCameraFromQuaternion(tweenedQuat);
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
-    const newPosition = V3.toArray(
-      V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)),
-    );
+    const newPosition = V3.toArray(V3.sub(flycamPos, V3.scale(tweened.forward, centerDistance)));
     Store.dispatch(
       setTDCameraWithoutTimeTrackingAction({
         position: newPosition,

@@ -328,6 +328,7 @@ export type UserConfiguration = {
   readonly newNodeNewTree: boolean;
   readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
+  readonly applyNodeRotationOnActivation: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
   readonly presetBrushSizes: BrushPresets | null;
@@ -427,6 +428,7 @@ export type Flycam = {
   readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
+  readonly rotation: Vector3;
 };
 export type CameraData = {
   readonly near: number;

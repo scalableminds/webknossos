@@ -21,17 +21,18 @@ import { Model, Store, api } from "viewer/singletons";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
+  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-  Store.dispatch(startEditingAction(calculateGlobalPos(state, pos), plane));
-  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
+  Store.dispatch(startEditingAction(globalPosRounded, plane));
+  Store.dispatch(addToLayerAction(globalPosRounded));
 }
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-  Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos), plane));
+  Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos).rounded, plane));
 }
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
-  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
+  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos).rounded));
 }
 export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());
@@ -39,9 +40,12 @@ export function handleEndForDrawOrErase() {
 }
 export function handlePickCell(pos: Point2) {
   const storeState = Store.getState();
-  const globalPos = calculateGlobalPos(storeState, pos);
+  const globalPosRounded = calculateGlobalPos(storeState, pos).rounded;
 
-  return handlePickCellFromGlobalPosition(globalPos, storeState.flycam.additionalCoordinates || []);
+  return handlePickCellFromGlobalPosition(
+    globalPosRounded,
+    storeState.flycam.additionalCoordinates || [],
+  );
 }
 export const getSegmentIdForPosition = memoizeOne(
   (globalPos: Vector3) => {
@@ -139,8 +143,8 @@ export function handlePickCellFromGlobalPosition(
   );
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {
-  const globalPos = calculateGlobalPos(Store.getState(), pos);
-  handleFloodFillFromGlobalPosition(globalPos, plane);
+  const globalPosRounded = calculateGlobalPos(Store.getState(), pos).rounded;
+  handleFloodFillFromGlobalPosition(globalPosRounded, plane);
 }
 export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
   Store.dispatch(floodFillAction(globalPos, plane));

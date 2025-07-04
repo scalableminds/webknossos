@@ -95,6 +95,7 @@ export function AnnotationsRouteWrapper() {
 
 export function DatasetSettingsRouteWrapper() {
   const { datasetNameAndId = "" } = useParams();
+  const { location } = useLocation();
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
   if (datasetName) {
@@ -130,6 +131,8 @@ export function DatasetSettingsRouteWrapper() {
 
 export function CreateExplorativeRouteWrapper() {
   const { datasetId, type } = useParams();
+  const { location } = useLocation();
+
   return (
     <SecuredRoute>
       <AsyncRedirect
@@ -141,19 +144,19 @@ export function CreateExplorativeRouteWrapper() {
           }
 
           const tracingType = coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
-          const getParams = Utils.getUrlParamsObjectFromString(location.search);
-          const { autoFallbackLayer, fallbackLayerName } = getParams;
+          const { autoFallbackLayer, fallbackLayerName, minMag, maxMag } =
+            Utils.getUrlParamsObjectFromString(location.search);
           const magRestrictions: APIMagRestrictions = {};
 
-          if (getParams.minMag !== undefined) {
-            magRestrictions.min = Number.parseInt(getParams.minMag);
+          if (minMag !== undefined) {
+            magRestrictions.min = Number.parseInt(minMag);
 
             if (!_.isNumber(magRestrictions.min)) {
               throw new Error("Invalid minMag parameter");
             }
 
-            if (getParams.maxMag !== undefined) {
-              magRestrictions.max = Number.parseInt(getParams.maxMag);
+            if (maxMag !== undefined) {
+              magRestrictions.max = Number.parseInt(maxMag);
 
               if (!_.isNumber(magRestrictions.max)) {
                 throw new Error("Invalid maxMag parameter");
@@ -205,6 +208,7 @@ export function TracingViewRouteWrapper() {
 
 export function TracingSandboxLegacyRouteWrapper() {
   const { type, datasetName = "", organizationId = "" } = useParams();
+  const { location } = useLocation();
 
   const tracingType = coalesce(TracingTypeEnum, type);
   if (tracingType == null) {
@@ -227,6 +231,8 @@ export function TracingSandboxLegacyRouteWrapper() {
 
 export function TracingSandboxRouteWrapper() {
   const { type, datasetNameAndId = "" } = useParams();
+  const { location } = useLocation();
+
   const tracingType = coalesce(TracingTypeEnum, type);
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
@@ -265,7 +271,9 @@ export function TracingSandboxRouteWrapper() {
 
 export function TracingViewModeLegacyWrapper() {
   const { datasetName = "", organizationId = "" } = useParams();
+  const { location } = useLocation();
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
+
   return (
     <AsyncRedirect
       redirectTo={async () => {
@@ -282,8 +290,11 @@ export function TracingViewModeLegacyWrapper() {
 
 export function TracingViewModeRouteWrapper() {
   const { datasetNameAndId = "" } = useParams();
+  const { location } = useLocation();
+
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
+
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
     // The schema is something like <authority>/datasets/:datasetName/view

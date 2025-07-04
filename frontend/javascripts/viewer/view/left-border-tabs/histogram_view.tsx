@@ -3,16 +3,16 @@ import { Alert, Col, InputNumber, Row, Spin } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
-import * as _ from "lodash";
-import * as React from "react";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
+import { debounce, range } from "lodash";
+import type React from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_types";
 import { PRIMARY_COLOR, type Vector3 } from "viewer/constants";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "viewer/store";
 
-type OwnProps = {
+type Props = {
   data: APIHistogramData | null | undefined;
   layerName: string;
   intensityRangeMin: number;
@@ -23,17 +23,6 @@ type OwnProps = {
   defaultMinMax: readonly [number, number];
   supportFractions: boolean;
   reloadHistogram: () => void;
-};
-type HistogramProps = OwnProps & {
-  onChangeLayer: (
-    layerName: string,
-    propertyName: keyof DatasetLayerConfiguration,
-    value: [number, number] | number | boolean,
-  ) => void;
-};
-type HistogramState = {
-  currentMin: number;
-  currentMax: number;
 };
 
 const uint24Colors = [
@@ -54,9 +43,7 @@ export function isHistogramSupported(elementClass: ElementClass): boolean {
   );
 }
 
-function getMinAndMax(props: HistogramProps) {
-  const { min, max, data, defaultMinMax } = props;
-
+function getMinAndMax({ min, max, data, defaultMinMax }: Props) {
   if (min != null && max != null) {
     return {
       min,
@@ -90,71 +77,102 @@ const DUMMY_HISTOGRAM_DATA = [
   // message will be rendered.
   {
     numberOfElements: 255,
-    elementCounts: _.range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
+    elementCounts: range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
     min: 0,
     max: 255,
   },
 ];
 
-class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
-  canvasRef: HTMLCanvasElement | null | undefined;
+const Histogram: React.FC<Props> = (props) => {
+  const {
+    data,
+    layerName,
+    intensityRangeMin,
+    intensityRangeMax,
+    isInEditMode,
+    defaultMinMax,
+    supportFractions,
+    reloadHistogram,
+  } = props;
 
-  constructor(props: HistogramProps) {
-    super(props);
-    const { min, max } = getMinAndMax(props);
-    this.state = {
-      currentMin: min,
-      currentMax: max,
-    };
-  }
+  const dispatch = useDispatch();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { min, max } = getMinAndMax(props);
+  const [currentMin, setCurrentMin] = useState(min);
+  const [currentMax, setCurrentMax] = useState(max);
 
-  componentDidUpdate(prevProps: HistogramProps) {
-    if (
-      prevProps.min !== this.props.min ||
-      prevProps.max !== this.props.max ||
-      prevProps.data !== this.props.data
-    ) {
-      const { min, max } = getMinAndMax(this.props);
-      this.setState({
-        currentMin: min,
-        currentMax: max,
-      });
-    }
+  const onChangeLayer = useCallback(
+    (
+      layerName: string,
+      propertyName: keyof DatasetLayerConfiguration,
+      value: [number, number] | number | boolean,
+    ) => {
+      dispatch(updateLayerSettingAction(layerName, propertyName, value));
+    },
+    [dispatch],
+  );
 
-    this.updateCanvas();
-  }
+  const getPrecision = () => Math.max(getPrecisionOf(currentMin), getPrecisionOf(currentMax)) + 3;
 
-  onCanvasRefChange = (ref: HTMLCanvasElement | null | undefined) => {
-    this.canvasRef = ref;
+  const drawHistogram = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      histogram: HistogramDatum,
+      maxValue: number,
+      color: Vector3,
+      minRange: number,
+      maxRange: number,
+    ) => {
+      const { intensityRangeMin, intensityRangeMax } = props;
+      const { min: histogramMin, max: histogramMax, elementCounts } = histogram;
+      const histogramLength = histogramMax - histogramMin;
+      const fullLength = maxRange - minRange;
+      const xOffset = histogramMin - minRange;
+      ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
+      ctx.strokeStyle = `rgba(${color.join(",")})`;
+      ctx.beginPath();
+      // Scale data to the height of the histogram canvas.
+      const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
+      const activeRegion = new Path2D();
+      ctx.moveTo(0, 0);
+      activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
 
-    if (this.canvasRef == null) {
+      for (let i = 0; i < downscaledData.length; i++) {
+        const xInHistogramScale = (i * histogramLength) / downscaledData.length;
+        const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
+        const xValue = histogramMin + xInHistogramScale;
+
+        if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
+          activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
+        }
+
+        ctx.lineTo(xInCanvasScale, downscaledData[i]);
+      }
+
+      ctx.stroke();
+      ctx.closePath();
+      const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
+      const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
+      activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+      activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+      activeRegion.closePath();
+      ctx.fill(activeRegion);
+    },
+    [props],
+  );
+
+  const updateCanvas = useCallback(() => {
+    if (canvasRef.current == null) {
       return;
     }
 
-    const ctx = this.canvasRef.getContext("2d");
-    if (ctx == null) {
-      return;
-    }
-    ctx.translate(0, CANVAS_HEIGHT);
-    ctx.scale(1, -1);
-    ctx.lineWidth = 1;
-    ctx.lineJoin = "round";
-    this.updateCanvas();
-  };
-
-  updateCanvas() {
-    if (this.canvasRef == null) {
-      return;
-    }
-
-    const ctx = this.canvasRef.getContext("2d");
+    const ctx = canvasRef.current.getContext("2d");
     if (ctx == null) {
       return;
     }
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    const { min, max } =
-      this.props.data != null ? getMinAndMax(this.props) : DUMMY_HISTOGRAM_DATA[0];
-    const data = this.props.data ?? DUMMY_HISTOGRAM_DATA;
+    const { min, max } = props.data != null ? getMinAndMax(props) : DUMMY_HISTOGRAM_DATA[0];
+    const data = props.data ?? DUMMY_HISTOGRAM_DATA;
 
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
@@ -173,236 +191,196 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 
     for (const [i, histogram] of data.entries()) {
       const color = data.length > 1 ? uint24Colors[i] : PRIMARY_COLOR;
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-      this.drawHistogram(ctx, histogram, maxValue, color, min, max);
+      drawHistogram(ctx, histogram, maxValue, color as Vector3, min, max);
     }
-  }
+  }, [props, drawHistogram]);
 
-  getPrecision = () =>
-    Math.max(getPrecisionOf(this.state.currentMin), getPrecisionOf(this.state.currentMax)) + 3;
+  useEffect(() => {
+    const { min, max } = getMinAndMax(props);
+    setCurrentMin(min);
+    setCurrentMax(max);
+  }, [props.min, props.max, props.data]);
 
-  drawHistogram = (
-    ctx: CanvasRenderingContext2D,
-    histogram: HistogramDatum,
-    maxValue: number,
-    color: Vector3,
-    minRange: number,
-    maxRange: number,
-  ) => {
-    const { intensityRangeMin, intensityRangeMax } = this.props;
-    const { min: histogramMin, max: histogramMax, elementCounts } = histogram;
-    const histogramLength = histogramMax - histogramMin;
-    const fullLength = maxRange - minRange;
-    const xOffset = histogramMin - minRange;
-    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
-    ctx.strokeStyle = `rgba(${color.join(",")})`;
-    ctx.beginPath();
-    // Scale data to the height of the histogram canvas.
-    const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
-    const activeRegion = new Path2D();
-    ctx.moveTo(0, 0);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
+  useEffect(() => {
+    updateCanvas();
+  });
 
-    for (let i = 0; i < downscaledData.length; i++) {
-      const xInHistogramScale = (i * histogramLength) / downscaledData.length;
-      const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
-      const xValue = histogramMin + xInHistogramScale;
-
-      if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
-        activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
-      }
-
-      ctx.lineTo(xInCanvasScale, downscaledData[i]);
+  useLayoutEffect(() => {
+    if (canvasRef.current == null) {
+      return;
     }
 
-    ctx.stroke();
-    ctx.closePath();
-    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
-    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
-    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
-    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
-    activeRegion.closePath();
-    ctx.fill(activeRegion);
-  };
+    const ctx = canvasRef.current.getContext("2d");
+    if (ctx == null) {
+      return;
+    }
+    ctx.translate(0, CANVAS_HEIGHT);
+    ctx.scale(1, -1);
+    ctx.lineWidth = 1;
+    ctx.lineJoin = "round";
+    updateCanvas();
+  }, [updateCanvas, canvasRef]);
 
-  onThresholdChange = (values: number[]) => {
-    const { layerName } = this.props;
+  const onThresholdChange = (values: number[]) => {
     const [firstVal, secVal] = values;
 
     if (firstVal < secVal) {
-      this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
+      onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
     } else {
-      this.props.onChangeLayer(layerName, "intensityRange", [secVal, firstVal]);
+      onChangeLayer(layerName, "intensityRange", [secVal, firstVal]);
     }
   };
 
-  tipFormatter = (value: number | undefined) => {
+  const tipFormatter = (value: number | undefined) => {
     if (value == null) {
       return "invalid";
     }
     return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
       ? value.toExponential()
-      : roundTo(value, this.getPrecision()).toString();
+      : roundTo(value, getPrecision()).toString();
   };
 
-  updateMinimumDebounced = _.debounce(
-    (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
-    500,
+  const updateMinimumDebounced = useCallback(
+    debounce((value, layerName) => onChangeLayer(layerName, "min", value), 500),
+    [],
   );
 
-  updateMaximumDebounced = _.debounce(
-    (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
-    500,
+  const updateMaximumDebounced = useCallback(
+    debounce((value, layerName) => onChangeLayer(layerName, "max", value), 500),
+    [],
   );
 
-  render() {
-    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName, data } =
-      this.props;
+  const maybeWarning =
+    data === null ? (
+      <Alert
+        type="warning"
+        style={{ margin: 10 }}
+        message={
+          <>
+            Histogram couldn’t be fetched.{" "}
+            <a href="#" onClick={reloadHistogram}>
+              Retry
+            </a>
+          </>
+        }
+        showIcon
+      />
+    ) : null;
 
-    const maybeWarning =
-      data === null ? (
-        <Alert
-          type="warning"
-          style={{ margin: 10 }}
-          message={
-            <>
-              Histogram couldn’t be fetched.{" "}
-              <a href="#" onClick={this.props.reloadHistogram}>
-                Retry
-              </a>
-            </>
-          }
-          showIcon
+  const { min: minRange, max: maxRange } = getMinAndMax(props);
+
+  const tooltipTitleFor = (minimumOrMaximum: string) =>
+    `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
+
+  const minMaxInputStyle = {
+    width: "100%",
+  };
+  const maybeCeilFn = supportFractions ? (val: number) => val : Math.ceil;
+  return (
+    <Spin spinning={data === undefined}>
+      <div style={{ display: "grid", placeItems: "center", position: "relative" }}>
+        {maybeWarning && <div style={{ position: "absolute", zIndex: 1 }}>{maybeWarning}</div>}
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          style={{ opacity: maybeWarning ? 0.5 : 1 }}
         />
-      ) : null;
-
-    const { currentMin, currentMax } = this.state;
-    const { min: minRange, max: maxRange } = getMinAndMax(this.props);
-
-    const tooltipTitleFor = (minimumOrMaximum: string) =>
-      `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
-
-    const minMaxInputStyle = {
-      width: "100%",
-    };
-    const maybeCeilFn = this.props.supportFractions ? (val: number) => val : Math.ceil;
-    return (
-      <Spin spinning={data === undefined}>
-        <div style={{ display: "grid", placeItems: "center", position: "relative" }}>
-          {maybeWarning && <div style={{ position: "absolute", zIndex: 1 }}>{maybeWarning}</div>}
-          <canvas
-            ref={this.onCanvasRefChange}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            style={{ opacity: maybeWarning ? 0.5 : 1 }}
-          />
-        </div>
-        <Slider
-          range
-          value={[intensityRangeMin, intensityRangeMax]}
-          min={minRange}
-          max={maxRange}
-          defaultValue={[minRange, maxRange]}
-          onChange={this.onThresholdChange}
-          onChangeComplete={this.onThresholdChange}
-          step={maybeCeilFn((maxRange - minRange) / 255)}
-          tooltip={{ formatter: this.tipFormatter }}
+      </div>
+      <Slider
+        range
+        value={[intensityRangeMin, intensityRangeMax]}
+        min={minRange}
+        max={maxRange}
+        defaultValue={[minRange, maxRange]}
+        onChange={onThresholdChange}
+        onChangeComplete={onThresholdChange}
+        step={maybeCeilFn((maxRange - minRange) / 255)}
+        tooltip={{ formatter: tipFormatter }}
+        style={{
+          width: CANVAS_WIDTH,
+          margin: 0,
+          marginTop: 6,
+        }}
+      />
+      {isInEditMode ? (
+        <Row
+          align="middle"
           style={{
-            width: CANVAS_WIDTH,
-            margin: 0,
             marginTop: 6,
           }}
-        />
-        {isInEditMode ? (
-          <Row
-            align="middle"
-            style={{
-              marginTop: 6,
-            }}
-          >
-            <Col span={3}>
-              <label className="setting-label">Min:</label>
-            </Col>
-            <Col span={8}>
-              <FastTooltip title={tooltipTitleFor("minimum")}>
-                <InputNumber
-                  size="small"
-                  min={defaultMinMax[0]}
-                  max={maxRange}
-                  defaultValue={currentMin}
-                  value={currentMin}
-                  variant="borderless"
-                  onChange={(value) => {
-                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = Number.parseFloat(value);
+        >
+          <Col span={3}>
+            <label className="setting-label">Min:</label>
+          </Col>
+          <Col span={8}>
+            <FastTooltip title={tooltipTitleFor("minimum")}>
+              <InputNumber
+                size="small"
+                min={defaultMinMax[0]}
+                max={maxRange}
+                defaultValue={currentMin}
+                value={currentMin}
+                variant="borderless"
+                onChange={(value) => {
+                  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
+                  value = Number.parseFloat(value);
 
-                    if (value <= maxRange) {
-                      this.setState({
-                        currentMin: value,
-                      });
-                      this.updateMinimumDebounced(value, layerName);
-                    }
-                  }}
-                  style={minMaxInputStyle}
-                />
-              </FastTooltip>
-            </Col>
-            <Col span={3}>
-              <label
-                className="setting-label"
-                style={{
-                  width: "100%",
-                  textAlign: "center",
+                  if (value <= maxRange) {
+                    setCurrentMin(value);
+                    updateMinimumDebounced(value, layerName);
+                  }
                 }}
-              >
-                Max:
-              </label>
-            </Col>
-            <Col span={8}>
-              <FastTooltip title={tooltipTitleFor("maximum")}>
-                <InputNumber
-                  size="small"
-                  min={minRange}
-                  max={defaultMinMax[1]}
-                  defaultValue={currentMax}
-                  value={currentMax}
-                  variant="borderless"
-                  onChange={(value) => {
-                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = Number.parseFloat(value);
-
-                    if (value >= minRange) {
-                      this.setState({
-                        currentMax: value,
-                      });
-                      this.updateMaximumDebounced(value, layerName);
-                    }
-                  }}
-                  style={minMaxInputStyle}
-                />
-              </FastTooltip>
-            </Col>
-            <FastTooltip title="Stop editing histogram range">
-              <Col
-                span={2}
-                style={{ textAlign: "right", cursor: "pointer" }}
-                onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
-              >
-                <CloseOutlined />
-              </Col>
+                style={minMaxInputStyle}
+              />
             </FastTooltip>
-          </Row>
-        ) : null}
-      </Spin>
-    );
-  }
-}
+          </Col>
+          <Col span={3}>
+            <label
+              className="setting-label"
+              style={{
+                width: "100%",
+                textAlign: "center",
+              }}
+            >
+              Max:
+            </label>
+          </Col>
+          <Col span={8}>
+            <FastTooltip title={tooltipTitleFor("maximum")}>
+              <InputNumber
+                size="small"
+                min={minRange}
+                max={defaultMinMax[1]}
+                defaultValue={currentMax}
+                value={currentMax}
+                variant="borderless"
+                onChange={(value) => {
+                  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
+                  value = Number.parseFloat(value);
 
-const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  onChangeLayer(layerName: string, propertyName: keyof DatasetLayerConfiguration, value: any) {
-    dispatch(updateLayerSettingAction(layerName, propertyName, value));
-  },
-});
+                  if (value >= minRange) {
+                    setCurrentMax(value);
+                    updateMaximumDebounced(value, layerName);
+                  }
+                }}
+                style={minMaxInputStyle}
+              />
+            </FastTooltip>
+          </Col>
+          <FastTooltip title="Stop editing histogram range">
+            <Col
+              span={2}
+              style={{ textAlign: "right", cursor: "pointer" }}
+              onClick={() => onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
+            >
+              <CloseOutlined />
+            </Col>
+          </FastTooltip>
+        </Row>
+      ) : null}
+    </Spin>
+  );
+};
 
-const connector = connect(null, mapDispatchToProps);
-export default connector(Histogram);
+export default Histogram;

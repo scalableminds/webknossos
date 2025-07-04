@@ -95,7 +95,7 @@ export function AnnotationsRouteWrapper() {
 
 export function DatasetSettingsRouteWrapper() {
   const { datasetNameAndId = "" } = useParams();
-  const { location } = useLocation();
+  const location = useLocation();
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
   if (datasetName) {

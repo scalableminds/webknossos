@@ -35,6 +35,7 @@ function InputComponent(props: InputProps) {
 
   // This effect handles cursor position/selection when the input value changes
   // while the input is focused.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-run when currentValue changes
   useLayoutEffect(() => {
     if (inputRef.current && document.activeElement === inputRef.current.input) {
       // Store current selection

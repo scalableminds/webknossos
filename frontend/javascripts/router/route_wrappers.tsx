@@ -231,7 +231,7 @@ export function TracingSandboxLegacyRouteWrapper() {
 
 export function TracingSandboxRouteWrapper() {
   const { type, datasetNameAndId = "" } = useParams();
-  conslocati = useLocation();
+  const location = useLocation();
 
   const tracingType = coalesce(TracingTypeEnum, type);
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);

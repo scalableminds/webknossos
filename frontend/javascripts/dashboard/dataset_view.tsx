@@ -47,6 +47,7 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 type Props = {
   user: APIUser;
@@ -100,6 +101,9 @@ function DatasetView(props: Props) {
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const { data: folder } = useFolderQuery(context.activeFolderId);
+
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -274,8 +278,9 @@ function DatasetView(props: Props) {
 
   return (
     <div>
-      <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-
+      <RenderToPortal portalId="dashboard-TabBarExtraContent">
+        {activeTab === renderingTab ? adminHeader : null}
+      </RenderToPortal>
       {searchQuery && (
         <GlobalSearchHeader
           searchQuery={searchQuery}

@@ -290,7 +290,7 @@ export function TracingViewModeLegacyWrapper() {
 
 export function TracingViewModeRouteWrapper() {
   const { datasetNameAndId = "" } = useParams();
-  const { location } = useLocation();
+  const location = useLocation();
 
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);

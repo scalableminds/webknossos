@@ -1,11 +1,8 @@
 import { Input, type InputProps, type InputRef } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import _ from "lodash";
-import * as React from "react";
-
-type InputComponentState = {
-  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | bigint;
-};
+import type React from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /*
  * A lightweight wrapper around <Input> which:
@@ -18,120 +15,95 @@ type InputComponentState = {
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */
 
-class InputComponent extends React.PureComponent<InputProps, InputComponentState> {
-  inputRef = React.createRef<InputRef>();
-  static defaultProps: InputProps = {
-    onChange: _.noop,
-    placeholder: "",
-    value: "",
-    style: {},
-  };
+function InputComponent(props: InputProps) {
+  const {
+    title,
+    style,
+    onChange = _.noop,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    value = "",
+    placeholder,
+    ...inputProps
+  } = props;
+  const inputRef = useRef<InputRef>(null);
+  const [currentValue, setCurrentValue] = useState(value);
 
-  state = {
-    currentValue: this.props.value,
-  };
+  useEffect(() => {
+    setCurrentValue(value);
+  }, [value]);
 
-  getSnapshotBeforeUpdate(
-    _prevProps: InputProps,
-    _prevState: InputComponentState,
-  ): [number | null, number | null] {
-    // Remember the selection within the input before updating it.
-    try {
-      return [
-        // @ts-ignore
-        this.inputRef?.current?.input.selectionStart,
-        // @ts-ignore
-        this.inputRef?.current?.input.selectionEnd,
-      ];
-    } catch {
-      return [null, null];
+  // This effect handles cursor position/selection when the input value changes
+  // while the input is focused.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-run when currentValue changes
+  useLayoutEffect(() => {
+    if (inputRef.current && document.activeElement === inputRef.current.input) {
+      // Store current selection
+      const selectionStart = inputRef.current.input?.selectionStart;
+      const selectionEnd = inputRef.current.input?.selectionEnd;
+
+      // Restore selection after re-render
+      if (selectionStart !== null && selectionEnd !== null) {
+        inputRef.current.input?.setSelectionRange(selectionStart ?? null, selectionEnd ?? null);
+      }
     }
-  }
+  }, [currentValue]); // Re-run when currentValue changes
 
-  componentDidUpdate(
-    prevProps: InputProps,
-    _prevState: InputComponentState,
-    snapshot: [number | null, number | null],
-  ) {
-    if (prevProps.value !== this.props.value) {
-      this.setState({
-        currentValue: this.props.value,
-      });
-    }
-
-    if (this.inputRef.current && document.activeElement !== this.inputRef.current.input) {
-      // Don't mutate the selection if the element is not active. Otherwise,
-      // the on-screen keyboard opens on iOS when moving through the dataset.
-      return;
-    }
-
-    // Restore the remembered selection when necessary
-    try {
-      // @ts-ignore
-      this.inputRef.current.input.selectionStart = snapshot[0];
-      // @ts-ignore
-      this.inputRef.current.input.selectionEnd = snapshot[1];
-    } catch {}
-  }
-
-  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    this.setState({
-      currentValue: e.target.value,
-    });
-    if (this.props.onChange) {
-      this.props.onChange(e);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentValue(e.target.value);
+    if (onChange) {
+      onChange(e);
     }
   };
 
-  handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (this.props.onFocus) {
-      this.props.onFocus(e);
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (onFocus) {
+      onFocus(e);
     }
   };
 
-  handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (this.props.onBlur) {
-      this.props.onBlur(e);
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (onBlur) {
+      onBlur(e);
     }
   };
 
-  blurYourself = () => (document.activeElement as HTMLElement | null)?.blur();
+  const blurYourself = () => (document.activeElement as HTMLElement | null)?.blur();
 
-  blurOnEscape = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const blurOnEscape = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
-      this.blurYourself();
+      blurYourself();
     }
-    if (this.props.onKeyDown) {
-      return this.props.onKeyDown(event);
+    if (onKeyDown) {
+      return onKeyDown(event);
     }
   };
 
-  render() {
-    const { title, style, ...inputProps } = this.props;
-    const input = (
-      <Input
-        ref={this.inputRef}
-        {...inputProps}
-        // Only pass the style to the input if no tooltip container is used.
-        // Otherwise, the tooltip container will get the style.
-        style={title == null ? style : undefined}
-        onChange={this.handleChange}
-        onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
-        value={this.state.currentValue}
-        onKeyDown={this.blurOnEscape}
-      />
-    );
+  const input = (
+    <Input
+      ref={inputRef}
+      {...inputProps}
+      // Only pass the style to the input if no tooltip container is used.
+      // Otherwise, the tooltip container will get the style.
+      style={title == null ? style : undefined}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      value={currentValue}
+      onKeyDown={blurOnEscape}
+      placeholder={placeholder}
+    />
+  );
 
-    return title != null ? (
-      <FastTooltip style={style} title={title}>
-        {input}
-      </FastTooltip>
-    ) : (
-      input
-    );
-  }
+  return title != null ? (
+    <FastTooltip style={style} title={title}>
+      {input}
+    </FastTooltip>
+  ) : (
+    input
+  );
 }
 
 export default InputComponent;

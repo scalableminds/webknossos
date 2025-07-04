@@ -1,6 +1,6 @@
 import type { ButtonProps } from "antd";
-import * as React from "react";
-const { useState } = React;
+import type React from "react";
+import { cloneElement, useState } from "react";
 
 export type HoverButtonProps = Omit<ButtonProps, "icon"> & {
   icon: React.ReactElement<any>;
@@ -23,7 +23,7 @@ export function HoverIconButton(props: HoverButtonProps) {
     }
   };
   const { hoveredIcon, ...restProps } = props;
-  return React.cloneElement(isMouseOver ? hoveredIcon : props.icon, {
+  return cloneElement(isMouseOver ? hoveredIcon : props.icon, {
     ...restProps,
     onMouseEnter,
     onMouseLeave,

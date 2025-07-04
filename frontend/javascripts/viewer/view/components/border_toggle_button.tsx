@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
-import * as React from "react";
+import { useState } from "react";
 import { connect } from "react-redux";
 import type { BorderOpenStatus, WebknossosState } from "viewer/store";
 type OwnProps = {
@@ -30,7 +30,7 @@ function BorderToggleButton(props: Props) {
   const imageClass = `center-item-using-flex icon-sidebar-toggle icon-sidebar-${iconKind}-${side}-${
     inFooter ? "dark" : "bright"
   }`;
-  const [lastTouchPosition, setLastTouchPosition] = React.useState([0, 0]);
+  const [lastTouchPosition, setLastTouchPosition] = useState([0, 0]);
   return (
     <FastTooltip title={tooltipTitle} placement={placement} style={TOOLTIP_STYLE}>
       <Button

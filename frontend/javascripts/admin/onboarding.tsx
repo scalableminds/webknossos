@@ -21,12 +21,12 @@ import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import React, { useState } from "react";
-import { connect } from "react-redux";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 import type { APIDataStore, APIUser } from "types/api_types";
-import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 
 const { Step } = Steps;
@@ -35,14 +35,6 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
 };
 type Props = StateProps & RouteComponentProps;
-type State = {
-  currentStep: number;
-  datastores: Array<APIDataStore>;
-  organizationId: string;
-  datasetIdToImport: string | null | undefined;
-  isDatasetUploadModalVisible: boolean;
-  isInviteModalVisible: boolean;
-};
 
 function StepHeader({
   header,
@@ -272,7 +264,7 @@ export function InviteUsersModal({
     ) : null;
 
     return (
-      <React.Fragment>
+      <Fragment>
         <p>
           Send an email to invite your colleagues and collaboration partners to your organization.
           Share datasets, collaboratively work on annotations, and organize complex analysis
@@ -302,7 +294,7 @@ export function InviteUsersModal({
           placeholder={"jane@example.com\njoe@example.com"}
           defaultValue={inviteesString}
         />
-      </React.Fragment>
+      </Fragment>
     );
   }
 
@@ -396,142 +388,130 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
   );
 };
 
-class OnboardingView extends React.PureComponent<Props, State> {
-  state: State = {
-    currentStep: 0,
-    datastores: [],
-    organizationId: "",
-    isDatasetUploadModalVisible: false,
-    isInviteModalVisible: false,
-    datasetIdToImport: null,
-  };
+function OnboardingView(props: Props) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [datastores, setDatastores] = useState<APIDataStore[]>([]);
+  const [organizationId, setOrganizationId] = useState("");
+  const [isDatasetUploadModalVisible, setIsDatasetUploadModalVisible] = useState(false);
+  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
+  const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
-  componentDidMount() {
-    if (this.props.activeUser != null) {
-      this.props.history.push("/dashboard");
+  useEffect(() => {
+    if (activeUser != null) {
+      props.history.push("/dashboard");
     }
-  }
+  }, [activeUser, props.history]);
 
-  async fetchDatastores() {
-    const datastores = await getDatastores();
-    this.setState({
-      datastores,
-    });
-  }
-
-  advanceStep = () => {
-    this.setState((prevState) => ({
-      currentStep: prevState.currentStep + 1,
-      isDatasetUploadModalVisible: false,
-      isInviteModalVisible: false,
-      datasetIdToImport: null,
-    }));
+  const fetchDatastores = async () => {
+    const fetchedDatastores = await getDatastores();
+    setDatastores(fetchedDatastores);
   };
-  renderCreateOrganization = () => (
+
+  const advanceStep = () => {
+    setCurrentStep((prevStep) => prevStep + 1);
+    setIsDatasetUploadModalVisible(false);
+    setIsInviteModalVisible(false);
+    setDatasetIdToImport(null);
+  };
+
+  const renderCreateOrganization = () => (
     <StepHeader
       header="Create or Join an Organization"
       subheader={
-        <React.Fragment>
+        <Fragment>
           Welcome to WEBKNOSSOS! This guide will help you get started.
           <br />
           Setup your organization to manage users and datasets. Example names: &ldquo;University of
           Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
-        </React.Fragment>
+        </Fragment>
       }
       icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
-        onComplete={(organizationId) => {
-          this.setState({
-            organizationId,
-          });
-          this.advanceStep();
+        onComplete={(orgId) => {
+          setOrganizationId(orgId);
+          advanceStep();
         }}
       />
     </StepHeader>
   );
-  renderCreateAccount = () => (
+
+  const renderCreateAccount = () => (
     <StepHeader
       header="Create an Admin Account"
       subheader={
-        <React.Fragment>
+        <Fragment>
           This will be the first user account in your organization. It will be equipped with admin
           privileges in order to confirm user registrations, define teams, create tasks and much
           more.
-        </React.Fragment>
+        </Fragment>
       }
       icon={<UserOutlined className="icon-big" />}
     >
       <RegistrationFormGeneric
         hidePrivacyStatement
-        organizationIdToCreate={this.state.organizationId}
+        organizationIdToCreate={organizationId}
         onRegistered={() => {
           // Update the entered organization to the normalized name of the organization received by the backend.
           // This is needed for further requests.
           const { activeUser } = Store.getState();
 
           if (activeUser) {
-            this.setState({
-              organizationId: activeUser.organization,
-            });
+            setOrganizationId(activeUser.organization);
             // A user can only see the available datastores when he is logged in.
             // Thus we can fetch the datastores only after the registration.
-            this.fetchDatastores();
+            fetchDatastores();
           }
 
-          this.advanceStep();
+          advanceStep();
         }}
         confirmLabel="Create account"
         tryAutoLogin
       />
     </StepHeader>
   );
-  renderUploadDatasets = () => (
+
+  const renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
       subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
-      {this.state.isDatasetUploadModalVisible && (
+      {isDatasetUploadModalVisible && (
         <Modal
           open
           width="85%"
           footer={null}
           maskClosable={false}
-          onCancel={() =>
-            this.setState({
-              isDatasetUploadModalVisible: false,
-            })
-          }
+          onCancel={() => setIsDatasetUploadModalVisible(false)}
         >
           <DatasetUploadView
-            datastores={this.state.datastores}
+            datastores={datastores}
             onUploaded={async (
               uploadedDatasetId: string,
               _uploadedDatasetName: string,
               needsConversion: boolean,
             ) => {
-              this.setState({
-                datasetIdToImport: uploadedDatasetId,
-                isDatasetUploadModalVisible: false,
-              });
+              setDatasetIdToImport(uploadedDatasetId);
+              setIsDatasetUploadModalVisible(false);
 
               if (needsConversion) {
                 // If the dataset needs a conversion, the settings cannot be shown. Thus we skip the settings step.
-                this.advanceStep();
+                advanceStep();
               }
             }}
             withoutCard
           />
         </Modal>
       )}
-      {this.state.datasetIdToImport != null && (
-        <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
+      {datasetIdToImport != null && (
+        <Modal open width="85%" footer={null} maskClosable={false} onCancel={advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
-            datasetId={this.state.datasetIdToImport}
-            onComplete={this.advanceStep}
-            onCancel={this.advanceStep}
+            datasetId={datasetIdToImport}
+            onComplete={advanceStep}
+            onCancel={advanceStep}
           />
         </Modal>
       )}
@@ -540,13 +520,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           header="Upload Dataset"
           icon={<CloudUploadOutlined />}
           action={
-            <Button
-              onClick={() =>
-                this.setState({
-                  isDatasetUploadModalVisible: true,
-                })
-              }
-            >
+            <Button onClick={() => setIsDatasetUploadModalVisible(true)}>
               Upload your dataset
             </Button>
           }
@@ -560,7 +534,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <OptionCard
           header="Skip"
           icon={<ClockCircleOutlined />}
-          action={<LinkButton onClick={this.advanceStep}>Skip this step</LinkButton>}
+          action={<LinkButton onClick={advanceStep}>Skip this step</LinkButton>}
           height={250}
         >
           You can always do this later!
@@ -568,16 +542,17 @@ class OnboardingView extends React.PureComponent<Props, State> {
       </Row>
     </StepHeader>
   );
-  renderWhatsNext = () => (
+
+  const renderWhatsNext = () => (
     <StepHeader
       header="Congratulations!"
       subheader={
-        <React.Fragment>
+        <Fragment>
           You&apos;ve completed the initial setup.
           <br />
           <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
           the features and concepts of WEBKNOSSOS.
-        </React.Fragment>
+        </Fragment>
       }
       icon={<RocketOutlined className="icon-big" />}
     >
@@ -592,23 +567,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
           formats and upload processes WEBKNOSSOS supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
-          <LinkButton
-            onClick={() =>
-              this.setState({
-                isInviteModalVisible: true,
-              })
-            }
-          >
+          <LinkButton onClick={() => setIsInviteModalVisible(true)}>
             Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
-            organizationId={this.state.organizationId}
-            isOpen={this.state.isInviteModalVisible}
-            handleVisibleChange={(isInviteModalVisible) =>
-              this.setState({
-                isInviteModalVisible,
-              })
-            }
+            organizationId={organizationId}
+            isOpen={isInviteModalVisible}
+            handleVisibleChange={setIsInviteModalVisible}
           />
           and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
           permissions and task assignments.
@@ -636,101 +601,95 @@ class OnboardingView extends React.PureComponent<Props, State> {
     </StepHeader>
   );
 
-  getAvailableSteps() {
+  const getAvailableSteps = () => {
     if (features().isWkorgInstance) {
       return [
         {
           title: "Create Organization",
-          component: this.renderCreateOrganization,
+          component: renderCreateOrganization,
         },
         {
           title: "Create Account",
-          component: this.renderCreateAccount,
+          component: renderCreateAccount,
         },
         {
           title: "What's Next?",
-          component: this.renderWhatsNext,
+          component: renderWhatsNext,
         },
       ];
     } else {
       return [
         {
           title: "Create Organization",
-          component: this.renderCreateOrganization,
+          component: renderCreateOrganization,
         },
         {
           title: "Create Account",
-          component: this.renderCreateAccount,
+          component: renderCreateAccount,
         },
         {
           title: "Add Dataset",
-          component: this.renderUploadDatasets,
+          component: renderUploadDatasets,
         },
         {
           title: "What's Next?",
-          component: this.renderWhatsNext,
+          component: renderWhatsNext,
         },
       ];
     }
-  }
+  };
 
-  render() {
-    const availableSteps = this.getAvailableSteps();
-    const currentStepContent = availableSteps[this.state.currentStep].component();
-    return (
-      <>
-        <div className="onboarding">
+  const availableSteps = getAvailableSteps();
+  const currentStepContent = availableSteps[currentStep].component();
+
+  return (
+    <>
+      <div className="onboarding">
+        <Row
+          justify="center"
+          style={{
+            padding: "20px 50px 70px",
+          }}
+          align="middle"
+        >
+          <Col span={18}>
+            <Steps
+              current={currentStep}
+              size="small"
+              style={{
+                height: 25,
+              }}
+            >
+              {availableSteps.map(({ title }) => (
+                <Step title={title} key={title} />
+              ))}
+            </Steps>
+          </Col>
+        </Row>
+        <div
+          style={{
+            flex: "1 1 auto",
+            display: "flex",
+          }}
+        >
           <Row
             justify="center"
             style={{
-              padding: "20px 50px 70px",
+              flex: "1 1 auto",
             }}
             align="middle"
           >
             <Col span={18}>
-              <Steps
-                current={this.state.currentStep}
-                size="small"
-                style={{
-                  height: 25,
-                }}
-              >
-                {availableSteps.map(({ title }) => (
-                  <Step title={title} key={title} />
-                ))}
-              </Steps>
+              <Row justify="center" align="middle">
+                <Col span={24}>{currentStepContent}</Col>
+              </Row>
             </Col>
           </Row>
-          <div
-            style={{
-              flex: "1 1 auto",
-              display: "flex",
-            }}
-          >
-            <Row
-              justify="center"
-              style={{
-                flex: "1 1 auto",
-              }}
-              align="middle"
-            >
-              <Col span={18}>
-                <Row justify="center" align="middle">
-                  <Col span={24}>{currentStepContent}</Col>
-                </Row>
-              </Col>
-            </Row>
-          </div>
         </div>
-        <CreditsFooter />
-      </>
-    );
-  }
+      </div>
+      <CreditsFooter />
+    </>
+  );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(OnboardingView));
+export default withRouter<RouteComponentProps & Props, any>(OnboardingView);

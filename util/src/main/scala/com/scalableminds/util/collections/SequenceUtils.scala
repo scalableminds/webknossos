@@ -1,5 +1,7 @@
 package com.scalableminds.util.collections
 
+import scala.collection.Searching.{Found, InsertionPoint}
+
 object SequenceUtils {
   def findUniqueElement[T](list: Seq[T]): Option[T] = {
     val uniqueElements = list.distinct
@@ -50,5 +52,12 @@ object SequenceUtils {
       val batchFrom = batchIndex * batchSize + from
       val batchTo = Math.min(to, (batchIndex + 1) * batchSize + from - 1)
       (batchFrom, batchTo)
+    }
+
+  // Search in a sorted array, returns Box of index where element is found or, if missing, where element would be inserted
+  def searchSorted(haystack: Array[Long], needle: Long): Int =
+    haystack.search(needle) match {
+      case Found(i)          => i
+      case InsertionPoint(i) => i
     }
 }

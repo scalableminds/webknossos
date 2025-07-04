@@ -24,6 +24,7 @@ function InputComponent(props: InputProps) {
     onBlur,
     onKeyDown,
     value = "",
+    placeholder,
     ...inputProps
   } = props;
   const inputRef = useRef<InputRef>(null);

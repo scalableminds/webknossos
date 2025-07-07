@@ -265,6 +265,8 @@ mesh.file.readVersion.failed=Failed to read format version from file “{0}”
 mesh.file.readMappingName.failed=Failed to read mapping name from mesh file “{0}”
 mesh.meshFileName.required=Trying to load mesh from mesh file, but mesh file name was not supplied.
 
+segmentIndexFile.notFound=Could not find requested segment index file
+
 task.create.noTasks=Zero tasks were requested
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.

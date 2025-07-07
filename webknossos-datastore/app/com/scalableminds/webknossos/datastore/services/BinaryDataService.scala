@@ -14,6 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Full}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext

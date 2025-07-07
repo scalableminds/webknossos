@@ -147,7 +147,7 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)
-      result <- rpc(
+      result <- rpc( // TODO: Use datasetId
         s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"

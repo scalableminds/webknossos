@@ -121,6 +121,7 @@ class AnnotationService @Inject()(
   private def createVolumeTracing(
       dataSource: DataSource,
       datasetOrganizationId: String,
+      datasetId: ObjectId,
       datasetDataStore: DataStore,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
@@ -138,7 +139,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetId.toString, layer.name)
         case None => Fox.successful(false)
       }
       elementClassProto <- ElementClass
@@ -237,6 +238,7 @@ class AnnotationService @Inject()(
             volumeTracing <- createVolumeTracing(
               dataSource,
               dataset._organization,
+              dataset._id,
               dataStore,
               fallbackLayer,
               magRestrictions = params.magRestrictions.getOrElse(MagRestrictions.empty),
@@ -429,6 +431,7 @@ class AnnotationService @Inject()(
       volumeTracing <- createVolumeTracing(
         dataSource,
         dataset._organization,
+        datasetId,
         dataStore,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>

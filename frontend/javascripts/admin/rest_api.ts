@@ -840,13 +840,12 @@ export async function getAnnotationProto(
 
 export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
-  datasetDirectoryName: string,
+  datasetId: string,
   dataLayerName: string,
-  organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationId}/${datasetDirectoryName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -977,7 +976,7 @@ export async function getDatasets(
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.id}/readInboxDataSource?token=${token}`,
     ),
   );
 }
@@ -986,10 +985,11 @@ export async function updateDatasetDatasource(
   datasetDirectoryName: string,
   dataStoreUrl: string,
   datasource: APIDataSource,
+  datasetId: string
 ): Promise<void> {
   await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetDirectoryName}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasetId}?token=${token}`,
       {
         data: datasource,
         method: "PUT",
@@ -1330,6 +1330,7 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
   dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName?: string,
 ): Promise<void> {
   await doWithToken((token) => {
@@ -1339,7 +1340,7 @@ export async function triggerDatasetClearCache(
       params.set("layerName", layerName);
     }
     return Request.triggerRequest(
-      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?${params}`,
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${datasetId}?${params}`,
       {
         host: datastoreHost,
         method: "POST",
@@ -1371,7 +1372,7 @@ export async function triggerDatasetClearThumbnailCache(datasetId: string): Prom
 
 export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
   return Promise.all([
-    triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
+    triggerDatasetClearCache(dataset.dataStore.url, dataset, dataset.id, layerName),
     triggerDatasetClearThumbnailCache(dataset.id),
   ]);
 }
@@ -1430,12 +1431,12 @@ export async function findDataPositionForVolumeTracing(
 
 export async function getHistogramForLayer(
   datastoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );

@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, RawCuboidRequ
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId, GenericDataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
-import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder, DSFullMeshService, FullMeshRequest}
 import com.scalableminds.webknossos.datastore.services.{BinaryDataService, BinaryDataServiceHolder, DSRemoteTracingstoreClient, DSRemoteWebknossosClient, DataSourceRepository, DataStoreAccessTokenService, FindDataService, UserAccessRequest, ZarrStreamingService}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.i18n.Messages
@@ -39,7 +39,8 @@ class LegacyController @Inject()(
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
     findDataService: FindDataService,
-    zarrStreamingService: ZarrStreamingService
+    zarrStreamingService: ZarrStreamingService,
+    fullMeshService: DSFullMeshService
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
@@ -510,6 +511,25 @@ class LegacyController @Inject()(
       accessTokenService.validateAccessFromTokenContextForSyncBlock(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         Ok(zarrStreamingService.zGroupJson)
+      }
+    }
+
+  // MESH ROUTES
+
+  def loadFullMeshStl(organizationId: String,
+                      datasetDirectoryName: String,
+                      dataLayerName: String): Action[FullMeshRequest] =
+    Action.async(validateJson[FullMeshRequest]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        for {
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName) ~> NOT_FOUND
+          data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer,
+            request.body) ?~> "mesh.file.loadChunk.failed"
+
+        } yield Ok(data)
       }
     }
 

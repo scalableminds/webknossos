@@ -98,17 +98,10 @@ export async function requestWithFallback(
 ): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
   const state = Store.getState();
   const datasetId = state.dataset.id;
-  const datasetDirectoryName = state.dataset.directoryName;
-  const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.annotation.tracingStore.url;
 
-  // Prefer datasetId (id) if available, otherwise fall back to old method
-  const getDataStoreUrl = (optLayerName?: string) =>
-    datasetId
-      ? `${dataStoreHost}/data/wkDatasets/${datasetId}/layers/${optLayerName || layerInfo.name}`
-      : `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${optLayerName || layerInfo.name}`;
-
+  const getDataStoreUrl = (optLayerName?: string) => `${dataStoreHost}/data/datasets/${datasetId}/layers/${optLayerName || layerInfo.name}`;
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =

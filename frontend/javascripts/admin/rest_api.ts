@@ -777,8 +777,9 @@ export function getUpdateActionLog(
   annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
+  sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) => {
+  return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);
     if (oldestVersion != null) {
@@ -787,9 +788,14 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    return Request.receiveJSON(
+    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
+
+    if (sortAscending) {
+      log.reverse();
+    }
+    return log;
   });
 }
 
@@ -1989,6 +1995,9 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
@@ -2019,6 +2028,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());
@@ -2201,7 +2213,7 @@ export function getSynapseTypes(
   );
 }
 
-type MinCutTargetEdge = {
+export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
   segmentId1: number;

@@ -11,7 +11,7 @@ import NodeShader, {
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
 import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
-import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/update_actions";
+import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/volume/update_actions";
 import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";

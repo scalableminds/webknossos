@@ -3,40 +3,61 @@ import {
   type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrManager } from "libs/utils";
-import React from "react";
-import { useLocation } from "react-router-dom";
+import type React from "react";
+import { memo, useCallback, useEffect, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 export type SecuredRouteProps = {
   children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;
-  serverAuthenticationCallback?: (...args: Array<any>) => any;
+  checkIfResourceIsPublic?: boolean;
 };
 
-function SecuredRoute(props: SecuredRouteProps) {
+function SecuredRoute({
+  children,
+  requiredPricingPlan,
+  requiresAdminOrManagerRole,
+  checkIfResourceIsPublic = false,
+}: SecuredRouteProps) {
   const location = useLocation();
+  const { id } = useParams();
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAuthenticated = activeUser !== null;
-  const [isAdditionallyAuthenticated, setIsAdditionallyAuthenticated] = React.useState(false);
+  const [isSecuredResourcePubliclyAvailable, setIsSecuredResourcePubliclyAvailable] =
+    useState(false);
 
-  React.useEffect(() => {
+  const getIsResourcePublic = useCallback(async () => {
+    if (id) {
+      try {
+        const annotationInformation = await getUnversionedAnnotationInformation(id || "");
+        return annotationInformation.visibility === "Public";
+      } catch (_ex) {
+        // Annotation could not be found
+      }
+    }
+
+    return false;
+  }, [id]);
+
+  useEffect(() => {
     async function fetchData() {
-      if (!isAuthenticated && props.serverAuthenticationCallback != null) {
-        const isAdditionallyAuthenticated = await props.serverAuthenticationCallback();
-        setIsAdditionallyAuthenticated(isAdditionallyAuthenticated);
+      if (!isAuthenticated && checkIfResourceIsPublic) {
+        const isAdditionallyAuthenticated = await getIsResourcePublic();
+        setIsSecuredResourcePubliclyAvailable(isAdditionallyAuthenticated);
       }
     }
     fetchData();
-  }, [isAuthenticated, props.serverAuthenticationCallback]);
+  }, [isAuthenticated, getIsResourcePublic, checkIfResourceIsPublic]);
 
-  const { serverAuthenticationCallback, children, ..._rest } = props;
-  const isCompletelyAuthenticated = serverAuthenticationCallback
-    ? isAuthenticated || isAdditionallyAuthenticated
+  const isCompletelyAuthenticated = checkIfResourceIsPublic
+    ? isAuthenticated || isSecuredResourcePubliclyAvailable
     : isAuthenticated;
   const isAdminOrManager = activeUser && isUserAdminOrManager(activeUser);
 
@@ -45,16 +66,16 @@ function SecuredRoute(props: SecuredRouteProps) {
   }
 
   if (
-    props.requiredPricingPlan &&
-    !isFeatureAllowedByPricingPlan(activeOrganization, props.requiredPricingPlan)
+    requiredPricingPlan &&
+    !isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan)
   ) {
-    return <PageUnavailableForYourPlanView requiredPricingPlan={props.requiredPricingPlan} />;
+    return <PageUnavailableForYourPlanView requiredPricingPlan={requiredPricingPlan} />;
   }
-  if (props.requiresAdminOrManagerRole && !isAdminOrManager) {
+  if (requiresAdminOrManagerRole && !isAdminOrManager) {
     return <PageNotAvailableToNormalUser />;
   }
 
   return children;
 }
 
-export default React.memo(SecuredRoute);
+export default memo(SecuredRoute);

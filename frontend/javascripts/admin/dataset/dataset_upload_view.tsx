@@ -294,7 +294,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    // TODO doublecheck this
     // @ts-ignore newLocation, action are implicit any
     const beforeUnload = (newLocation, action): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser

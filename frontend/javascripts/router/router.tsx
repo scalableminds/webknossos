@@ -9,7 +9,6 @@ import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
-import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
@@ -76,17 +75,6 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
   () => import("admin/voxelytics/workflow_list_view"),
 );
 
-const serverAuthenticationCallback = async (id: string) => {
-  try {
-    const annotationInformation = await getUnversionedAnnotationInformation(id || "");
-    return annotationInformation.visibility === "Public";
-  } catch (_ex) {
-    // Annotation could not be found
-  }
-
-  return false;
-};
-
 function RootLayout() {
   const isAuthenticated = useWkSelector((state) => state.activeUser != null);
   const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
@@ -109,7 +97,14 @@ function RootLayout() {
 const routes = createRoutesFromElements(
   <Route element={<RootLayout />}>
     <Route path="/" element={<RootRouteWrapper />} />
-    <Route path="/dashboard/:tab" element={<DashboardRouteWrapper />} />
+    <Route
+      path="/dashboard/:tab"
+      element={
+        <SecuredRoute>
+          <DashboardRouteWrapper />
+        </SecuredRoute>
+      }
+    />
 
     <Route
       path="/dashboard/datasets/:folderIdWithName"
@@ -121,7 +116,14 @@ const routes = createRoutesFromElements(
     />
 
     <Route path="/dashboard" element={<DashboardRouteRootWrapper />} />
-    <Route path="/users/:userId/details" element={<UserDetailsRouteWrapper />} />
+    <Route
+      path="/users/:userId/details"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <UserDetailsRouteWrapper />
+        </SecuredRoute>
+      }
+    />
     <Route
       path="/users"
       element={
@@ -235,11 +237,18 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/annotations/:type/:id" element={<AnnotationsRouteWrapper />} />
+    <Route
+      path="/annotations/:type/:id"
+      element={
+        <SecuredRoute checkIfResourceIsPublic>
+          <AnnotationsRouteWrapper />
+        </SecuredRoute>
+      }
+    />
     <Route
       path="/annotations/:id"
       element={
-        <SecuredRoute serverAuthenticationCallback={serverAuthenticationCallback}>
+        <SecuredRoute checkIfResourceIsPublic>
           <TracingViewRouteWrapper />
         </SecuredRoute>
       }
@@ -252,7 +261,15 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/datasets/:datasetNameAndId/edit" element={<DatasetSettingsRouteWrapper />} />
+
+    <Route
+      path="/datasets/:datasetNameAndId/edit"
+      element={
+        <SecuredRoute requiresAdminOrManagerRole>
+          <DatasetSettingsRouteWrapper />
+        </SecuredRoute>
+      }
+    />
     <Route
       path="/taskTypes"
       element={
@@ -352,9 +369,11 @@ const routes = createRoutesFromElements(
     <Route path="/invite/:token" element={<AcceptInviteView />} />
 
     <Route path="/verifyEmail/:token" element={<VerifyEmailView />} />
-
+    {/* Backwards compatibility for signup URLs */}
     <Route path="/signup" element={<Navigate to="/auth/signup" />} />
+    {/* Backwards compatibility for register URLs */}
     <Route path="/register" element={<Navigate to="/auth/signup" />} />
+    {/* Backwards compatibility for register URLs */}
     <Route path="/auth/register" element={<Navigate to="/auth/signup" />} />
     <Route path="/auth/login" element={<LoginView />} />
     <Route path="/auth/signup" element={<RegistrationView />} />
@@ -378,7 +397,11 @@ const routes = createRoutesFromElements(
     />
     <Route
       path="/datasets/:datasetId/createExplorative/:type"
-      element={<CreateExplorativeRouteWrapper />}
+      element={
+        <SecuredRoute>
+          <CreateExplorativeRouteWrapper />
+        </SecuredRoute>
+      }
     />
     {
       // Note that this route has to be beneath all others sharing the same prefix,

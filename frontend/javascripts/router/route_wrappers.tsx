@@ -5,7 +5,6 @@ import {
 import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import AsyncRedirect from "components/redirect";
-import SecuredRoute from "components/secured_route";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
@@ -13,7 +12,7 @@ import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import { isNumber } from "lodash";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -56,20 +55,12 @@ export function DashboardRouteWrapper() {
   const initialTabKey =
     // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
     tab ? urlTokenToTabKeyMap[tab] : null;
-  return (
-    <SecuredRoute>
-      <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />
-    </SecuredRoute>
-  );
+  return <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />;
 }
 
 export function UserDetailsRouteWrapper() {
   const { userId } = useParams();
-  return (
-    <SecuredRoute requiresAdminOrManagerRole>
-      <DashboardView userId={userId} isAdminView={userId !== null} initialTabKey={null} />
-    </SecuredRoute>
-  );
+  return <DashboardView userId={userId} isAdminView={userId !== null} initialTabKey={null} />;
 }
 
 export function AnnotationsRouteWrapper() {
@@ -79,18 +70,10 @@ export function AnnotationsRouteWrapper() {
 
   if (initialMaybeCompoundType == null) {
     const { hash, search } = location;
-    return (
-      <SecuredRoute>
-        <Navigate to={`/annotations/${id}${search}${hash}`} />
-      </SecuredRoute>
-    );
+    return <Navigate to={`/annotations/${id}${search}${hash}`} />;
   }
 
-  return (
-    <SecuredRoute>
-      <TracingViewRouteWrapper />
-    </SecuredRoute>
-  );
+  return <TracingViewRouteWrapper />;
 }
 
 export function DatasetSettingsRouteWrapper() {
@@ -102,30 +85,26 @@ export function DatasetSettingsRouteWrapper() {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
     // The schema is something like <authority>/datasets/:datasetName/edit
     return (
-      <SecuredRoute requiresAdminOrManagerRole>
-        <AsyncRedirect
-          redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
-            const datasetId = await getDatasetIdFromNameAndOrganization(
-              datasetName,
-              organizationId,
-              getParams.token,
-            );
-            return `/datasets/${datasetName}-${datasetId}/edit`;
-          }}
-        />{" "}
-      </SecuredRoute>
+      <AsyncRedirect
+        redirectTo={async () => {
+          const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/edit`;
+        }}
+      />
     );
   }
   return (
-    <SecuredRoute requiresAdminOrManagerRole>
-      <DatasetSettingsView
-        isEditingMode
-        datasetId={datasetId || ""}
-        onComplete={() => window.history.back()}
-        onCancel={() => window.history.back()}
-      />
-    </SecuredRoute>
+    <DatasetSettingsView
+      isEditingMode
+      datasetId={datasetId || ""}
+      onComplete={() => window.history.back()}
+      onCancel={() => window.history.back()}
+    />
   );
 }
 
@@ -134,48 +113,46 @@ export function CreateExplorativeRouteWrapper() {
   const location = useLocation();
 
   return (
-    <SecuredRoute>
-      <AsyncRedirect
-        pushToHistory={false}
-        redirectTo={async () => {
-          if (!datasetId || !type) {
-            // Typehint for TS
-            throw new Error("Invalid URL");
+    <AsyncRedirect
+      pushToHistory={false}
+      redirectTo={async () => {
+        if (!datasetId || !type) {
+          // Typehint for TS
+          throw new Error("Invalid URL");
+        }
+
+        const tracingType = coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
+        const { autoFallbackLayer, fallbackLayerName, minMag, maxMag } =
+          Utils.getUrlParamsObjectFromString(location.search);
+        const magRestrictions: APIMagRestrictions = {};
+
+        if (minMag !== undefined) {
+          magRestrictions.min = Number.parseInt(minMag);
+
+          if (!isNumber(magRestrictions.min)) {
+            throw new Error("Invalid minMag parameter");
           }
 
-          const tracingType = coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
-          const { autoFallbackLayer, fallbackLayerName, minMag, maxMag } =
-            Utils.getUrlParamsObjectFromString(location.search);
-          const magRestrictions: APIMagRestrictions = {};
+          if (maxMag !== undefined) {
+            magRestrictions.max = Number.parseInt(maxMag);
 
-          if (minMag !== undefined) {
-            magRestrictions.min = Number.parseInt(minMag);
-
-            if (!_.isNumber(magRestrictions.min)) {
-              throw new Error("Invalid minMag parameter");
-            }
-
-            if (maxMag !== undefined) {
-              magRestrictions.max = Number.parseInt(maxMag);
-
-              if (!_.isNumber(magRestrictions.max)) {
-                throw new Error("Invalid maxMag parameter");
-              }
+            if (!isNumber(magRestrictions.max)) {
+              throw new Error("Invalid maxMag parameter");
             }
           }
+        }
 
-          const annotation = await createExplorational(
-            datasetId,
-            tracingType,
-            !!autoFallbackLayer,
-            fallbackLayerName,
-            null,
-            magRestrictions,
-          );
-          return `/annotations/${annotation.id}`;
-        }}
-      />
-    </SecuredRoute>
+        const annotation = await createExplorational(
+          datasetId,
+          tracingType,
+          !!autoFallbackLayer,
+          fallbackLayerName,
+          null,
+          magRestrictions,
+        );
+        return `/annotations/${annotation.id}`;
+      }}
+    />
   );
 }
 

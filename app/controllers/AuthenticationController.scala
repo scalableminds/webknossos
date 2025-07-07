@@ -32,6 +32,24 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
+case class CreateUserInOrganizationParameters(firstName: String,
+                                              lastName: String,
+                                              email: String,
+                                              password: Option[String],
+                                              autoActivate: Option[Boolean])
+
+object CreateUserInOrganizationParameters {
+  implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
+    Json.format[CreateUserInOrganizationParameters]
+}
+
+case class InviteParameters(
+    recipients: List[String],
+    autoActivate: Boolean
+)
+
+object InviteParameters { implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters] }
+
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
@@ -83,9 +101,9 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
+                organizationId = Option(signUpData.organizationId).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
-                  GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                  GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organizationId)
                 _ <- organizationService
                   .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -501,9 +519,8 @@ class AuthenticationController @Inject()(
                 } else {
                   for {
                     _ <- initialDataService.insertLocalDataStoreIfEnabled()
-                    organization <- organizationService.createOrganization(
-                      Option(signUpData.organization).filter(_.trim.nonEmpty),
-                      signUpData.organizationName) ?~> "organization.create.failed"
+                    organization <- organizationService
+                      .createOrganization(signUpData.organizationName) ?~> "organization.create.failed"
                     user <- userService.insert(
                       organization._id,
                       email,
@@ -544,17 +561,6 @@ class AuthenticationController @Inject()(
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
       _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
     } yield ()
-
-  case class CreateUserInOrganizationParameters(firstName: String,
-                                                lastName: String,
-                                                email: String,
-                                                password: Option[String],
-                                                autoActivate: Option[Boolean])
-
-  object CreateUserInOrganizationParameters {
-    implicit val jsonFormat: OFormat[CreateUserInOrganizationParameters] =
-      Json.format[CreateUserInOrganizationParameters]
-  }
 
   def createUserInOrganization(organizationId: String): Action[CreateUserInOrganizationParameters] =
     sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
@@ -615,21 +621,12 @@ class AuthenticationController @Inject()(
 
 }
 
-case class InviteParameters(
-    recipients: List[String],
-    autoActivate: Boolean
-)
-
-object InviteParameters {
-  implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters]
-}
-
 trait AuthForms {
 
   private val passwordMinLength = 8
 
   // Sign up
-  case class SignUpData(organization: String,
+  case class SignUpData(organizationId: Option[String], // None for createOrganizationWithAdmin route
                         organizationName: String,
                         email: String,
                         firstName: String,
@@ -641,29 +638,15 @@ trait AuthForms {
   def signUpForm(implicit messages: Messages): Form[SignUpData] =
     Form(
       mapping(
-        "organization" -> text,
-        "organizationName" -> text,
+        "organizationId" -> optional(nonEmptyText),
+        "organizationName" -> nonEmptyText,
         "email" -> email,
-        "password" -> tuple(
-          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
-          "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
+        "password" -> nonEmptyText.verifying(minLength(passwordMinLength)),
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
         "acceptedTermsOfService" -> optional(number)
-      )((organization, organizationName, email, password, firstName, lastName, inviteToken, acceptTos) =>
-        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken, acceptTos))(
-        signUpData =>
-          Some(
-            (signUpData.organization,
-             signUpData.organizationName,
-             signUpData.email,
-             ("", ""),
-             signUpData.firstName,
-             signUpData.lastName,
-             signUpData.inviteToken,
-             signUpData.acceptedTermsOfService))))
+      )(SignUpData.apply)(SignUpData.unapply))
 
   // Sign in
   case class SignInData(email: String, password: String)

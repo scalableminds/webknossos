@@ -109,35 +109,32 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
-  def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
-    for {
-      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
-      organizationId = organizationIdOpt
-        .flatMap(TextUtils.normalizeStrong)
-        .getOrElse(normalizedName)
-        .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
-      else (PricingPlan.Custom, None, None)
-      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
+  private def generateOrganizationId: String = ??? // TODO
 
-      organization = Organization(
-        organizationId,
-        "",
-        "",
-        organizationName,
-        initialPricingParameters._1,
-        None,
-        initialPricingParameters._2,
-        initialPricingParameters._3,
-        organizationRootFolder._id
-      )
-      organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
+  def createOrganization(organizationName: String): Fox[Organization] = {
+    val initialPricingParameters =
+      if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+      else (PricingPlan.Custom, None, None)
+
+    val organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
+    val organization = Organization(
+      generateOrganizationId,
+      "",
+      "",
+      organizationName,
+      initialPricingParameters._1,
+      None,
+      initialPricingParameters._2,
+      initialPricingParameters._3,
+      organizationRootFolder._id
+    )
+    val organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
+    for {
       _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
+  }
 
   def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =

@@ -25,10 +25,11 @@ export const getAbsoluteCoords: ShaderModule = {
     }
   `,
 };
-export const getWorldCoordUVW: ShaderModule = {
+
+export const worldCoordToUVW: ShaderModule = {
   requirements: [getW, isFlightMode],
   code: `
-    vec3 getWorldCoordUVW() {
+    vec3 worldCoordToUVW(vec4 worldCoord) {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
       vec3 positionOffsetUVW = transDim(positionOffset);
 
@@ -57,35 +58,20 @@ export const getWorldCoordUVW: ShaderModule = {
   `,
 };
 
-// TODOM: refactor me
+export const getWorldCoordUVW: ShaderModule = {
+  requirements: [worldCoordToUVW],
+  code: `
+    vec3 getWorldCoordUVW() {
+      return worldCoordToUVW(worldCoord);
+    }
+  `,
+};
+
 export const getUnrotatedWorldCoordUVW: ShaderModule = {
-  requirements: [getW, isFlightMode],
+  requirements: [worldCoordToUVW],
   code: `
     vec3 getUnrotatedWorldCoordUVW() {
-      vec3 worldCoordUVW = transDim((inverseFlycamRotationMatrix * worldCoord).xyz);
-      vec3 positionOffsetUVW = transDim(positionOffset);
-
-      if (isFlightMode()) {
-        vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
-        float sphericalRadius = sphericalCapRadius;
-
-        vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
-        modelCoords.z = 0.0;
-        modelCoords += centerVertex;
-        modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
-        modelCoords -= centerVertex;
-
-        worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
-      }
-
-      vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
-
-      // We subtract the potential offset of the plane and then
-      // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
-      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
-
-
-      return worldCoordUVW;
+      return worldCoordToUVW(inverseFlycamRotationMatrix * worldCoord);
     }
   `,
 };

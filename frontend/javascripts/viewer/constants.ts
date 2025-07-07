@@ -149,7 +149,7 @@ function correctCameraViewingDirection(baseEuler: THREE.Euler): THREE.Euler {
 }
 
 // The orthographic cameras point towards negative z direction per default. To make it look into positive direction of the z axis,
-// an additional rotation around x axis by 180° is needed. Th
+// an additional rotation around x axis by 180° is needed. This is appended via correctCameraViewingDirection.
 export const OrthoCamerasBaseRotations = {
   [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
   [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),

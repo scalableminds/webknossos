@@ -92,7 +92,8 @@ import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
-  // In orthogonal view mode, we need to subtract the
+  // In orthogonal view mode, this active planes default rotation is added to the flycam rotation upon node creation.
+  // To get the same flycam rotation as was active during node creation, the default rotation is calculated out from the nodes rotation.
   const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
   const nodeRotationInReducerFormatMatrix = eulerAngleToReducerInternalMatrix(nodeRotationRadian);
   const viewportRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(

@@ -95,6 +95,8 @@ function ensureNonConflictingHandlers(
   }
 }
 
+const FIXED_ROTATION_STEP = Math.PI / 2;
+
 const cycleTools = () => {
   Store.dispatch(cycleToolAction());
 };
@@ -397,8 +399,9 @@ class PlaneController extends React.PureComponent<Props> {
       const state = Store.getState();
       const invertingFactor = oppositeDirection ? -1 : 1;
       const rotationAngle =
-        (fixedStepRotation ? Math.PI / 2 : state.userConfiguration.rotateValue * timeFactor) *
-        invertingFactor;
+        (fixedStepRotation
+          ? FIXED_ROTATION_STEP
+          : state.userConfiguration.rotateValue * timeFactor) * invertingFactor;
       const { activeViewport } = state.viewModeData.plane;
       const viewportIndices = Dimensions.getIndices(activeViewport);
       const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
@@ -458,17 +461,22 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
+
     const ignoredTimeFactor = 0;
+    const rotateViewportAwareFixedWithoutTiming = (
+      dimensionIndex: DimensionIndices,
+      oppositeDirection: boolean,
+    ) => rotateViewportAware(ignoredTimeFactor, dimensionIndex, oppositeDirection, true);
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(
       {
         ...notLoopedKeyboardControls,
         // Directly rotate by 90 degrees.
-        "ctrl + shift + left": () => rotateViewportAware(ignoredTimeFactor, 1, false, true),
-        "ctrl + shift + right": () => rotateViewportAware(ignoredTimeFactor, 1, true, true),
-        "ctrl + shift + up": () => rotateViewportAware(ignoredTimeFactor, 0, false, true),
-        "ctrl + shift + down": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
-        "ctrl + alt + left": () => rotateViewportAware(ignoredTimeFactor, 2, false, true),
-        "ctrl + alt + right": () => rotateViewportAware(ignoredTimeFactor, 0, true, true),
+        "ctrl + shift + left": () => rotateViewportAwareFixedWithoutTiming(1, false),
+        "ctrl + shift + right": () => rotateViewportAwareFixedWithoutTiming(1, true),
+        "ctrl + shift + up": () => rotateViewportAwareFixedWithoutTiming(0, false),
+        "ctrl + shift + down": () => rotateViewportAwareFixedWithoutTiming(0, true),
+        "ctrl + alt + left": () => rotateViewportAwareFixedWithoutTiming(2, false),
+        "ctrl + alt + right": () => rotateViewportAwareFixedWithoutTiming(0, true),
       },
       {},
       extendedNotLoopedKeyboardControls,

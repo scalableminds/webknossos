@@ -1306,7 +1306,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label={settings.applyNodeRotationOnActivation}
               value={userConfiguration.applyNodeRotationOnActivation}
               onChange={this.onChangeUser.applyNodeRotationOnActivation}
-              tooltipText="When enabled, the rotation active during creation of the new active node will be set upon activation."
+              tooltipText="If enabled, the rotation that was active when a node was created will be set when activating the node."
             />
             <SwitchSetting
               label={settings.highlightCommentedNodes}

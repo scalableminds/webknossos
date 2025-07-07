@@ -86,6 +86,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       to <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, toPtr)
       }.flatMap(_.headOption.toFox) ?~> "Could not read synapses from connectome file"
+      _ = cachedConnectomeFile.finishAccess()
     } yield Seq.range(from, to)
 
   def synapticPartnerForSynapses(connectomeFileKey: ConnectomeFileKey,
@@ -100,6 +101,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(synapticPartnerKey(direction), 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
+      _ = cachedConnectomeFile.finishAccess()
     } yield agglomerateIds
 
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
@@ -113,6 +115,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
           cachedConnectomeFile.uint64Reader.readMatrixBlockWithOffset(keySynapsePositions, 1, 3, synapseId, 0)
         }.flatMap(_.headOption.toFox)
       }
+      _ = cachedConnectomeFile.finishAccess()
     } yield synapsePositions.map(_.toList)
 
   def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
@@ -127,6 +130,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keySynapseTypes, 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
+      _ = cachedConnectomeFile.finishAccess()
     } yield SynapseTypesWithLegend(synapseTypes, legacySynapseTypeNames)
 
   def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
@@ -157,6 +161,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
           from <- fromAndTo.lift(0).toFox
           to <- fromAndTo.lift(1).toFox
         } yield Seq.range(from, to)
+      _ = cachedConnectomeFile.finishAccess()
     } yield synapses
 
   private def finishAccessOnFailure[T](f: CachedHdf5File)(block: => T)(implicit ec: ExecutionContext): Fox[T] =

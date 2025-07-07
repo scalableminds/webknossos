@@ -244,48 +244,40 @@ class DataSourceController @Inject()(
     }
 
   def listMappings(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContextForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-      addNoCacheHeaderFallback(
-        Ok(Json.toJson(dataSourceService.exploreMappings(organizationId, datasetDirectoryName, dataLayerName))))
+    accessTokenService.validateAccessFromTokenContextForSyncBlock(UserAccessRequest.readDataset(datasetId)) {
+      addNoCacheHeaderFallback( // TODO
+        Ok(Json.toJson(dataSourceService.exploreMappings(???, ???, dataLayerName))))
     }
   }
 
   def listAgglomerates(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateList = agglomerateService.listAgglomeratesFiles(dataSource.id, dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }
 
   def generateAgglomerateSkeleton(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
       agglomerateId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
           .generateSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateSkeleton.failed"
@@ -294,19 +286,16 @@ class DataSourceController @Inject()(
   }
 
   def agglomerateGraph(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
       agglomerateId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateGraph <- agglomerateService
           .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> "agglomerateGraph.failed"
@@ -315,19 +304,16 @@ class DataSourceController @Inject()(
   }
 
   def positionForSegmentViaAgglomerateFile(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
       segmentId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         position <- agglomerateService
           .positionForSegmentId(agglomerateFileKey, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
@@ -336,18 +322,15 @@ class DataSourceController @Inject()(
   }
 
   def largestAgglomerateId(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)){
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         largestAgglomerateId: Long <- agglomerateService.largestAgglomerateId(agglomerateFileKey)
       } yield Ok(Json.toJson(largestAgglomerateId))
@@ -355,18 +338,15 @@ class DataSourceController @Inject()(
   }
 
   def agglomerateIdsForSegmentIds(
-      organizationId: String,
-      datasetDirectoryName: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String
   ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      UserAccessRequest.readDataset(datasetId)){
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
           agglomerateFileKey,

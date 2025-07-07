@@ -13,8 +13,8 @@ GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 
 GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw                                    @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaKnossos(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
-POST          /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMesh(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
-GET           /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJson(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
+POST          /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                            @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMesh(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+GET           /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                                @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJson(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
 
 
 # Zarr2 compatible routes

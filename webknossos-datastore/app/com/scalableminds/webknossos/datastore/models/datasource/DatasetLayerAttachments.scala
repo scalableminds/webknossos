@@ -42,7 +42,7 @@ case class LayerAttachment(name: String,
                            credentialId: Option[String] = None) {
   // Warning: throws! Use inside of tryo
   def localPath: Path = {
-    if (path.getScheme.nonEmpty && path.getScheme != DataVaultService.schemeFile) {
+    if (path.getScheme != null && path.getScheme.nonEmpty && path.getScheme != DataVaultService.schemeFile) {
       throw new Exception(
         "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system.")
     }

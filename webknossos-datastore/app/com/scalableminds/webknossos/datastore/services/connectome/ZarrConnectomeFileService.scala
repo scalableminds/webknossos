@@ -56,7 +56,8 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       _ =>
         for {
           groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(connectomeFileKey.attachment)
-          groupHeaderBytes <- (groupVaultPath / ConnectomeFileAttributes.FILENAME_ZARR_JSON).readBytes()
+          groupHeaderBytes <- (groupVaultPath / ConnectomeFileAttributes.FILENAME_ZARR_JSON)
+            .readBytes() ?~> "Could not read connectome file zarr group file."
           connectomeFileAttributes <- JsonHelper
             .parseAs[ConnectomeFileAttributes](groupHeaderBytes)
             .toFox ?~> "Could not parse connectome file attributes from zarr group file."
@@ -118,7 +119,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCscIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
       cscAgglomeratePairArray <- openZarrArray(connectomeFileKey, keyCscAgglomeratePair)
-      _ <- Fox.fromBool(toPtr >= fromPtr) ?~> s"Agglomerate $agglomerateId not present in agglomerate file"
+      _ <- Fox.fromBool(fromPtr <= toPtr) ?~> s"Agglomerate $agglomerateId not present in agglomerate file"
       agglomeratePairsMA <- cscAgglomeratePairArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       agglomeratePairs <- tryo(agglomeratePairsMA.getStorage.asInstanceOf[Array[Long]]).toFox
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>

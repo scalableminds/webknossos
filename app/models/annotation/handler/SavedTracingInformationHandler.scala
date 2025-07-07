@@ -24,7 +24,7 @@ class SavedTracingInformationHandler @Inject()(
     with Formatter
     with FoxImplicits {
 
-  override val cache = false
+  override val useCache = false
 
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {

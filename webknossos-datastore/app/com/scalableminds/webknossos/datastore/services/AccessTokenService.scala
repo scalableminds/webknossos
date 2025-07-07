@@ -43,6 +43,9 @@ object UserAccessRequest {
   def readDataset(datasetId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.read)
 
+  def readDataset(datasetId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.read)
+
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 

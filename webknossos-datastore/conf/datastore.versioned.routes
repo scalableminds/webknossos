@@ -3,6 +3,20 @@
 ->  /v10/ datastore.latest.Routes
 ->  /v9/  datastore.latest.Routes
 
+# Read image data
+POST          /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossos(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+POST          /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/readData                                                          @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawCuboidPost(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawCuboid(organizationId: String, datasetDirectoryName: String, dataLayerName: String, x: Int, y: Int, z: Int, width: Int, height: Int, depth: Int, mag: String, halfByte: Boolean ?= false, mappingName: Option[String])
+GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/thumbnail.jpg                                                     @com.scalableminds.webknossos.datastore.controllers.LegacyController.thumbnailJpeg(organizationId: String, datasetDirectoryName: String, dataLayerName: String, x: Int, y: Int, z: Int, width: Int, height: Int, mag: String, mappingName: Option[String], intensityMin: Option[Double], intensityMax: Option[Double], color: Option[String], invertColor: Option[Boolean])
+GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/findData                                                          @com.scalableminds.webknossos.datastore.controllers.LegacyController.findData(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/histogram                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.histogram(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+
+GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw                                    @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaKnossos(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: Int, x: Int, y: Int, z: Int, cubeSize: Int)
+
+POST          /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMesh(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
+GET           /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJson(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
+
+
 # Zarr2 compatible routes
 GET           /v9/zarr/:organizationId/:datasetDirectoryName                                                                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContents(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)
 GET           /v9/zarr/:organizationId/:datasetDirectoryName/                                                                                            @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContents(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)

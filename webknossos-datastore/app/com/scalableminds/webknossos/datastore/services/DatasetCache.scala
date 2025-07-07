@@ -26,6 +26,6 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(i
       dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found"
     } yield (dataSource, dataLayer)
 
-  def invalidateCache(datasetId: String): Unit = cache.remove(ObjectId(datasetId))
+  def invalidateCache(datasetId: ObjectId): Unit = cache.remove(datasetId)
 
 }

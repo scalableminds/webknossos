@@ -41,13 +41,12 @@ class ZarrStreamingController @Inject()(
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
   def requestZAttrs(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataSource <- datasetCache.getById(datasetIdValidated) ~> NOT_FOUND
+        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
         dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
         header = zarrStreamingService.getHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
@@ -55,13 +54,12 @@ class ZarrStreamingController @Inject()(
   }
 
   def requestZarrJson(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataSource <- datasetCache.getById(datasetIdValidated) ~> NOT_FOUND
+        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
         dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
         header = zarrStreamingService.getGroupHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
@@ -118,13 +116,12 @@ class ZarrStreamingController @Inject()(
     * Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
   def requestDataSource(
-      datasetId: String,
+      datasetId: ObjectId,
       zarrVersion: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataSource <- datasetCache.getById(datasetIdValidated) ~> NOT_FOUND
+        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
         zarrSource = zarrStreamingService.getZarrDataSource(dataSource, zarrVersion)
       } yield Ok(Json.toJson(zarrSource))
     }
@@ -204,15 +201,14 @@ class ZarrStreamingController @Inject()(
     }
 
   def requestRawZarrCube(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mag: String,
       coordinates: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetIdValidated, dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         result <- zarrStreamingService.rawZarrCube(dataSource, dataLayer, mag, coordinates)
       } yield Ok(result)
     }
@@ -241,28 +237,26 @@ class ZarrStreamingController @Inject()(
     }
 
   def requestZArray(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        (_, dataLayer) <- datasetCache.getWithLayer(datasetIdValidated, dataLayerName) ~> NOT_FOUND
+        (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         zarrHeader <- zarrStreamingService.getZArray(dataLayer, mag)
       } yield Ok(Json.toJson(zarrHeader))
     }
   }
 
   def requestZarrJsonForMag(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetIdValidated, dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         zarrJson <- zarrStreamingService.requestZarrJsonForMag(dataSource, dataLayer, mag)
       } yield Ok(Json.toJson(zarrJson))
     }
@@ -321,14 +315,13 @@ class ZarrStreamingController @Inject()(
     } yield result
 
   def requestDataLayerDirectoryContents(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       zarrVersion: Int
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetIdValidated, dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         contents <- zarrStreamingService.dataLayerDirectoryContents(dataSource, dataLayer, zarrVersion)
       } yield
         Ok(
@@ -370,15 +363,14 @@ class ZarrStreamingController @Inject()(
     }
 
   def requestDataLayerMagDirectoryContents(
-      datasetId: String,
+      datasetId: ObjectId,
       dataLayerName: String,
       mag: String,
       zarrVersion: Int
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetIdValidated, dataLayerName) ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         contents <- zarrStreamingService.dataLayerMagDirectoryContents(dataSource, dataLayer, mag, zarrVersion)
       } yield
         Ok(
@@ -422,19 +414,18 @@ class ZarrStreamingController @Inject()(
     }
 
   def requestDataSourceDirectoryContents(
-      datasetId: String,
+      datasetId: ObjectId,
       zarrVersion: Int
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataSource <- datasetCache.getById(datasetIdValidated)
+        dataSource <- datasetCache.getById(datasetId)
         files <- zarrStreamingService.dataSourceDirectoryContents(dataSource, zarrVersion)
       } yield
         Ok(
           views.html.datastoreZarrDatasourceDir(
             "Datastore",
-            datasetId,
+            datasetId.toString,
             List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ files
           ))
     }
@@ -453,7 +444,7 @@ class ZarrStreamingController @Inject()(
           ))
     }
 
-  def requestZGroup(datasetId: String, dataLayerName: String = ""): Action[AnyContent] =
+  def requestZGroup(datasetId: ObjectId, dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContextForSyncBlock(UserAccessRequest.readDataset(datasetId)) {
         Ok(zarrStreamingService.zGroupJson)

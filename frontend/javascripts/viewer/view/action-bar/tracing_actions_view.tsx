@@ -44,7 +44,7 @@ import messages from "messages";
 import * as React from "react";
 
 import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_types";
@@ -486,6 +486,7 @@ function TracingActionsView({ layoutMenu }: Props) {
   const isZarrPrivateLinksModalOpen = useWkSelector(
     (state) => state.uiInformation.showZarrPrivateLinksModal,
   );
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
   const [isReopenAllowed, setIsReopenAllowed] = useState(false);
   const reopenTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -596,8 +597,7 @@ function TracingActionsView({ layoutMenu }: Props) {
     }
   };
 
-  const getTracingViewModals = () => {
-    const { viewMode } = Store.getState().temporaryConfiguration;
+  const getTracingViewModals = useCallback(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const modals = [];
 
@@ -653,7 +653,19 @@ function TracingActionsView({ layoutMenu }: Props) {
     }
 
     return modals;
-  };
+  }, [
+    activeUser,
+    isDownloadModalOpen,
+    isMergeModalOpen,
+    isZarrPrivateLinksModalOpen,
+    isShareModalOpen,
+    isUserScriptsModalOpen,
+    isRenderAnimationModalOpen,
+    viewMode,
+    annotationId,
+    annotationType,
+    restrictions,
+  ]);
 
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";

@@ -10,7 +10,6 @@ import {
   setFlightmodeRecordingAction,
   setViewModeAction,
 } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const VIEW_MODE_TO_ICON = {
@@ -45,7 +44,7 @@ function ViewModesView() {
       onChangeFlightmodeRecording(false);
     }
 
-    Store.dispatch(setViewModeAction(mode));
+    dispatch(setViewModeAction(mode));
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
     args.domEvent.target.blur();
   };

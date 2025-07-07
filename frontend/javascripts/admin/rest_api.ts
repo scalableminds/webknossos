@@ -779,7 +779,7 @@ export function getUpdateActionLog(
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams([["truncate", "true"]]);
     params.set("token", token);
     if (oldestVersion != null) {
       params.set("oldestVersion", oldestVersion.toString());

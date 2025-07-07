@@ -3,7 +3,7 @@ package models.organization
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 
@@ -14,6 +14,7 @@ import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
+import security.RandomIDGenerator
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -109,7 +110,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
-  private def generateOrganizationId: String = ??? // TODO
+  private def generateOrganizationId: String = RandomIDGenerator.generateBlocking(24)
 
   def createOrganization(organizationName: String): Fox[Organization] = {
     val initialPricingParameters =

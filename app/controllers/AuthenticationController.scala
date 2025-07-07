@@ -101,8 +101,8 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                organizationId = Option(signUpData.organizationId).filter(_.trim.nonEmpty)
-                organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
+                organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption,
+                                                                                 signUpData.organizationId)(
                   GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organizationId)
                 _ <- organizationService
                   .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
@@ -635,7 +635,7 @@ trait AuthForms {
                         inviteToken: Option[String],
                         acceptedTermsOfService: Option[Int])
 
-  def signUpForm(implicit messages: Messages): Form[SignUpData] =
+  def signUpForm: Form[SignUpData] =
     Form(
       mapping(
         "organizationId" -> optional(nonEmptyText),

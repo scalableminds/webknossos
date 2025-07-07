@@ -43,13 +43,16 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
-      from <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
-      to <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
+      fromPtr <- fromAndToPtr.lift(0).toFox ?~> "Could not read start offset from connectome file"
+      toPtr <- fromAndToPtr.lift(1).toFox ?~> "Could not read end offset from connectome file"
+      _ <- Fox.fromBool(toPtr >= fromPtr) ?~> s"Agglomerate $agglomerateId not present in agglomerate file"
       // readArrayBlockWithOffset has a bug and does not return the empty array when block size 0 is passed, hence the if.
-      agglomeratePairs: Array[Long] <- if (to - from == 0L) Fox.successful(Array.empty[Long])
+      agglomeratePairs: Array[Long] <- if (toPtr - fromPtr == 0L) Fox.successful(Array.empty[Long])
       else
         finishAccessOnFailure(cachedConnectomeFile) {
-          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscAgglomeratePair, (to - from).toInt, from)
+          cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscAgglomeratePair,
+                                                                     (toPtr - fromPtr).toInt,
+                                                                     fromPtr)
         } ?~> "Could not read agglomerate pairs from connectome file"
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
         for {

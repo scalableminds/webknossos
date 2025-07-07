@@ -118,13 +118,14 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       (fromPtr, toPtr) <- getToAndFromPtr(connectomeFileKey, agglomerateId, keyCscIndptr)
       agglomeratePairOffsetsArray <- openZarrArray(connectomeFileKey, keyAgglomeratePairOffsets)
       cscAgglomeratePairArray <- openZarrArray(connectomeFileKey, keyCscAgglomeratePair)
+      _ <- Fox.fromBool(toPtr >= fromPtr) ?~> s"Agglomerate $agglomerateId not present in agglomerate file"
       agglomeratePairsMA <- cscAgglomeratePairArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       agglomeratePairs <- tryo(agglomeratePairsMA.getStorage.asInstanceOf[Array[Long]]).toFox
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
         for {
           fromTo <- agglomeratePairOffsetsArray.readAsMultiArray(offset = agglomeratePair, shape = 2)
-          from <- tryo(fromTo.getLong(0)).toFox
-          to <- tryo(fromTo.getLong(1)).toFox
+          from <- tryo(fromTo.getLong(0)).toFox ?~> "Could not read start offset from connectome file"
+          to <- tryo(fromTo.getLong(1)).toFox ?~> "Could not read end offset from connectome file"
         } yield Seq.range(from, to)
       }
     } yield synapseIdsNested.flatten

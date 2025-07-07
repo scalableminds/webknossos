@@ -294,41 +294,6 @@ export function SwitchSetting(props: SwitchSettingProps) {
   );
 }
 
-type NumberInputSettingProps = {
-  onChange: (value: number | null) => void;
-  value: number;
-  label: string;
-  max?: number;
-  min?: number;
-  step?: number;
-};
-
-// TODO This component is not used by any other component. Remove it?
-export function NumberInputSetting(props: NumberInputSettingProps) {
-  const { onChange, value, label, max, min = 1, step = 1 } = props;
-  return (
-    <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
-      <Col span={SETTING_LEFT_SPAN}>
-        <label className="setting-label">{label}</label>
-      </Col>
-      <Col span={SETTING_RIGHT_SPAN}>
-        <InputNumber
-          style={{
-            width: "100%",
-          }}
-          min={min}
-          max={max}
-          onChange={onChange}
-          value={value}
-          step={step}
-          size="small"
-          variant="borderless"
-        />
-      </Col>
-    </Row>
-  );
-}
-
 type NumberInputPopoverSettingProps = {
   onChange: (value: number) => void;
   value: number | null | undefined;

@@ -43,7 +43,7 @@ import { finishedResizingUserBoundingBoxAction } from "viewer/model/actions/anno
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
-  proofreadMerge,
+  proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   hideMeasurementTooltipAction,
@@ -1082,7 +1082,7 @@ export class ProofreadToolController {
     const globalPosition = calculateGlobalPos(state, pos).rounded;
 
     if (event.shiftKey) {
-      Store.dispatch(proofreadMerge(globalPosition));
+      Store.dispatch(proofreadMergeAction(globalPosition));
     } else if (event.ctrlKey || event.metaKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {

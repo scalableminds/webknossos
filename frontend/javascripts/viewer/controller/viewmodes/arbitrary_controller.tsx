@@ -39,12 +39,12 @@ import {
   createBranchPointAction,
   createNodeAction,
   createTreeAction,
-  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   setActiveNodeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";

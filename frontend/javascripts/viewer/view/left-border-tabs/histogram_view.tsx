@@ -195,11 +195,12 @@ const Histogram: React.FC<Props> = (props) => {
     }
   }, [props, drawHistogram]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update min/max when the data changes.
   useEffect(() => {
     const { min, max } = getMinAndMax(props);
     setCurrentMin(min);
     setCurrentMax(max);
-  }, [props.min, props.max, props.data]);
+  }, [props.min, props.max]);
 
   useEffect(() => {
     updateCanvas();
@@ -219,7 +220,7 @@ const Histogram: React.FC<Props> = (props) => {
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
     updateCanvas();
-  }, [updateCanvas, canvasRef]);
+  }, [updateCanvas]);
 
   const onThresholdChange = (values: number[]) => {
     const [firstVal, secVal] = values;

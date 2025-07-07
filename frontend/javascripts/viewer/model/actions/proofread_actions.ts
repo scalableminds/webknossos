@@ -4,7 +4,7 @@ import type { Tree } from "viewer/model/types/tree_types";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
-export type ProofreadMergeAction = ReturnType<typeof proofreadMerge>;
+export type ProofreadMergeAction = ReturnType<typeof proofreadMergeAction>;
 export type MinCutAgglomerateAction = ReturnType<typeof minCutAgglomerateAction>;
 export type MinCutAgglomerateWithPositionAction = ReturnType<
   typeof minCutAgglomerateWithPositionAction
@@ -36,7 +36,7 @@ export const clearProofreadingByProducts = () =>
     type: "CLEAR_PROOFREADING_BY_PRODUCTS",
   }) as const;
 
-export const proofreadMerge = (
+export const proofreadMergeAction = (
   position: Vector3 | null,
   segmentId?: number | null,
   agglomerateId?: number | null,

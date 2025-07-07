@@ -73,7 +73,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return skeletonTracing.trees.getOrThrow(activeTreeId).nodes.getOrThrow(activeNodeId);
+    return skeletonTracing.trees.getNullable(activeTreeId)?.nodes.getNullable(activeNodeId) ?? null;
   }
 
   return null;
@@ -86,7 +86,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefine
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return skeletonTracing.trees.getNullable(activeTreeId) || null;
+    return skeletonTracing.trees.getNullable(activeTreeId) ?? null;
   }
 
   return null;

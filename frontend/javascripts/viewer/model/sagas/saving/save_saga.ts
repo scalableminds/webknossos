@@ -33,10 +33,9 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-// todop: restore to 10, 60, 30 ?
-const VERSION_POLL_INTERVAL_COLLAB = 1 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
-const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
+const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
 function* watchForSaveConflicts(): Saga<void> {
   function* checkForNewVersion(): Saga<boolean> {

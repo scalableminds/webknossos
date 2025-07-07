@@ -1,7 +1,6 @@
 // The save saga uses a retry mechanism which is based
 // on exponential back-off.
-// todop: restore to 30s
-export const PUSH_THROTTLE_TIME = 5000; // 30s
+export const PUSH_THROTTLE_TIME = 30 * 1000; // 30s
 
 export const SAVE_RETRY_WAITING_TIME = 2000;
 export const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m

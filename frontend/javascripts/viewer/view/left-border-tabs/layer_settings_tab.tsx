@@ -337,6 +337,124 @@ function LayerInfoIconWithTooltip({
   );
 }
 
+const LayerSettings = ({
+  layerName,
+  layerConfiguration,
+  isColorLayer,
+  isLastLayer,
+  getLayerSettingsHeader,
+  onChangeLayer,
+  onChange,
+  dataset,
+  getHistogram,
+  getColorLayerSpecificSettings,
+  getSegmentationSpecificSettings,
+  hasLessThanTwoColorLayers = true,
+}: {
+  layerName: string;
+  layerConfiguration: DatasetLayerConfiguration | null | undefined;
+  isColorLayer: boolean;
+  isLastLayer: boolean;
+  getLayerSettingsHeader: any;
+  onChangeLayer: any;
+  onChange: any;
+  dataset: any;
+  getHistogram: any;
+  getColorLayerSpecificSettings: any;
+  getSegmentationSpecificSettings: any;
+  hasLessThanTwoColorLayers?: boolean;
+}) => {
+  const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
+  const onAlphaChange = useCallback(
+    (value: number) => onChangeLayer(layerName, "alpha", value),
+    [layerName, onChangeLayer],
+  );
+
+  const onGammaCorrectionValueChange = useCallback(
+    (value: number) => onChangeLayer(layerName, "gammaCorrectionValue", value),
+    [layerName, onChangeLayer],
+  );
+  const onColorChange = useCallback(
+    (value: Vector3) => onChangeLayer(layerName, "color", value),
+    [layerName, onChangeLayer],
+  );
+  const onIsInvertedChange = useCallback(
+    () => onChangeLayer(layerName, "isInverted", !layerConfiguration?.isInverted),
+    [layerName, onChangeLayer, layerConfiguration?.isInverted],
+  );
+  const onSegmentationPatternOpacityChange = useCallback(
+    (value: number) => onChange("segmentationPatternOpacity", value),
+    [onChange],
+  );
+  // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+  if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
+    return null;
+  }
+  const elementClass = getElementClass(dataset, layerName);
+  const { isDisabled, isInEditMode } = layerConfiguration;
+  const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? "100" : "auto",
+    opacity: isDragging ? 0.3 : 1,
+    marginBottom: isLastLayer ? 30 : 0,
+  };
+
+  const opacityLabel =
+    layerConfiguration.alpha === 0 ? (
+      <FastTooltip title="The current opacity is zero">
+        Opacity <WarningOutlined style={{ color: "orange" }} />
+      </FastTooltip>
+    ) : (
+      "Opacity"
+    );
+
+  const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
+  const layerSpecificDefaults = getSpecificDefaultsForLayer(dataset, layerName, isColorLayer);
+
+  return (
+    <div key={layerName} style={style} ref={setNodeRef}>
+      {getLayerSettingsHeader(
+        isDisabled,
+        isColorLayer,
+        isInEditMode,
+        layerName,
+        layerConfiguration,
+        isHistogramAvailable,
+        hasLessThanTwoColorLayers,
+      )}
+      {isDisabled ? null : (
+        <div
+          style={{
+            ...betweenLayersMarginBottom,
+            marginLeft: 10,
+          }}
+        >
+          {isHistogramAvailable && getHistogram(layerName, layerConfiguration)}
+          <NumberSliderSetting
+            label={opacityLabel}
+            min={0}
+            max={100}
+            value={layerConfiguration.alpha}
+            onChange={onAlphaChange}
+            defaultValue={layerSpecificDefaults.alpha}
+          />
+          {isColorLayer
+            ? getColorLayerSpecificSettings(
+                layerConfiguration,
+                onGammaCorrectionValueChange,
+                onColorChange,
+                onIsInvertedChange,
+              )
+            : getSegmentationSpecificSettings(layerName, onSegmentationPatternOpacityChange)}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DatasetSettings: React.FC = () => {
   const dispatch = useDispatch();
 
@@ -678,30 +796,33 @@ const DatasetSettings: React.FC = () => {
     </FastTooltip>
   );
 
-  const getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
-    const { intensityRange, min, max, isInEditMode } = layer;
-    if (!intensityRange) {
-      return null;
-    }
-    const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
-    const histograms = histogramData?.[layerName];
-    const elementClass = getElementClass(dataset, layerName);
+  const getHistogram = useCallback(
+    (layerName: string, layer: DatasetLayerConfiguration) => {
+      const { intensityRange, min, max, isInEditMode } = layer;
+      if (!intensityRange) {
+        return null;
+      }
+      const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
+      const histograms = histogramData?.[layerName];
+      const elementClass = getElementClass(dataset, layerName);
 
-    return (
-      <Histogram
-        supportFractions={elementClass === "float" || elementClass === "double"}
-        data={histograms}
-        intensityRangeMin={intensityRange[0]}
-        intensityRangeMax={intensityRange[1]}
-        min={min}
-        max={max}
-        isInEditMode={isInEditMode}
-        layerName={layerName}
-        defaultMinMax={defaultIntensityRange}
-        reloadHistogram={() => reloadHistogram(layerName)}
-      />
-    );
-  };
+      return (
+        <Histogram
+          supportFractions={elementClass === "float" || elementClass === "double"}
+          data={histograms}
+          intensityRangeMin={intensityRange[0]}
+          intensityRangeMax={intensityRange[1]}
+          min={min}
+          max={max}
+          isInEditMode={isInEditMode}
+          layerName={layerName}
+          defaultMinMax={defaultIntensityRange}
+          reloadHistogram={() => reloadHistogram(layerName)}
+        />
+      );
+    },
+    [dataset, histogramData, reloadHistogram],
+  );
 
   const getLayerSettingsHeader = (
     isDisabled: boolean,
@@ -1039,110 +1160,6 @@ const DatasetSettings: React.FC = () => {
         {segmentationOpacitySetting}
         <HideUnregisteredSegmentsSwitch layerName={layerName} />
         <MappingSettingsView layerName={layerName} />
-      </div>
-    );
-  };
-
-  const LayerSettings = ({
-    layerName,
-    layerConfiguration,
-    isColorLayer,
-    isLastLayer,
-    hasLessThanTwoColorLayers = true,
-  }: {
-    layerName: string;
-    layerConfiguration: DatasetLayerConfiguration | null | undefined;
-    isColorLayer: boolean;
-    isLastLayer: boolean;
-    hasLessThanTwoColorLayers?: boolean;
-  }) => {
-    const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
-    const onAlphaChange = useCallback(
-      (value: number) => onChangeLayer(layerName, "alpha", value),
-      [layerName],
-    );
-
-    const onGammaCorrectionValueChange = useCallback(
-      (value: number) => onChangeLayer(layerName, "gammaCorrectionValue", value),
-      [layerName],
-    );
-    const onColorChange = useCallback(
-      (value: Vector3) => onChangeLayer(layerName, "color", value),
-      [layerName],
-    );
-    const onIsInvertedChange = useCallback(
-      () => onChangeLayer(layerName, "isInverted", !layerConfiguration?.isInverted),
-      [layerName, layerConfiguration?.isInverted],
-    );
-    const onSegmentationPatternOpacityChange = useCallback(
-      (value: number) => onChange("segmentationPatternOpacity", value),
-      [],
-    );
-    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
-    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
-      return null;
-    }
-    const elementClass = getElementClass(dataset, layerName);
-    const { isDisabled, isInEditMode } = layerConfiguration;
-    const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      zIndex: isDragging ? "100" : "auto",
-      opacity: isDragging ? 0.3 : 1,
-      marginBottom: isLastLayer ? 30 : 0,
-    };
-
-    const opacityLabel =
-      layerConfiguration.alpha === 0 ? (
-        <FastTooltip title="The current opacity is zero">
-          Opacity <WarningOutlined style={{ color: "orange" }} />
-        </FastTooltip>
-      ) : (
-        "Opacity"
-      );
-
-    const isHistogramAvailable = isHistogramSupported(elementClass) && isColorLayer;
-    const layerSpecificDefaults = getSpecificDefaultsForLayer(dataset, layerName, isColorLayer);
-
-    return (
-      <div key={layerName} style={style} ref={setNodeRef}>
-        {getLayerSettingsHeader(
-          isDisabled,
-          isColorLayer,
-          isInEditMode,
-          layerName,
-          layerConfiguration,
-          isHistogramAvailable,
-          hasLessThanTwoColorLayers,
-        )}
-        {isDisabled ? null : (
-          <div
-            style={{
-              ...betweenLayersMarginBottom,
-              marginLeft: 10,
-            }}
-          >
-            {isHistogramAvailable && getHistogram(layerName, layerConfiguration)}
-            <NumberSliderSetting
-              label={opacityLabel}
-              min={0}
-              max={100}
-              value={layerConfiguration.alpha}
-              onChange={onAlphaChange}
-              defaultValue={layerSpecificDefaults.alpha}
-            />
-            {isColorLayer
-              ? getColorLayerSpecificSettings(
-                  layerConfiguration,
-                  onGammaCorrectionValueChange,
-                  onColorChange,
-                  onIsInvertedChange,
-                )
-              : getSegmentationSpecificSettings(layerName, onSegmentationPatternOpacityChange)}
-          </div>
-        )}
       </div>
     );
   };
@@ -1568,23 +1585,37 @@ const DatasetSettings: React.FC = () => {
   const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
     return (
       <LayerSettings
+        onChange={onChange}
         key={layerName}
         layerName={layerName}
         layerConfiguration={layers[layerName]}
         isColorLayer
+        getLayerSettingsHeader={getLayerSettingsHeader}
         isLastLayer={index === colorLayerOrder.length - 1}
         hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+        onChangeLayer={onChangeLayer}
+        dataset={dataset}
+        getHistogram={getHistogram}
+        getColorLayerSpecificSettings={getColorLayerSpecificSettings}
+        getSegmentationSpecificSettings={getSegmentationSpecificSettings}
       />
     );
   });
   const segmentationLayerSettings = segmentationLayerNames.map((layerName, index) => {
     return (
       <LayerSettings
+        onChange={onChange}
+        onChangeLayer={onChangeLayer}
+        dataset={dataset}
         key={layerName}
         layerName={layerName}
+        getLayerSettingsHeader={getLayerSettingsHeader}
         isLastLayer={index === segmentationLayerNames.length - 1}
         layerConfiguration={layers[layerName]}
         isColorLayer={false}
+        getHistogram={getHistogram}
+        getColorLayerSpecificSettings={getColorLayerSpecificSettings}
+        getSegmentationSpecificSettings={getSegmentationSpecificSettings}
       />
     );
   });

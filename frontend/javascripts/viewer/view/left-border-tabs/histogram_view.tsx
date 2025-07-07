@@ -241,16 +241,6 @@ const Histogram: React.FC<Props> = (props) => {
       : roundTo(value, getPrecision()).toString();
   };
 
-  const updateMinimumDebounced = useCallback(
-    debounce((value, layerName) => onChangeLayer(layerName, "min", value), 500),
-    [],
-  );
-
-  const updateMaximumDebounced = useCallback(
-    debounce((value, layerName) => onChangeLayer(layerName, "max", value), 500),
-    [],
-  );
-
   const maybeWarning =
     data === null ? (
       <Alert
@@ -329,7 +319,7 @@ const Histogram: React.FC<Props> = (props) => {
 
                   if (value <= maxRange) {
                     setCurrentMin(value);
-                    updateMinimumDebounced(value, layerName);
+                    onChangeLayer(layerName, "min", value);
                   }
                 }}
                 style={minMaxInputStyle}
@@ -362,7 +352,7 @@ const Histogram: React.FC<Props> = (props) => {
 
                   if (value >= minRange) {
                     setCurrentMax(value);
-                    updateMaximumDebounced(value, layerName);
+                    onChangeLayer(layerName, "max", value);
                   }
                 }}
                 style={minMaxInputStyle}

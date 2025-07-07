@@ -18,6 +18,11 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 
+  // Cannot read type names from the hdf5 file due to a limitation in jhdf5.
+  // However, all existing hdf5 connectome files have this exact type name set.
+  // Also compare https://scm.slack.com/archives/C5AKLAV0B/p1750852209211939?thread_ts=1705502230.128199&cid=C5AKLAV0B
+  private lazy val legacySynapseTypeNames = List("dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse")
+
   def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext): Fox[String] =
     for {
       cachedConnectomeFile <- fileHandleCache
@@ -114,13 +119,12 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       // Hard coded type name list, as all legacy files have this value.
-      typeNames = List("dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse")
       synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keySynapseTypes, 1, synapseId)
         }.flatMap(_.headOption.toFox)
       }
-    } yield SynapseTypesWithLegend(synapseTypes, typeNames)
+    } yield SynapseTypesWithLegend(synapseTypes, legacySynapseTypeNames)
 
   def synapseIdsForDirectedPair(connectomeFileKey: ConnectomeFileKey, srcAgglomerateId: Long, dstAgglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[Seq[Long]] =

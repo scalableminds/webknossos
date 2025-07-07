@@ -70,7 +70,7 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
       groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON).readBytes()
       segmentIndexFileAttributes <- JsonHelper
         .parseAs[SegmentIndexFileAttributes](groupHeaderBytes)
-        .toFox ?~> "Could not parse segment index file attributes from zarr group file"
+        .toFox ?~> "Could not parse segment index file attributes from zarr group file."
     } yield segmentIndexFileAttributes
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,

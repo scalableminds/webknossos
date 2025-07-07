@@ -59,7 +59,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
           groupHeaderBytes <- (groupVaultPath / ConnectomeFileAttributes.FILENAME_ZARR_JSON).readBytes()
           connectomeFileAttributes <- JsonHelper
             .parseAs[ConnectomeFileAttributes](groupHeaderBytes)
-            .toFox ?~> "Could not parse connectome file attributes from zarr group file"
+            .toFox ?~> "Could not parse connectome file attributes from zarr group file."
         } yield connectomeFileAttributes
     )
 
@@ -90,7 +90,7 @@ class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteS
       arraySynapsePositions <- openZarrArray(connectomeFileKey, keySynapsePositions)
       synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         for {
-          synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3)) // TODO should offset and shape be transposed?
+          synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3))
           synapsePosition <- tryo(
             Seq(synapsePositionMA.getLong(0), synapsePositionMA.getLong(1), synapsePositionMA.getLong(2))).toFox
         } yield synapsePosition

@@ -75,7 +75,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
       groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON).readBytes()
       meshFileAttributes <- JsonHelper
         .parseAs[MeshFileAttributes](groupHeaderBytes)
-        .toFox ?~> "Could not parse meshFile attributes from zarr group file"
+        .toFox ?~> "Could not parse meshFile attributes from zarr group file."
     } yield meshFileAttributes
 
   private def readMeshFileAttributes(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,

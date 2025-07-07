@@ -38,7 +38,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
-} from "viewer/model/sagas/save_saga_constants";
+} from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { determineLayout } from "viewer/view/layouting/default_layout_configs";
@@ -48,7 +48,7 @@ import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
-import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
+import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.

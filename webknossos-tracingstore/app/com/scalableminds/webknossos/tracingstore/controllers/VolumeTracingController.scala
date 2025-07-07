@@ -144,7 +144,11 @@ class VolumeTracingController @Inject()(
           val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
             mergedTracingRaw <- volumeTracingService
-              .merge(tracingsFlat, MergedVolumeStats.empty(shouldCreateSegmentIndex), None, newVersion = 0L)
+              .merge(tracingsFlat,
+                     MergedVolumeStats.empty(shouldCreateSegmentIndex),
+                     None,
+                     newVersion = 0L,
+                     additionalBoundingBoxes = Seq.empty)
               .toFox
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)

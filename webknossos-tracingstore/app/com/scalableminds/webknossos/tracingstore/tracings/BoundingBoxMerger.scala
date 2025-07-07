@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBoxProto => ProtoNamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto => ProtoBoundingBox}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
@@ -26,18 +26,18 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
 
   protected def combineUserBoundingBoxes(singleBoundingBoxAOpt: Option[ProtoBoundingBox],
                                          singleBoundingBoxBOpt: Option[ProtoBoundingBox],
-                                         userBoundingBoxesA: Seq[ProtoNamedBoundingBox],
-                                         userBoundingBoxesB: Seq[ProtoNamedBoundingBox],
-  ): (Seq[ProtoNamedBoundingBox], UserBboxIdMap, UserBboxIdMap) = {
+                                         userBoundingBoxesA: Seq[NamedBoundingBoxProto],
+                                         userBoundingBoxesB: Seq[NamedBoundingBoxProto],
+  ): (Seq[NamedBoundingBoxProto], UserBboxIdMap, UserBboxIdMap) = {
     // note that the singleBoundingBox field is deprecated but still supported here to avoid database evolutions
     val singleBoundingBoxANamed =
-      singleBoundingBoxAOpt.map(bb => (ProtoNamedBoundingBox(0, boundingBox = bb), BoundingBoxSource.singleA))
+      singleBoundingBoxAOpt.map(bb => (NamedBoundingBoxProto(0, boundingBox = bb), BoundingBoxSource.singleA))
     val singleBoundingBoxBNamed =
-      singleBoundingBoxBOpt.map(bb => (ProtoNamedBoundingBox(0, boundingBox = bb), BoundingBoxSource.singleB))
+      singleBoundingBoxBOpt.map(bb => (NamedBoundingBoxProto(0, boundingBox = bb), BoundingBoxSource.singleB))
 
-    val allBoundingBoxes: Seq[(ProtoNamedBoundingBox, BoundingBoxSource.Value)] = userBoundingBoxesA.map(
+    val allBoundingBoxes: Seq[(NamedBoundingBoxProto, BoundingBoxSource.Value)] = userBoundingBoxesA.map(
       (_, BoundingBoxSource.userA)) ++ userBoundingBoxesB.map((_, BoundingBoxSource.userB)) ++ singleBoundingBoxANamed ++ singleBoundingBoxBNamed
-    val newBoxesAndPrevIds: Seq[(ProtoNamedBoundingBox, BoundingBoxSource.Value, Int)] =
+    val newBoxesAndPrevIds: Seq[(NamedBoundingBoxProto, BoundingBoxSource.Value, Int)] =
       allBoundingBoxes.distinctBy(_._1.copy(id = 0)).zipWithIndex.map {
         case ((uBB, source), idx) => (uBB.copy(id = idx), source, uBB.id)
       }
@@ -52,6 +52,16 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
     }.toMap
     val newBoxes = newBoxesAndPrevIds.map(_._1)
     (newBoxes, idMapA, idMapB)
+  }
+
+  protected def addAdditionalBoundingBoxes(
+      originalBoundingBoxes: Seq[NamedBoundingBoxProto],
+      additionalBoundingBoxes: Seq[NamedBoundingBox]): Seq[NamedBoundingBoxProto] = {
+    val idOffset = originalBoundingBoxes.map(_.id).maxOption.getOrElse(-1) + 1
+    val additionalAdapted = additionalBoundingBoxes.zipWithIndex.map {
+      case (bb, idx) => bb.copy(id = idx + idOffset).toProto
+    }
+    originalBoundingBoxes ++ additionalAdapted
   }
 
 }

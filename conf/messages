@@ -216,14 +216,9 @@ annotation.notActive=The annotation is not active and cannot be finished
 annotation.reset.failed=Could not reset annotation to base
 annotation.merge.success=Merging successfully done
 annotation.merge.failed=Merging failed
-annotation.merge.failed.compound=Could not merge annotations for compound view
-annotation.transferee.noDatasetAccess=Cannot transfer annotation to a user who has no access to the dataset
-annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.merge.failed.compound=Couldn’t merge annotations for compound view
 annotation.transferee.noDatasetAccess=Cannot transfer annotation to a user who has no access to the dataset
-annotation.timelogging.read.failed=Time
-annotation.write.failed=Could not convert annotation to json
 annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
 annotation.addLayer.explorationalsOnly=Could not add annotation layer because it is only allowed for explorational annotations.
 annotation.addLayer.nameInUse=An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates.
@@ -269,6 +264,8 @@ mesh.file.lookup.failed=Failed to look up mesh file “{0}”
 mesh.file.readVersion.failed=Failed to read format version from file “{0}”
 mesh.file.readMappingName.failed=Failed to read mapping name from mesh file “{0}”
 mesh.meshFileName.required=Trying to load mesh from mesh file, but mesh file name was not supplied.
+
+segmentIndexFile.notFound=Could not find requested segment index file
 
 task.create.noTasks=Zero tasks were requested
 task.create.failed=Failed to create Task

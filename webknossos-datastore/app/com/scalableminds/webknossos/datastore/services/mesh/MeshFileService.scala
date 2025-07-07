@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
-import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
+import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Box
@@ -70,10 +70,10 @@ class MeshFileService @Inject()(config: DataStoreConfig,
                                 neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
                                 remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
-    with Hdf5HashedArrayUtils {
+    with ArrayArtifactHashing {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
-  private val meshesDir = "meshes"
+  private val localMeshesDir = "meshes"
   private val hdf5MeshFileExtension = "hdf5"
 
   private val meshFileKeyCache
@@ -102,7 +102,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
         meshFileName,
         localDatasetDir
           .resolve(dataLayer.name)
-          .resolve(meshesDir)
+          .resolve(localMeshesDir)
           .resolve(meshFileName + "." + hdf5MeshFileExtension)
           .toUri,
         LayerAttachmentDataformat.hdf5
@@ -124,7 +124,7 @@ class MeshFileService @Inject()(config: DataStoreConfig,
     val layerDir =
       dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
     val scannedMeshFileNames = PathUtils
-      .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5MeshFileExtension))
+      .listFiles(layerDir.resolve(localMeshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5MeshFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }

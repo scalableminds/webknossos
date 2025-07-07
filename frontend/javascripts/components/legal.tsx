@@ -127,7 +127,7 @@ export const Privacy: React.FC = () => {
           <h3>Data controller</h3>
           {defaultOrganization != null ? (
             <div key={defaultOrganization.id}>
-              <Markdown>defaultOrganization.additionalInformation</Markdown>
+              <Markdown>{defaultOrganization.additionalInformation}</Markdown>
             </div>
           ) : null}
 

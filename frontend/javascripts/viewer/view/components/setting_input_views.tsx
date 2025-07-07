@@ -25,6 +25,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
@@ -51,82 +52,86 @@ type NumberSliderSettingProps = {
   value: number;
   label: string | React.ReactNode;
   max: number;
-  min: number;
-  step: number;
-  disabled: boolean;
-  spans: Vector3;
+  min?: number;
+  step?: number;
+  disabled?: boolean;
+  spans?: Vector3;
   defaultValue?: number;
   wheelFactor?: number;
 };
-export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
-  static defaultProps = {
-    min: 1,
-    step: 1,
-    disabled: false,
-    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
-  };
+export const NumberSliderSetting = React.memo(function NumberSliderSetting(
+  props: NumberSliderSettingProps,
+) {
+  const {
+    min = 1,
+    step = 1,
+    disabled = false,
+    spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+    value: originalValue,
+    label,
+    max,
+    onChange,
+    defaultValue,
+    wheelFactor: stepSize,
+  } = props;
 
-  _onChange = (_value: number | null) => {
-    if (_value != null && this.isValueValid(_value)) {
-      this.props.onChange(_value);
+  const [value, setValue] = useState(originalValue);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update the debaunced change handler when prop changes
+  const debouncedOnChange = useCallback(_.debounce(onChange, 250), [onChange]);
+
+  const isValueValid = (_value: number | null) =>
+    _.isNumber(_value) && _value >= min && _value <= max;
+
+  const _onChange = (_value: number | null) => {
+    if (_value != null && isValueValid(_value)) {
+      setValue(_value);
+      debouncedOnChange(_value);
     }
   };
 
-  isValueValid = (_value: number | null) =>
-    _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
+  // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
+  // This check guards against broken settings which could be introduced before this component
+  // checked more thoroughly against invalid values.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isValueValid changes on every render
+  useEffect(() => {
+    setValue(isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2));
+  }, [originalValue, min, max]);
 
-  render() {
-    const {
-      value: originalValue,
-      label,
-      max,
-      min,
-      step,
-      onChange,
-      disabled,
-      defaultValue,
-      wheelFactor: stepSize,
-    } = this.props;
-    // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
-    // This check guards against broken settings which could be introduced before this component
-    // checked more thoroughly against invalid values.
-    const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
-    return (
-      <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={this.props.spans[0]}>
-          <label className="setting-label">{label}</label>
-        </Col>
-        <Col span={this.props.spans[1]}>
-          <Slider
-            min={min}
-            max={max}
-            onChange={onChange}
-            value={value}
-            step={step}
-            disabled={disabled}
-            defaultValue={defaultValue}
-            wheelFactor={stepSize}
-          />
-        </Col>
-        <Col span={this.props.spans[2]}>
-          <InputNumber
-            controls={false}
-            min={min}
-            max={max}
-            style={{
-              width: "100%",
-            }}
-            value={value}
-            onChange={this._onChange}
-            size="small"
-            disabled={disabled}
-            variant="borderless"
-          />
-        </Col>
-      </Row>
-    );
-  }
-}
+  return (
+    <Row align="middle" gutter={ROW_GUTTER}>
+      <Col span={spans[0]}>
+        <label className="setting-label">{label}</label>
+      </Col>
+      <Col span={spans[1]}>
+        <Slider
+          min={min}
+          max={max}
+          onChange={_onChange}
+          value={value}
+          step={step}
+          disabled={disabled}
+          defaultValue={defaultValue}
+          wheelFactor={stepSize}
+        />
+      </Col>
+      <Col span={spans[2]}>
+        <InputNumber
+          controls={false}
+          min={min}
+          max={max}
+          style={{
+            width: "100%",
+          }}
+          value={value}
+          onChange={_onChange}
+          size="small"
+          disabled={disabled}
+          variant="borderless"
+        />
+      </Col>
+    </Row>
+  );
+});
 
 type LogSliderSettingProps = {
   onChange: (value: number) => void;
@@ -134,9 +139,9 @@ type LogSliderSettingProps = {
   label: string | React.ReactNode;
   max: number;
   min: number;
-  roundTo: number;
+  roundTo?: number;
   disabled?: boolean;
-  spans: Vector3;
+  spans?: Vector3;
   precision?: number;
   defaultValue?: number;
 };
@@ -144,101 +149,113 @@ type LogSliderSettingProps = {
 const LOG_SLIDER_MIN = -100;
 const LOG_SLIDER_MAX = 100;
 
-export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps> {
-  static defaultProps = {
-    disabled: false,
-    roundTo: 3,
-    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+export const LogSliderSetting = React.memo(function LogSliderSetting(props: LogSliderSettingProps) {
+  const {
+    disabled = false,
+    roundTo = 3,
+    spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+    label,
+    value: originalValue,
+    min,
+    max,
+    onChange,
+    precision,
+    defaultValue,
+  } = props;
+
+  const [value, setValue] = useState(originalValue);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update the debaunced change handler when prop changes
+  const debouncedOnChange = useCallback(_.debounce(onChange, 250), [onChange]);
+
+  const calculateValue = (v: number) => {
+    const a = 200 / (Math.log(max) - Math.log(min));
+    const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
+    return Math.exp((v - b) / a);
   };
 
-  onChangeInput = (value: number | null) => {
-    if (value == null) {
-      return;
-    }
-    if (this.props.min <= value && value <= this.props.max) {
-      this.props.onChange(value);
-    } else {
-      // reset to slider value
-      this.props.onChange(this.props.value);
-    }
-  };
-
-  onChangeSlider = (value: number) => {
-    this.props.onChange(this.calculateValue(value));
-  };
-
-  calculateValue(value: number) {
-    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
-    const b =
-      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
-      (Math.log(this.props.min) - Math.log(this.props.max));
-    return Math.exp((value - b) / a);
-  }
-
-  formatTooltip = (value: number | undefined) => {
-    if (value == null) {
-      return "invalid";
-    }
-    const calculatedValue = this.calculateValue(value);
-    return calculatedValue >= 10000
-      ? calculatedValue.toExponential()
-      : Utils.roundTo(calculatedValue, this.props.roundTo);
-  };
-
-  getSliderValue = () => {
-    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
-    const b =
-      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
-      (Math.log(this.props.min) - Math.log(this.props.max));
-    const scaleValue = a * Math.log(this.props.value) + b;
+  const getSliderValue = (v: number) => {
+    const a = 200 / (Math.log(max) - Math.log(min));
+    const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
+    const scaleValue = a * Math.log(v) + b;
     return Math.round(scaleValue);
   };
 
-  resetToDefaultValue = () => {
-    if (this.props.defaultValue == null) return;
-    this.onChangeInput(this.props.defaultValue);
+  const onChangeInput = (v: number | null) => {
+    if (v == null) {
+      return;
+    }
+    if (min <= v && v <= max) {
+      setValue(v);
+      debouncedOnChange(v);
+    } else {
+      // reset to slider value
+      setValue(value);
+      debouncedOnChange(value);
+    }
   };
 
-  render() {
-    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
-    return (
-      <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={this.props.spans[0]}>
-          <label className="setting-label">{label}</label>
-        </Col>
-        <Col span={this.props.spans[1]}>
-          <Slider
-            min={LOG_SLIDER_MIN}
-            max={LOG_SLIDER_MAX}
-            tooltip={{ formatter: this.formatTooltip }}
-            onChange={this.onChangeSlider}
-            value={this.getSliderValue()}
-            disabled={disabled}
-            defaultValue={defaultValue}
-            onResetToDefault={this.resetToDefaultValue}
-          />
-        </Col>
-        <Col span={this.props.spans[2]}>
-          <InputNumber
-            controls={false}
-            variant={"borderless"}
-            min={min}
-            max={max}
-            style={{
-              width: "100%",
-            }}
-            step={value / 10}
-            precision={this.props.precision ?? 2}
-            value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
-            onChange={this.onChangeInput}
-            disabled={disabled}
-            size="small"
-          />
-        </Col>
-      </Row>
-    );
-  }
-}
+  const onChangeSlider = (v: number) => {
+    const calculatedValue = calculateValue(v);
+    setValue(calculatedValue);
+    debouncedOnChange(calculatedValue);
+  };
+
+  const formatTooltip = (v: number | undefined) => {
+    if (v == null) {
+      return "invalid";
+    }
+    const calculatedValue = calculateValue(v);
+    return calculatedValue >= 10000
+      ? calculatedValue.toExponential()
+      : Utils.roundTo(calculatedValue, roundTo);
+  };
+
+  const resetToDefaultValue = () => {
+    if (defaultValue == null) return;
+    onChangeInput(defaultValue);
+  };
+
+  useEffect(() => {
+    setValue(originalValue);
+  }, [originalValue]);
+
+  return (
+    <Row align="middle" gutter={ROW_GUTTER}>
+      <Col span={spans[0]}>
+        <label className="setting-label">{label}</label>
+      </Col>
+      <Col span={spans[1]}>
+        <Slider
+          min={LOG_SLIDER_MIN}
+          max={LOG_SLIDER_MAX}
+          tooltip={{ formatter: formatTooltip }}
+          onChange={onChangeSlider}
+          value={getSliderValue(value)}
+          disabled={disabled}
+          defaultValue={defaultValue}
+          onResetToDefault={resetToDefaultValue}
+        />
+      </Col>
+      <Col span={spans[2]}>
+        <InputNumber
+          controls={false}
+          variant={"borderless"}
+          min={min}
+          max={max}
+          style={{
+            width: "100%",
+          }}
+          step={value / 10}
+          precision={precision ?? 2}
+          value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
+          onChange={onChangeInput}
+          disabled={disabled}
+          size="small"
+        />
+      </Col>
+    </Row>
+  );
+});
 
 type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;

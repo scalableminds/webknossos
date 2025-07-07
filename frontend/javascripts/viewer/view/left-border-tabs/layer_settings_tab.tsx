@@ -947,9 +947,12 @@ const DatasetSettings: React.FC = () => {
 
   const getColorLayerSpecificSettings = (
     layerConfiguration: DatasetLayerConfiguration,
-    layerName: string,
+    onGammaCorrectionValueChange: (value: number) => void,
+    onColorChange: (value: Vector3) => void,
+    onIsInvertedChange: () => void,
   ) => {
     const defaultSettings = getDefaultLayerViewConfiguration();
+
     return (
       <div>
         <LogSliderSetting
@@ -962,7 +965,7 @@ const DatasetSettings: React.FC = () => {
           max={10}
           roundTo={3}
           value={layerConfiguration.gammaCorrectionValue}
-          onChange={_.partial(onChangeLayer, layerName, "gammaCorrectionValue")}
+          onChange={onGammaCorrectionValueChange}
           defaultValue={defaultSettings.gammaCorrectionValue}
         />
         <Row
@@ -977,7 +980,7 @@ const DatasetSettings: React.FC = () => {
           <Col span={SETTING_MIDDLE_SPAN}>
             <ColorSetting
               value={Utils.rgbToHex(layerConfiguration.color)}
-              onChange={_.partial(onChangeLayer, layerName, "color")}
+              onChange={onColorChange}
               style={{
                 marginLeft: 6,
               }}
@@ -986,13 +989,7 @@ const DatasetSettings: React.FC = () => {
           <Col span={SETTING_VALUE_SPAN}>
             <FastTooltip title="Invert the color of this layer.">
               <div
-                onClick={() =>
-                  onChangeLayer(
-                    layerName,
-                    "isInverted",
-                    layerConfiguration ? !layerConfiguration.isInverted : false,
-                  )
-                }
+                onClick={onIsInvertedChange}
                 style={{
                   top: 4,
                   right: 0,
@@ -1021,7 +1018,10 @@ const DatasetSettings: React.FC = () => {
     );
   };
 
-  const getSegmentationSpecificSettings = (layerName: string) => {
+  const getSegmentationSpecificSettings = (
+    layerName: string,
+    onSegmentationPatternOpacityChange: (value: number) => void,
+  ) => {
     const segmentationOpacitySetting = (
       <NumberSliderSetting
         label={settings.segmentationPatternOpacity}
@@ -1029,7 +1029,7 @@ const DatasetSettings: React.FC = () => {
         max={100}
         step={1}
         value={datasetConfiguration.segmentationPatternOpacity}
-        onChange={_.partial(onChange, "segmentationPatternOpacity")}
+        onChange={onSegmentationPatternOpacityChange}
         defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
     );
@@ -1057,7 +1057,27 @@ const DatasetSettings: React.FC = () => {
     hasLessThanTwoColorLayers?: boolean;
   }) => {
     const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
+    const onAlphaChange = useCallback(
+      (value: number) => onChangeLayer(layerName, "alpha", value),
+      [layerName],
+    );
 
+    const onGammaCorrectionValueChange = useCallback(
+      (value: number) => onChangeLayer(layerName, "gammaCorrectionValue", value),
+      [layerName],
+    );
+    const onColorChange = useCallback(
+      (value: Vector3) => onChangeLayer(layerName, "color", value),
+      [layerName],
+    );
+    const onIsInvertedChange = useCallback(
+      () => onChangeLayer(layerName, "isInverted", !layerConfiguration?.isInverted),
+      [layerName, layerConfiguration?.isInverted],
+    );
+    const onSegmentationPatternOpacityChange = useCallback(
+      (value: number) => onChange("segmentationPatternOpacity", value),
+      [],
+    );
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
@@ -1110,12 +1130,17 @@ const DatasetSettings: React.FC = () => {
               min={0}
               max={100}
               value={layerConfiguration.alpha}
-              onChange={_.partial(onChangeLayer, layerName, "alpha")}
+              onChange={onAlphaChange}
               defaultValue={layerSpecificDefaults.alpha}
             />
             {isColorLayer
-              ? getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : getSegmentationSpecificSettings(layerName)}
+              ? getColorLayerSpecificSettings(
+                  layerConfiguration,
+                  onGammaCorrectionValueChange,
+                  onColorChange,
+                  onIsInvertedChange,
+                )
+              : getSegmentationSpecificSettings(layerName, onSegmentationPatternOpacityChange)}
           </div>
         )}
       </div>

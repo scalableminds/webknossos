@@ -173,7 +173,7 @@ class ZarrStreamingService @Inject()(
       dataSource: DataSource,
       dataLayer: DataLayer,
       zarrVersion: Int
-  )(implicit m: MessagesProvider): Fox[List[String]] =
+  ): Fox[List[String]] =
     for {
       _ <- Fox.successful(())
       mags = dataLayer.sortedMags

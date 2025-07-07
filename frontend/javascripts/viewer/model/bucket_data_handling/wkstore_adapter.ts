@@ -20,8 +20,8 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_converter";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
-import { updateBucket } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
+import { updateBucket } from "viewer/model/sagas/volume/update_actions";
 import type { DataLayerType, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ByteArraysToLz4Base64Worker from "viewer/workers/byte_arrays_to_lz4_base64.worker";

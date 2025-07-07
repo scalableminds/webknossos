@@ -240,13 +240,13 @@ function TaskTypeListView({ initialSearchValue }: Props) {
               <span>
                 <Link
                   to={`/annotations/CompoundTaskType/${taskType.id}`}
-                  title="Show a compound annotation of all finished tasks for this taskType"
+                  title="Show Compound Annotation of All Finished Annotations"
                 >
                   <EyeOutlined className="icon-margin-right" />
-                  View merged
+                  View Merged
                 </Link>
                 <br />
-                <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit Task Type">
                   <EditOutlined className="icon-margin-right" />
                   Edit
                 </Link>
@@ -267,7 +267,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
                     const includesVolumeData = taskType.tracingType !== "skeleton";
                     return downloadAnnotation(taskType.id, "CompoundTaskType", includesVolumeData);
                   }}
-                  title="Download all Finished Annotations"
+                  title="Download All Finished Annotations"
                   icon={<DownloadOutlined className="icon-margin-right" />}
                 >
                   Download

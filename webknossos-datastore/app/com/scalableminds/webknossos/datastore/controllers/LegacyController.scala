@@ -12,38 +12,12 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
-import com.scalableminds.webknossos.datastore.models.{
-  DataRequest,
-  RawCuboidRequest,
-  VoxelPosition,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  DataLayer,
-  DataSourceId,
-  GenericDataSource,
-  SegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.{DataRequest, RawCuboidRequest, VoxelPosition, WebknossosAdHocMeshRequest, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId, GenericDataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
-import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  BinaryDataServiceHolder,
-  DSRemoteTracingstoreClient,
-  DSRemoteWebknossosClient,
-  DataSourceRepository,
-  DataStoreAccessTokenService,
-  FindDataService,
-  MappingService,
-  UserAccessRequest,
-  ZarrStreamingService
-}
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, BinaryDataServiceHolder, DSRemoteTracingstoreClient, DSRemoteWebknossosClient, DataSourceRepository, DataStoreAccessTokenService, FindDataService, UserAccessRequest, ZarrStreamingService}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -60,8 +34,8 @@ class LegacyController @Inject()(
     binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     remoteTracingstoreClient: DSRemoteTracingstoreClient,
-    config: DataStoreConfig,
     mappingService: MappingService,
+    config: DataStoreConfig,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
     findDataService: FindDataService,

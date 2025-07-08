@@ -67,10 +67,11 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
       tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     for {
       groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(segmentIndexFileKey.attachment)
-      groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON).readBytes()
+      groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON)
+        .readBytes() ?~> "Could not read segment index file zarr group file"
       segmentIndexFileAttributes <- JsonHelper
         .parseAs[SegmentIndexFileAttributes](groupHeaderBytes)
-        .toFox ?~> "Could not parse segment index file attributes from zarr group file"
+        .toFox ?~> "Could not parse segment index file attributes from zarr group file."
     } yield segmentIndexFileAttributes
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,

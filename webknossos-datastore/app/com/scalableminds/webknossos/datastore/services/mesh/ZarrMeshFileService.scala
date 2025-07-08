@@ -72,10 +72,11 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
                                                                    tc: TokenContext): Fox[MeshFileAttributes] =
     for {
       groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
-      groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON).readBytes()
+      groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON)
+        .readBytes() ?~> "Could not read mesh file zarr group file"
       meshFileAttributes <- JsonHelper
         .parseAs[MeshFileAttributes](groupHeaderBytes)
-        .toFox ?~> "Could not parse meshFile attributes from zarr group file"
+        .toFox ?~> "Could not parse meshFile attributes from zarr group file."
     } yield meshFileAttributes
 
   private def readMeshFileAttributes(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,

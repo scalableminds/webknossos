@@ -849,58 +849,6 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
 }
 `;
 
-exports[`Annotation API (E2E) > Send update actions and compare resulting tracing 1`] = `
-{
-  "additionalAxes": [],
-  "createdTimestamp": "createdTimestamp",
-  "editPosition": {
-    "x": 256,
-    "y": 256,
-    "z": 128,
-  },
-  "editPositionAdditionalCoordinates": [],
-  "editRotation": {
-    "x": 0,
-    "y": 0,
-    "z": 0,
-  },
-  "id": "id",
-  "storedWithExternalTreeBodies": true,
-  "treeGroups": [],
-  "trees": [],
-  "typ": "Skeleton",
-  "userBoundingBoxes": [],
-  "userStates": [
-    {
-      "boundingBoxIds": [],
-      "boundingBoxVisibilities": [],
-      "treeGroupExpandedStates": [],
-      "treeGroupIds": [],
-      "treeIds": [],
-      "treeVisibilities": [],
-      "userId": "dummy-user-id",
-    },
-  ],
-  "zoomLevel": 2,
-}
-`;
-
-exports[`Annotation API (E2E) > Send update actions and compare resulting tracing 2`] = `
-{
-  "annotationLayers": [
-    {
-      "name": "Skeleton",
-      "tracingId": "tracingId",
-      "typ": "Skeleton",
-    },
-  ],
-  "description": "",
-  "earliestAccessibleVersion": 0,
-  "userStates": [],
-  "version": 1,
-}
-`;
-
 exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
 {
   "additionalAxes": [],

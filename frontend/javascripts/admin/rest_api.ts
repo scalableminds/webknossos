@@ -2047,7 +2047,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
     params.set("token", token);
     return Utils.retryAsyncFunction(() => {
       counter++;
-      const brokenSuffix = counter % 2 === 1 ? "broken" : "broken2";
+      const brokenSuffix = counter % 2 === 1 || "alwaysFail" in window ? "broken" : "";
       console.log("brokenSuffix", brokenSuffix);
       return Request.receiveArraybuffer(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments${brokenSuffix}?${params}`,

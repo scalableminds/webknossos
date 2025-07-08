@@ -228,6 +228,7 @@ class AuthenticationController @Inject()(
     conf.WebKnossos.User.ssoKey
 
   private lazy val origin = new Origin(conf.Http.uri)
+  private lazy val usesHttps = conf.Http.uri.startsWith("https://")
   private lazy val webAuthnPubKeyParams = Array(
     // COSE Algorithm: EdDSA
     WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
@@ -585,6 +586,7 @@ class AuthenticationController @Inject()(
   def webauthnAuthStart(): Action[AnyContent] = Action.async { implicit request =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+      _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
       sessionId = UUID.randomUUID().toString
       cookie = Cookie(name = "webauthn-session",
                       value = sessionId,
@@ -609,6 +611,7 @@ class AuthenticationController @Inject()(
     implicit request =>
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
@@ -648,6 +651,7 @@ class AuthenticationController @Inject()(
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+      _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
@@ -693,6 +697,7 @@ class AuthenticationController @Inject()(
     sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
@@ -705,7 +710,7 @@ class AuthenticationController @Inject()(
         registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
         _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
         attestation = registrationData.getAttestationObject
-        credentialRecord = new WebAuthnCredentialRecord( // TODO: Rename or minimal custom implementation
+        credentialRecord = new WebAuthnCredentialRecord(
           attestation.getAttestationStatement,
           null, // User Verification not used
           null, // Backup not used

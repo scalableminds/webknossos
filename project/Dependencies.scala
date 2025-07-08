@@ -104,7 +104,7 @@ object Dependencies {
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % "42.7.5",
-    /// WebAuthn Dependencies
+    /// WebAuthn for passkey authentication. import com.webauthn4j
     "com.webauthn4j" % "webauthn4j-core" % "0.29.3.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
   )
 

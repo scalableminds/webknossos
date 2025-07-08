@@ -148,7 +148,7 @@ object WebAuthnCreationOptionsUser {
   *  Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions
   *
   *  Omitted:
-  *  - allowCredentials: No restrictions on credentials
+  *  - allowCredentials: Not necessary, because we use client discoverable credentials
   *  - extensions: Not used
   */
 case class WebAuthnPublicKeyCredentialRequestOptions(
@@ -229,7 +229,7 @@ class AuthenticationController @Inject()(
 
   private lazy val origin = new Origin(conf.Http.uri)
   private lazy val webAuthnPubKeyParams = Array(
-    // COSE Algorithm: Ed25519
+    // COSE Algorithm: EdDSA
     WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
     // COSE Algorithm: ES256
     WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),

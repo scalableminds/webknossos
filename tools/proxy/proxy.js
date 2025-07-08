@@ -9,8 +9,8 @@ const https = require("https");
 const time5min = 5 * 60 * 1000;
 
 const proxy = httpProxy.createProxyServer({
-  proxyTimeout: time5min, // 5 min
-  timeout: time5min, // 5 min
+  proxyTimeout: time5min,
+  timeout: time5min,
 });
 
 const app = express();

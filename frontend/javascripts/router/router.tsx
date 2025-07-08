@@ -135,7 +135,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/import"
       element={
-        <SecuredRoute>
+        <SecuredRoute requiresAdminOrManagerRole>
           <DatasetURLImport />
         </SecuredRoute>
       }
@@ -159,7 +159,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/reports/projectProgress"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <ProjectProgressReportView />
         </SecuredRoute>
       }
@@ -168,7 +168,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/reports/availableTasks"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <AvailableTasksReportView />
         </SecuredRoute>
       }
@@ -176,7 +176,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/tasks"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskListView />
         </SecuredRoute>
       }
@@ -184,7 +184,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/tasks/create"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskCreateView />
         </SecuredRoute>
       }
@@ -192,7 +192,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/tasks/:taskId/edit"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskCreateFormView />
         </SecuredRoute>
       }
@@ -200,7 +200,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/tasks/:taskId"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskListView />
         </SecuredRoute>
       }
@@ -208,7 +208,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/projects"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <ProjectListView />
         </SecuredRoute>
       }
@@ -216,7 +216,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/projects/create"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <ProjectCreateView />
         </SecuredRoute>
       }
@@ -224,7 +224,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/projects/:projectId/tasks"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskListView />
         </SecuredRoute>
       }
@@ -232,7 +232,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/projects/:projectId/edit"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <ProjectCreateView />
         </SecuredRoute>
       }
@@ -289,7 +289,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/taskTypes/:taskTypeId/edit"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskTypeCreateView />
         </SecuredRoute>
       }
@@ -297,7 +297,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/taskTypes/:taskTypeId/tasks"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <TaskListView />
         </SecuredRoute>
       }
@@ -305,7 +305,7 @@ const routes = createRoutesFromElements(
     <Route
       path="/taskTypes/:taskTypeId/projects"
       element={
-        <SecuredRoute requiredPricingPlan={PricingPlanEnum.Team} requiresAdminOrManagerRole>
+        <SecuredRoute requiresAdminOrManagerRole requiredPricingPlan={PricingPlanEnum.Team}>
           <ProjectListView />
         </SecuredRoute>
       }

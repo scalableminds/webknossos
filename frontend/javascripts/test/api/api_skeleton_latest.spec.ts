@@ -5,11 +5,23 @@ import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_action
 import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { OrthoBaseRotations, OrthoViews, OrthoViewToNumber, type Vector3 } from "viewer/constants";
+import {
+  OrthoBaseRotations,
+  OrthoViews,
+  OrthoViewToNumber,
+  OrthoViewValuesWithoutTDView,
+  type Vector3,
+} from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import * as THREE from "three";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "viewer/model/helpers/rotation_helpers";
+import testRotations from "test/fixtures/test_rotations";
+import { map3 } from "libs/utils";
 
 const toRadian = (arr: Vector3): Vector3 => [
   THREE.MathUtils.degToRad(arr[0]),
@@ -380,42 +392,47 @@ describe("API Skeleton", () => {
       mag: 0,
     });
   });
-  // TODOM: Try figure out why these tests need to compare the quaternions differently.
-  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in XY viewport.", ({
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in all three viewports.", ({
     api,
   }) => {
-    const rotation = [20, 90, 10] as Vector3;
-    const rotationQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(rotation)),
-    );
-    Store.dispatch(setRotationAction(rotation));
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
-    api.tracing.createNode([10, 10, 10]);
-    const newNode = enforceSkeletonTracing(Store.getState().annotation)
-      .trees.getOrThrow(2)
-      .nodes.getOrThrow(4);
-    const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(newNode.rotation)),
-    );
-    expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
-  });
-  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated  in YZ viewport.", ({
-    api,
-  }) => {
-    const rotation = [20, 90, 0] as Vector3;
-    const rotationQuaternion = new THREE.Quaternion()
-      .setFromEuler(new THREE.Euler(...toRadian([-rotation[0], -rotation[1], -rotation[2]]), "ZYX"))
-      // Apply viewport's default rotation.
-      .multiply(new THREE.Quaternion().setFromEuler(OrthoBaseRotations[OrthoViews.PLANE_YZ]));
-    Store.dispatch(setRotationAction(rotation));
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
-    api.tracing.createNode([10, 10, 10]);
-    const newNode = enforceSkeletonTracing(Store.getState().annotation)
-      .trees.getOrThrow(2)
-      .nodes.getOrThrow(4);
-    const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...toRadian(newNode.rotation)),
-    );
-    expect(rotationQuaternion.angleTo(newNodeQuaternion)).toBeLessThan(0.000001);
+    for (const testRotation of testRotations) {
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        const rotationInRadian = toRadian(testRotation);
+        // eulerAngleToReducerInternalMatrix and reducerInternalMatrixToEulerAngle are tested in rotation_helpers.spec.ts.
+        // Calculate expected rotation and make it a quaternion for equal comparison.
+        const rotationMatrix = eulerAngleToReducerInternalMatrix(rotationInRadian);
+        const rotationMatrixWithViewport = rotationMatrix.multiply(
+          new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[planeId]),
+        );
+        const resultingAngle = reducerInternalMatrixToEulerAngle(rotationMatrixWithViewport);
+        const rotationQuaternion = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(...resultingAngle),
+        );
+        // Test node creation.
+        Store.dispatch(setRotationAction(testRotation));
+        Store.dispatch(setViewportAction(planeId));
+        api.tracing.createNode([10, 10, 10], { activate: true });
+        const { activeTreeId, activeNodeId } = Store.getState().annotation.skeleton || {
+          activeTreeId: null,
+          activeNodeId: null,
+        };
+        expect(activeTreeId).not.toBeNull();
+        expect(activeNodeId).not.toBeNull();
+        if (!activeNodeId || !activeTreeId) {
+          throw new Error("Satisfy TS. The assertion above should already report this.");
+        }
+        console.error({ activeTreeId, activeNodeId });
+        const newNode = enforceSkeletonTracing(Store.getState().annotation)
+          .trees.getOrThrow(activeTreeId)
+          .nodes.getOrThrow(activeNodeId);
+        const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(...toRadian(newNode.rotation)),
+        );
+        expect(
+          rotationQuaternion.angleTo(newNodeQuaternion),
+          `Node rotation ${newNode.rotation} is not nearly equal to ${map3(THREE.MathUtils.radToDeg, resultingAngle)} in viewport ${planeId}.`,
+        ).toBeLessThan(0.000001);
+      }
+    }
   });
 });

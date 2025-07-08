@@ -11,6 +11,7 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
+import type { BlockerFunction } from "react-router-dom";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
@@ -133,31 +134,37 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const saveBeforeNavigationToOtherPage = () => {
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean => {
       // Navigation blocking can be triggered by two sources:
       // 1. The browser's native beforeunload event
       // 2. The React-Router block function (useBlocker or withBlocker HOC)
-      // In both cases, we try to save the annotation before leaving the page.
+
       if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+
         setTimeout(() => {
           if (!this._isMounted) {
-            return;
+            return false;
           }
 
           Store.dispatch(saveNowAction());
+          // restore the event handler in case a user chose to stay on the page
+          // @ts-ignore
+          window.onbeforeunload = beforeUnload;
         }, 500);
+
+        // The native event requires a truthy return value to show a generic message
+        // The React Router blocker accepts a boolean
+        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
+
+      return false;
     };
 
-    window.onbeforeunload = (_evt: BeforeUnloadEvent) => {
-      saveBeforeNavigationToOtherPage();
-      return messages["save.leave_page_unfinished"];
-    };
+    window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      shouldBlock: () => {
-        saveBeforeNavigationToOtherPage();
-        return !window.confirm(messages["save.leave_page_unfinished"]);
-      },
+      // @ts-ignore beforeUnload signature is overloaded
+      shouldBlock: beforeUnload,
     });
 
     UrlManager.startUrlUpdater();

@@ -2,10 +2,10 @@ import type React from "react";
 import { forwardRef, useState } from "react";
 import { type Blocker, type BlockerFunction, useBlocker } from "react-router-dom";
 
-export interface WithBlockerProps {
+export type WithBlockerProps = {
   setBlocking: ({ shouldBlock }: { shouldBlock: boolean | BlockerFunction }) => void;
   blocker: Blocker;
-}
+};
 
 /**
  * Higher-Order Component that provides useBlocker functionality to class components
@@ -14,7 +14,7 @@ export interface WithBlockerProps {
  * @returns Enhanced component with blocker functionality
  */
 export function withBlocker<TProps extends WithBlockerProps>(
-  WrappedComponent: React.ComponentType<TProps & WithBlockerProps>,
+  WrappedComponent: React.ComponentType<TProps>,
 ): React.ForwardRefExoticComponent<React.PropsWithoutRef<TProps> & React.RefAttributes<any>> {
   const WithBlockerComponent = forwardRef<any, TProps>((props, ref) => {
     // State to control blocking behavior

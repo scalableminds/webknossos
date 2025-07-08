@@ -61,7 +61,7 @@ import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
-import { Link } from "react-router-dom";
+import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
   APIJobType,
@@ -215,7 +215,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     unfinishedUploadToContinue: null,
   };
 
-  unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
   formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
 
@@ -271,10 +270,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       clearTimeout(this.blockTimeoutId);
       this.blockTimeoutId = null;
     }
-
-    if (this.unblock != null) {
-      this.unblock();
-    }
   }
 
   getDatastoreForUrl(url: string): APIDataStore | null | undefined {
@@ -296,42 +291,33 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    // // @ts-ignore newLocation, action are implicit any
-    // const beforeUnload = (newLocation, action): string | false | void => {
-    //   // Only show the prompt if this is a proper beforeUnload event from the browser
-    //   // or the pathname changed
-    //   // This check has to be done because history.block triggers this function even if only the url hash changed
-    //   if (action === undefined || newLocation.pathname !== window.location.pathname) {
-    //     const { isUploading } = this.state;
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean => {
+      // Navigation blocking can be triggered by two sources:
+      // 1. The browser's native beforeunload event
+      // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-    //     if (isUploading) {
-    //       window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+      if (this.state.isUploading) {
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
-    //       this.blockTimeoutId = window.setTimeout(() => {
-    //         // restore the event handler in case a user chose to stay on the page
-    //         // @ts-ignore
-    //         window.onbeforeunload = beforeUnload;
-    //       }, 500);
-    //       return messages["dataset.leave_during_upload"];
-    //     }
-    //   }
+        this.blockTimeoutId = window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
+        // The native event requires a truthy return value to show a generic message
+        // The React Router blocker accepts a boolean
+        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
+      }
 
-    //   return;
-    // };
+      return false;
+    };
+
     const { unfinishedUploadToContinue } = this.state;
 
+    window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // Block React Router from navigating away to another WK React view while uploading
-      shouldBlock: () => {
-        return this.state.isUploading && !window.confirm(messages["dataset.leave_during_upload"]);
-      },
+      // @ts-ignore beforeUnload signature is overloaded
+      shouldBlock: beforeUnload,
     });
-    window.onbeforeunload = (_evt: BeforeUnloadEvent) => {
-      // Block native browser from leaving the page to external websites while uploading
-      if (this.state.isUploading) {
-        return messages["dataset.leave_during_upload"];
-      }
-    };
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));

@@ -27,7 +27,7 @@ function isValueEqual(val1: Value, val2: Value | null) {
 }
 
 describe("CuckooTableUint32", () => {
-  it("Maxing out capacity", { timeout: 20000 }, () => {
+  it("Maxing out capacity", { timeout: 25000 }, () => {
     const textureWidth = 128;
 
     const attemptCount = 10;

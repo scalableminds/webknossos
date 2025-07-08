@@ -55,6 +55,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
+import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
@@ -94,7 +95,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   organization: APIOrganization;
 };
-type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps;
+type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps & WithBlockerProps;
 type State = {
   isUploading: boolean;
   isFinishing: boolean;
@@ -264,6 +265,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblockHistory() {
     window.onbeforeunload = null;
+    this.props.blocker.reset ? this.props.blocker.reset() : void 0;
 
     if (this.blockTimeoutId != null) {
       clearTimeout(this.blockTimeoutId);
@@ -294,32 +296,42 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    // @ts-ignore newLocation, action are implicit any
-    const beforeUnload = (newLocation, action): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        const { isUploading } = this.state;
+    // // @ts-ignore newLocation, action are implicit any
+    // const beforeUnload = (newLocation, action): string | false | void => {
+    //   // Only show the prompt if this is a proper beforeUnload event from the browser
+    //   // or the pathname changed
+    //   // This check has to be done because history.block triggers this function even if only the url hash changed
+    //   if (action === undefined || newLocation.pathname !== window.location.pathname) {
+    //     const { isUploading } = this.state;
 
-        if (isUploading) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+    //     if (isUploading) {
+    //       window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
-          this.blockTimeoutId = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["dataset.leave_during_upload"];
-        }
-      }
+    //       this.blockTimeoutId = window.setTimeout(() => {
+    //         // restore the event handler in case a user chose to stay on the page
+    //         // @ts-ignore
+    //         window.onbeforeunload = beforeUnload;
+    //       }, 500);
+    //       return messages["dataset.leave_during_upload"];
+    //     }
+    //   }
 
-      return;
-    };
+    //   return;
+    // };
     const { unfinishedUploadToContinue } = this.state;
 
-    // @ts-ignore
-    window.onbeforeunload = beforeUnload;
+    this.props.setBlocking({
+      // Block React Router from navigating away to another WK React view while uploading
+      shouldBlock: () => {
+        return this.state.isUploading && !window.confirm(messages["dataset.leave_during_upload"]);
+      },
+    });
+    window.onbeforeunload = (_evt: BeforeUnloadEvent) => {
+      // Block native browser from leaving the page to external websites while uploading
+      if (this.state.isUploading) {
+        return messages["dataset.leave_during_upload"];
+      }
+    };
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
@@ -1369,4 +1381,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<PropsWithFormAndRouter>(DatasetUploadView));
+export default connector(withBlocker(withRouter<PropsWithFormAndRouter>(DatasetUploadView)));

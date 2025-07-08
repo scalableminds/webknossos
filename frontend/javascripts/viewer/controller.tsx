@@ -4,7 +4,8 @@ import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { document } from "libs/window";
+import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
@@ -41,7 +42,7 @@ type StateProps = {
   user: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & RouteComponentProps;
+type PropsWithRouter = Props & RouteComponentProps & WithBlockerProps;
 type State = {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
@@ -83,6 +84,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   componentWillUnmount() {
     this._isMounted = false;
     Store.dispatch(setIsInAnnotationViewAction(false));
+    this.props.setBlocking({
+      shouldBlock: false,
+    });
   }
 
   tryFetchingModel() {
@@ -129,37 +133,33 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    // @ts-ignore newLocation, action are implicit any
-    const beforeUnload = (newLocation, action): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== location.pathname) {
-        const stateSaved = Model.stateSaved();
+    const saveBeforeNavigationToOtherPage = () => {
+      // Navigation blocking can be triggered by two sources:
+      // 1. The browser's native beforeunload event
+      // 2. The React-Router block function (useBlocker or withBlocker HOC)
+      // In both cases, we try to save the annotation before leaving the page.
+      if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
+        setTimeout(() => {
+          if (!this._isMounted) {
+            return;
+          }
 
-        if (!stateSaved && Store.getState().annotation.restrictions.allowUpdate) {
-          // @ts-ignore
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-
-          setTimeout(() => {
-            if (!this._isMounted) {
-              return;
-            }
-
-            Store.dispatch(saveNowAction());
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["save.leave_page_unfinished"];
-        }
+          Store.dispatch(saveNowAction());
+        }, 500);
       }
-
-      return;
     };
 
-    // @ts-ignore
-    window.onbeforeunload = beforeUnload;
+    window.onbeforeunload = (_evt: BeforeUnloadEvent) => {
+      saveBeforeNavigationToOtherPage();
+      return messages["save.leave_page_unfinished"];
+    };
+    this.props.setBlocking({
+      shouldBlock: () => {
+        saveBeforeNavigationToOtherPage();
+        return !window.confirm(messages["save.leave_page_unfinished"]);
+      },
+    });
+
     UrlManager.startUrlUpdater();
     initializeSceneController();
     this.initKeyboard();
@@ -351,4 +351,4 @@ function mapStateToProps(state: WebknossosState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<PropsWithRouter>(Controller));
+export default connector(withBlocker(withRouter<PropsWithRouter>(Controller)));

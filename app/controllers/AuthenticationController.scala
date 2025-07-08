@@ -616,9 +616,9 @@ class AuthenticationController @Inject()(
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ?~> "Bad Request" ~> BAD_REQUEST
         credentialId = authData.getCredentialId
-        multiUserEmail = new String(authData.getUserHandle)
+        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ~> "Passkey Authentication Failed"
         multiUser <- multiUserDAO
-          .findOneByEmail(multiUserEmail)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .findOneById(multiUserId)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO
           .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
@@ -651,7 +651,7 @@ class AuthenticationController @Inject()(
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
-        id = Base64.encodeBase64URLSafeString(email.getBytes),
+        id = Base64.encodeBase64URLSafeString(request.identity._multiUser.toString.getBytes),
         name = email
       )
       credentials <- webAuthnCredentialDAO

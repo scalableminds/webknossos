@@ -180,7 +180,7 @@ if (process.argv.includes("--tls")) {
     }, app).listen(PORT)
   } catch (error) {
     console.error(loggingPrefix, "Failed to start HTTPS server:", error.message);
-    console.error(loggingPrefix, "Make sure you've generated SSL certificates using the gen-ssl-dev-certs.sh script");
+    console.error(loggingPrefix, "Make sure you've generated SSL certificates using the ./tools/proxy/gen-ssl-dev-certs.sh script");
     process.exit(1);
   }
 } else {

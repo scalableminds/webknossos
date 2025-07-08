@@ -1,5 +1,6 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
 import { changePassword, logoutUser } from "admin/rest_api";
+import features from "features";
 import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -11,6 +12,7 @@ import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
+import PasskeysView from "../auth/passkeys_view.tsx";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -164,6 +166,8 @@ function AccountPasswordView() {
     },
   ];
 
+  const { passkeysEnabled } = features();
+
   return (
     <div>
       <SettingsTitle title="Password" description="Manage and update your password" />
@@ -185,14 +189,19 @@ function AccountPasswordView() {
         </Col>
       </Row>
 
-      <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
-      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-        {passKeyList.map((item) => (
-          <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} description={item.value} action={item.action} />
-          </Col>
-        ))}
-      </Row>
+      {passkeysEnabled && (
+        <>
+          <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
+          <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+            <Col span={12}>
+              <SettingsCard
+                title="Passkeys"
+                description={<PasskeysView />}
+                />
+            </Col>
+          </Row>
+        </>
+      )}
     </div>
   );
 }

@@ -69,8 +69,10 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String, l: Logger = logger): Unit =
+  def logSince(before: Instant, label: String, l: Logger = logger): Instant = {
     l.info(f"$label took ${formatDuration(Instant.since(before))}")
+    now
+  }
 
   def fromString(instantLiteral: String): Option[Instant] =
     fromIsoString(instantLiteral).orElse(fromEpochMillisString(instantLiteral))

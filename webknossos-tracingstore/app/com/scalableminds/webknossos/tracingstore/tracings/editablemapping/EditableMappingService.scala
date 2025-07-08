@@ -229,8 +229,10 @@ class EditableMappingService @Inject()(
                                                    version: Long): Fox[Map[Long, Long]] = {
     val chunkIds = segmentIds.map(_ / defaultSegmentToAgglomerateChunkSize)
     for {
+      before <- Instant.nowFox
       maps: List[Seq[(Long, Long)]] <- Fox.serialCombined(chunkIds.toList)(chunkId =>
         getSegmentToAgglomerateChunkFiltered(tracingId, chunkId, version, segmentIds))
+      _ = Instant.logSince(before, s"    getSegmentToAgglomerateChunkFiltered for ${chunkIds.length} chunks")
     } yield maps.flatten.toMap
   }
 
@@ -266,30 +268,40 @@ class EditableMappingService @Inject()(
     getSegmentToAgglomerateChunk(chunkKey, version)
   }
 
+  private val debugIdPrefix = "264bfd5c" // "4b00502b"
+
   def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
+      before <- Instant.nowFox
       keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(chunkKey, version, mayBeEmpty = Some(true))
+      _ = if (chunkKey.startsWith(debugIdPrefix))
+        Instant.logSince(before, s"      fossil call getSegmentToAgglomerateChunk $chunkKey")
       valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
       else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
     } yield asSequence
 
-  def generateCombinedMappingForSegmentIds(
-      segmentIds: Set[Long],
-      editableMapping: EditableMappingInfo,
-      editableMappingVersion: Long,
-      tracingId: String,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] =
+  def generateCombinedMappingForSegmentIds(segmentIds: Set[Long],
+                                           editableMapping: EditableMappingInfo,
+                                           editableMappingVersion: Long,
+                                           tracingId: String,
+                                           remoteFallbackLayer: RemoteFallbackLayer,
+                                           log: Boolean = false)(implicit tc: TokenContext): Fox[Map[Long, Long]] =
     for {
+      before <- Instant.nowFox
       editableMappingForSegmentIds <- getSegmentToAgglomerateForSegmentIds(segmentIds,
                                                                            tracingId,
                                                                            editableMappingVersion)
+      _ = Instant.logSince(before, s"  getSegmentToAgglomerateForSegmentIds (tid $tracingId)")
       segmentIdsInEditableMapping: Set[Long] = editableMappingForSegmentIds.keySet
       segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
+      t2 = Instant.now
       baseMappingSubset <- getBaseSegmentToAgglomerate(editableMapping.baseMappingName,
                                                        segmentIdsInBaseMapping,
-                                                       remoteFallbackLayer)
+                                                       remoteFallbackLayer,
+                                                       log = log && tracingId.startsWith(debugIdPrefix))
+      _ = if (log) Instant.logSince(t2, s"  getBaseSegmentToAgglomerate (tid $tracingId)")
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
   def getAgglomerateSkeletonWithFallback(tracingId: String,
@@ -344,15 +356,16 @@ class EditableMappingService @Inject()(
     skeleton.toByteArray
   }
 
-  def getBaseSegmentToAgglomerate(
-      baseMappingName: String,
-      segmentIds: Set[Long],
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] = {
+  def getBaseSegmentToAgglomerate(baseMappingName: String,
+                                  segmentIds: Set[Long],
+                                  remoteFallbackLayer: RemoteFallbackLayer,
+                                  log: Boolean = false)(implicit tc: TokenContext): Fox[Map[Long, Long]] = {
     val segmentIdsOrdered = segmentIds.toList
     for {
       agglomerateIdsOrdered <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(remoteFallbackLayer,
                                                                                     baseMappingName,
-                                                                                    segmentIdsOrdered)
+                                                                                    segmentIdsOrdered,
+                                                                                    log)
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 

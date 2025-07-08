@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -70,17 +71,22 @@ class EditableMappingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
+            before <- Instant.nowFox
             annotation <- annotationService.get(annotationId, version)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
+            _ = logger.info("\n\n")
+            t2 = Instant.logSince(before, s"setup (tid $tracingId; ${request.body.items.toSet.size} segment ids)")
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
               editableMappingInfo,
               annotation.version,
               tracingId,
-              remoteFallbackLayer) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
+              remoteFallbackLayer,
+              log = true) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
+            _ = Instant.logSince(before, s"generateCombinedMappingForSegmentIds (tid $tracingId)")
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }

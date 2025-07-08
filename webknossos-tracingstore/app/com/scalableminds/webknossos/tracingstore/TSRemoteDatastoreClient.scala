@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -78,12 +79,18 @@ class TSRemoteDatastoreClient @Inject()(
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
                                      mappingName: String,
-                                     segmentIdsOrdered: List[Long])(implicit tc: TokenContext): Fox[List[Long]] =
+                                     segmentIdsOrdered: List[Long],
+                                     log: Boolean = false)(implicit tc: TokenContext): Fox[List[Long]] =
     for {
+      before <- Instant.nowFox
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+      _ = if (log) Instant.logSince(before, "    getRemoteLayerUri")
       segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext.silent
+      t2 = Instant.now
+      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext
         .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
+      _ = Instant.logSince(t2,
+                           s"    rpc agglomeratesForSegment $remoteLayerUri for ${segmentIdsOrdered.length} segments")
     } yield result.items.toList
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer, baseMappingName: String, agglomerateId: Long)(

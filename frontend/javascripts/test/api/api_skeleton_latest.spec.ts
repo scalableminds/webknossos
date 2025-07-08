@@ -29,6 +29,20 @@ const toRadian = (arr: Vector3): Vector3 => [
   THREE.MathUtils.degToRad(arr[2]),
 ];
 
+function applyRotationInFlycamReducerSpace(
+  flycamRotationInRadian: Vector3,
+  rotationToApply: THREE.Euler,
+): Vector3 {
+  // eulerAngleToReducerInternalMatrix and reducerInternalMatrixToEulerAngle are tested in rotation_helpers.spec.ts.
+  // Calculate expected rotation and make it a quaternion for equal comparison.
+  const rotationMatrix = eulerAngleToReducerInternalMatrix(flycamRotationInRadian);
+  const rotationMatrixWithViewport = rotationMatrix.multiply(
+    new THREE.Matrix4().makeRotationFromEuler(rotationToApply),
+  );
+  const resultingAngle = reducerInternalMatrixToEulerAngle(rotationMatrixWithViewport);
+  return resultingAngle;
+}
+
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "skeleton", { dontDispatchWkReady: true });
@@ -319,78 +333,45 @@ describe("API Skeleton", () => {
       true,
     );
   });
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties for XY viewport", ({
-    api,
-  }) => {
-    Store.dispatch(setRotationAction([0, 0, 0]));
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
-    api.tracing.createNode([10, 10, 10]);
-    const newNode = enforceSkeletonTracing(Store.getState().annotation)
-      .trees.getOrThrow(2)
-      .nodes.getOrThrow(4);
-    const propsToCheck = {
-      untransformedPosition: newNode.untransformedPosition,
-      additionalCoordinates: newNode.additionalCoordinates,
-      rotation: newNode.rotation,
-      viewport: newNode.viewport,
-      mag: newNode.mag,
-    };
-    expect(propsToCheck).toStrictEqual({
-      untransformedPosition: [10, 10, 10],
-      additionalCoordinates: [],
-      rotation: [0, 0, 0],
-      viewport: OrthoViewToNumber[OrthoViews.PLANE_XY],
-      mag: 0,
-    });
-  });
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties for YZ viewport", ({
-    api,
-  }) => {
-    Store.dispatch(setRotationAction([0, 0, 0]));
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_YZ));
-    api.tracing.createNode([10, 10, 10]);
-    const newNode = enforceSkeletonTracing(Store.getState().annotation)
-      .trees.getOrThrow(2)
-      .nodes.getOrThrow(4);
-    const propsToCheck = {
-      untransformedPosition: newNode.untransformedPosition,
-      additionalCoordinates: newNode.additionalCoordinates,
-      rotation: newNode.rotation,
-      viewport: newNode.viewport,
-      mag: newNode.mag,
-    };
-    expect(propsToCheck).toStrictEqual({
-      untransformedPosition: [10, 10, 10],
-      additionalCoordinates: [],
-      rotation: [0, 270, 0],
-      viewport: OrthoViewToNumber[OrthoViews.PLANE_YZ],
-      mag: 0,
-    });
-  });
 
-  it<WebknossosTestContext>("should create skeleton nodes with correct properties for XZ viewport", ({
-    api,
-  }) => {
-    Store.dispatch(setRotationAction([0, 0, 0]));
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_XZ));
-    api.tracing.createNode([10, 10, 10]);
-    const newNode = enforceSkeletonTracing(Store.getState().annotation)
-      .trees.getOrThrow(2)
-      .nodes.getOrThrow(4);
-    const propsToCheck = {
-      untransformedPosition: newNode.untransformedPosition,
-      additionalCoordinates: newNode.additionalCoordinates,
-      rotation: newNode.rotation,
-      viewport: newNode.viewport,
-      mag: newNode.mag,
-    };
-    expect(propsToCheck).toStrictEqual({
-      untransformedPosition: [10, 10, 10],
-      additionalCoordinates: [],
-      rotation: [90, 0, 0],
-      viewport: OrthoViewToNumber[OrthoViews.PLANE_XZ],
-      mag: 0,
-    });
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties.", ({ api }) => {
+    const flycamRotation = [0, 0, 0] as Vector3;
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const rotationForComparison = applyRotationInFlycamReducerSpace(
+        flycamRotation,
+        OrthoBaseRotations[planeId],
+      );
+      const rotationQuaternion = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(...rotationForComparison),
+      );
+      Store.dispatch(setRotationAction(flycamRotation));
+      Store.dispatch(setViewportAction(planeId));
+      api.tracing.createNode([10, 10, 10], { activate: true });
+      const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+      // Throw error if no node / tree is active by passing -1 as id.
+      const newNode = skeletonTracing.trees
+        .getOrThrow(skeletonTracing.activeTreeId || -1)
+        .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
+      const propsToCheck = {
+        untransformedPosition: newNode.untransformedPosition,
+        additionalCoordinates: newNode.additionalCoordinates,
+        viewport: newNode.viewport,
+        mag: newNode.mag,
+      };
+      expect(propsToCheck).toStrictEqual({
+        untransformedPosition: [10, 10, 10],
+        additionalCoordinates: [],
+        viewport: OrthoViewToNumber[planeId],
+        mag: 0,
+      });
+      const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(...toRadian(newNode.rotation)),
+      );
+      expect(
+        rotationQuaternion.angleTo(newNodeQuaternion),
+        `Node rotation ${newNode.rotation} is not nearly equal to ${map3(THREE.MathUtils.radToDeg, rotationForComparison)} in viewport ${planeId}.`,
+      ).toBeLessThan(0.000001);
+    }
   });
   it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in all three viewports.", ({
     api,
@@ -398,13 +379,10 @@ describe("API Skeleton", () => {
     for (const testRotation of testRotations) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const rotationInRadian = toRadian(testRotation);
-        // eulerAngleToReducerInternalMatrix and reducerInternalMatrixToEulerAngle are tested in rotation_helpers.spec.ts.
-        // Calculate expected rotation and make it a quaternion for equal comparison.
-        const rotationMatrix = eulerAngleToReducerInternalMatrix(rotationInRadian);
-        const rotationMatrixWithViewport = rotationMatrix.multiply(
-          new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[planeId]),
+        const resultingAngle = applyRotationInFlycamReducerSpace(
+          rotationInRadian,
+          OrthoBaseRotations[planeId],
         );
-        const resultingAngle = reducerInternalMatrixToEulerAngle(rotationMatrixWithViewport);
         const rotationQuaternion = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(...resultingAngle),
         );
@@ -412,19 +390,11 @@ describe("API Skeleton", () => {
         Store.dispatch(setRotationAction(testRotation));
         Store.dispatch(setViewportAction(planeId));
         api.tracing.createNode([10, 10, 10], { activate: true });
-        const { activeTreeId, activeNodeId } = Store.getState().annotation.skeleton || {
-          activeTreeId: null,
-          activeNodeId: null,
-        };
-        expect(activeTreeId).not.toBeNull();
-        expect(activeNodeId).not.toBeNull();
-        if (!activeNodeId || !activeTreeId) {
-          throw new Error("Satisfy TS. The assertion above should already report this.");
-        }
-        console.error({ activeTreeId, activeNodeId });
-        const newNode = enforceSkeletonTracing(Store.getState().annotation)
-          .trees.getOrThrow(activeTreeId)
-          .nodes.getOrThrow(activeNodeId);
+        const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+        // Throw error if no node / tree is active by passing -1 as id.
+        const newNode = skeletonTracing.trees
+          .getOrThrow(skeletonTracing.activeTreeId || -1)
+          .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
         const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(...toRadian(newNode.rotation)),
         );

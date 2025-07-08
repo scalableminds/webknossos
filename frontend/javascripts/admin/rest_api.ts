@@ -2001,15 +2001,17 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
+      ),
     );
   });
   // Ensure that the values are bigint if the keys are bigint
@@ -2020,6 +2022,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   // @ts-ignore
   return new Map(keyValues);
 }
+
+let counter = 0;
 
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
@@ -2041,16 +2045,22 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() => {
+      counter++;
+      const brokenSuffix = counter % 2 === 1 ? "broken" : "broken2";
+      console.log("brokenSuffix", brokenSuffix);
+      return Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments${brokenSuffix}?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          showErrorToast: false,
         },
-      },
-    );
+      );
+    });
   });
 
   // Ensure that the values are bigint if the keys are bigint

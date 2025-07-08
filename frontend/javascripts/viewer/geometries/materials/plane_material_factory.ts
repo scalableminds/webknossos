@@ -597,7 +597,6 @@ class PlaneMaterialFactory {
         },
       ),
       listenToStoreProperty(
-        // TODOM: Fix rotation direction. Seems to be in different direction than actual rotation.
         (storeState) => getRotationInRadian(storeState.flycam),
         (rotation) => {
           const state = Store.getState();

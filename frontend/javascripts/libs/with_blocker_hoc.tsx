@@ -15,27 +15,31 @@ export type WithBlockerProps = {
  */
 export function withBlocker<TProps extends WithBlockerProps>(
   WrappedComponent: React.ComponentType<TProps>,
-): React.ForwardRefExoticComponent<React.PropsWithoutRef<TProps> & React.RefAttributes<any>> {
-  const WithBlockerComponent = forwardRef<any, TProps>((props, ref) => {
-    // State to control blocking behavior
-    const [shouldBlockState, setShouldBlockState] = useState<{
-      shouldBlock: boolean | BlockerFunction;
-    }>({
-      shouldBlock: false,
-    });
+): React.ForwardRefExoticComponent<
+  React.PropsWithoutRef<Omit<TProps, keyof WithBlockerProps>> & React.RefAttributes<any>
+> {
+  const WithBlockerComponent = forwardRef<any, Omit<TProps, keyof WithBlockerProps>>(
+    (props, ref) => {
+      // State to control blocking behavior
+      const [shouldBlockState, setShouldBlockState] = useState<{
+        shouldBlock: boolean | BlockerFunction;
+      }>({
+        shouldBlock: false,
+      });
 
-    // Use the useBlocker hook
-    const blocker = useBlocker(shouldBlockState.shouldBlock);
+      // Use the useBlocker hook
+      const blocker = useBlocker(shouldBlockState.shouldBlock);
 
-    // Create props object with the blocker and control function
-    const enhancedProps = {
-      ...props,
-      blocker,
-      setBlocking: setShouldBlockState,
-    } as TProps & WithBlockerProps;
+      // Create props object with the blocker and control function
+      const enhancedProps = {
+        ...props,
+        blocker,
+        setBlocking: setShouldBlockState,
+      } as unknown as TProps;
 
-    return <WrappedComponent {...enhancedProps} ref={ref} />;
-  });
+      return <WrappedComponent {...enhancedProps} ref={ref} />;
+    },
+  );
 
   return WithBlockerComponent;
 }

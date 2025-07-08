@@ -55,7 +55,7 @@ import {
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
   createEdge,
   createNode,
@@ -70,7 +70,7 @@ import {
   updateTreeGroups,
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";

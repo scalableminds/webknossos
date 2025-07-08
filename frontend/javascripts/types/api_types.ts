@@ -1,6 +1,8 @@
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
+import type { BoundingBoxProto } from "types/bounding_box";
 import type {
+  AdditionalCoordinate,
   ColorObject,
   LOG_LEVELS,
   NestedMatrix4,
@@ -15,7 +17,7 @@ import type {
   TracingStats,
   VolumeTracingStats,
 } from "viewer/model/accessors/annotation_accessor";
-import type { ServerUpdateAction } from "viewer/model/sagas/update_actions";
+import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
@@ -25,7 +27,9 @@ import type {
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
 
-export type AdditionalCoordinate = { name: string; value: number };
+// Re-export
+export type { BoundingBoxProto } from "types/bounding_box";
+export type { AdditionalCoordinate } from "viewer/constants";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -67,7 +71,7 @@ export type AdditionalAxis = {
   name: string;
 };
 
-export type ServerAdditionalAxis = {
+export type AdditionalAxisProto = {
   bounds: { x: number; y: number };
   index: number;
   name: string;
@@ -855,20 +859,14 @@ export type ServerBranchPoint = {
   createdTimestamp: number;
   nodeId: number;
 };
-export type ServerBoundingBox = {
-  topLeft: Point3;
-  width: number;
-  height: number;
-  depth: number;
-};
-export type UserBoundingBoxFromServer = {
-  boundingBox: ServerBoundingBox;
+export type UserBoundingBoxProto = {
+  boundingBox: BoundingBoxProto;
   id: number;
   name?: string;
   color?: ColorObject;
   isVisible?: boolean;
 };
-export type ServerBoundingBoxTypeTuple = {
+export type ServerBoundingBoxMinMaxTypeTuple = {
   topLeft: Vector3;
   width: number;
   height: number;
@@ -916,11 +914,11 @@ type ServerSegment = {
 };
 export type ServerTracingBase = {
   id: string;
-  userBoundingBoxes: Array<UserBoundingBoxFromServer>;
-  userBoundingBox?: ServerBoundingBox;
+  userBoundingBoxes: Array<UserBoundingBoxProto>;
+  userBoundingBox?: BoundingBoxProto;
   createdTimestamp: number;
   error?: string;
-  additionalAxes: ServerAdditionalAxis[];
+  additionalAxes: AdditionalAxisProto[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove
   // the property.
@@ -951,7 +949,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   // This is done to simplify the selection for the type.
   typ: "Skeleton";
   activeNodeId?: number; // only use as a fallback if userStates is empty
-  boundingBox?: ServerBoundingBox;
+  boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
@@ -974,7 +972,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // This is done to simplify the selection for the type.
   typ: "Volume";
   activeSegmentId?: number; // only use as a fallback if userStates is empty
-  boundingBox: ServerBoundingBox;
+  boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;

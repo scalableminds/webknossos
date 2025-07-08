@@ -81,17 +81,20 @@ class TSRemoteDatastoreClient @Inject()(
                                      mappingName: String,
                                      segmentIdsOrdered: List[Long],
                                      log: Boolean = false)(implicit tc: TokenContext): Fox[List[Long]] =
-    for {
-      before <- Instant.nowFox
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      _ = if (log) Instant.logSince(before, "    getRemoteLayerUri")
-      segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
-      t2 = Instant.now
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext
-        .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
-      _ = Instant.logSince(t2,
-                           s"    rpc agglomeratesForSegment $remoteLayerUri for ${segmentIdsOrdered.length} segments")
-    } yield result.items.toList
+    if (segmentIdsOrdered.isEmpty) Fox.successful(List.empty)
+    else {
+      for {
+        before <- Instant.nowFox
+        remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+        _ = if (log) Instant.logSince(before, "    getRemoteLayerUri")
+        segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
+        t2 = Instant.now
+        result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext
+          .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
+        _ = Instant.logSince(t2,
+                             s"    rpc agglomeratesForSegment $remoteLayerUri for ${segmentIdsOrdered.length} segments")
+      } yield result.items.toList
+    }
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer, baseMappingName: String, agglomerateId: Long)(
       implicit tc: TokenContext): Fox[AgglomerateGraph] =

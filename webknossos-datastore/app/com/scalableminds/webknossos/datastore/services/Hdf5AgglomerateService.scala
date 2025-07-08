@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -19,14 +20,16 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
+import scala.concurrent.duration.DurationInt
 
-class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter {
+class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
 
   private val cumsumFileName = "cumsum.json"
 
@@ -110,9 +113,14 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
     tryo {
       val agglomerateIds = segmentIds.map { segmentId: Long =>
-        cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
-                                                           cachedAgglomerateFile.reader,
-                                                           cachedAgglomerateFile.dataset)(readHDF)
+        val before = Instant.now
+        val res = cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
+                                                                     cachedAgglomerateFile.reader,
+                                                                     cachedAgglomerateFile.dataset)(readHDF)
+        Instant.logSince(before,
+                         s"reading agglomerate id for segment id $segmentId. ${cachedAgglomerateFile.cache.getClass}.",
+                         silentIfBelow = 1 millis)
+        res
       }
       cachedAgglomerateFile.finishAccess()
       agglomerateIds
@@ -293,8 +301,10 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
     val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
+        logger.info(s"Cumsum exists at $cumsumPath, using cumsum-based cache for agglomerate file")
         Right(CumsumParser.parse(cumsumPath.toFile, config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange))
       } else {
+        logger.info(s"No cumsum at $cumsumPath, using standard block cache for agglomerate file")
         Left(agglomerateIdCache)
       }
 

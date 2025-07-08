@@ -69,8 +69,14 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
 
   def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
 
-  def logSince(before: Instant, label: String, l: Logger = logger): Instant = {
-    l.info(f"$label took ${formatDuration(Instant.since(before))}")
+  def logSince(before: Instant,
+               label: String,
+               l: Logger = logger,
+               silentIfBelow: FiniteDuration = 0 millis): Instant = {
+    val diff = Instant.since(before)
+    if (diff > silentIfBelow) {
+      l.info(f"$label took ${formatDuration(Instant.since(before))}")
+    }
     now
   }
 

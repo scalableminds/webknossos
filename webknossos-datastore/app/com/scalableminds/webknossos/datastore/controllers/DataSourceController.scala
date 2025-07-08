@@ -362,15 +362,18 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
+        before <- Instant.nowFox
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName)
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
+        t2 = Instant.logSince(before, "DS setup")
         agglomerateIds: Seq[Long] <- agglomerateService.agglomerateIdsForSegmentIds(
           agglomerateFileKey,
           request.body.items
         )
+        _ = Instant.logSince(t2, "DS agglomerateIdsForSegmentIds")
       } yield Ok(ListOfLong(agglomerateIds).toByteArray)
     }
   }

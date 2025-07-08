@@ -32,7 +32,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   implicit val ec: ExecutionContext
 
-  def cache: Boolean = true
+  def useCache: Boolean = true
 
   def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 

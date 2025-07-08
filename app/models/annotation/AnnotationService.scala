@@ -313,6 +313,7 @@ class AnnotationService @Inject()(
       for {
         _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
+        _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       } yield {
         if (annotation._task.isEmpty)
           "annotation.finished"

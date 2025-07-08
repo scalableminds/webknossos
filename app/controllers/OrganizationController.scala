@@ -66,7 +66,7 @@ class OrganizationController @Inject()(
     } yield Ok(Json.toJson(js))
   }
 
-  case class OrganizationCreationParameters(organization: Option[String], organizationName: String, ownerEmail: String)
+  case class OrganizationCreationParameters(organizationName: String, ownerEmail: String)
   object OrganizationCreationParameters {
     implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
   }
@@ -75,7 +75,7 @@ class OrganizationController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
-        org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
+        org <- organizationService.createOrganization(request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
         _ <- userService.joinOrganization(user,
                                           org._id,

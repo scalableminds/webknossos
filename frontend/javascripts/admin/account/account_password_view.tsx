@@ -1,7 +1,7 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
 import { changePassword, logoutUser } from "admin/rest_api";
-import features from "features";
 import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
+import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
@@ -157,15 +157,6 @@ function AccountPasswordView() {
     setResetPasswordVisible(true);
   }
 
-  const passKeyList = [
-    {
-      title: "Coming soon",
-      value: "Passwordless login with passkeys is coming soon",
-      // action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
-      action: undefined,
-    },
-  ];
-
   const { passkeysEnabled } = features();
 
   return (
@@ -194,10 +185,7 @@ function AccountPasswordView() {
           <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col span={12}>
-              <SettingsCard
-                title="Passkeys"
-                description={<PasskeysView />}
-                />
+              <SettingsCard title="Passkeys" description={<PasskeysView />} />
             </Col>
           </Row>
         </>

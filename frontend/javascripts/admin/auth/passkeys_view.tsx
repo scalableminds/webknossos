@@ -1,28 +1,16 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { Alert, Button, Col, Form, Input, Modal, Row, Table } from "antd";
-import Request from "libs/request";
-import Toast from "libs/toast";
-import messages from "messages";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
-import { logoutUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
-const FormItem = Form.Item;
-const { Password } = Input;
 import {
   type WebAuthnKeyDescriptor,
   doWebAuthnRegistration,
   listWebAuthnKeys,
   removeWebAuthnKey,
 } from "admin/api/webauthn";
+import { Button, Input, Modal, Table } from "antd";
+import Toast from "libs/toast";
 import { useEffect, useState } from "react";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 
-type Props = {
-  history: RouteComponentProps["history"];
-};
-
-const MIN_PASSWORD_LENGTH = 8;
-
-function ChangePasswordView({ history }: Props) {
+function ChangePasswordView() {
   /// Passkeys
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
@@ -73,8 +61,14 @@ function ChangePasswordView({ history }: Props) {
       title: "Actions",
       dataIndex: "id",
       key: "id",
-      render: (id: string, passkey: WebAuthnKeyDescriptor) => (
-        <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
+      render: (_id: string, passkey: WebAuthnKeyDescriptor) => (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<DeleteOutlined />}
+          onClick={webauthnRemoveKey(passkey)}
+          size="small"
+        />
       ),
     },
   ];

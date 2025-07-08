@@ -82,11 +82,11 @@ class MeshFileService @Inject()(config: DataStoreConfig,
   def lookUpMeshFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer, meshFileName: String)(
       implicit ec: ExecutionContext): Fox[MeshFileKey] =
     meshFileKeyCache.getOrLoad((dataSourceId, dataLayer.name, meshFileName),
-                               _ => lookUpMeshFileImpl(dataSourceId, dataLayer, meshFileName).toFox)
+                               _ => lookUpMeshFileKeyImpl(dataSourceId, dataLayer, meshFileName).toFox)
 
-  private def lookUpMeshFileImpl(dataSourceId: DataSourceId,
-                                 dataLayer: DataLayer,
-                                 meshFileName: String): Box[MeshFileKey] = {
+  private def lookUpMeshFileKeyImpl(dataSourceId: DataSourceId,
+                                    dataLayer: DataLayer,
+                                    meshFileName: String): Box[MeshFileKey] = {
     val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
       case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
       case None              => None

@@ -128,6 +128,9 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
+
+// See the following or an explanation about the relative orientation of the viewports toward the XY viewport.
+// https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800e8682e92a5c91a519
 export const OrthoBaseRotations = {
   [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
   [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0),

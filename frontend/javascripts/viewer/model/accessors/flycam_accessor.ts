@@ -306,7 +306,8 @@ const flycamMatrixObject = new THREE.Matrix4();
 
 // Returns the current rotation of the flycam in radians as an euler xyz tuple.
 // As the order in which the angles are applied is zyx (see flycam_reducer setRotationReducer),
-// this order must be followed when this euler angle is applied to 2d computations.
+// this order must be followed when this euler angle is applied to 3d  rotation computations.
+// But when calculating with
 function _getRotationInRadianFromMatrix(flycamMatrix: Matrix4x4, invertZ: boolean = true): Vector3 {
   // Somehow z rotation is inverted but the others are not.
   const zInvertFactor = invertZ ? -1 : 1;
@@ -343,17 +344,15 @@ function _isRotated(flycam: Flycam): boolean {
   return !V3.equals(getRotationInRadian(flycam), [0, 0, 0]);
 }
 
-// Memoizing this function makes no sense as its result will always be used to change the flycam rotation.
-export function getFlycamRotationWithAppendedRotation(
+function _getFlycamRotationWithAppendedRotation(
   flycam: Flycam,
-  // prependedRotation must be in ZYX order.
   rotationToAppend: THREE.Euler,
 ): Vector3 {
   const flycamRotation = getRotationInRadian(flycam, false);
 
   // Perform same operations as the flycam reducer does. First default 180° around z.
   let rotFlycamMatrix = eulerAngleToReducerInternalMatrix(flycamRotation);
-  // Apply viewport default rotation
+  // Apply rotation
   rotFlycamMatrix = rotFlycamMatrix.multiply(
     new THREE.Matrix4().makeRotationFromEuler(rotationToAppend),
   );
@@ -372,6 +371,9 @@ export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
 export const getRotationInRadian = memoizeOne(_getRotationInRadian);
 export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
+export const getFlycamRotationWithAppendedRotation = memoizeOne(
+  _getFlycamRotationWithAppendedRotation,
+);
 export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 

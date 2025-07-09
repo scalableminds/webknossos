@@ -176,6 +176,8 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
   });
 }
 
+// The way rotations are currently handled / interpreted is quirky. See here for more information:
+// https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800fb874e717e49da7bc
 export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;

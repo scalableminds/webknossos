@@ -13,6 +13,8 @@ const invertedEulerMatrix = new THREE.Matrix4();
 // first convert the angle into the quirky way the flycam matrix does rotations.
 // After the rotation calculation is done, the companion function reducerInternalMatrixToEulerAngle
 // should be used to transform the result back.
+// For some more info look at
+// https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c6380cf8302fb8f6749ae1d.
 export function eulerAngleToReducerInternalMatrix(angleInRadian: Vector3): THREE.Matrix4 {
   // Perform same operations as the flycam reducer does. First default 180° around z.
   let matrixLikeInReducer = matrix.makeRotationZ(Math.PI);

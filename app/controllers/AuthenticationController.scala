@@ -711,7 +711,6 @@ class AuthenticationController @Inject()(
         registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
         _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
         attestationObject = registrationData.getAttestationObject
-        _ = println(attestationObject)
         credentialRecord = new WebAuthnCredentialRecord(
           attestationObject,
           null, // clientData - Client data is not collected.
@@ -744,7 +743,7 @@ class AuthenticationController @Inject()(
     {
       for {
         _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
-        _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser)
+        _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser) ?~> "Passkey not found" ~> NOT_FOUND
       } yield Ok(Json.obj())
     }
   }

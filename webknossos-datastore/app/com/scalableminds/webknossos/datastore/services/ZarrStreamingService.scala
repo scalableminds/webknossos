@@ -20,11 +20,9 @@ import scala.concurrent.ExecutionContext
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 
 class ZarrStreamingService @Inject()(
-    dataSourceRepository: DataSourceRepository,
-    accessTokenService: DataStoreAccessTokenService,
+    datasetCache: DatasetCache,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    remoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit ec: ExecutionContext)
     extends Zarr3OutputHelper
     with FoxImplicits {
@@ -211,9 +209,7 @@ class ZarrStreamingService @Inject()(
       implicit tc: TokenContext): Fox[List[String]] =
     for {
       annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)
-      dataSource <- dataSourceRepository // TODO: Use datasetcache here
-        .findUsable(DataSourceId(annotationSource.datasetDirectoryName, annotationSource.organizationId))
-        .toFox
+      dataSource <- datasetCache.getById(annotationSource.datasetId)
       annotationLayerNames = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume).map(_.name)
       dataSourceLayerNames = dataSource.dataLayers
         .map((dataLayer: DataLayer) => dataLayer.name)

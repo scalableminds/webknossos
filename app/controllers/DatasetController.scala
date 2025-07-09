@@ -89,6 +89,7 @@ class DatasetController @Inject()(userService: UserService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
+                                  composeService: ComposeService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
@@ -488,6 +489,13 @@ class DatasetController @Inject()(userService: UserService,
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }
+    }
+
+  def compose(): Action[ComposeRequest] =
+    sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
+      for {
+        (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
+      } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
 }

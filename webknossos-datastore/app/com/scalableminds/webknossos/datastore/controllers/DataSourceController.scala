@@ -56,7 +56,6 @@ class DataSourceController @Inject()(
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
-    composeService: ComposeService,
     meshFileService: MeshFileService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -441,19 +440,6 @@ class DataSourceController @Inject()(
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
           _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
         } yield Ok
-      }
-    }
-
-  def compose(): Action[ComposeRequest] =
-    Action.async(validateJson[ComposeRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDataSources(request.body.organizationId)) {
-        for {
-          _ <- Fox.serialCombined(request.body.layers.map(_.dataSourceId).toList)(id =>
-            accessTokenService.assertUserAccess(UserAccessRequest.readDataSources(id)))
-          (dataSource, newDatasetId) <- composeService.composeDataset(request.body)
-          _ <- dataSourceRepository.updateDataSource(dataSource)
-        } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
       }
     }
 

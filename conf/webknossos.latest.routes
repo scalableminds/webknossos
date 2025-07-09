@@ -93,6 +93,7 @@ POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask            
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

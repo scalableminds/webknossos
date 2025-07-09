@@ -1,9 +1,9 @@
 import { Card, Col, Row } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "./login_form";
-import { useWkSelector } from "libs/react_hooks";
 
 type Props = {
   redirect?: string;

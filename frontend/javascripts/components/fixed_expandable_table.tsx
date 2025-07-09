@@ -1,6 +1,7 @@
 import { Button, Table, type TableProps } from "antd";
-import type { ColumnsType, GetRowKey } from "antd/lib/table/interface";
-import React, { useEffect } from "react";
+import type { ColumnsType, ExpandableConfig, GetRowKey } from "antd/lib/table/interface";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 /** This is a wrapper for large tables that have fixed columns and support expanded rows.
  *  This wrapper ensures that when rows are expanded no column is fixed as this creates rendering bugs.
@@ -13,7 +14,7 @@ type OwnTableProps<RecordType = any> = TableProps<RecordType> & {
   columns: ColumnsType<RecordType>;
 };
 
-const EMPTY_ARRAY: readonly string[] = [] as const;
+const EMPTY_ARRAY: React.Key[] = [] as const;
 
 const getAllRowIds = (
   dataSource: readonly any[] | undefined,
@@ -31,7 +32,7 @@ export default function FixedExpandableTable<RecordType>({
   columns,
   ...restProps
 }: OwnTableProps<RecordType>) {
-  const [expandedRows, setExpandedRows] = useState<React.Key>(EMPTY_ARRAY);
+  const [expandedRows, setExpandedRows] = useState<React.Key[]>(EMPTY_ARRAY);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Collapse all rows when source changes
   useEffect(() => {
@@ -58,14 +59,15 @@ export default function FixedExpandableTable<RecordType>({
     const columnFixed = expandedRows.length > 0 ? false : column.fixed;
     return { ...column, fixed: columnFixed };
   });
-  const expandableProp = {
+  const expandableProp: ExpandableConfig<RecordType> = {
     ...expandable,
     expandedRowKeys: expandedRows,
     onExpandedRowsChange: (selectedRows: readonly React.Key[]) => {
-      setExpandedRows(selectedRows);
+      setExpandedRows(selectedRows as React.Key[]);
     },
     columnTitle: areAllRowsExpanded ? columnTitleExpanded : columnTitleCollapsed,
   };
+
   return (
     <Table
       {...restProps}

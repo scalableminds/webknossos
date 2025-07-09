@@ -1,6 +1,7 @@
 import { getExistingExperienceDomains } from "admin/rest_api";
 import { Select, Tooltip } from "antd";
-import * as React from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import type { ExperienceDomainList } from "types/api_types";
 
 type Props = {
@@ -11,7 +12,7 @@ type Props = {
   disabled: boolean;
   onSelect?: (arg0: string) => void;
   onChange?: () => void;
-  allowCreation: boolean;
+  allowCreation?: boolean;
   alreadyUsedDomains?: ExperienceDomainList;
 };
 
@@ -23,13 +24,13 @@ const SelectExperienceDomain: React.FC<Props> = ({
   placeholder,
   onSelect,
   onChange,
-  allowCreation,
+  allowCreation = false,
   alreadyUsedDomains = [],
 }) => {
-  const [domains, setDomains] = React.useState<ExperienceDomainList>([]);
-  const [currentlyEnteredDomain, setCurrentlyEnteredDomain] = React.useState("");
+  const [domains, setDomains] = useState<ExperienceDomainList>([]);
+  const [currentlyEnteredDomain, setCurrentlyEnteredDomain] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       const existingDomains = await getExistingExperienceDomains();
       setDomains(existingDomains);
@@ -80,11 +81,6 @@ const SelectExperienceDomain: React.FC<Props> = ({
       </Select>
     </Tooltip>
   );
-};
-
-SelectExperienceDomain.defaultProps = {
-  alreadyUsedDomains: [],
-  allowCreation: false,
 };
 
 export default SelectExperienceDomain;

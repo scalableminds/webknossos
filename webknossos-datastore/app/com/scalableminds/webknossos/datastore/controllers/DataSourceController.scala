@@ -24,6 +24,12 @@ import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndex
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.services.connectome.{
+  ByAgglomerateIdsRequest,
+  BySynapseIdsRequest,
+  ConnectomeFileService,
+  SynapticPartnerDirection
+}
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -401,11 +407,13 @@ class DataSourceController @Inject()(
       meshFileService.clearCache(dataSourceId, layerName)
     val closedSegmentIndexFileHandleCount =
       segmentIndexFileService.clearCache(dataSourceId, layerName)
+    val closedConnectomeFileHandleCount =
+      connectomeFileService.clearCache(dataSourceId, layerName)
     datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
     val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(dataSource, layerName)
     clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
       logger.info(
-        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+        s"Cleared caches for ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles, $closedMeshFileHandleCount mesh file handles, $closedSegmentIndexFileHandleCount segment index file handles, $closedConnectomeFileHandleCount connectome file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
     }
   }
 
@@ -455,21 +463,12 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-        val connectomeFileNames =
-          connectomeFileService.exploreConnectomeFiles(organizationId, datasetDirectoryName, dataLayerName)
         for {
-          mappingNames <- Fox.serialCombined(connectomeFileNames.toList) { connectomeFileName =>
-            val path =
-              connectomeFileService.connectomeFilePath(organizationId,
-                                                       datasetDirectoryName,
-                                                       dataLayerName,
-                                                       connectomeFileName)
-            connectomeFileService.mappingNameForConnectomeFile(path)
-          }
-          connectomesWithMappings = connectomeFileNames
-            .zip(mappingNames)
-            .map(tuple => ConnectomeFileNameWithMappingName(tuple._1, tuple._2))
-        } yield Ok(Json.toJson(connectomesWithMappings))
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          connectomeFileInfos <- connectomeFileService.listConnectomeFiles(dataSource.id, dataLayer)
+        } yield Ok(Json.toJson(connectomeFileInfos))
       }
     }
 
@@ -480,10 +479,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapses <- connectomeFileService.synapsesForAgglomerates(meshFilePath, request.body.agglomerateIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapses <- connectomeFileService.synapsesForAgglomerates(meshFileKey, request.body.agglomerateIds)
         } yield Ok(Json.toJson(synapses))
       }
     }
@@ -496,12 +498,18 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFilePath,
+          directionValidated <- SynapticPartnerDirection
+            .fromString(direction)
+            .toFox ?~> "could not parse synaptic partner direction"
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFileKey,
                                                                              request.body.synapseIds,
-                                                                             direction)
+                                                                             directionValidated)
         } yield Ok(Json.toJson(agglomerateIds))
       }
     }
@@ -513,10 +521,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapsePositions <- connectomeFileService.positionsForSynapses(meshFilePath, request.body.synapseIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapsePositions <- connectomeFileService.positionsForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapsePositions))
       }
     }
@@ -528,10 +539,13 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFilePath <- Fox.successful(
-            connectomeFileService
-              .connectomeFilePath(organizationId, datasetDirectoryName, dataLayerName, request.body.connectomeFile))
-          synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
+                                                                       dataLayer,
+                                                                       request.body.connectomeFile)
+          synapseTypes <- connectomeFileService.typesForSynapses(meshFileKey, request.body.synapseIds)
         } yield Ok(Json.toJson(synapseTypes))
       }
     }

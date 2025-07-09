@@ -4,6 +4,11 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.connectome.{
+  ConnectomeFileService,
+  Hdf5ConnectomeFileService,
+  ZarrConnectomeFileService
+}
 import com.scalableminds.webknossos.datastore.services.mapping.{
   AgglomerateService,
   Hdf5AgglomerateService,
@@ -52,6 +57,9 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[SegmentIndexFileService]).asEagerSingleton()
     bind(classOf[ZarrSegmentIndexFileService]).asEagerSingleton()
     bind(classOf[Hdf5SegmentIndexFileService]).asEagerSingleton()
+    bind(classOf[ConnectomeFileService]).asEagerSingleton()
+    bind(classOf[ZarrConnectomeFileService]).asEagerSingleton()
+    bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
     bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
     bind(classOf[ChunkCacheService]).asEagerSingleton()

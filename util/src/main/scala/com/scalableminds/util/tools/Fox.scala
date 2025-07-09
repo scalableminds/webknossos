@@ -239,6 +239,15 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       }
     }
 
+  // Overwrite error message in case of Failure and Empty (wrapping Empty in a Failure).
+  def ??~>(s: String): Fox[A] =
+    Fox.fromFutureBox {
+      futureBox.map {
+        case Full(value) => Full(value)
+        case _ => Failure(s)
+      }
+    }
+
   // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
   def ~>[T](errorCode: => T): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))

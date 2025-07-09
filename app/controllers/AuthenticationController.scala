@@ -617,13 +617,13 @@ class AuthenticationController @Inject()(
         challenge <- temporaryAssertionStore
           .pop(sessionId)
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
-        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ?~> "Bad Request" ~> BAD_REQUEST
+        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
-        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ~> "Passkey Authentication Failed"
+        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         multiUser <- multiUserDAO
-          .findOneById(multiUserId)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .findOneById(multiUserId)(GlobalAccessContext) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO
-          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
         params = new AuthenticationParameters(
@@ -633,15 +633,15 @@ class AuthenticationController @Inject()(
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
 
         // Sign count is 0 if not used by the authenticator.
         _ <- Fox
-          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ?~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
         result <- Fox.fromFuture(authenticateInner(loginInfo))

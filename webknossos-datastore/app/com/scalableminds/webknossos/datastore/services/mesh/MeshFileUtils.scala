@@ -1,8 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
-import com.typesafe.scalalogging.LazyLogging
-
-trait MeshFileUtils extends LazyLogging {
+trait MeshFileUtils {
 
   protected val keyBucketOffsets = "bucket_offsets"
   protected val keyBuckets = "buckets"

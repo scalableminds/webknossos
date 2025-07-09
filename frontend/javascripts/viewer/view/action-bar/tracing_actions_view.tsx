@@ -85,6 +85,7 @@ import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "viewer/view/layouting/default_layout_configs";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { useDispatch } from "react-redux";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -350,11 +351,27 @@ const handleDuplicate = async (annotationId: string, annotationType: APIAnnotati
   window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
 };
 
+const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
+  if (event != null) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
+    event.target.blur();
+  }
+
+  Model.forceSave();
+};
+
+const handleUndo = () => dispatchUndoAsync(Store.dispatch);
+const handleRedo = () => dispatchRedoAsync(Store.dispatch);
+
+const handleFinishAndGetNextTask = async () => {
+  api.tracing.finishAndGetNextTask();
+};
+
 export const getTracingViewMenuItems = (
   props: TracingViewMenuProps,
   layoutMenu: SubMenuType | null,
 ) => {
-  const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
+  const { viewMode, controlMode } = useWkSelector((state) => state.temporaryConfiguration);
   const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
   const {
     restrictions,
@@ -465,10 +482,8 @@ export const getTracingViewMenuItems = (
 };
 
 function TracingActionsView({ layoutMenu }: Props) {
-  const annotationType = useWkSelector((state) => state.annotation.annotationType);
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const restrictions = useWkSelector((state) => state.annotation.restrictions);
-  const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
   const task = useWkSelector((state) => state.task);
   const activeUser = useWkSelector((state) => state.activeUser);
   const hasTracing = useWkSelector(
@@ -488,8 +503,11 @@ function TracingActionsView({ layoutMenu }: Props) {
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
+  const dispatch = useDispatch();
   const [isReopenAllowed, setIsReopenAllowed] = useState(false);
   const reopenTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { annotationType, annotationId, restrictions, owner: annotationOwner } = annotation;
 
   useEffect(() => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
@@ -522,26 +540,14 @@ function TracingActionsView({ layoutMenu }: Props) {
     };
   }, [task]);
 
-  const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
-    if (event != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-      event.target.blur();
-    }
-
-    Model.forceSave();
-  };
-
-  const handleUndo = () => dispatchUndoAsync(Store.dispatch);
-  const handleRedo = () => dispatchRedoAsync(Store.dispatch);
-
-  const handleCopyToAccount = async () => {
+  const handleCopyToAccount = useCallback(async () => {
     // duplicates the annotation in the current user account
     const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
     location.href = `/annotations/${newAnnotation.id}`;
-  };
+  }, [annotationId, annotationType]);
 
-  const handleCopySandboxToAccount = async () => {
-    const { annotation: sandboxAnnotation, dataset } = Store.getState();
+  const handleCopySandboxToAccount = useCallback(async () => {
+    const sandboxAnnotation = annotation;
     const tracingType = getTracingType(sandboxAnnotation);
 
     if (tracingType !== TracingTypeEnum.skeleton) {
@@ -559,25 +565,23 @@ function TracingActionsView({ layoutMenu }: Props) {
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxAnnotation);
     const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+
     // Update the sandbox tracing with the new tracingId and createdTimestamp
     const newSkeletonTracing = {
       ...sandboxSkeletonTracing,
       tracingId: skeletonTracing.tracingId,
       createdTimestamp: skeletonTracing.createdTimestamp,
     };
-    Store.dispatch(setSkeletonTracingAction(newSkeletonTracing));
+    dispatch(setSkeletonTracingAction(newSkeletonTracing));
     await Model.ensureSavedState();
+
     // Do a complete page refresh, because the URL changed and the router
     // would cause a reload the next time the URL hash changes (because the
     // TracingLayoutView would be remounted).
     location.reload();
-  };
+  }, [dispatch, annotation, dataset]);
 
-  const handleFinishAndGetNextTask = async () => {
-    api.tracing.finishAndGetNextTask();
-  };
-
-  const handleReopenTask = async () => {
+  const handleReopenTask = useCallback(async () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (!localStorageEntry) return;
     const { annotationId } = JSON.parse(localStorageEntry);
@@ -595,7 +599,7 @@ function TracingActionsView({ layoutMenu }: Props) {
         },
       });
     }
-  };
+  }, []);
 
   const getTracingViewModals = useCallback(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);

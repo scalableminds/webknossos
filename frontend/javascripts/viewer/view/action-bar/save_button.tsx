@@ -10,11 +10,12 @@ import ErrorHandling from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
-import React, { useCallback, useState } from "react";
+import type React from "react";
+import { useCallback, useState, useEffect } from "react";
 
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { Model } from "viewer/singletons";
-import Store, { type SaveState } from "viewer/store";
+import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 
 type Props = {
@@ -38,8 +39,10 @@ const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
   );
 }, REPORT_THROTTLE_THRESHOLD);
 
+const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
+
 function SaveButton({ onClick, className }: Props) {
-  const { progressInfo, isBusy } = useWkSelector((state) => state.save);
+  const { progressInfo, isBusy, queue } = useWkSelector((state) => state.save);
   // For a low action count, the progress info would show only for a very short amount of time.
   // Therefore, the progressFraction is set to null, if the count is low.
   const progressFraction =
@@ -54,11 +57,9 @@ function SaveButton({ onClick, className }: Props) {
     waitingForCompressionBucketCount: 0,
   });
 
-  const getPushQueueStats = useCallback(reuseInstanceOnEquality(Model.getPushQueueStats), []);
-
   const _forceUpdate = useCallback(() => {
     const isStateSaved = Model.stateSaved();
-    const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
+    const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(queue);
 
     const unsavedDuration = Math.max(
       oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0,
@@ -74,9 +75,9 @@ function SaveButton({ onClick, className }: Props) {
     setIsStateSaved(isStateSaved);
     setShowUnsavedWarning(showUnsavedWarning);
     setSaveInfo(newSaveInfo);
-  }, [getPushQueueStats]);
+  }, [queue]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Polling can be removed once VolumeMode saving is reactive
     const savedPollingInterval = window.setInterval(_forceUpdate, SAVE_POLLING_INTERVAL);
     return () => {
@@ -84,7 +85,7 @@ function SaveButton({ onClick, className }: Props) {
     };
   }, [_forceUpdate]);
 
-  const getSaveButtonIcon = () => {
+  const getSaveButtonIcon = useCallback(() => {
     if (isStateSaved) {
       return <CheckOutlined />;
     } else if (isBusy) {
@@ -92,11 +93,9 @@ function SaveButton({ onClick, className }: Props) {
     } else {
       return <HourglassOutlined />;
     }
-  };
+  }, [isStateSaved, isBusy]);
 
-  const shouldShowProgress = (): boolean => {
-    return isBusy && progressFraction != null;
-  };
+  const shouldShowProgress = isBusy && progressFraction != null;
 
   const { outstandingBucketDownloadCount } = saveInfo;
 
@@ -127,7 +126,7 @@ function SaveButton({ onClick, className }: Props) {
               : null
         }
       >
-        {shouldShowProgress() ? (
+        {shouldShowProgress ? (
           <span
             style={{
               marginLeft: 8,

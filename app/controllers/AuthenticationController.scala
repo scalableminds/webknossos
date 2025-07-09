@@ -619,7 +619,8 @@ class AuthenticationController @Inject()(
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
-        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        multiUserId <- ObjectId
+          .fromString(new String(authData.getUserHandle)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         multiUser <- multiUserDAO
           .findOneById(multiUserId)(GlobalAccessContext) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO
@@ -709,18 +710,13 @@ class AuthenticationController @Inject()(
           new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))
         registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
         _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
-        attestation = registrationData.getAttestationObject
+        attestationObject = registrationData.getAttestationObject
+        _ = println(attestationObject)
         credentialRecord = new WebAuthnCredentialRecord(
-          attestation.getAttestationStatement,
-          null, // User Verification not used
-          null, // Backup not used
-          null, // Backup not used
-          0, // Counter is initially 0
-          attestation.getAuthenticatorData.getAttestedCredentialData,
-          attestation.getAuthenticatorData.getExtensions,
-          null, // We do not need the challenge
-          null, // Client extensions are not used
-          null // Transports are not used
+          attestationObject,
+          null, // clientData - Client data is not collected.
+          null, // clientExtensions - Client extensions are ignored.
+          null // transports - All transports are allowed.
         )
         _ = registrationData
         credential = WebAuthnCredential(

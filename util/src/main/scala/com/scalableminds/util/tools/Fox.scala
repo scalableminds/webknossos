@@ -244,6 +244,10 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     Fox.fromFutureBox {
       futureBox.map {
         case Full(value) => Full(value)
+        case f: Failure => {
+          println(f)
+          Failure(s)
+        }
         case _ => Failure(s)
       }
     }

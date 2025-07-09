@@ -55,7 +55,7 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
         S3DataVault.create(remoteSource, ws)
       } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
         HttpsDataVault.create(remoteSource, ws, config.Http.uri)
-      } else if (scheme == DataVaultService.schemeFile) {
+      } else if (scheme == DataVaultService.schemeFile || scheme == null) {
         FileSystemDataVault.create
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")

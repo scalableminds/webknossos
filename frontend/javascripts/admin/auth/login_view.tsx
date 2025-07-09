@@ -3,6 +3,7 @@ import * as Utils from "libs/utils";
 import window from "libs/window";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "./login_form";
+import { useWkSelector } from "libs/react_hooks";
 
 type Props = {
   redirect?: string;
@@ -10,6 +11,13 @@ type Props = {
 
 function LoginView({ redirect }: Props) {
   const navigate = useNavigate();
+  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
+
+  if (isAuthenticated) {
+    // If you're already logged in, redirect to the dashboard
+    navigate("/");
+  }
+
   const onLoggedIn = () => {
     if (!Utils.hasUrlParam("redirectPage")) {
       if (redirect) {

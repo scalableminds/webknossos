@@ -3,10 +3,11 @@ import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import { getDefaultOrganization } from "admin/rest_api";
 import { Card, Col, Row, Spin } from "antd";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import type { APIOrganization } from "types/api_types";
 
 function RegistrationViewGeneric() {
@@ -120,6 +121,12 @@ function RegistrationViewWkOrg() {
 }
 
 function RegistrationView() {
+  // If you're already logged in, redirect to the dashboard
+  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
+
+  if (isAuthenticated) {
+    return <Navigate to="/" />;
+  }
   return features().isWkorgInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
 }
 

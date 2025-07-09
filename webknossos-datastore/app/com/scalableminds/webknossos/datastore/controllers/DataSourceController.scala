@@ -425,8 +425,8 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
-        //tryo(clearCachesOfDataSource(organizationId, datasetDirectoryName, None))
         for {
+          _ <- Fox.fromBool(dataSourceService.existsOnDisk(organizationId, datasetDirectoryName)) ?~> "The dataset does not exist on disk"
           _ <- dataSourceService.deleteOnDisk(
             organizationId,
             datasetDirectoryName,

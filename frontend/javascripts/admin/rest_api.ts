@@ -2023,8 +2023,6 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   return new Map(keyValues);
 }
 
-let counter = 0;
-
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
@@ -2045,12 +2043,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Utils.retryAsyncFunction(() => {
-      counter++;
-      const brokenSuffix = counter % 2 === 1 || "alwaysFail" in window ? "broken" : "";
-      console.log("brokenSuffix", brokenSuffix);
-      return Request.receiveArraybuffer(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments${brokenSuffix}?${params}`,
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
         {
           method: "POST",
           body: segmentIdBuffer,
@@ -2059,8 +2054,8 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
           },
           showErrorToast: false,
         },
-      );
-    });
+      ),
+    );
   });
 
   // Ensure that the values are bigint if the keys are bigint

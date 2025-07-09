@@ -11,7 +11,7 @@ import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
 import type React from "react";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { Model } from "viewer/singletons";
@@ -38,8 +38,6 @@ const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
     ),
   );
 }, REPORT_THROTTLE_THRESHOLD);
-
-const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
 function SaveButton({ onClick, className }: Props) {
   const { progressInfo, isBusy, queue } = useWkSelector((state) => state.save);
@@ -70,6 +68,8 @@ function SaveButton({ onClick, className }: Props) {
     if (showUnsavedWarning) {
       reportUnsavedDurationThresholdExceeded();
     }
+
+    const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
     const newSaveInfo = getPushQueueStats();
     setIsStateSaved(isStateSaved);

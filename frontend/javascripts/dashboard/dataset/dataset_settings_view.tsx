@@ -419,7 +419,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       if (this.didDatasourceIdChange(dataSource)) {
         Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
       }
-      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
+      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource, dataset.id);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });

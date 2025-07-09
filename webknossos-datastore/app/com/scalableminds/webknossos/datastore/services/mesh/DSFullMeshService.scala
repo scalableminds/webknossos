@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services._
@@ -52,29 +52,22 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  def loadFor(organizationId: String,
-              datasetDirectoryName: String,
-              dataLayerName: String,
-              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                m: MessagesProvider,
-                                                tc: TokenContext): Fox[Array[Byte]] =
+  def loadFor(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
+      implicit ec: ExecutionContext,
+      m: MessagesProvider,
+      tc: TokenContext): Fox[Array[Byte]] =
     if (fullMeshRequest.meshFileName.isDefined)
-      loadFullMeshFromMeshFile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
+      loadFullMeshFromMeshFile(dataSource, dataLayer, fullMeshRequest)
     else
-      loadFullMeshFromAdHoc(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
+      loadFullMeshFromAdHoc(dataSource, dataLayer, fullMeshRequest)
 
-  private def loadFullMeshFromAdHoc(organizationId: String,
-                                    datasetName: String,
-                                    dataLayerName: String,
-                                    fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                      m: MessagesProvider,
-                                                                      tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromAdHoc(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
+      implicit ec: ExecutionContext,
+      m: MessagesProvider,
+      tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                datasetName,
-                                                                                dataLayerName)
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
       before = Instant.now
       verticesForChunks <- getAllAdHocChunks(dataSource,
@@ -119,17 +112,12 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield allVertices
   }
 
-  private def loadFullMeshFromMeshFile(organizationId: String,
-                                       datasetDirectoryName: String,
-                                       dataLayerName: String,
-                                       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                         m: MessagesProvider,
-                                                                         tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromMeshFile(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
+      implicit ec: ExecutionContext,
+      m: MessagesProvider,
+      tc: TokenContext): Fox[Array[Byte]] =
     for {
       before <- Instant.nowFox
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                datasetDirectoryName,
-                                                                                dataLayerName)
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh.meshFileName.required"
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
       mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)

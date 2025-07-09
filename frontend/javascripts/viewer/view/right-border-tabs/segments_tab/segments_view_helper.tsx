@@ -76,9 +76,8 @@ export async function hasSegmentIndex(
   if (maybeVolumeTracing == null) {
     segmentIndexInDataStore = await hasSegmentIndexInDataStore(
       dataset.dataStore.url,
-      dataset.directoryName,
+      dataset.id,
       visibleSegmentationLayer.name,
-      dataset.owningOrganization,
     );
   }
   return (

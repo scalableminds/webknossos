@@ -1,6 +1,6 @@
 package models.dataset
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,6 +9,8 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   N5SegmentationLayer,
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
   ZarrDataLayer,
@@ -23,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   DataFormat,
+  DataSource,
   DataSourceId,
   GenericDataSource,
   DataLayerLike => DataLayer
@@ -50,7 +53,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                datasetMagsDAO: DatasetMagsDAO,
-                               datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
@@ -63,7 +65,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
+  private val virtualRemoteDatasetStatus = "Virtual remote dataset" // Virtual datasets should not be deleted when not reported
+  private val inactiveStatusList =
+    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus, virtualRemoteDatasetStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
@@ -97,6 +101,32 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield newDataset
   }
 
+  def createVirtualDataset(datasetName: String,
+                           organizationId: String,
+                           dataStore: DataStore,
+                           dataSource: DataSource,
+                           folderId: Option[String],
+                           user: User): Fox[Dataset] =
+    for {
+      _ <- assertValidDatasetName(datasetName)
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
+        GlobalAccessContext)
+      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
+      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> "organization.notFound"
+      folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
+      _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
+      newDatasetId = ObjectId.generate
+      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(_.asAbstractLayer))
+      dataset <- createDataset(dataStore,
+                               newDatasetId,
+                               datasetName,
+                               abstractDataSource,
+                               status = Some(virtualRemoteDatasetStatus))
+      datasetId = dataset._id
+      _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
+      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
+    } yield dataset
+
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
@@ -114,7 +144,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetId: ObjectId,
       datasetName: String,
       dataSource: InboxDataSource,
-      publication: Option[ObjectId] = None
+      publication: Option[ObjectId] = None,
+      status: Option[String] = None
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val metadata =
@@ -147,7 +178,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         name = datasetName,
         voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,
-        status = dataSource.statusOpt.getOrElse(""),
+        status = status.orElse(dataSource.statusOpt).getOrElse(""),
         logoUrl = None,
         metadata = metadata
       )
@@ -331,8 +362,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                 case Some(df) =>
                   df match {
                     case DataFormat.wkw =>
-                      throw new NotImplementedError(
-                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                      WKWDataLayer(
+                        name,
+                        category,
+                        boundingBox,
+                        mags,
+                        elementClass,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
                     case DataFormat.neuroglancerPrecomputed =>
                       PrecomputedDataLayer(
                         name,
@@ -413,8 +454,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                 case Some(df) =>
                   df match {
                     case DataFormat.wkw =>
-                      throw new NotImplementedError(
-                        "WKW data format not supported in this context, only datasets with MagLocators are supported")
+                      WKWSegmentationLayer(
+                        name,
+                        boundingBox,
+                        mags,
+                        elementClass,
+                        mappings,
+                        largestSegmentId,
+                        defaultViewConfiguration,
+                        adminViewConfiguration,
+                        coordinateTransformations,
+                        additionalAxes,
+                        attachmentsOpt
+                      )
                     case DataFormat.neuroglancerPrecomputed =>
                       PrecomputedSegmentationLayer(
                         name,

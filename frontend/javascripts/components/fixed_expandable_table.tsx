@@ -62,7 +62,7 @@ export default function FixedExpandableTable<RecordType>({
     ...expandable,
     expandedRowKeys: expandedRows,
     onExpandedRowsChange: (selectedRows: readonly React.Key[]) => {
-      setExpandedRows(selectedRows as string[]);
+      setExpandedRows(selectedRows);
     },
     columnTitle: areAllRowsExpanded ? columnTitleExpanded : columnTitleCollapsed,
   };

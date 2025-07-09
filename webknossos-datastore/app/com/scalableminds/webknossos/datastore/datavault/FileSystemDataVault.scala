@@ -94,7 +94,7 @@ class FileSystemDataVault extends DataVault {
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
-      _ <- Fox.fromBool(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
+      _ <- Fox.fromBool(uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file or null"
       _ <- Fox.fromBool(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Paths.get(uri.getPath)
       _ <- Fox.fromBool(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"

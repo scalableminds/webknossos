@@ -7,7 +7,6 @@ import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import {
   OrthoBaseRotations,
-  OrthoViews,
   OrthoViewToNumber,
   OrthoViewValuesWithoutTDView,
   type Vector3,

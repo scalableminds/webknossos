@@ -457,31 +457,21 @@ class DataSourceController @Inject()(
       }
     }
 
-  def listConnectomeFiles(organizationId: String,
-                          datasetDirectoryName: String,
-                          dataLayerName: String): Action[AnyContent] =
+  def listConnectomeFiles(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           connectomeFileInfos <- connectomeFileService.listConnectomeFiles(dataSource.id, dataLayer)
         } yield Ok(Json.toJson(connectomeFileInfos))
       }
     }
 
-  def getSynapsesForAgglomerates(organizationId: String,
-                                 datasetDirectoryName: String,
-                                 dataLayerName: String): Action[ByAgglomerateIdsRequest] =
+  def getSynapsesForAgglomerates(datasetId: ObjectId, dataLayerName: String): Action[ByAgglomerateIdsRequest] =
     Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
                                                                        dataLayer,
                                                                        request.body.connectomeFile)
@@ -490,20 +480,16 @@ class DataSourceController @Inject()(
       }
     }
 
-  def getSynapticPartnerForSynapses(organizationId: String,
-                                    datasetDirectoryName: String,
+  def getSynapticPartnerForSynapses(datasetId: ObjectId,
                                     dataLayerName: String,
                                     direction: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           directionValidated <- SynapticPartnerDirection
             .fromString(direction)
             .toFox ?~> "could not parse synaptic partner direction"
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
                                                                        dataLayer,
                                                                        request.body.connectomeFile)
@@ -514,16 +500,11 @@ class DataSourceController @Inject()(
       }
     }
 
-  def getSynapsePositions(organizationId: String,
-                          datasetDirectoryName: String,
-                          dataLayerName: String): Action[BySynapseIdsRequest] =
+  def getSynapsePositions(datasetId: ObjectId, dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
                                                                        dataLayer,
                                                                        request.body.connectomeFile)
@@ -532,16 +513,11 @@ class DataSourceController @Inject()(
       }
     }
 
-  def getSynapseTypes(organizationId: String,
-                      datasetDirectoryName: String,
-                      dataLayerName: String): Action[BySynapseIdsRequest] =
+  def getSynapseTypes(datasetId: ObjectId, dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- connectomeFileService.lookUpConnectomeFileKey(dataSource.id,
                                                                        dataLayer,
                                                                        request.body.connectomeFile)

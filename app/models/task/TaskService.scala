@@ -5,7 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
-import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationIdentifier, AnnotationStore, AnnotationType}
 import models.dataset.DatasetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
@@ -19,10 +19,12 @@ import scala.concurrent.ExecutionContext
 class TaskService @Inject()(conf: WkConf,
                             datasetDAO: DatasetDAO,
                             scriptDAO: ScriptDAO,
+                            annotationStore: AnnotationStore,
                             userService: UserService,
                             annotationDAO: AnnotationDAO,
                             taskTypeDAO: TaskTypeDAO,
                             teamDAO: TeamDAO,
+                            taskDAO: TaskDAO,
                             scriptService: ScriptService,
                             taskTypeService: TaskTypeService,
                             projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
@@ -88,4 +90,11 @@ class TaskService @Inject()(conf: WkConf,
       activeCount <- Fox.fromFuture(annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0))
     } yield TaskStatus(task.pendingInstances, activeCount, task.totalInstances - (activeCount + task.pendingInstances))
 
+  def clearCompoundCache(taskId: ObjectId): Fox[Unit] =
+    for {
+      task <- taskDAO.findOne(taskId)(GlobalAccessContext)
+      _ = annotationStore.removeFromCache(AnnotationIdentifier(AnnotationType.CompoundTask, task._id))
+      _ = annotationStore.removeFromCache(AnnotationIdentifier(AnnotationType.CompoundProject, task._project))
+      _ = annotationStore.removeFromCache(AnnotationIdentifier(AnnotationType.CompoundTaskType, task._taskType))
+    } yield ()
 }

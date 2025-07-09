@@ -477,24 +477,33 @@ export function* updateLocalHdf5Mapping(
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
 
-  const newEntries =
-    editableMapping != null
-      ? yield* call(
-          getAgglomeratesForSegmentsFromTracingstore,
-          annotation.tracingStore.url,
-          editableMapping.tracingId,
-          Array.from(newSegmentIds),
-          annotation.annotationId,
-          annotation.version,
-        )
-      : yield* call(
-          getAgglomeratesForSegmentsFromDatastore,
-          dataset.dataStore.url,
-          dataset,
-          mappingLayerName,
-          mappingName,
-          Array.from(newSegmentIds),
-        );
+  let newEntries;
+  try {
+    newEntries =
+      editableMapping != null
+        ? yield* call(
+            getAgglomeratesForSegmentsFromTracingstore,
+            annotation.tracingStore.url,
+            editableMapping.tracingId,
+            Array.from(newSegmentIds),
+            annotation.annotationId,
+            annotation.version,
+          )
+        : yield* call(
+            getAgglomeratesForSegmentsFromDatastore,
+            dataset.dataStore.url,
+            dataset,
+            mappingLayerName,
+            mappingName,
+            Array.from(newSegmentIds),
+          );
+  } catch (exception) {
+    console.error("Could not load agglomerate ids for segments due to", exception);
+    Toast.error(
+      "Could not load agglomerate ids for segments. Some segments will remain hidden for now.",
+    );
+    return;
+  }
 
   // It is safe to mutate mutableRemainingEntries to compute the merged,
   // new mapping. See the definition of mutableRemainingEntries.

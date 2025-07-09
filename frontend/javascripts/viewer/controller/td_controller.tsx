@@ -77,6 +77,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
             event.ctrlKey || event.metaKey,
             OrthoViews.TDView,
             isTouch,
+            false,
           ),
   };
 }

@@ -2241,17 +2241,19 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-      {
-        data: {
-          ...segmentsInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId1: Number(segmentsInfo.segmentId1),
-          segmentId2: Number(segmentsInfo.segmentId2),
-          agglomerateId: Number(segmentsInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            ...segmentsInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId1: Number(segmentsInfo.segmentId1),
+            segmentId2: Number(segmentsInfo.segmentId2),
+            agglomerateId: Number(segmentsInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2272,16 +2274,18 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-      {
-        data: {
-          ...segmentInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId: Number(segmentInfo.segmentId),
-          agglomerateId: Number(segmentInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+        {
+          data: {
+            ...segmentInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId: Number(segmentInfo.segmentId),
+            agglomerateId: Number(segmentInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }

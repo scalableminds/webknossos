@@ -31,7 +31,7 @@ export default function FixedExpandableTable<RecordType>({
   columns,
   ...restProps
 }: OwnTableProps<RecordType>) {
-  const [expandedRows, setExpandedRows] = React.useState(EMPTY_ARRAY);
+  const [expandedRows, setExpandedRows] = useState<React.Key>(EMPTY_ARRAY);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Collapse all rows when source changes
   useEffect(() => {

@@ -12,7 +12,7 @@ import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
-import PasskeysView from "../auth/passkeys_view.tsx";
+import PasskeysView from "../auth/passkeys_view";
 
 const MIN_PASSWORD_LENGTH = 8;
 

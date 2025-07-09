@@ -193,6 +193,8 @@ class DatasetArray(vaultPath: VaultPath,
                                                                tc: TokenContext): Fox[MultiArray] =
     if (shape.contains(0)) {
       Fox.successful(MultiArrayUtils.createEmpty(header.resolvedDataType, rank))
+    } else if (shape.exists(_ < 0)) {
+      Fox.failure(s"Trying to read negative shape from DatasetArray: ${shape.mkString(",")}")
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
       val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)

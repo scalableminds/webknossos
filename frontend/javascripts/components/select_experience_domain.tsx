@@ -1,7 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { getExistingExperienceDomains } from "admin/rest_api";
 import { Select, Tooltip } from "antd";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { ExperienceDomainList } from "types/api_types";
 
 type Props = {
@@ -27,16 +28,11 @@ const SelectExperienceDomain: React.FC<Props> = ({
   allowCreation = false,
   alreadyUsedDomains = [],
 }) => {
-  const [domains, setDomains] = useState<ExperienceDomainList>([]);
+  const { data: domains = [] } = useQuery({
+    queryKey: ["experienceDomains"],
+    queryFn: getExistingExperienceDomains,
+  });
   const [currentlyEnteredDomain, setCurrentlyEnteredDomain] = useState("");
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const existingDomains = await getExistingExperienceDomains();
-      setDomains(existingDomains);
-    };
-    void fetchData();
-  }, []);
 
   const getUnusedDomains = (): ExperienceDomainList => {
     return domains.filter((domain) => !alreadyUsedDomains.includes(domain));

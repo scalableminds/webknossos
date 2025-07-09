@@ -55,10 +55,12 @@ export default function FixedExpandableTable<RecordType>({
       onClick={() => setExpandedRows(EMPTY_ARRAY)}
     />
   );
+
   const columnsWithAdjustedFixedProp = columns.map((column) => {
     const columnFixed = expandedRows.length > 0 ? false : column.fixed;
     return { ...column, fixed: columnFixed };
   });
+
   const expandableProp: ExpandableConfig<RecordType> = {
     ...expandable,
     expandedRowKeys: expandedRows,

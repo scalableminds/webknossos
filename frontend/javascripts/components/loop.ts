@@ -1,5 +1,5 @@
 import window from "libs/window";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 type LoopProps = {
   interval: number;
@@ -7,13 +7,15 @@ type LoopProps = {
 };
 
 export default function Loop({ interval, onTick }: LoopProps) {
+  const _onTick = useCallback(onTick, []);
+
   useEffect(() => {
-    const intervalId = window.setInterval(onTick, interval);
+    const intervalId = window.setInterval(_onTick, interval);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [interval, onTick]);
+  }, [interval, _onTick]);
 
   return null;
 }

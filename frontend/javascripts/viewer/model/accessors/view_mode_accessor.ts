@@ -99,7 +99,7 @@ const flycamRotationEuler = new THREE.Euler();
 const flycamRotationMatrix = new THREE.Matrix4();
 const flycamPositionMatrix = new THREE.Matrix4();
 const rotatedDiff = new THREE.Vector3();
-const planeRationVector = new THREE.Vector3();
+const planeRatioVector = new THREE.Vector3();
 
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
@@ -122,7 +122,7 @@ function _calculateMaybeGlobalPos(
   flycamPositionMatrix.makeTranslation(...curGlobalPos);
   rotatedDiff.set(...diffXyz).applyMatrix4(flycamRotationMatrix);
   const scaledRotatedPosition = rotatedDiff
-    .multiply(planeRationVector.set(...planeRatio))
+    .multiply(planeRatioVector.set(...planeRatio))
     .multiplyScalar(-1);
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
@@ -163,6 +163,32 @@ function _calculateMaybeGlobalPos(
   return { rounded: roundedPosition, floating: floatingPosition };
 }
 
+// This function inverts parts of the _calculateMaybeGlobalPos function.
+// It takes a global position and calculates a screen space vector relative to the flycam position for it.
+// The result it like the input of position of _calculateMaybeGlobalPos but as a 3D vector from which the
+// viewport dependant coordinates need to be extracted (xy -> xy, yz -> zy, xz -> xz).
+function _calculateInViewportPos(
+  globalPosition: Vector3,
+  flycamPosition: Vector3,
+  flycamRotationInRadian: Vector3,
+  planeRatio: Vector3,
+  zoomStep: number,
+): THREE.Vector3 {
+  // Difference in world space
+  const positionDiff = new THREE.Vector3(...V3.sub(globalPosition, flycamPosition));
+
+  // Inverse rotate the world difference vector into local plane-aligned space
+  const inverseRotationMatrix = new THREE.Matrix4()
+    .makeRotationFromEuler(new THREE.Euler(...flycamRotationInRadian, "ZYX"))
+    .invert();
+
+  // Unscale from voxel ratio (undo voxel scaling)
+  const posInScreenSpaceScaling = positionDiff.divide(new THREE.Vector3(...planeRatio));
+  const rotatedIntoScreenSpace = posInScreenSpaceScaling.applyMatrix4(inverseRotationMatrix);
+  const unzoomedPosition = rotatedIntoScreenSpace.multiplyScalar(1 / zoomStep);
+  return unzoomedPosition;
+}
+
 function _calculateMaybePlaneScreenPos(
   state: WebknossosState,
   globalPosition: Vector3,
@@ -178,35 +204,28 @@ function _calculateMaybePlaneScreenPos(
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const navbarHeight = state.uiInformation.navbarHeight;
 
-  // Difference in world space
-  const positionDiff = new THREE.Vector3(...V3.sub(globalPosition, flycamPosition));
-
-  // Inverse rotate the world difference vector into local plane-aligned space
-  const inverseRotationMatrix = new THREE.Matrix4()
-    .makeRotationFromEuler(new THREE.Euler(...flycamRotation, "ZYX"))
-    .invert();
-
-  const localDiff = positionDiff.applyMatrix4(inverseRotationMatrix);
-
-  // Unscale from voxel ratio (undo voxel scaling)
-  const scaledLocalDiff = localDiff
-    .divide(new THREE.Vector3(...planeRatio))
-    .multiplyScalar(1 / state.flycam.zoomStep);
+  const positionInViewportPerspective = calculateInViewportPos(
+    globalPosition,
+    flycamPosition,
+    flycamRotation,
+    planeRatio,
+    state.flycam.zoomStep,
+  );
 
   // Get plane-aligned screen-space coordinates (u/v)
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      point = [scaledLocalDiff.x, scaledLocalDiff.y];
+      point = [positionInViewportPerspective.x, positionInViewportPerspective.y];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      point = [scaledLocalDiff.z, scaledLocalDiff.y];
+      point = [positionInViewportPerspective.z, positionInViewportPerspective.y];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      point = [scaledLocalDiff.x, scaledLocalDiff.z];
+      point = [positionInViewportPerspective.x, positionInViewportPerspective.z];
       break;
     }
 
@@ -319,6 +338,7 @@ export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGl
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
+export const calculateInViewportPos = reuseInstanceOnEquality(_calculateInViewportPos);
 export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

@@ -7,22 +7,22 @@ import {
   formatNumberToArea,
   formatNumberToLength,
 } from "libs/format_utils";
-import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
-import * as THREE from "three";
 import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import {
+  calculateInViewportPos,
   calculateMaybePlaneScreenPos,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -47,16 +47,18 @@ function isPositionStillInPlane(
   flycamRotation: Vector3,
   flycamPosition: Vector3,
   planeId: OrthoView,
+  baseVoxelFactors: Vector3,
+  zoomStep: number,
 ) {
-  const inverseFlycamRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    // As we apply the inverse of the euler angle the flycam currently has we need to invert the order as well.
-    new THREE.Euler(...V3.scale(flycamRotation, -1), "XYZ"),
-  );
-  const positionUvw = new THREE.Vector3(...V3.sub(positionXYZ, flycamPosition))
-    .applyMatrix4(inverseFlycamRotationMatrix)
-    .toArray();
+  const posInViewport = calculateInViewportPos(
+    positionXYZ,
+    flycamPosition,
+    flycamRotation,
+    baseVoxelFactors,
+    zoomStep,
+  ).toArray();
   const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
-  return Math.abs(positionUvw[thirdDim]) < 1;
+  return Math.abs(posInViewport[thirdDim]) < 1;
 }
 
 export default function DistanceMeasurementTooltip() {
@@ -64,13 +66,16 @@ export default function DistanceMeasurementTooltip() {
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
   );
   const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
-  const flycam = useWkSelector((state) => state.flycam);
+  const flycamPosition = useWkSelector((state) => getPosition(state.flycam));
+  const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
+  const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const planeRatio = useWkSelector((state) =>
+    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+  );
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
-  const currentPosition = getPosition(flycam);
-  const rotation = getRotationInRadian(flycam);
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
   const activeGeometry =
     activeTool === AnnotationTool.LINE_MEASUREMENT
@@ -92,16 +97,30 @@ export default function DistanceMeasurementTooltip() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
   // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(activeGeometry.resetAndHide):
   useEffect(() => {
     if (
       lastMeasuredGlobalPosition &&
-      !isPositionStillInPlane(lastMeasuredGlobalPosition, rotation, currentPosition, orthoView)
+      !isPositionStillInPlane(
+        lastMeasuredGlobalPosition,
+        flycamRotation,
+        flycamPosition,
+        orthoView,
+        planeRatio,
+        zoomStep,
+      )
     ) {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }
-  }, [lastMeasuredGlobalPosition, rotation, currentPosition, orthoView]);
+  }, [
+    lastMeasuredGlobalPosition,
+    flycamRotation,
+    flycamPosition,
+    orthoView,
+    planeRatio,
+    zoomStep,
+    activeGeometry.resetAndHide,
+  ]);
 
   if (
     lastMeasuredGlobalPosition == null ||

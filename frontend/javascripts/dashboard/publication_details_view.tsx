@@ -4,11 +4,13 @@ import { Layout, Spin, Tooltip } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { APIPublication } from "types/api_types";
 const { Content } = Layout;
 
-function PublicationDetailView({ publicationId }: { publicationId: string }) {
+function PublicationDetailView() {
+  const { id: publicationId = "" } = useParams();
+
   const [publication, setPublication] = useState<APIPublication | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 

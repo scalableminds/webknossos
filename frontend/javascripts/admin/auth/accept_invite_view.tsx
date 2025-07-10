@@ -4,22 +4,19 @@ import { getOrganizationByInvite, joinOrganization, switchToOrganization } from 
 import { Button, Layout, Result, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
-import type { APIUser } from "types/api_types";
+import { useNavigate, useParams } from "react-router-dom";
 
 const { Content } = Layout;
 
-export default function AcceptInviteView({
-  token,
-  activeUser,
-}: {
-  token: string;
-  activeUser: APIUser | null | undefined;
-}) {
-  const history = useHistory();
+export default function AcceptInviteView() {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const { token = "" } = useParams();
+  const navigate = useNavigate();
+
   const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {
@@ -46,7 +43,7 @@ export default function AcceptInviteView({
     targetOrganization != null ? targetOrganization.name || targetOrganization.id : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
-    history.push("/dashboard");
+    navigate("/dashboard");
 
     if (userJustRegistered) {
       // Since the user just registered, the organization is already active.

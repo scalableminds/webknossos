@@ -38,7 +38,7 @@ import _ from "lodash";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
@@ -56,6 +56,14 @@ const persistence = new Persistence<{ searchQuery: string }>(
 
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
+  const { taskId, projectId, taskTypeId } = useParams();
+
+  initialFieldValues = {
+    ...initialFieldValues,
+    taskId,
+    projectId,
+    taskTypeId,
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);

@@ -4,9 +4,10 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { updateOrganization } from "admin/rest_api";
 import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-import type { APIOrganization } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 
@@ -17,7 +18,10 @@ type FormValues = {
   newUserMailingList: string;
 };
 
-export function OrganizationNotificationsView({ organization }: { organization: APIOrganization }) {
+export function OrganizationNotificationsView() {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const [form] = Form.useForm<FormValues>();
   const [ownerEmail, setOwnerEmail] = useState<string>("");
 

@@ -1,14 +1,8 @@
 import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
-import { useWkSelector } from "libs/react_hooks";
-import { Route, Switch, useHistory, useLocation } from "react-router-dom";
-import { Redirect } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import constants from "viewer/constants";
-import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
-import { OrganizationDangerZoneView } from "./organization_danger_zone_view";
-import { OrganizationNotificationsView } from "./organization_notifications_view";
-import { OrganizationOverviewView } from "./organization_overview_view";
 
 const { Sider, Content } = Layout;
 
@@ -43,11 +37,8 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 ];
 
 const OrganizationView = () => {
-  const organization = useWkSelector((state) =>
-    enforceActiveOrganization(state.activeOrganization),
-  );
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "overview";
 
   const breadcrumbItems = [
@@ -72,26 +63,12 @@ const OrganizationView = () => {
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
           items={MENU_ITEMS}
-          onClick={({ key }) => history.push(`/organization/${key}`)}
+          onClick={({ key }) => navigate(`/organization/${key}`)}
         />
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
-        <Switch>
-          <Route
-            path="/organization/overview"
-            render={() => <OrganizationOverviewView organization={organization} />}
-          />
-          <Route
-            path="/organization/notifications"
-            render={() => <OrganizationNotificationsView organization={organization} />}
-          />
-          <Route
-            path="/organization/delete"
-            render={() => <OrganizationDangerZoneView organization={organization} />}
-          />
-          <Route path="/organization" render={() => <Redirect to="/organization/overview" />} />
-        </Switch>
+        <Outlet />
       </Content>
     </Layout>
   );

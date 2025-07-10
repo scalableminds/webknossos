@@ -35,12 +35,14 @@ import features from "features";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import type { MenuProps } from "rc-menu";
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -90,9 +92,14 @@ const refreshMenuItems: ItemType[] = [
   },
 ];
 
-function DatasetView(props: Props) {
-  const { user } = props;
-  const context = props.context;
+function DatasetView({
+  user,
+  context,
+  onSelectDataset,
+  selectedDatasets,
+  onSelectFolder,
+  setFolderIdForEditModal,
+}: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -100,6 +107,9 @@ function DatasetView(props: Props) {
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const { data: folder } = useFolderQuery(context.activeFolderId);
+
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -151,21 +161,21 @@ function DatasetView(props: Props) {
   function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
     return (
       <DatasetTable
-        context={props.context}
+        context={context}
         datasets={filteredDatasets}
         subfolders={subfolders}
-        onSelectDataset={props.onSelectDataset}
-        selectedDatasets={props.selectedDatasets}
+        onSelectDataset={onSelectDataset}
+        selectedDatasets={selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
-        onSelectFolder={props.onSelectFolder}
+        onSelectFolder={onSelectFolder}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
-        setFolderIdForEditModal={props.setFolderIdForEditModal}
+        setFolderIdForEditModal={setFolderIdForEditModal}
       />
     );
   }
@@ -234,7 +244,7 @@ function DatasetView(props: Props) {
       }}
     >
       {isUserAdminOrDatasetManagerOrTeamManager ? (
-        <React.Fragment>
+        <Fragment>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
           {context.activeFolderId != null && (
@@ -252,7 +262,7 @@ function DatasetView(props: Props) {
             </PricingEnforcedButton>
           )}
           {search}
-        </React.Fragment>
+        </Fragment>
       ) : (
         search
       )}
@@ -274,8 +284,9 @@ function DatasetView(props: Props) {
 
   return (
     <div>
-      <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-
+      <RenderToPortal portalId="dashboard-TabBarExtraContent">
+        {activeTab === renderingTab ? adminHeader : null}
+      </RenderToPortal>
       {searchQuery && (
         <GlobalSearchHeader
           searchQuery={searchQuery}
@@ -428,7 +439,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   }
 
   const newJobsHeader = (
-    <React.Fragment>
+    <Fragment>
       Recent Dataset Conversions{" "}
       <Tooltip
         title="The conversion of the displayed datasets were started in the last 3 days."
@@ -436,7 +447,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       >
         <InfoCircleOutlined />
       </Tooltip>
-    </React.Fragment>
+    </Fragment>
   );
   const newJobsList = (
     <div

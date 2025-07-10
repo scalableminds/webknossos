@@ -166,7 +166,7 @@ class ReactRouter extends React.Component<Props> {
             organizationId,
             getParams.token,
           );
-          return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+          return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
         }}
       />
     );

@@ -40,24 +40,23 @@ const handleZarrLinksClose = () => {
 };
 
 function TracingModals() {
-  const {
-    annotation: { annotationType, annotationId, restrictions },
-    activeUser,
-    uiInformation: {
-      showDownloadModal,
-      showShareModal,
-      showRenderAnimationModal,
-      showMergeAnnotationModal,
-      showAddScriptModal,
-      showZarrPrivateLinksModal,
-    },
-    temporaryConfiguration: { viewMode },
-  } = useWkSelector((state) => ({
-    annotation: state.annotation,
-    activeUser: state.activeUser,
-    uiInformation: state.uiInformation,
-    temporaryConfiguration: state.temporaryConfiguration,
-  }));
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const showDownloadModal = useWkSelector((state) => state.uiInformation.showDownloadModal);
+  const showShareModal = useWkSelector((state) => state.uiInformation.showShareModal);
+  const showRenderAnimationModal = useWkSelector(
+    (state) => state.uiInformation.showRenderAnimationModal,
+  );
+  const showMergeAnnotationModal = useWkSelector(
+    (state) => state.uiInformation.showMergeAnnotationModal,
+  );
+  const showAddScriptModal = useWkSelector((state) => state.uiInformation.showAddScriptModal);
+  const showZarrPrivateLinksModal = useWkSelector(
+    (state) => state.uiInformation.showZarrPrivateLinksModal,
+  );
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
   const modals = React.useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);

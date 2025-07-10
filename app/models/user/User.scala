@@ -403,7 +403,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN (${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom})
+                        WHERE pricingPlan IN (${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])

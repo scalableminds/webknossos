@@ -39,6 +39,10 @@ const handleZarrLinksClose = () => {
   Store.dispatch(setZarrLinksModalVisibilityAction(false));
 };
 
+const handleRenderAnimationClose = () => {
+  Store.dispatch(setRenderAnimationModalVisibilityAction(false));
+};
+
 function TracingModals() {
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -84,7 +88,7 @@ function TracingModals() {
       <CreateAnimationModal
         key="render-animation-modal"
         isOpen={showRenderAnimationModal}
-        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+        onClose={handleRenderAnimationClose}
       />,
     );
 

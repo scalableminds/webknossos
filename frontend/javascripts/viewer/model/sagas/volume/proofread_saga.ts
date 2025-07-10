@@ -1340,16 +1340,6 @@ export function* removeAgglomerateFromActiveMapping(
   );
 }
 
-export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
-  const newMapping = new Map();
-
-  yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: newMapping,
-    }),
-  );
-}
-
 function* gatherInfoForOperation(
   action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
   preparation: Preparation,

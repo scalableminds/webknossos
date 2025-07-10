@@ -35,6 +35,7 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import {
   type BucketRetrievalSource,
+  getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
@@ -154,11 +155,53 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
+  yield* takeEvery("DEBUG__RELOAD_HDF5_MAPPING", reloadHdf5Mapping);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
   for (const layer of segmentationLayers) {
     // The following saga will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
+}
+
+export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+  const newMapping = new Map();
+
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: newMapping,
+    }),
+  );
+}
+
+function* reloadHdf5Mapping() {
+  /*
+   * currently only exists for debugging purposes. can be invoked via
+   *   webknossos.DEV.store.dispatch({type: "DEBUG__RELOAD_HDF5_MAPPING"})
+   */
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+
+  const actionTracingId = volumeTracingLayer?.tracingId;
+  if (actionTracingId == null) {
+    return;
+  }
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
+  );
+
+  const layerName = actionTracingId;
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+  const dataset = yield* select((state) => state.dataset);
+  const layerInfo = getLayerByName(dataset, layerName);
+  const { mappingName } = mappingInfo;
+
+  if (mappingName == null) {
+    throw new Error("Could not apply splitAgglomerate because no active mapping was found.");
+  }
+
+  yield* call(clearActiveMapping, actionTracingId, activeMapping);
+  yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
 }
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {

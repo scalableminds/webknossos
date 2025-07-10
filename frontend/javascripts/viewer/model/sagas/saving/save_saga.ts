@@ -20,9 +20,8 @@ import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
-import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
+import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
-  clearActiveMapping,
   removeAgglomerateFromActiveMapping,
   updateMappingWithMerge,
 } from "../volume/proofread_saga";
@@ -38,7 +37,8 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+// todop: restore to 10
+const VERSION_POLL_INTERVAL_COLLAB = 20 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
@@ -345,6 +345,7 @@ export function* tryToIncorporateActions(
             );
           }
           updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            console.log("clearing and refreshing mapping because of split/merge action");
             yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
           };
@@ -396,6 +397,7 @@ export function* tryToIncorporateActions(
           const layerInfo = getLayerByName(dataset, layerName);
 
           updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            console.log("clearing and refreshing mapping because of split/merge action");
             yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
           };

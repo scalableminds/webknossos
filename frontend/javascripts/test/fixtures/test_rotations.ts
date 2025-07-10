@@ -2,6 +2,7 @@ import type { Vector3 } from "viewer/constants";
 
 const testRotations: Vector3[] = [
   [0, 0, 0],
+  [83, 0, 0],
   [10, 10, 10],
   [90, 160, 90],
   [30, 90, 40],

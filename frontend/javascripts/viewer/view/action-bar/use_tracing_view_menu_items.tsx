@@ -12,7 +12,8 @@ import {
   UnlockOutlined,
 } from "@ant-design/icons";
 import { duplicateAnnotation, editLockedState, finishAnnotation } from "admin/rest_api";
-import { Modal } from "antd";
+import { App } from "antd";
+import type { useAppProps } from "antd/es/app/context";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -45,8 +46,8 @@ const handleRestore = async () => {
   Store.dispatch(setVersionRestoreVisibilityAction(true));
 };
 
-const handleDisableSaving = () => {
-  Modal.confirm({
+const handleDisableSaving = (modal: useAppProps["modal"]) => {
+  modal.confirm({
     title: messages["annotation.disable_saving"],
     content: messages["annotation.disable_saving.content"],
     onOk: () => {
@@ -95,9 +96,13 @@ const handleChangeLockedStateOfAnnotation = async (
   }
 };
 
-const handleFinish = async (annotationId: string, annotationType: APIAnnotationType) => {
+const handleFinish = async (
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  modal: useAppProps["modal"],
+) => {
   await Model.ensureSavedState();
-  Modal.confirm({
+  modal.confirm({
     title: messages["annotation.finish"],
     onOk: async () => {
       await finishAnnotation(annotationId, annotationType);
@@ -130,6 +135,8 @@ export const useTracingViewMenuItems = (
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
 
+  const { modal } = App.useApp();
+
   const {
     restrictions,
     task,
@@ -149,7 +156,7 @@ export const useTracingViewMenuItems = (
     if (restrictions.allowFinish) {
       menuItems.push({
         key: "finish-button",
-        onClick: () => handleFinish(annotationId, annotationType),
+        onClick: () => handleFinish(annotationId, annotationType, modal),
         icon: <CheckCircleOutlined />,
         label: archiveButtonText,
       });
@@ -218,7 +225,7 @@ export const useTracingViewMenuItems = (
     if (restrictions.allowSave && !task) {
       menuItems.push({
         key: "disable-saving",
-        onClick: handleDisableSaving,
+        onClick: () => handleDisableSaving(modal),
         icon: <StopOutlined />,
         label: "Disable saving",
       });
@@ -249,5 +256,6 @@ export const useTracingViewMenuItems = (
     isAnnotationLockedByUser,
     annotationOwner,
     layoutMenu,
+    modal,
   ]);
 };

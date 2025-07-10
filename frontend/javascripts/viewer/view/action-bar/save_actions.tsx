@@ -96,11 +96,7 @@ function SandboxActions({
       throw Error(message);
     }
 
-    // todo: does this logic make sense at all? the above condition seems to exclude
-    // volume tracings
-    const fallbackLayer =
-      sandboxAnnotation.volumes.length > 0 ? sandboxAnnotation.volumes[0].fallbackLayer : null;
-    const newAnnotation = await createExplorational(dataset.id, tracingType, false, fallbackLayer);
+    const newAnnotation = await createExplorational(dataset.id, tracingType, false);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxAnnotation);

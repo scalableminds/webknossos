@@ -91,6 +91,7 @@ case class UserCompactInfo(
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
+private val PricingPlansAllowingGuestsSql = q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
   protected val collection = Users
 
   protected def idColumn(x: Users): Rep[String] = x._Id
@@ -217,7 +218,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND _organization IN (
                 SELECT _id
                 FROM webknossos.organizations
-                WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+                WHERE pricingPlan IN $PricingPlansAllowingGuestsSql
               )
             ORDER BY _multiUser, created ASC
          )
@@ -403,7 +404,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN (${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})
+                        WHERE pricingPlan IN $PricingPlansAllowingGuestsSql
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])

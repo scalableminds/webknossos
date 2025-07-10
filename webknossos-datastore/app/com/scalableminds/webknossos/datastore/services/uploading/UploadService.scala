@@ -4,8 +4,9 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools._
+import com.scalableminds.webknossos.datastore.dataformats.layers._
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
@@ -24,8 +25,6 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 
@@ -521,9 +520,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
       newName = layerIdentifier.newLayerName.getOrElse(layerIdentifier.layerName)
       layerRenamed: DataLayer <- layer match {
-        case l: WKWSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case l: WKWDataLayer         => Fox.successful(l.copy(name = newName))
-        case _                       => Fox.failure("Unknown layer type for link")
+        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
+        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
+        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
+        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
+        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
+        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
+        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
+        case _                               => Fox.failure("Unknown layer type for link")
       }
     } yield layerRenamed
   }

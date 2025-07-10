@@ -6,10 +6,10 @@ import { AsyncButton, type AsyncButtonProps } from "components/async_clickables"
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import * as React from "react";
+import type React from "react";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { TracingTypeEnum } from "types/api_types";
+import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -33,7 +33,22 @@ const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
   Model.forceSave();
 };
 
-function ReadOnlyActions({ activeUser, handleCopyToAccount, copyAnnotationText }) {
+function ReadOnlyActions({
+  activeUser,
+  copyAnnotationText,
+}: {
+  activeUser: APIUser | null | undefined;
+  copyAnnotationText: string;
+}) {
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+
+  const handleCopyToAccount = useCallback(async () => {
+    // duplicates the annotation in the current user account
+    const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
+    location.href = `/annotations/${newAnnotation.id}`;
+  }, [annotationId, annotationType]);
+
   return (
     <>
       <ButtonComponent
@@ -60,49 +75,16 @@ function ReadOnlyActions({ activeUser, handleCopyToAccount, copyAnnotationText }
   );
 }
 
-function SandboxActions({ activeUser, handleCopySandboxToAccount, copyAnnotationText }) {
-  return (
-    <>
-      <Tooltip
-        placement="bottom"
-        title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
-        key="sandbox-tooltip"
-      >
-        <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-          <span className="hide-on-small-screen">Sandbox</span>
-        </Button>
-      </Tooltip>
-      <AsyncButtonWithAuthentication
-        activeUser={activeUser}
-        authenticationMessage="Please register or login to copy the sandbox tracing to your account."
-        key="copy-sandbox-button"
-        icon={<FileAddOutlined />}
-        onClick={handleCopySandboxToAccount}
-        title={copyAnnotationText}
-      >
-        <span className="hide-on-small-screen">Copy To My Account</span>
-      </AsyncButtonWithAuthentication>
-    </>
-  );
-}
-
-function SaveActions() {
-  const annotation = useWkSelector((state) => state.annotation);
-  const dataset = useWkSelector((state) => state.dataset);
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const hasTracing = useWkSelector(
-    (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
-  );
-  const busyBlockingInfo = useWkSelector((state) => state.uiInformation.busyBlockingInfo);
+function SandboxActions({
+  activeUser,
+  copyAnnotationText,
+}: {
+  activeUser: APIUser | null | undefined;
+  copyAnnotationText: string;
+}) {
   const dispatch = useDispatch();
-
-  const { annotationType, annotationId, restrictions, owner: annotationOwner } = annotation;
-
-  const handleCopyToAccount = useCallback(async () => {
-    // duplicates the annotation in the current user account
-    const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
-    location.href = `/annotations/${newAnnotation.id}`;
-  }, [annotationId, annotationType]);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
 
   const handleCopySandboxToAccount = useCallback(async () => {
     const sandboxAnnotation = annotation;
@@ -139,28 +121,52 @@ function SaveActions() {
     location.reload();
   }, [dispatch, annotation, dataset]);
 
+  return (
+    <>
+      <Tooltip
+        placement="bottom"
+        title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
+        key="sandbox-tooltip"
+      >
+        <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+          <span className="hide-on-small-screen">Sandbox</span>
+        </Button>
+      </Tooltip>
+      <AsyncButtonWithAuthentication
+        activeUser={activeUser}
+        authenticationMessage="Please register or login to copy the sandbox tracing to your account."
+        key="copy-sandbox-button"
+        icon={<FileAddOutlined />}
+        onClick={handleCopySandboxToAccount}
+        title={copyAnnotationText}
+      >
+        <span className="hide-on-small-screen">Copy To My Account</span>
+      </AsyncButtonWithAuthentication>
+    </>
+  );
+}
+
+function SaveActions() {
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const hasTracing = useWkSelector(
+    (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
+  );
+  const busyBlockingInfo = useWkSelector((state) => state.uiInformation.busyBlockingInfo);
+
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
   if (!restrictions.allowUpdate) {
-    return (
-      <ReadOnlyActions
-        activeUser={activeUser}
-        handleCopyToAccount={handleCopyToAccount}
-        copyAnnotationText={copyAnnotationText}
-      />
-    );
+    return <ReadOnlyActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />;
   }
 
   if (!restrictions.allowSave) {
     return (
       <>
         <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
-        <SandboxActions
-          activeUser={activeUser}
-          handleCopySandboxToAccount={handleCopySandboxToAccount}
-          copyAnnotationText={copyAnnotationText}
-        />
+        <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
       </>
     );
   }

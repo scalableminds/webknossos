@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { duplicateAnnotation, editLockedState, finishAnnotation } from "admin/rest_api";
 import { Modal } from "antd";
-import type { SubMenuType } from "antd/es/menu/interface";
+import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -144,7 +144,7 @@ export const useTracingViewMenuItems = (
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
-    const menuItems: any[] = [];
+    const menuItems: ItemType[] = [];
 
     if (restrictions.allowFinish) {
       menuItems.push({

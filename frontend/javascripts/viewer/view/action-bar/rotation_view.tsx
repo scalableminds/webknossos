@@ -6,7 +6,6 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
-import type React from "react";
 import type { Vector3 } from "viewer/constants";
 import { getRotation } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";

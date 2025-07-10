@@ -219,7 +219,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND _organization IN (
                 SELECT _id
                 FROM webknossos.organizations
-                WHERE pricingPlan IN $PricingPlansAllowingGuestsSql
+                WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
               )
             ORDER BY _multiUser, created ASC
          )
@@ -405,7 +405,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN $PricingPlansAllowingGuestsSql
+                        WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])

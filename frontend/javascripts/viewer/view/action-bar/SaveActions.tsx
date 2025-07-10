@@ -27,8 +27,7 @@ const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeo
 
 const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
   if (event != null) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-    event.target.blur();
+    (event.target as HTMLButtonElement).blur();
   }
 
   Model.forceSave();

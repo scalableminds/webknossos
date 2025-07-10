@@ -4,11 +4,11 @@ import Toast from "libs/toast";
 import messages from "messages";
 import React from "react";
 import {
+  type FixedTask,
   call,
   cancel,
   cancelled,
   delay,
-  type FixedTask,
   fork,
   put,
   race,
@@ -23,10 +23,10 @@ import {
   setBlockedByUserAction,
   setIsMutexAcquiredAction,
 } from "viewer/model/actions/annotation_actions";
+import type { EnsureMaySaveNowAction } from "viewer/model/actions/save_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
-import { EnsureMaySaveNowAction } from "viewer/model/actions/save_actions";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
@@ -48,6 +48,10 @@ function* getDoesHaveMutex(): Saga<boolean> {
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
+  /*
+   * This saga is directly called by the root saga.
+   *
+   */
   yield* call(ensureWkReady);
   const initialAllowUpdate = yield* select(
     (state) => state.annotation.restrictions.initialAllowUpdate,
@@ -114,7 +118,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
 function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
   /*
-   * For each EnsureMaySaveNowAction wait until, we have the mutex. Then call
+   * For each EnsureMaySaveNowAction wait until we have the mutex. Then call
    * the callback.
    */
   while (true) {
@@ -128,6 +132,10 @@ function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
 }
 
 function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<never> {
+  /*
+   * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
+   * race).
+   */
   console.log("started tryAcquireMutexContinuously");
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   const activeUser = yield* select((state) => state.activeUser);

@@ -27,6 +27,7 @@ export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
 export type EnsureMaySaveNowAction = ReturnType<typeof ensureMaySaveNowAction>;
+export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
 export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 
 export type SaveAction =
@@ -42,6 +43,7 @@ export type SaveAction =
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
   | EnsureMaySaveNowAction
+  | EnsureHasNewestVersionAction
   | DoneSavingAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
@@ -146,6 +148,21 @@ export const ensureMaySaveNowAction = (callback: () => void) =>
 export const dispatchEnsureMaySaveNowAsync = async (dispatch: Dispatch<any>): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = ensureMaySaveNowAction(() => readyDeferred.resolve(null));
+  dispatch(action);
+  await readyDeferred.promise();
+};
+
+export const ensureHasNewestVersionAction = (callback: () => void) =>
+  ({
+    type: "ENSURE_HAS_NEWEST_VERSION",
+    callback,
+  }) as const;
+
+export const dispatchEnsureHasNewestVersionAsync = async (
+  dispatch: Dispatch<any>,
+): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };

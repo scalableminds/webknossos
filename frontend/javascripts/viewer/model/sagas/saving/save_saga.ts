@@ -3,15 +3,19 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
-import { call, fork, put, takeEvery } from "typed-redux-saga";
+import { buffers } from "redux-saga";
+import { actionChannel, call, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setVersionNumberAction } from "viewer/model/actions/save_actions";
+import {
+  type EnsureHasNewestVersionAction,
+  setVersionNumberAction,
+} from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
@@ -157,9 +161,21 @@ function* watchForSaveConflicts(): Saga<void> {
 
   yield* call(ensureWkReady);
 
+  const channel = yield actionChannel(
+    ["ENSURE_HAS_NEWEST_VERSION"],
+    // todop: if multiple actions are sent to this buffer (without consumption inbetween),
+    // we only want to poll the newest version once. This is why the current implementation
+    // uses a sliding buffer of size 1. However, this means that dropped actions won't get
+    // their callback's notified. This is a problem and could lead to infinite waiting.
+    buffers.sliding<EnsureHasNewestVersionAction>(1),
+  );
+
   while (true) {
     const interval = yield* call(getPollInterval);
-    yield* call(sleep, interval);
+    const { ensureHasNewestVersion } = yield* race({
+      sleep: call(sleep, interval),
+      ensureHasNewestVersion: take(channel),
+    });
     if (yield* select((state) => state.uiInformation.showVersionRestore)) {
       continue;
     }
@@ -169,6 +185,12 @@ function* watchForSaveConflicts(): Saga<void> {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
+      } else {
+        if (ensureHasNewestVersion) {
+          // checkForNewVersion was done in response to a ensureHasNewestVersion action.
+          // We invoke the callback to signal that the newest version was ensured.
+          (ensureHasNewestVersion as EnsureHasNewestVersionAction).callback();
+        }
       }
     } catch (exception) {
       // If the version check fails for some reason, we don't want to crash the entire

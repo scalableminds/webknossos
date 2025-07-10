@@ -14,6 +14,7 @@ import { call, delay, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  dispatchEnsureHasNewestVersionAsync,
   dispatchEnsureMaySaveNowAsync,
   doneSavingAction,
   setLastSaveTimestampAction,
@@ -36,6 +37,9 @@ import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 
 export function* pushSaveQueueAsync(): Saga<never> {
+  /*
+   * This saga continuously drains the save queue by sending its content to the server.
+   */
   yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction());
@@ -65,8 +69,13 @@ export function* pushSaveQueueAsync(): Saga<never> {
     });
     yield* put(setSaveBusyAction(true));
 
-    // Wait until we may save
+    // Wait until we may save (due to mutex aquisition).
     yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
+    // Wait until we have the newest version. This *must* happen after
+    // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+    // race condition where the frontend thinks that it knows about the newest
+    // version when in fact somebody else saved a newer version in the meantime.
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
     // Send (parts of) the save queue to the server.
     // There are two main cases:

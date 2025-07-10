@@ -6,7 +6,6 @@ import { AsyncButton, type AsyncButtonProps } from "components/async_clickables"
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import type React from "react";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
@@ -24,14 +23,6 @@ import UndoRedoActions from "./undo_redo_actions";
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
 );
-
-const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
-  if (event != null) {
-    (event.target as HTMLButtonElement).blur();
-  }
-
-  Model.forceSave();
-};
 
 function ReadOnlyActions({
   activeUser,
@@ -170,7 +161,7 @@ function SaveActions() {
   return (
     <>
       <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
-      <SaveButton className="narrow" key="save-button" onClick={handleSave} />
+      <SaveButton key="save-button" />
     </>
   );
 }

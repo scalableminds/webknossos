@@ -11,17 +11,12 @@ import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
-
-type Props = {
-  onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
-  className?: string;
-};
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
 
@@ -39,14 +34,26 @@ const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
   );
 }, REPORT_THROTTLE_THRESHOLD);
 
-function SaveButton({ onClick, className }: Props) {
-  const { progressInfo, isBusy, queue } = useWkSelector((state) => state.save);
-  // For a low action count, the progress info would show only for a very short amount of time.
-  // Therefore, the progressFraction is set to null, if the count is low.
-  const progressFraction =
-    progressInfo.totalActionCount > 5000
+const handleSave = (event?: React.MouseEvent<HTMLElement>) => {
+  if (event != null) {
+    (event.target as HTMLButtonElement).blur();
+  }
+
+  Model.forceSave();
+};
+
+function SaveButton() {
+  const progressFraction = useWkSelector((state) => {
+    // For a low action count, the progress info would show only for a very short amount of time.
+    // Therefore, the progressFraction is set to null, if the count is low.
+    // This is an optimization to avoid unnecessary re-renders by keeping the fraction a constant value.
+    const progressInfo = state.save.progressInfo;
+    return progressInfo.totalActionCount > 5000
       ? progressInfo.processedActionCount / progressInfo.totalActionCount
       : null;
+  });
+  const isBusy = useWkSelector((state) => state.save.isBusy);
+
   const [isStateSaved, setIsStateSaved] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [saveInfo, setSaveInfo] = useState({
@@ -57,7 +64,7 @@ function SaveButton({ onClick, className }: Props) {
 
   const _forceUpdate = useCallback(() => {
     const isStateSaved = Model.stateSaved();
-    const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(queue);
+    const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
 
     const unsavedDuration = Math.max(
       oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0,
@@ -75,7 +82,7 @@ function SaveButton({ onClick, className }: Props) {
     setIsStateSaved(isStateSaved);
     setShowUnsavedWarning(showUnsavedWarning);
     setSaveInfo(newSaveInfo);
-  }, [queue]);
+  }, []);
 
   useEffect(() => {
     // Polling can be removed once VolumeMode saving is reactive
@@ -85,7 +92,7 @@ function SaveButton({ onClick, className }: Props) {
     };
   }, [_forceUpdate]);
 
-  const getSaveButtonIcon = useCallback(() => {
+  const getSaveButtonIcon = useMemo(() => {
     if (isStateSaved) {
       return <CheckOutlined />;
     } else if (isBusy) {
@@ -105,9 +112,9 @@ function SaveButton({ onClick, className }: Props) {
     <ButtonComponent
       key="save-button"
       type="primary"
-      onClick={onClick}
-      icon={getSaveButtonIcon()}
-      className={className}
+      onClick={handleSave}
+      icon={getSaveButtonIcon}
+      className="narrow"
       style={{
         background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
       }}

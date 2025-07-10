@@ -14,12 +14,12 @@ import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
-import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import { Model, api } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action-bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";
+import UndoRedoActions from "./undo_redo_actions";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -33,8 +33,58 @@ const handleSave = async (event?: React.MouseEvent<HTMLButtonElement>) => {
   Model.forceSave();
 };
 
-const handleUndo = () => dispatchUndoAsync(Store.dispatch);
-const handleRedo = () => dispatchRedoAsync(Store.dispatch);
+function ReadOnlyActions({ activeUser, handleCopyToAccount, copyAnnotationText }) {
+  return (
+    <>
+      <ButtonComponent
+        key="read-only-button"
+        danger
+        disabled
+        style={{
+          backgroundColor: "var(--ant-color-warning)",
+        }}
+      >
+        Read only
+      </ButtonComponent>
+      <AsyncButtonWithAuthentication
+        activeUser={activeUser}
+        authenticationMessage="Please register or login to copy the tracing to your account."
+        key="copy-button"
+        icon={<FileAddOutlined />}
+        onClick={handleCopyToAccount}
+        title={copyAnnotationText}
+      >
+        <span className="hide-on-small-screen">{copyAnnotationText}</span>
+      </AsyncButtonWithAuthentication>
+    </>
+  );
+}
+
+function SandboxActions({ activeUser, handleCopySandboxToAccount, copyAnnotationText }) {
+  return (
+    <>
+      <Tooltip
+        placement="bottom"
+        title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
+        key="sandbox-tooltip"
+      >
+        <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+          <span className="hide-on-small-screen">Sandbox</span>
+        </Button>
+      </Tooltip>
+      <AsyncButtonWithAuthentication
+        activeUser={activeUser}
+        authenticationMessage="Please register or login to copy the sandbox tracing to your account."
+        key="copy-sandbox-button"
+        icon={<FileAddOutlined />}
+        onClick={handleCopySandboxToAccount}
+        title={copyAnnotationText}
+      >
+        <span className="hide-on-small-screen">Copy To My Account</span>
+      </AsyncButtonWithAuthentication>
+    </>
+  );
+}
 
 function SaveActions() {
   const annotation = useWkSelector((state) => state.annotation);
@@ -92,97 +142,35 @@ function SaveActions() {
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
-  const saveButton = React.useMemo(() => {
-    if (!restrictions.allowUpdate) {
-      return [
-        <ButtonComponent
-          key="read-only-button"
-          danger
-          disabled
-          style={{
-            backgroundColor: "var(--ant-color-warning)",
-          }}
-        >
-          Read only
-        </ButtonComponent>,
-        <AsyncButtonWithAuthentication
-          activeUser={activeUser}
-          authenticationMessage="Please register or login to copy the tracing to your account."
-          key="copy-button"
-          icon={<FileAddOutlined />}
-          onClick={handleCopyToAccount}
-          title={copyAnnotationText}
-        >
-          <span className="hide-on-small-screen">{copyAnnotationText}</span>
-        </AsyncButtonWithAuthentication>,
-      ];
-    }
-
-    const undoRedoButtons = hasTracing
-      ? [
-          <AsyncButton
-            className="narrow undo-redo-button"
-            key="undo-button"
-            title="Undo (Ctrl+Z)"
-            onClick={handleUndo}
-            disabled={busyBlockingInfo.isBusy}
-            hideContentWhenLoading
-          >
-            <i className="fas fa-undo" aria-hidden="true" />
-          </AsyncButton>,
-          <AsyncButton
-            className="narrow undo-redo-button hide-on-small-screen"
-            key="redo-button"
-            title="Redo (Ctrl+Y)"
-            onClick={handleRedo}
-            disabled={busyBlockingInfo.isBusy}
-            hideContentWhenLoading
-          >
-            <i className="fas fa-redo" aria-hidden="true" />
-          </AsyncButton>,
-        ]
-      : null;
-
-    if (restrictions.allowSave) {
-      return [
-        undoRedoButtons,
-        <SaveButton className="narrow" key="save-button" onClick={handleSave} />,
-      ];
-    }
-
-    return [
-      undoRedoButtons,
-      <Tooltip
-        placement="bottom"
-        title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
-        key="sandbox-tooltip"
-      >
-        <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-          <span className="hide-on-small-screen">Sandbox</span>
-        </Button>
-      </Tooltip>,
-      <AsyncButtonWithAuthentication
+  if (!restrictions.allowUpdate) {
+    return (
+      <ReadOnlyActions
         activeUser={activeUser}
-        authenticationMessage="Please register or login to copy the sandbox tracing to your account."
-        key="copy-sandbox-button"
-        icon={<FileAddOutlined />}
-        onClick={handleCopySandboxToAccount}
-        title={copyAnnotationText}
-      >
-        <span className="hide-on-small-screen">Copy To My Account</span>
-      </AsyncButtonWithAuthentication>,
-    ];
-  }, [
-    restrictions,
-    hasTracing,
-    busyBlockingInfo.isBusy,
-    activeUser,
-    handleCopyToAccount,
-    handleCopySandboxToAccount,
-    copyAnnotationText,
-  ]);
+        handleCopyToAccount={handleCopyToAccount}
+        copyAnnotationText={copyAnnotationText}
+      />
+    );
+  }
 
-  return saveButton;
+  if (!restrictions.allowSave) {
+    return (
+      <>
+        <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
+        <SandboxActions
+          activeUser={activeUser}
+          handleCopySandboxToAccount={handleCopySandboxToAccount}
+          copyAnnotationText={copyAnnotationText}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
+      <SaveButton className="narrow" key="save-button" onClick={handleSave} />
+    </>
+  );
 }
 
 export default SaveActions;

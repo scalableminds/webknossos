@@ -2,13 +2,7 @@ import update from "immutability-helper";
 import { describe, it, expect } from "vitest";
 import type { WebknossosState } from "viewer/store";
 import * as accessors from "viewer/model/accessors/view_mode_accessor";
-import {
-  OrthoViews,
-  OrthoViewValuesWithoutTDView,
-  UnitLong,
-  type Vector2,
-  type Vector3,
-} from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView, UnitLong, type Vector3 } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 import { M4x4, V3 } from "libs/mjs";

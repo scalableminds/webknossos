@@ -387,16 +387,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       return;
     }
-    items.push(
-      mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
     yield* call(
       updateMappingWithMerge,
       volumeTracingId,
@@ -409,15 +400,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
       return;
     }
-    items.push(
-      splitAgglomerate(
-        sourceAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
     const hasErrored = yield* call(
       performMinCut,
@@ -572,15 +555,7 @@ function* performMinCut(
       "and",
       edge.segmentId2,
     );
-    items.push(
-      splitAgglomerate(
-        sourceAgglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
   }
 
   return false;
@@ -666,15 +641,7 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(
-      splitAgglomerate(
-        agglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
   }
 
   return { didCancel: false, neighborInfo };
@@ -733,16 +700,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    items.push(
-      mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
 
     console.log(
       "Merging agglomerate",
@@ -1374,6 +1332,16 @@ export function* removeAgglomerateFromActiveMapping(
       newMapping.set(key, value);
     }
   }
+
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: newMapping,
+    }),
+  );
+}
+
+export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+  const newMapping = new Map();
 
   yield* put(
     setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {

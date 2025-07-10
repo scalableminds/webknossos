@@ -895,16 +895,13 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
   actionTracingId: string,
 ): {
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId: number; // Unused in back-end.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // For backwards compatibility reasons,
@@ -912,7 +909,8 @@ export function splitAgglomerate(
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    agglomerateId?: number | undefined; // Unused in back-end but may exist in older update actions
+    mag?: Vector3; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
@@ -920,26 +918,19 @@ export function splitAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: NumberLike,
-  agglomerateId2: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
   actionTracingId: string,
 ): {
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number; // unused in backend
-    agglomerateId2: number; // unused in backend
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // For backwards compatibility reasons,
@@ -947,7 +938,9 @@ export function mergeAgglomerate(
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3;
+    agglomerateId1?: number; // Unused in back-end but may exist in older update actions
+    agglomerateId2?: number; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
@@ -955,11 +948,8 @@ export function mergeAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId1: Number(agglomerateId1),
-      agglomerateId2: Number(agglomerateId2),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
     },
   } as const;
 }

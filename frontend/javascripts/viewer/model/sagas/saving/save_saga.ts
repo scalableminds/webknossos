@@ -22,6 +22,7 @@ import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
+  clearActiveMapping,
   removeAgglomerateFromActiveMapping,
   updateMappingWithMerge,
 } from "../volume/proofread_saga";
@@ -323,13 +324,30 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
-          yield* call(
-            updateMappingWithMerge,
-            action.value.actionTracingId,
-            activeMapping,
-            action.value.agglomerateId1,
-            action.value.agglomerateId2,
+          // yield* call(
+          //   updateMappingWithMerge,
+          //   action.value.actionTracingId,
+          //   activeMapping,
+          //   action.value.agglomerateId1,
+          //   action.value.agglomerateId2,
+          // );
+          const layerName = action.value.actionTracingId;
+          const mappingInfo = yield* select((state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
           );
+          const dataset = yield* select((state) => state.dataset);
+          const layerInfo = getLayerByName(dataset, layerName);
+          const { mappingName } = mappingInfo;
+
+          if (mappingName == null) {
+            throw new Error(
+              "Could not apply splitAgglomerate because no active mapping was found.",
+            );
+          }
+          updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
+            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
+          };
           break;
         }
         case "splitAgglomerate": {
@@ -337,12 +355,29 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
-          yield* call(
-            removeAgglomerateFromActiveMapping,
-            action.value.actionTracingId,
-            activeMapping,
-            action.value.agglomerateId,
-          );
+          // yield* call(
+          //   removeAgglomerateFromActiveMapping,
+          //   action.value.actionTracingId,
+          //   activeMapping,
+          //   /* todop:
+          //    * segmentId1 was split from segmentId2. This means both used to map to the same agglomerateId.
+          //    * This UA should "invalidate" the current equivalence class to which segmentId1 and segmentId2
+          //    * belong. All members of that equivalence class should be removed from the active mapping
+          //    * and then re-fetched.
+          //    * If our current mapping contains one (or both) of the segmentIds, we can look up the mapped value
+          //    * and then clear the mapping accordingly (this is important because the local mapping might have diverged
+          //    * from the mapping stored on the server; therefore, even if the UA would also encode the mapped value,
+          //    * that wouldn't be sufficient).
+          //    * However, it might be that none of the segmentIds were fetched yet. In that case, there are two options:
+          //    *   1) the entire equivalence class is unknown to the frontend. Nothing needs to be done now.
+          //    *   2) the equivalence class is known, but the segmentIds from the UA are not known. In that case
+          //    *      we still need to find out to which id the segmentIds used to map.
+          //    *      This can be done by asking the server. For the request we should pass the version that existed
+          //    *      right before the update action (because that is the version where the two segments were merged.)
+          //    */
+
+          //   action.value.agglomerateId,
+          // );
 
           const layerName = action.value.actionTracingId;
 
@@ -361,6 +396,7 @@ export function* tryToIncorporateActions(
           const layerInfo = getLayerByName(dataset, layerName);
 
           updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
           };
 

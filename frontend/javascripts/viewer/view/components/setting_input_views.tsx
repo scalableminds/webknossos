@@ -25,7 +25,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
@@ -74,14 +74,19 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
     spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   } = props;
 
-  const isValueValid = (_value: number | null) =>
-    _.isNumber(_value) && _value >= min && _value <= max;
+  const isValueValid = useCallback(
+    (_value: number | null) => _.isNumber(_value) && _value >= min && _value <= max,
+    [min, max],
+  );
 
-  const _onChange = (_value: number | null) => {
-    if (_value != null && isValueValid(_value)) {
-      onChange(_value);
-    }
-  };
+  const _onChange = useCallback(
+    (_value: number | null) => {
+      if (_value != null && isValueValid(_value)) {
+        onChange(_value);
+      }
+    },
+    [isValueValid, onChange],
+  );
 
   // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
   // This check guards against broken settings which could be introduced before this component
@@ -153,47 +158,60 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
     defaultValue,
   } = props;
 
-  const onChangeInput = (inputValue: number | null) => {
-    if (inputValue == null) {
-      return;
-    }
-    if (min <= inputValue && inputValue <= max) {
-      onChange(inputValue);
-    } else {
-      // reset to slider value
-      onChange(value);
-    }
-  };
-  const onChangeSlider = (sliderValue: number) => {
-    onChange(calculateValue(sliderValue));
-  };
-  const calculateValue = (sliderValue: number) => {
-    const a = 200 / (Math.log(max) - Math.log(min));
-    const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
-    return Math.exp((sliderValue - b) / a);
-  };
+  const calculateValue = useCallback(
+    (sliderValue: number) => {
+      const a = 200 / (Math.log(max) - Math.log(min));
+      const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
+      return Math.exp((sliderValue - b) / a);
+    },
+    [max, min],
+  );
 
-  const formatTooltip = (tooltipValue: number | undefined) => {
-    if (tooltipValue == null) {
-      return "invalid";
-    }
-    const calculatedValue = calculateValue(tooltipValue);
-    return calculatedValue >= 10000
-      ? calculatedValue.toExponential()
-      : Utils.roundTo(calculatedValue, roundTo);
-  };
+  const onChangeInput = useCallback(
+    (inputValue: number | null) => {
+      if (inputValue == null) {
+        return;
+      }
+      if (min <= inputValue && inputValue <= max) {
+        onChange(inputValue);
+      } else {
+        // reset to slider value
+        onChange(value);
+      }
+    },
+    [min, max, onChange, value],
+  );
+  const onChangeSlider = useCallback(
+    (sliderValue: number) => {
+      onChange(calculateValue(sliderValue));
+    },
+    [calculateValue, onChange],
+  );
 
-  const getSliderValue = () => {
+  const formatTooltip = useCallback(
+    (tooltipValue: number | undefined) => {
+      if (tooltipValue == null) {
+        return "invalid";
+      }
+      const calculatedValue = calculateValue(tooltipValue);
+      return calculatedValue >= 10000
+        ? calculatedValue.toExponential()
+        : Utils.roundTo(calculatedValue, roundTo);
+    },
+    [calculateValue, roundTo],
+  );
+
+  const getSliderValue = useCallback(() => {
     const a = 200 / (Math.log(max) - Math.log(min));
     const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
     const scaleValue = a * Math.log(value) + b;
     return Math.round(scaleValue);
-  };
+  }, [max, min, value]);
 
-  const resetToDefaultValue = () => {
+  const resetToDefaultValue = useCallback(() => {
     if (defaultValue == null) return;
     onChangeInput(defaultValue);
-  };
+  }, [defaultValue, onChangeInput]);
 
   return (
     <Row align="middle" gutter={ROW_GUTTER}>
@@ -308,11 +326,14 @@ type NumberInputPopoverSettingProps = {
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
   const placement: PopoverProps["placement"] = props.placement || "top";
-  const onChangeGuarded = (val: number | null) => {
-    if (val != null) {
-      onChange(val);
-    }
-  };
+  const onChangeGuarded = useCallback(
+    (val: number | null) => {
+      if (val != null) {
+        onChange(val);
+      }
+    },
+    [onChange],
+  );
   const numberInput = (
     <div>
       <div
@@ -380,6 +401,9 @@ type UserBoundingBoxInputProps = {
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
+function computeText(vector: Vector6) {
+  return vector.join(", ");
+}
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     value: propValue,
@@ -419,66 +443,73 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     }
   }, [propName]);
 
-  function computeText(vector: Vector6) {
-    return vector.join(", ");
-  }
-
-  const handleBlur = () => {
+  const handleBlur = useCallback(() => {
     setIsEditing(false);
     setIsValid(true);
     setText(computeText(propValue));
-  };
+  }, [propValue]);
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsEditing(true);
     setText(computeText(propValue));
     setIsValid(true);
-  };
+  }, [propValue]);
 
-  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const newText = evt.target.value;
-    // only numbers, commas and whitespace is allowed
-    const isValidInput = /^[\d\s,]*$/g.test(newText);
-    const value = Utils.stringToNumberArray(newText);
-    const isValidLength = value.length === 6;
-    const isValid = isValidInput && isValidLength;
+  const handleChange = useCallback(
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
+      const newText = evt.target.value;
+      // only numbers, commas and whitespace is allowed
+      const isValidInput = /^[\d\s,]*$/g.test(newText);
+      const value = Utils.stringToNumberArray(newText);
+      const isValidLength = value.length === 6;
+      const isValid = isValidInput && isValidLength;
 
-    if (isValid) {
-      onBoundingChange(Utils.numberArrayToVector6(value));
-    }
+      if (isValid) {
+        onBoundingChange(Utils.numberArrayToVector6(value));
+      }
 
-    setText(newText);
-    setIsValid(isValid);
-  };
+      setText(newText);
+      setIsValid(isValid);
+    },
+    [onBoundingChange],
+  );
 
-  const handleColorChange = (newColor: Vector3) => {
-    const mappedColor = newColor.map((colorPart) => colorPart / 255) as any as Vector3;
-    onColorChange(mappedColor);
-  };
+  const handleColorChange = useCallback(
+    (newColor: Vector3) => {
+      const mappedColor = newColor.map((colorPart) => colorPart / 255) as any as Vector3;
+      onColorChange(mappedColor);
+    },
+    [onColorChange],
+  );
 
-  const handleNameChanged = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-    const currentEnteredName = evt.target.value;
+  const handleNameChanged = useCallback(
+    (evt: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) => {
+      const currentEnteredName = (evt.target as HTMLInputElement).value;
 
-    if (currentEnteredName !== propName) {
-      onNameChange(currentEnteredName);
-    }
-  };
+      if (currentEnteredName !== propName) {
+        onNameChange(currentEnteredName);
+      }
+    },
+    [onNameChange, propName],
+  );
 
-  const maybeCloseContextMenu = () => {
+  const maybeCloseContextMenu = useCallback(() => {
     if (onHideContextMenu) {
       onHideContextMenu();
     }
-  };
+  }, [onHideContextMenu]);
 
-  const onRegisterSegmentsForBB = (value: Vector6, name: string): void => {
-    const min: Vector3 = [value[0], value[1], value[2]];
-    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
-    api.tracing
-      .registerSegmentsForBoundingBox(min, max, name)
-      .catch((error) => Toast.error(error.message));
-    maybeCloseContextMenu();
-  };
+  const onRegisterSegmentsForBB = useCallback(
+    (value: Vector6, name: string): void => {
+      const min: Vector3 = [value[0], value[1], value[2]];
+      const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+      api.tracing
+        .registerSegmentsForBoundingBox(min, max, name)
+        .catch((error) => Toast.error(error.message));
+      maybeCloseContextMenu();
+    },
+    [maybeCloseContextMenu],
+  );
 
   const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
   const marginRightStyle = {
@@ -505,7 +536,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     isOwner,
   );
 
-  const getContextMenu = () => {
+  const getContextMenu = useCallback(() => {
     const items: MenuProps["items"] = [
       {
         key: "registerSegments",
@@ -550,7 +581,20 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     ];
 
     return { items };
-  };
+  }, [
+    disabled,
+    editingDisallowedExplanation,
+    isExportEnabled,
+    name,
+    onDelete,
+    onExport,
+    onGoToBoundingBox,
+    onRegisterSegmentsForBB,
+    propValue,
+    props.visibleSegmentationLayer,
+    deleteButton,
+    exportButton,
+  ]);
 
   return (
     <div
@@ -666,9 +710,12 @@ type ColorSettingPropTypes = {
 export function ColorSetting(props: ColorSettingPropTypes) {
   const { value, disabled = false, style } = props;
 
-  const onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    props.onChange(Utils.hexToRgb(evt.target.value));
-  };
+  const onColorChange = useCallback(
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
+      props.onChange(Utils.hexToRgb(evt.target.value));
+    },
+    [props.onChange],
+  );
 
   return (
     <div

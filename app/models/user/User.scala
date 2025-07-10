@@ -91,7 +91,8 @@ case class UserCompactInfo(
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
-private val PricingPlansAllowingGuestsQuery = q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
+  private val PricingPlansAllowingGuestsQuery =
+    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
   protected val collection = Users
 
   protected def idColumn(x: Users): Rep[String] = x._Id

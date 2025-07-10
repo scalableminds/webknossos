@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileC
 import jakarta.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
@@ -17,7 +17,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
     with MeshFileUtils
     with FoxImplicits {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -23,7 +23,7 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
-    Paths.get(config.Datastore.baseDirectory),
+    Path.of(config.Datastore.baseDirectory),
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
     Some(chunkCacheService.sharedChunkContentsCache),

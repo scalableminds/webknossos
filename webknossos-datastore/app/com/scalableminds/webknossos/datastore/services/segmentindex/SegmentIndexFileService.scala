@@ -26,7 +26,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import com.scalableminds.webknossos.datastore.services.{ArrayArtifactHashing, BinaryDataServiceHolder}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -41,7 +41,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     extends FoxImplicits
     with ArrayArtifactHashing
     with SegmentStatistics {
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
   private val localSegmentIndexDir = "segmentIndex"
   private val hdf5SegmentIndexFileExtension = "hdf5"
 

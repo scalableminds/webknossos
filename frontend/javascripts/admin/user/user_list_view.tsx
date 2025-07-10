@@ -21,31 +21,23 @@ import { Alert, App, Button, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip }
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import Persistence from "libs/persistence";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
 import { Link } from "react-router-dom";
-import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
+import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { logoutUserAction } from "../../viewer/model/actions/user_actions";
 import Store from "../../viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;
-
-type StateProps = {
-  activeUser: APIUser;
-  activeOrganization: APIOrganization;
-};
-type Props = RouteComponentProps & StateProps;
 
 type ActivationFilterType = Array<"activated" | "deactivated" | "verified" | "unverified">;
 
@@ -60,8 +52,13 @@ const persistence = new Persistence<{
   "userList",
 );
 
-function UserListView({ activeUser, activeOrganization }: Props) {
+function UserListView() {
   const { modal } = App.useApp();
+
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
+  const activeOrganization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<APIUser[]>([]);
@@ -650,10 +647,4 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-  activeOrganization: enforceActiveOrganization(state.activeOrganization),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(UserListView);
+export default UserListView;

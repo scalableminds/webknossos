@@ -20,7 +20,7 @@ import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
-} from "../action-bar/useTracingViewMenuItems";
+} from "../action-bar/use_tracing_view_menu_items";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 

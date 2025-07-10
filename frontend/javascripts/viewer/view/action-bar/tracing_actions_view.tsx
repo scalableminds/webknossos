@@ -15,10 +15,10 @@ import messages from "messages";
 import * as React from "react";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "viewer/view/layouting/default_layout_configs";
-import ActionsMenu from "./ActionsMenu";
-import SaveActions from "./SaveActions";
-import TaskCompletionActions from "./TaskCompletionActions";
-import TracingModals from "./TracingModals";
+import ActionsMenu from "./actions_menu";
+import SaveActions from "./save_actions";
+import TaskCompletionActions from "./task_completion_actions";
+import TracingModals from "./tracing_modals";
 
 type Props = {
   layoutMenu: SubMenuType | null;

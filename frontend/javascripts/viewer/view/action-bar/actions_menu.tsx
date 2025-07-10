@@ -4,7 +4,7 @@ import type { SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
 import ButtonComponent from "viewer/view/components/button_component";
-import { useTracingViewMenuItems } from "./useTracingViewMenuItems";
+import { useTracingViewMenuItems } from "./use_tracing_view_menu_items";
 
 type Props = {
   layoutMenu: SubMenuType | null;

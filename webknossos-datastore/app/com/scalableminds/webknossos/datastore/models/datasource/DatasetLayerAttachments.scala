@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -38,7 +39,16 @@ object LayerAttachmentType extends ExtendedEnumeration {
 case class LayerAttachment(name: String,
                            path: URI,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
-                           credentialId: Option[String] = None)
+                           credentialId: Option[String] = None) {
+  // Warning: throws! Use inside of tryo
+  def localPath: Path = {
+    if (path.getScheme != null && path.getScheme.nonEmpty && path.getScheme != DataVaultService.schemeFile) {
+      throw new Exception(
+        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system.")
+    }
+    Path.of(path)
+  }
+}
 
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]

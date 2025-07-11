@@ -10,7 +10,7 @@ import {
   updateUserBoundingBoxInVolumeTracing,
   updateUserBoundingBoxVisibilityInSkeletonTracing,
   updateUserBoundingBoxVisibilityInVolumeTracing,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { TreeGroup } from "../types/tree_types";
 

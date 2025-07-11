@@ -50,7 +50,7 @@ export function OrganizationDangerZoneView({ organization }: { organization: API
       />
       <SettingsCard
         title="Danger Zone"
-        description={
+        content={
           <Button
             danger
             loading={isDeleting}

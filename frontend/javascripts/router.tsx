@@ -69,6 +69,7 @@ import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -545,12 +546,23 @@ class ReactRouter extends React.Component<Props> {
                     );
                   }
                   return (
-                    <DatasetSettingsView
-                      isEditingMode
-                      datasetId={datasetId || ""}
-                      onComplete={() => window.history.back()}
-                      onCancel={() => window.history.back()}
-                    />
+                    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
+                      <DatasetSettingsView />
+                    </DatasetSettingsProvider>
+                  );
+                }}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/datasets/:datasetNameAndId/edit/:tab"
+                render={({ match }: ContextRouter) => {
+                  const { datasetId } = getDatasetIdOrNameFromReadableURLPart(
+                    match.params.datasetNameAndId,
+                  );
+                  return (
+                    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
+                      <DatasetSettingsView />
+                    </DatasetSettingsProvider>
                   );
                 }}
               />

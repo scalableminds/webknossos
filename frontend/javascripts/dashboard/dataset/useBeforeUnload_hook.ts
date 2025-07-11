@@ -31,7 +31,7 @@ const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
+      if (action === undefined || !newLocation.pathname.includes("/datasets")) {
         if (hasUnsavedChanges) {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
           blockTimeoutIdRef.current = window.setTimeout(() => {

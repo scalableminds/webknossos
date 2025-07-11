@@ -1,4 +1,6 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { startFindLargestSegmentIdJob } from "admin/rest_api";
@@ -9,7 +11,6 @@ import {
   type FormInstance,
   Input,
   InputNumber,
-  List,
   Row,
   Select,
   Space,
@@ -26,7 +27,8 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
-import * as React from "react";
+import type React from "react";
+import { cloneElement, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
@@ -35,11 +37,12 @@ import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const FormItem = Form.Item;
 
 export const syncDataSourceFields = (
-  form: FormInstance,
+  form: FormInstance, // Keep form as a prop for this utility function
   syncTargetTabKey: "simple" | "advanced",
   // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
   // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
@@ -77,17 +80,9 @@ export const syncDataSourceFields = (
   }
 };
 
-export default function DatasetSettingsDataTab({
-  form,
-  activeDataSourceEditMode,
-  onChange,
-  dataset,
-}: {
-  form: FormInstance;
-  activeDataSourceEditMode: "simple" | "advanced";
-  onChange: (arg0: "simple" | "advanced") => void;
-  dataset?: APIDataset | null | undefined;
-}) {
+export default function DatasetSettingsDataTab() {
+  const { dataset, form, activeDataSourceEditMode, handleDataSourceEditModeChange } =
+    useDatasetSettingsContext();
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
   Form.useWatch("dataSource", form);
@@ -97,14 +92,13 @@ export default function DatasetSettingsDataTab({
   const datasetStoredLocationInfo = dataset
     ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
     : "";
-
   const isJSONValid = isValidJSON(dataSourceJson);
 
   return (
     <div>
-      <div
+      <span
         style={{
-          textAlign: "right",
+          float: "right",
         }}
       >
         <Tooltip
@@ -124,11 +118,12 @@ export default function DatasetSettingsDataTab({
             }}
             onChange={(bool) => {
               const key = bool ? "advanced" : "simple";
-              onChange(key);
+              handleDataSourceEditModeChange(key);
             }}
           />
         </Tooltip>
-      </div>
+      </span>
+      <SettingsTitle title="Data Source" description="Configure the data source" />
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
@@ -191,149 +186,140 @@ function SimpleDatasetForm({
     });
     syncDataSourceFields(form, "advanced");
   };
+  const marginBottom: React.CSSProperties = {
+    marginBottom: 24,
+  };
+
   return (
     <div>
-      <List
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Dataset
-          </div>
-        }
-      >
-        <List.Item>
-          <div
-            style={{
-              width: "100%",
-            }}
-          >
-            <Row gutter={48}>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
-                  // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
-                  name={["dataset", "name"]}
-                  label="Name"
-                  info="The name of the dataset"
-                  validateFirst
-                  rules={getDatasetNameRules(activeUser)}
-                >
+      <SettingsCard
+        title="General Dataset Settings"
+        style={marginBottom}
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
+                // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
+                name={["dataset", "name"]}
+                label="Name"
+                info="The name of the dataset"
+                validateFirst
+                rules={getDatasetNameRules(activeUser)}
+              >
+                <Input
+                  style={{
+                    width: LEFT_COLUMN_ITEMS_WIDTH,
+                  }}
+                />
+              </FormItemWithInfo>
+              <Space size="large" />
+              <FormItemWithInfo
+                name={["dataset", "id"]}
+                label="Dataset ID"
+                info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
+              >
+                <Space.Compact>
                   <Input
+                    value={dataset?.id}
                     style={{
-                      width: LEFT_COLUMN_ITEMS_WIDTH,
+                      width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
                     }}
+                    readOnly
+                    disabled
                   />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataset", "id"]}
-                  label="Dataset ID"
-                  info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
-                >
-                  <Space.Compact>
-                    <Input
-                      value={dataset?.id}
-                      style={{
-                        width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
-                      }}
-                      readOnly
-                      disabled
-                    />
-                    <Tooltip title="Copy dataset ID">
-                      <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
-                    </Tooltip>
-                  </Space.Compact>
-                </FormItemWithInfo>
-              </Col>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "factor"]}
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a voxel size for the dataset.",
-                    },
-                    {
-                      validator: syncValidator(
-                        (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the voxel size must be greater than 0",
-                      ),
-                    },
-                  ]}
-                >
-                  <Vector3Input
-                    style={{
-                      width: 400,
-                    }}
-                    allowDecimals
-                  />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "unit"]}
-                  label="Unit"
-                  info="The unit in which the voxel size is defined."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a unit for the voxel scale of the dataset.",
-                    },
-                  ]}
-                >
-                  <Select
-                    style={{ width: 120 }}
-                    options={AllUnits.map((unit) => ({
-                      value: unit,
-                      label: (
-                        <span>
-                          <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
-                        </span>
-                      ),
-                    }))}
-                  />
-                </FormItemWithInfo>
-              </Col>
-            </Row>
-            <Row gutter={48}>
-              <Col span={24} xl={12} />
-              <Col span={24} xl={12}>
-                <AxisRotationSettingForDataset form={form} />
-              </Col>
-            </Row>
-          </div>
-        </List.Item>
-      </List>
-
-      <List
-        locale={{ emptyText: "No Layers" }}
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Layers
-          </div>
+                  <Tooltip title="Copy dataset ID">
+                    <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                  </Tooltip>
+                </Space.Compact>
+              </FormItemWithInfo>
+            </Col>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                name={["dataSource", "scale", "factor"]}
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a voxel size for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      (value: Vector3) => value?.every((el) => el > 0),
+                      "Each component of the voxel size must be greater than 0",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                />
+              </FormItemWithInfo>
+              <Space size="large" />
+              <FormItemWithInfo
+                name={["dataSource", "scale", "unit"]}
+                label="Unit"
+                info="The unit in which the voxel size is defined."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a unit for the voxel scale of the dataset.",
+                  },
+                ]}
+              >
+                <Select
+                  style={{ width: 120 }}
+                  options={AllUnits.map((unit) => ({
+                    value: unit,
+                    label: (
+                      <span>
+                        <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
+                      </span>
+                    ),
+                  }))}
+                />
+              </FormItemWithInfo>
+            </Col>
+          </Row>
         }
-      >
-        {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          // the layer name may change in this view, the order does not, so idx is the right key choice here
-          <List.Item key={`layer-${idx}`}>
-            <SimpleLayerForm
-              dataset={dataset}
-              layer={layer}
-              index={idx}
-              onRemoveLayer={onRemoveLayer}
-              form={form}
+      />
+
+      <SettingsCard
+        title="Axis Rotation"
+        style={marginBottom}
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24}>
+              <AxisRotationSettingForDataset form={form} />
+            </Col>
+          </Row>
+        }
+      />
+
+      {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
+        // the layer name may change in this view, the order does not, so idx is the right key choice here
+        <Row gutter={[24, 24]} key={`layer-${idx}`}>
+          <Col span={24}>
+            <SettingsCard
+              title={`Layer: ${layer.name}`}
+              style={marginBottom}
+              content={
+                <SimpleLayerForm
+                  dataset={dataset}
+                  layer={layer}
+                  index={idx}
+                  onRemoveLayer={onRemoveLayer}
+                  form={form}
+                />
+              }
             />
-          </List.Item>
-        ))}
-      </List>
+          </Col>
+        </Row>
+      ))}
     </div>
   );
 }
@@ -361,15 +347,15 @@ function SimpleLayerForm({
 }) {
   const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
-  const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
-  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
+  const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
   const isSegmentation = category === "segmentation";
   const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Always revalidate in case the user changes the data layers in the form.
-  React.useEffect(() => {
+  useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
     // names all relevant fields are properly validated.
     // This is a workaround, since shouldUpdate=true on a
@@ -469,11 +455,11 @@ function SimpleLayerForm({
               </Select>
             </FormItemWithInfo>
             <FormItemWithInfo
-              label="Element Class"
+              label="Data Type"
               style={{
                 marginBottom: 24,
               }}
-              info="The element class (data type) of the layer."
+              info="The data type (sometimes called dtype) of the layer."
             >
               <Select disabled value={layer.elementClass} style={{ width: 120 }}>
                 <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
@@ -683,7 +669,7 @@ function DelegatePropsToFirstChild({ children, ...props }: { children: React.Rea
   // even though antd only demands one. We do this for better layouting.
   return (
     <>
-      {React.cloneElement(children[0], props)}
+      {cloneElement(children[0], props)}
       {children[1]}
     </>
   );

@@ -94,22 +94,22 @@ export function OrganizationNotificationsView({ organization }: { organization: 
         <Col span={12}>
           <SettingsCard
             title="WEBKNOSSOS Plan & Subscription"
-            explanation="Get notified when your WK subscription is about to expire or reach user and storage limits."
-            description={ownerEmail}
+            tooltip="Get notified when your WK subscription is about to expire or reach user and storage limits."
+            content={ownerEmail}
           />
         </Col>
         <Col span={12}>
           <SettingsCard
             title="AI Job Completion"
-            explanation="Get notified when a background conversion or AI job is completed."
-            description="Users are notified individually."
+            tooltip="Get notified when a background conversion or AI job is completed."
+            content="Users are notified individually."
           />
         </Col>
         <Col span={12}>
           <SettingsCard
             title="New User Signup"
-            explanation="Get notified when a new user signs up to your organization."
-            description={getNewUserNotificationsSettings()}
+            tooltip="Get notified when a new user signs up to your organization."
+            content={getNewUserNotificationsSettings()}
           />
         </Col>
       </Row>

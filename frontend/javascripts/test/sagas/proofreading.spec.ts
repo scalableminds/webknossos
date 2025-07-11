@@ -302,6 +302,9 @@ describe("Proofreading", () => {
       yield call(() => api.tracing.save());
 
       expect(context.receivedDataPerSaveRequest).toEqual([]);
+
+      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
     await task.toPromise();

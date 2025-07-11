@@ -200,6 +200,9 @@ const defaultState: WebknossosState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+    // The flycam matrix has a default rotation of 180° around the z axis (see flycam_reducer.tsx resetMatrix) which is already
+    // calculated out of the rotation value shown to the user and stored in this property. But as the initial matrix above
+    // does not have this default rotation, the correct resulting rotation value matching the identity matrix is [0,0,180].
     rotation: [0, 0, 180],
   },
   flycamInfoCache: {

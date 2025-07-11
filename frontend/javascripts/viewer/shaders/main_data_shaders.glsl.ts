@@ -500,8 +500,8 @@ void main() {
   // of the currently rendered magnification.
   // In general, an index i is computed for each vertex so that each vertex can be moved
   // to the right/bottom border of the i-th bucket.
-  // Exceptions are the first and the last vertex which aren't moved so that the plane
-  // keeps its original extent.
+  // To ensure that the outer vertices are not moved to the next lower / higher bucket border
+  // the vertices are clamp to stay in range of worldCoordTopLeft and worldCoordBottomRight.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
   // Let's only consider x:
@@ -524,24 +524,24 @@ void main() {
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-    transWorldCoord.x =
-      (
-        // Left border of left-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.x * voxelSizeFactorInvertedUVW.x / d.x) * d.x
-        // Move by index.x buckets to the right.
-        + index.x * d.x
-      ) * voxelSizeFactorUVW.x;
+  transWorldCoord.x =
+    (
+      // Left border of left-most bucket (probably outside of visible plane)
+      floor(worldCoordTopLeft.x * voxelSizeFactorInvertedUVW.x / d.x) * d.x
+      // Move by index.x buckets to the right.
+      + index.x * d.x
+    ) * voxelSizeFactorUVW.x;
 
-    transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
+  transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
 
-    transWorldCoord.y =
-      (
-        // Top border of top-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.y * voxelSizeFactorInvertedUVW.y / d.y) * d.y
-        // Move by index.y buckets to the bottom.
-        + index.y * d.y
-      ) * voxelSizeFactorUVW.y;
-    transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
+  transWorldCoord.y =
+    (
+      // Top border of top-most bucket (probably outside of visible plane)
+      floor(worldCoordTopLeft.y * voxelSizeFactorInvertedUVW.y / d.y) * d.y
+      // Move by index.y buckets to the bottom.
+      + index.y * d.y
+    ) * voxelSizeFactorUVW.y;
+  transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
 
   worldCoord = vec4(transDim(transWorldCoord), 1.);
 

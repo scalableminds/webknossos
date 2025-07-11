@@ -16,7 +16,8 @@ import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useHistory } from "react-router-dom";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
@@ -30,11 +31,10 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import { syncDataSourceFields } from "./dataset_settings_data_tab";
 import type { FormData } from "./dataset_settings_context";
+import { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
-import { useHistory } from "react-router-dom";
 
 type DatasetSettingsProviderProps = {
   children: React.ReactNode;
@@ -102,6 +102,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       });
 
       form.setFieldsValue({
+        // @ts-ignore Missmatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 
@@ -112,6 +113,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
           !firstLayerTransformations ||
           firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
         ) {
+          3;
           const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
           initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
         } else {
@@ -160,7 +162,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setIsLoading(false);
       form.validateFields();
     }
-  }, [datasetId]);
+  }, [datasetId, form.setFieldsValue, form.validateFields]);
 
   const getFormValidationSummary = useCallback((): Record<string, any> => {
     const err = form.getFieldsError();
@@ -277,6 +279,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     isEditingMode,
     queryClient,
     onComplete,
+    form.getFieldsValue,
   ]);
 
   const handleValidationFailed = useCallback(() => {
@@ -295,14 +298,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     syncDataSourceFields(form, activeDataSourceEditMode === "simple" ? "advanced" : "simple");
 
     const afterForceUpdateCallback = () => {
-      setTimeout(
-        () =>
-          form
-            .validateFields()
-            .then(submitForm)
-            .catch((errorInfo) => handleValidationFailed(errorInfo)),
-        0,
-      );
+      setTimeout(() => form.validateFields().then(submitForm).catch(handleValidationFailed), 0);
     };
 
     setActiveDataSourceEditMode((prev) => prev);
@@ -336,23 +332,20 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     });
   }, [fetchData]);
 
-  const contextValue: DatasetSettingsContextValue = useMemo(
-    () => ({
-      form,
-      isLoading,
-      dataset,
-      datasetId,
-      datasetDefaultConfiguration,
-      activeDataSourceEditMode,
-      isEditingMode,
-      handleSubmit,
-      handleCancel,
-      handleDataSourceEditModeChange,
-      onValuesChange,
-      getFormValidationSummary,
-    }),
-    [isEditingMode, isLoading, datasetDefaultConfiguration, dataset, activeDataSourceEditMode],
-  );
+  const contextValue: DatasetSettingsContextValue = {
+    form,
+    isLoading,
+    dataset,
+    datasetId,
+    datasetDefaultConfiguration,
+    activeDataSourceEditMode,
+    isEditingMode,
+    handleSubmit,
+    handleCancel,
+    handleDataSourceEditModeChange,
+    onValuesChange,
+    getFormValidationSummary,
+  };
 
   return (
     <DatasetSettingsContext.Provider value={contextValue}>

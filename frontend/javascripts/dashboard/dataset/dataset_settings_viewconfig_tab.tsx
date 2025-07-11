@@ -1,4 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/rest_api";
 import { Col, Form, Input, InputNumber, Row, Select, Switch, Table, Tooltip } from "antd";
 import { Slider } from "components/slider";
@@ -14,8 +16,6 @@ import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/sto
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { jsonEditStyle } from "./helper_components";
-import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
-import { SettingsTitle } from "admin/account/helpers/settings_title";
 
 const FormItem = Form.Item;
 
@@ -26,13 +26,14 @@ export default function DatasetSettingsViewConfigTab() {
 
   const { dataset } = useDatasetSettingsContext();
   const dataStoreURL = dataset?.dataStore.url;
-  const dataSourceId = dataset
+  const dataSourceId: APIDataSourceId | null = dataset
     ? {
         owningOrganization: dataset.owningOrganization,
         directoryName: dataset.directoryName,
       }
     : null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: validate on dataset change
   const validateDefaultMappings = useMemo(
     () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
       let config = {} as DatasetConfiguration["layers"];
@@ -195,7 +196,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.interpolation,
+      title: settings.interpolation as string,
       tooltip: settingsTooltips.interpolation,
       content: (
         <Form.Item name={["defaultConfiguration", "interpolation"]} valuePropName="checked">
@@ -204,7 +205,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.fourBit,
+      title: settings.fourBit as string,
       tooltip: settingsTooltips.fourBit,
       content: (
         <Form.Item name={["defaultConfiguration", "fourBit"]} valuePropName="checked">
@@ -213,7 +214,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.renderMissingDataBlack,
+      title: settings.renderMissingDataBlack as string,
       tooltip: settingsTooltips.renderMissingDataBlack,
       content: (
         <Form.Item
@@ -225,7 +226,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.segmentationPatternOpacity,
+      title: settings.segmentationPatternOpacity as string,
       tooltip: settingsTooltips.segmentationPatternOpacity,
       content: (
         <Row>
@@ -243,7 +244,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.blendMode,
+      title: settings.blendMode as string,
       tooltip: settingsTooltips.blendMode,
       content: (
         <Form.Item name={["defaultConfiguration", "blendMode"]}>
@@ -255,7 +256,7 @@ export default function DatasetSettingsViewConfigTab() {
       ),
     },
     {
-      title: settings.loadingStrategy,
+      title: settings.loadingStrategy as string,
       tooltip: settingsTooltips.loadingStrategy,
       content: (
         <Form.Item name={["defaultConfiguration", "loadingStrategy"]}>

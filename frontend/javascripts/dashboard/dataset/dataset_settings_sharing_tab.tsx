@@ -1,21 +1,21 @@
 import { RetweetOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
 import { Col, Collapse, Form, Row, Space, Switch, Tooltip, Typography } from "antd";
+import { useWatch } from "antd/es/form/Form";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
-import { useWatch } from "antd/es/form/Form";
-import { useQuery } from "@tanstack/react-query";
 
 export default function DatasetSettingsSharingTab() {
   const { form, datasetId, dataset } = useDatasetSettingsContext();

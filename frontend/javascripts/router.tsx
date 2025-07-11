@@ -69,12 +69,12 @@ import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/globals";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import { CommandPalette } from "viewer/view/components/command_palette";
-import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 
 const { Content } = Layout;
 

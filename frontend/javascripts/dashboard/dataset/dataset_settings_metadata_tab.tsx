@@ -1,6 +1,6 @@
-import { Col, DatePicker, Form, Input, Row } from "antd";
 import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { Col, DatePicker, Form, Input, Row } from "antd";
 
 export default function DatasetSettingsMetadataTab() {
   const metadataItems: SettingsCardProps[] = [

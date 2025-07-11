@@ -2,9 +2,9 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Alert, Form, Modal, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
-import _ from "lodash";
+import { sum } from "lodash";
 import type { FieldError } from "rc-field-form/es/interface";
-import * as React from "react";
+import React from "react";
 
 const FormItem = Form.Item;
 
@@ -125,5 +125,5 @@ export const hasFormError = (formErrors: FieldError[], key: string): boolean => 
   const errorsForKey = formErrors.map((errorObj) =>
     errorObj.name[0] === key ? errorObj.errors.length : 0,
   );
-  return _.sum(errorsForKey) > 0;
+  return sum(errorsForKey) > 0;
 };

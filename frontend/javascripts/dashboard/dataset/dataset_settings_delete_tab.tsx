@@ -1,14 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { confirmAsync } from "./helper_components";
-import { SettingsCard } from "admin/account/helpers/settings_card";
-import { SettingsTitle } from "admin/account/helpers/settings_title";
 
 const DatasetSettingsDeleteTab = () => {
   const { dataset } = useDatasetSettingsContext();
@@ -16,7 +16,7 @@ const DatasetSettingsDeleteTab = () => {
   const queryClient = useQueryClient();
   const history = useHistory();
 
-  async function handleDeleteButtonClicked(): Promise<void> {
+  const handleDeleteButtonClicked = useCallback(async () => {
     if (!dataset) {
       return;
     }
@@ -50,7 +50,7 @@ const DatasetSettingsDeleteTab = () => {
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
     history.push("/dashboard");
-  }
+  }, [dataset, history, queryClient]);
 
   return (
     <div>

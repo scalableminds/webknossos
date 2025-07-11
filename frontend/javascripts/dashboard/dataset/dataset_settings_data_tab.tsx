@@ -1,5 +1,8 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
@@ -8,14 +11,12 @@ import {
   type FormInstance,
   Input,
   InputNumber,
-  List,
   Row,
   Select,
   Space,
   Switch,
   Tooltip,
 } from "antd";
-import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
   FormItemWithInfo,
   Hideable,
@@ -26,7 +27,8 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
-import * as React from "react";
+import type React from "react";
+import { cloneElement, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
@@ -36,8 +38,6 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { SettingsCard } from "admin/account/helpers/settings_card";
 
 const FormItem = Form.Item;
 
@@ -355,7 +355,7 @@ function SimpleLayerForm({
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Always revalidate in case the user changes the data layers in the form.
-  React.useEffect(() => {
+  useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
     // names all relevant fields are properly validated.
     // This is a workaround, since shouldUpdate=true on a
@@ -669,7 +669,7 @@ function DelegatePropsToFirstChild({ children, ...props }: { children: React.Rea
   // even though antd only demands one. We do this for better layouting.
   return (
     <>
-      {React.cloneElement(children[0], props)}
+      {cloneElement(children[0], props)}
       {children[1]}
     </>
   );

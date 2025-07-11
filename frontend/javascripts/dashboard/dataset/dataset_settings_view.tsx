@@ -8,28 +8,28 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
+import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
-import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import features from "features";
 import { useWkSelector } from "libs/react_hooks";
+import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
 import {
+  Redirect,
   Route,
+  type RouteComponentProps,
+  Switch,
   useHistory,
   useLocation,
-  Switch,
-  Redirect,
-  type RouteComponentProps,
 } from "react-router-dom";
 import { Unicode } from "viewer/constants";
-import messages from "messages";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
-import type { MenuItemGroupType } from "antd/es/menu/interface";
-import features from "features";
+import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 
 const { Sider, Content } = Layout;
 const FormItem = Form.Item;
@@ -41,17 +41,6 @@ const BREADCRUMB_LABELS = {
   metadata: "Metadata",
   defaultConfig: "View Configuration",
   delete: "Delete Dataset",
-};
-
-const FIXED_SIDER_STYLE: React.CSSProperties = {
-  overflow: "auto",
-  height: "100vh",
-  position: "sticky",
-  insetInlineStart: 0,
-  top: 0,
-  bottom: 0,
-  scrollbarWidth: "thin",
-  scrollbarGutter: "stable",
 };
 
 const DatasetSettingsView: React.FC = () => {
@@ -165,29 +154,29 @@ const DatasetSettingsView: React.FC = () => {
     </Tooltip>
   );
 
-  const menuItems: MenuItemGroupType[] = [
+  const menuItems: ItemType[] = [
     {
       label: titleString,
       type: "group",
       children: [
         {
           key: "data",
-          icon: <CodeSandboxOutlined />,
+          icon: formErrors.data ? errorIcon : <CodeSandboxOutlined />,
           label: "Data Source",
         },
         {
           key: "sharing",
-          icon: <TeamOutlined />,
+          icon: formErrors.sharing ? errorIcon : <TeamOutlined />,
           label: "Sharing & Permissions",
         },
         {
           key: "metadata",
-          icon: <FileTextOutlined />,
+          icon: formErrors.metadata ? errorIcon : <FileTextOutlined />,
           label: "Metadata",
         },
         {
           key: "defaultConfig",
-          icon: <SettingOutlined />,
+          icon: formErrors.defaultConfig ? errorIcon : <SettingOutlined />,
           label: "View Configuration",
         },
         isUserAdmin && features().allowDeleteDatasets

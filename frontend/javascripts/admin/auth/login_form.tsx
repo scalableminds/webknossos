@@ -1,4 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
+import { doWebAuthnLogin } from "admin/api/webauthn";
 import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
@@ -42,7 +43,20 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
-  const { openIdConnectEnabled } = features();
+  const { openIdConnectEnabled, passkeysEnabled = false } = features();
+
+  const webauthnLogin = async () => {
+    try {
+      const [user, organization] = await doWebAuthnLogin();
+      Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
+      if (onLoggedIn) {
+        onLoggedIn();
+      }
+    } catch (error) {
+      console.error("webauthn login:", error);
+    }
+  };
 
   const iframeWarning = getIsInIframe() ? (
     <Alert
@@ -139,6 +153,15 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
+        {passkeysEnabled && (
+          <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+            <FormItem style={{ flexGrow: 1 }}>
+              <Button style={{ width: "100%" }} onClick={webauthnLogin}>
+                Log in with Passkey
+              </Button>
+            </FormItem>
+          </div>
+        )}
         {hideFooter ? null : (
           <FormItem
             style={{

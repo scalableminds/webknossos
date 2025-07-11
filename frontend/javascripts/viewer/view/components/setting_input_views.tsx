@@ -28,7 +28,7 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
-import type { Vector3, Vector6 } from "viewer/constants";
+import type { Vector3, Vector4, Vector6 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
@@ -55,9 +55,10 @@ type NumberSliderSettingProps = {
   min?: number;
   step?: number;
   disabled?: boolean;
-  spans?: Vector3;
+  spans?: Vector3 | Vector4;
   defaultValue?: number;
   wheelFactor?: number;
+  postComponent?: React.ReactNode;
 };
 
 export function NumberSliderSetting(props: NumberSliderSettingProps) {
@@ -72,7 +73,13 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
     defaultValue,
     wheelFactor: stepSize,
     spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+    postComponent,
   } = props;
+
+  const maybeCorrectedSpans =
+    postComponent != null && spans.length < 4
+      ? [spans[0] - 1, spans[1] - 1, spans[2] - 1, 3]
+      : spans;
 
   const isValueValid = (_value: number | null) =>
     _.isNumber(_value) && _value >= min && _value <= max;
@@ -89,10 +96,10 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
   const value = isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
   return (
     <Row align="middle" gutter={ROW_GUTTER}>
-      <Col span={spans[0]}>
+      <Col span={maybeCorrectedSpans[0]}>
         <label className="setting-label">{label}</label>
       </Col>
-      <Col span={spans[1]}>
+      <Col span={maybeCorrectedSpans[1]}>
         <Slider
           min={min}
           max={max}
@@ -104,7 +111,7 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
           wheelFactor={stepSize}
         />
       </Col>
-      <Col span={spans[2]}>
+      <Col span={maybeCorrectedSpans[2]}>
         <InputNumber
           controls={false}
           min={min}
@@ -119,6 +126,7 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
           variant="borderless"
         />
       </Col>
+      {postComponent ? <Col span={maybeCorrectedSpans[3]}>{postComponent}</Col> : null}
     </Row>
   );
 }

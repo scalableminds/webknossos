@@ -27,7 +27,7 @@ import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionView from "viewer/view/action-bar/dataset_position_view";
+import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
 import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
@@ -357,7 +357,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
-          <DatasetPositionView />
+          <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
           <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager

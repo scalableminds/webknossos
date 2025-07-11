@@ -40,6 +40,11 @@ import {
   getMaximumBrushSize,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import {
+  pitchFlycamAction,
+  rollFlycamAction,
+  yawFlycamAction,
+} from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   createBranchPointAction,
@@ -60,7 +65,8 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import dimensions from "viewer/model/dimensions";
+import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
+import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { Model, api } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
@@ -88,6 +94,8 @@ function ensureNonConflictingHandlers(
     );
   }
 }
+
+const FIXED_ROTATION_STEP = Math.PI / 2;
 
 const cycleTools = () => {
   Store.dispatch(cycleToolAction());
@@ -377,6 +385,29 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
+    const axisIndexToRotation = {
+      0: pitchFlycamAction,
+      1: yawFlycamAction,
+      2: rollFlycamAction,
+    };
+    const rotateViewportAware = (
+      timeFactor: number,
+      dimensionIndex: DimensionIndices,
+      oppositeDirection: boolean,
+      fixedStepRotation: boolean = false,
+    ) => {
+      const state = Store.getState();
+      const invertingFactor = oppositeDirection ? -1 : 1;
+      const rotationAngle =
+        (fixedStepRotation
+          ? FIXED_ROTATION_STEP
+          : state.userConfiguration.rotateValue * timeFactor) * invertingFactor;
+      const { activeViewport } = state.viewModeData.plane;
+      const viewportIndices = Dimensions.getIndices(activeViewport);
+      const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
+      Store.dispatch(rotationAction(rotationAngle));
+    };
+
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -391,6 +422,12 @@ class PlaneController extends React.PureComponent<Props> {
       right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
       up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
       down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
+      "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
+      "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
+      "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
+      "shift + down": (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
+      "alt + left": (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
+      "alt + right": (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
     });
     const {
       baseControls: notLoopedKeyboardControls,
@@ -424,8 +461,23 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
+
+    const ignoredTimeFactor = 0;
+    const rotateViewportAwareFixedWithoutTiming = (
+      dimensionIndex: DimensionIndices,
+      oppositeDirection: boolean,
+    ) => rotateViewportAware(ignoredTimeFactor, dimensionIndex, oppositeDirection, true);
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(
-      notLoopedKeyboardControls,
+      {
+        ...notLoopedKeyboardControls,
+        // Directly rotate by 90 degrees.
+        "ctrl + shift + left": () => rotateViewportAwareFixedWithoutTiming(1, false),
+        "ctrl + shift + right": () => rotateViewportAwareFixedWithoutTiming(1, true),
+        "ctrl + shift + up": () => rotateViewportAwareFixedWithoutTiming(0, false),
+        "ctrl + shift + down": () => rotateViewportAwareFixedWithoutTiming(0, true),
+        "ctrl + alt + left": () => rotateViewportAwareFixedWithoutTiming(2, false),
+        "ctrl + alt + right": () => rotateViewportAwareFixedWithoutTiming(0, true),
+      },
       {},
       extendedNotLoopedKeyboardControls,
       keyUpControls,
@@ -489,14 +541,14 @@ class PlaneController extends React.PureComponent<Props> {
 
         if (mousePosition) {
           const [x, y] = mousePosition;
-          const globalMousePosition = calculateGlobalPos(Store.getState(), {
+          const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
             x,
             y,
-          });
+          }).rounded;
           const { cube } = segmentationLayer;
           const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
-            globalMousePosition,
+            globalMousePositionRounded,
             additionalCoordinates,
             mapping,
             getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),

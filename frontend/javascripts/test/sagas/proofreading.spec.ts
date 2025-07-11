@@ -292,8 +292,6 @@ describe("Proofreading", () => {
         },
       ]);
 
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
       const mapping1 = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

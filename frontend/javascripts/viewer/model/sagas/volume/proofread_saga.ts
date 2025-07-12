@@ -61,6 +61,7 @@ import {
   initializeEditableMappingAction,
   removeSegmentAction,
   setHasEditableMappingAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -239,6 +240,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
 
+  yield put(updateProofreadingMarkerPositionAction(position, layerName));
+
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
   if (!proofreadUsingMeshes()) return;
@@ -295,7 +298,7 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
-  // Handles split, merge and min-cut actions on agglomerates.
+  // This saga handles split, merge and min-cut actions on agglomerates.
   // Note that the skeletontracing reducer already mutated the skeletons according to the
   // received action.
   if (
@@ -387,16 +390,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       return;
     }
-    items.push(
-      mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
     yield* call(
       updateMappingWithMerge,
       volumeTracingId,
@@ -409,15 +403,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
       return;
     }
-    items.push(
-      splitAgglomerate(
-        sourceAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
     const hasErrored = yield* call(
       performMinCut,
@@ -572,15 +558,7 @@ function* performMinCut(
       "and",
       edge.segmentId2,
     );
-    items.push(
-      splitAgglomerate(
-        sourceAgglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
   }
 
   return false;
@@ -666,15 +644,7 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(
-      splitAgglomerate(
-        agglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
   }
 
   return { didCancel: false, neighborInfo };
@@ -733,16 +703,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    items.push(
-      mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
-        sourceInfo.unmappedId,
-        targetInfo.unmappedId,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
 
     console.log(
       "Merging agglomerate",

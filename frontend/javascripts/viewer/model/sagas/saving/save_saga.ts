@@ -3,20 +3,24 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
-import { call, fork, put, takeEvery } from "typed-redux-saga";
+import { buffers } from "redux-saga";
+import { actionChannel, call, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setVersionNumberAction } from "viewer/model/actions/save_actions";
+import {
+  type EnsureHasNewestVersionAction,
+  setVersionNumberAction,
+} from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
-import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
+import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
   removeAgglomerateFromActiveMapping,
   updateMappingWithMerge,
@@ -33,7 +37,8 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+// todop: restore to 10
+const VERSION_POLL_INTERVAL_COLLAB = 20 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
@@ -50,7 +55,9 @@ function* watchForSaveConflicts(): Saga<void> {
       (state) =>
         state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
     );
-    if (allowSave) {
+
+    // todop
+    if (false && allowSave) {
       // The active user is currently the only one that is allowed to mutate the annotation.
       // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
       // between the page load and this check here.
@@ -155,9 +162,21 @@ function* watchForSaveConflicts(): Saga<void> {
 
   yield* call(ensureWkReady);
 
+  const channel = yield actionChannel(
+    ["ENSURE_HAS_NEWEST_VERSION"],
+    // todop: if multiple actions are sent to this buffer (without consumption inbetween),
+    // we only want to poll the newest version once. This is why the current implementation
+    // uses a sliding buffer of size 1. However, this means that dropped actions won't get
+    // their callback's notified. This is a problem and could lead to infinite waiting.
+    buffers.sliding<EnsureHasNewestVersionAction>(1),
+  );
+
   while (true) {
     const interval = yield* call(getPollInterval);
-    yield* call(sleep, interval);
+    const { ensureHasNewestVersion } = yield* race({
+      sleep: call(sleep, interval),
+      ensureHasNewestVersion: take(channel),
+    });
     if (yield* select((state) => state.uiInformation.showVersionRestore)) {
       continue;
     }
@@ -167,6 +186,12 @@ function* watchForSaveConflicts(): Saga<void> {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
+      } else {
+        if (ensureHasNewestVersion) {
+          // checkForNewVersion was done in response to a ensureHasNewestVersion action.
+          // We invoke the callback to signal that the newest version was ensured.
+          (ensureHasNewestVersion as EnsureHasNewestVersionAction).callback();
+        }
       }
     } catch (exception) {
       // If the version check fails for some reason, we don't want to crash the entire
@@ -299,13 +324,31 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
-          yield* call(
-            updateMappingWithMerge,
-            action.value.actionTracingId,
-            activeMapping,
-            action.value.agglomerateId1,
-            action.value.agglomerateId2,
+          // yield* call(
+          //   updateMappingWithMerge,
+          //   action.value.actionTracingId,
+          //   activeMapping,
+          //   action.value.agglomerateId1,
+          //   action.value.agglomerateId2,
+          // );
+          const layerName = action.value.actionTracingId;
+          const mappingInfo = yield* select((state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
           );
+          const dataset = yield* select((state) => state.dataset);
+          const layerInfo = getLayerByName(dataset, layerName);
+          const { mappingName } = mappingInfo;
+
+          if (mappingName == null) {
+            throw new Error(
+              "Could not apply splitAgglomerate because no active mapping was found.",
+            );
+          }
+          updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            console.log("clearing and refreshing mapping because of split/merge action");
+            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
+            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
+          };
           break;
         }
         case "splitAgglomerate": {
@@ -313,12 +356,29 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
-          yield* call(
-            removeAgglomerateFromActiveMapping,
-            action.value.actionTracingId,
-            activeMapping,
-            action.value.agglomerateId,
-          );
+          // yield* call(
+          //   removeAgglomerateFromActiveMapping,
+          //   action.value.actionTracingId,
+          //   activeMapping,
+          //   /* todop:
+          //    * segmentId1 was split from segmentId2. This means both used to map to the same agglomerateId.
+          //    * This UA should "invalidate" the current equivalence class to which segmentId1 and segmentId2
+          //    * belong. All members of that equivalence class should be removed from the active mapping
+          //    * and then re-fetched.
+          //    * If our current mapping contains one (or both) of the segmentIds, we can look up the mapped value
+          //    * and then clear the mapping accordingly (this is important because the local mapping might have diverged
+          //    * from the mapping stored on the server; therefore, even if the UA would also encode the mapped value,
+          //    * that wouldn't be sufficient).
+          //    * However, it might be that none of the segmentIds were fetched yet. In that case, there are two options:
+          //    *   1) the entire equivalence class is unknown to the frontend. Nothing needs to be done now.
+          //    *   2) the equivalence class is known, but the segmentIds from the UA are not known. In that case
+          //    *      we still need to find out to which id the segmentIds used to map.
+          //    *      This can be done by asking the server. For the request we should pass the version that existed
+          //    *      right before the update action (because that is the version where the two segments were merged.)
+          //    */
+
+          //   action.value.agglomerateId,
+          // );
 
           const layerName = action.value.actionTracingId;
 
@@ -337,6 +397,8 @@ export function* tryToIncorporateActions(
           const layerInfo = getLayerByName(dataset, layerName);
 
           updateLocalHdf5FunctionByTracing[layerName] = function* () {
+            console.log("clearing and refreshing mapping because of split/merge action");
+            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
           };
 

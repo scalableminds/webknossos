@@ -1,4 +1,9 @@
-import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  InfoCircleOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -40,6 +45,8 @@ import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_a
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { MarkdownModal } from "../components/markdown_modal";
+import { Store } from "viewer/singletons";
+import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 
 type StateProps = {
   annotation: StoreAnnotation;
@@ -660,7 +667,12 @@ function DebugInfo() {
   const versionOnClient = useWkSelector((state) => {
     return state.annotation.version;
   });
-  return <>Version: {versionOnClient}</>;
+  return (
+    <>
+      Version: {versionOnClient}
+      <ReloadOutlined onClick={() => Store.dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
+    </>
+  );
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({

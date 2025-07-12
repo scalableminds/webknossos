@@ -729,6 +729,12 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
+export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
+    method: "DELETE",
+  });
+}
+
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,

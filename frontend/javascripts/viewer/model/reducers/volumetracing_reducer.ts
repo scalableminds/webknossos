@@ -495,6 +495,16 @@ function VolumeTracingReducer(
       return handleRemoveSegment(state, action);
     }
 
+    case "UPDATE_PROOFREADING_MARKER_POSITION": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (volumeTracing) {
+        return updateVolumeTracing(state, volumeTracing.tracingId, {
+          proofreadingMarkerPosition: action.position,
+        });
+      }
+      return state;
+    }
+
     case "SET_EXPANDED_SEGMENT_GROUPS": {
       const { expandedSegmentGroups, layerName } = action;
       const { segmentGroups } = getVisibleSegments(state);

@@ -275,8 +275,15 @@ function sliceBufferIntoPieces(
   missingBuckets: Array<number>,
   buffer: Uint8Array<ArrayBuffer>,
 ): Array<Uint8Array<ArrayBuffer> | null | undefined> {
-  let offset = 0;
   const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+  const availableBucketCount = batch.length - missingBuckets.length;
+  const expectedTotalByteLength = availableBucketCount * BUCKET_BYTE_LENGTH;
+  if (expectedTotalByteLength !== buffer.length) {
+    throw new Error(
+      `Expected ${expectedTotalByteLength} bytes, but received ${buffer.length}. Rejecting buckets.`,
+    );
+  }
+  let offset = 0;
   const bucketBuffers = batch.map((_bucketAddress, index) => {
     const isMissing = missingBuckets.indexOf(index) > -1;
     const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH));

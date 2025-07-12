@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { getBitDepth } from "viewer/model/accessors/dataset_accessor";
+import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
 import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -68,7 +68,7 @@ const tokenResponse = {
 };
 
 interface TestContext {
-  layer: APIDataLayer;
+  colorLayer: APIDataLayer;
   segmentationLayer: APIDataLayer;
 }
 
@@ -78,24 +78,26 @@ describe("wkstore_adapter", () => {
     mock.receiveJSON.mockReset();
     mock.receiveJSON.mockReturnValue(Promise.resolve(tokenResponse));
 
-    context.layer = dataSource.dataLayers[0];
+    context.colorLayer = dataSource.dataLayers[0];
     context.segmentationLayer = dataSource.dataLayers[1];
   });
 
-  it<TestContext>("Initialization should set the attributes correctly", ({ layer }) => {
-    expect(layer.name).toBe("color");
-    expect(layer.category).toBe("color");
-    expect(getBitDepth(layer)).toBe(8);
+  it<TestContext>("Initialization should set the attributes correctly", ({ colorLayer }) => {
+    expect(colorLayer.name).toBe("color");
+    expect(colorLayer.category).toBe("color");
+    expect(getBitDepth(colorLayer)).toBe(8);
   });
 
-  function prepare() {
+  function prepare(layer: APIDataLayer) {
     const batch = [
       [0, 0, 0, 0],
       [1, 1, 1, 1],
     ] as BucketAddress[];
 
-    const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
-    const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
+    const fourBitFactor = _fourBit && layer.category === "color" ? 0.5 : 1;
+    const byteCount = fourBitFactor * getByteCountFromLayer(layer) * 32 ** 3;
+    const bucketData1 = _.range(0, byteCount).map((i) => i % 256);
+    const bucketData2 = _.range(0, byteCount).map((i) => (2 * i) % 256);
 
     const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
@@ -119,9 +121,9 @@ describe("wkstore_adapter", () => {
   }
 
   it<TestContext>("requestWithFallback: Token Handling should re-request a token when it's invalid", async ({
-    layer,
+    colorLayer,
   }) => {
-    const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
+    const { batch, responseBuffer, bucketData1, bucketData2 } = prepare(colorLayer);
 
     const RequestMock = vi.mocked(Request);
     RequestMock.sendJSONReceiveArraybufferWithHeaders
@@ -151,7 +153,7 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-    const buffers = await requestWithFallback(layer, batch);
+    const buffers = await requestWithFallback(colorLayer, batch);
     const [buffer1, buffer2] = buffers;
     expect(buffer1).toEqual(bucketData1);
     expect(buffer2).toEqual(bucketData2);
@@ -191,13 +193,13 @@ describe("wkstore_adapter", () => {
   }
 
   it<TestContext>("requestWithFallback: Request Handling: should pass the correct request parameters", async ({
-    layer,
+    colorLayer,
   }) => {
-    const { batch } = prepare();
+    const { batch } = prepare(colorLayer);
     const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
 
-    await requestWithFallback(layer, batch).then(() => {
+    await requestWithFallback(colorLayer, batch).then(() => {
       const RequestMock = vi.mocked(Request);
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(1);
 
@@ -209,16 +211,16 @@ describe("wkstore_adapter", () => {
   });
 
   it<TestContext>("requestWithFallback: Request Handling: four bit mode should be respected for color layers", async ({
-    layer,
+    colorLayer,
   }) => {
     setFourBit(true);
     // test four bit color and 8 bit seg
-    const { batch } = prepare();
+    const { batch } = prepare(colorLayer);
     const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
 
     const RequestMock = vi.mocked(Request);
-    await requestWithFallback(layer, batch).then(() => {
+    await requestWithFallback(colorLayer, batch).then(() => {
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(1);
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
         expectedUrl,
@@ -232,7 +234,7 @@ describe("wkstore_adapter", () => {
     segmentationLayer,
   }) => {
     setFourBit(true);
-    const { batch } = prepare();
+    const { batch } = prepare(segmentationLayer);
     const expectedUrl =
       "url/data/datasets/organization/datasetPath/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);

@@ -52,6 +52,7 @@ import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
   setSelectedSegmentsOrGroupAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
@@ -593,6 +594,8 @@ function* ensureSegmentExists(
         !doesSegmentExist,
       ),
     );
+
+    yield put(updateProofreadingMarkerPositionAction(somePosition, layerName));
 
     yield* call(updateClickedSegments, action);
   }

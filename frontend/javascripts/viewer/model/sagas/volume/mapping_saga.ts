@@ -35,10 +35,13 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import {
   type BucketRetrievalSource,
+  getActiveCellId,
   getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
+  getVolumeTracingById,
+  getVolumeTracingByLayerName,
   isMappingActivationAllowed,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -71,10 +74,12 @@ import type {
   NumberLikeMap,
 } from "viewer/store";
 import type { Action } from "../../actions/actions";
-import { updateSegmentAction } from "../../actions/volumetracing_actions";
+import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkReady } from "../ready_sagas";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -563,10 +568,43 @@ export function* updateLocalHdf5Mapping(
   });
 
   yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+
+  yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
+
   if (process.env.IS_TESTING) {
     // in test context, the mapping.ts code is not executed (which is usually responsible
     // for finishing the initialization).
     yield put(finishMappingInitializationAction(layerName));
+  }
+}
+
+function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
+  const annotation = yield* select((state) => state.annotation);
+
+  const volumeTracing = getVolumeTracingByLayerName(annotation, layerName);
+  if (!volumeTracing) {
+    return;
+  }
+
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+
+  if (activeTool !== AnnotationTool.PROOFREAD) {
+    return;
+  }
+
+  const { proofreadingMarkerPosition } = volumeTracing;
+  if (proofreadingMarkerPosition) {
+    const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
+    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+
+    if (activeSegmentId !== agglomerateId) {
+      yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
+      yield* call(() =>
+        Toast.info(
+          `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+        ),
+      );
+    }
   }
 }
 

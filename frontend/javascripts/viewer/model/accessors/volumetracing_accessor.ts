@@ -499,18 +499,14 @@ function _getSelectedIds(state: WebknossosState): [
 
 export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
-export function getActiveSegmentPosition(state: WebknossosState): Vector3 | null | undefined {
+export function getProofreadingMarkerPosition(state: WebknossosState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
   const volumeTracing = getVolumeTracingByLayerName(state.annotation, layer.name);
   if (volumeTracing == null) return null;
 
-  const activeCellId = getActiveCellId(volumeTracing);
-  if (activeCellId == null) return null;
-
-  const segments = getSegmentsForLayer(state, layer.name);
-  return segments.getNullable(activeCellId)?.somePosition;
+  return volumeTracing.proofreadingMarkerPosition;
 }
 
 /*

@@ -61,6 +61,7 @@ import {
   initializeEditableMappingAction,
   removeSegmentAction,
   setHasEditableMappingAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -238,6 +239,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const layerName = volumeTracingLayer.tracingId;
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
+
+  yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 

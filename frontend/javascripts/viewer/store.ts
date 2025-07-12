@@ -196,6 +196,11 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  // The position of the "proofreading marker" (a cross) is stored separately.
+  // In earlier versions, the anchor position of the current segment was simply used.
+  // However, the anchor position can be updated by another user (in collab mode) which
+  // leads to unexpected jumping of the marker.
+  readonly proofreadingMarkerPosition: Vector3 | undefined;
   readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;

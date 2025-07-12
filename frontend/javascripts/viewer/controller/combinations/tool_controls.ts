@@ -1086,10 +1086,10 @@ export class ProofreadToolController {
     } else if (event.ctrlKey || event.metaKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {
+      VolumeHandlers.handlePickCell(pos);
       Store.dispatch(
         proofreadAtPosition(globalPosition, state.flycam.additionalCoordinates || undefined),
       );
-      VolumeHandlers.handlePickCell(pos);
     }
   }
 

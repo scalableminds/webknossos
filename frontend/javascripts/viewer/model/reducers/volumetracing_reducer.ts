@@ -319,6 +319,7 @@ export function serverVolumeToClientVolumeTracing(
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
+    proofreadingMarkerPosition: undefined,
   };
   return volumeTracing;
 }

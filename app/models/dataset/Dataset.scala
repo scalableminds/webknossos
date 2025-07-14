@@ -517,6 +517,15 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
+  def getVirtualDatasetIds()(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(q"""SELECT _id
+                       FROM webknossos.datasets_
+                       WHERE status = 'Virtual remote dataset'
+                       AND $accessQuery""".as[ObjectId])
+    } yield rList.toList
+
   def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {

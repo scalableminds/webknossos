@@ -64,7 +64,7 @@ case class WKWDataLayer(
       coordinateTransformations,
       additionalAxes,
       attachments,
-      None,
+      if (mags.isEmpty) None else Some(mags),
       None,
       Some(dataFormat)
     )
@@ -76,9 +76,13 @@ object WKWDataLayer {
   implicit val jsonFormat: Format[WKWDataLayer] = new Format[WKWDataLayer] {
     def reads(json: JsValue): JsResult[WKWDataLayer] =
       for {
-        mag: List[MagLocator] <- (json \ "wkwResolutions").validate[List[WKWResolution]] match {
-          case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
-          case JsError(_)          => (json \ "mags").validate[List[MagLocator]]
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WKWResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
         }
         name <- (json \ "name").validate[String]
         category <- (json \ "category").validate[Category.Value]
@@ -94,7 +98,7 @@ object WKWDataLayer {
           name,
           category,
           boundingBox,
-          mag,
+          mags,
           elementClass,
           defaultViewConfiguration,
           adminViewConfiguration,
@@ -137,7 +141,7 @@ case class WKWSegmentationLayer(
       coordinateTransformations,
       additionalAxes,
       attachments,
-      None,
+      if (mags.isEmpty) None else Some(mags),
       None,
       Some(dataFormat)
     )
@@ -149,9 +153,13 @@ object WKWSegmentationLayer {
   implicit val jsonFormat: Format[WKWSegmentationLayer] = new Format[WKWSegmentationLayer] {
     def reads(json: JsValue): JsResult[WKWSegmentationLayer] =
       for {
-        mag: List[MagLocator] <- (json \ "wkwResolutions").validate[List[WKWResolution]] match {
-          case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
-          case JsError(_)          => (json \ "mags").validate[List[MagLocator]]
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WKWResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
         }
         name <- (json \ "name").validate[String]
         boundingBox <- (json \ "boundingBox").validate[BoundingBox]
@@ -167,7 +175,7 @@ object WKWSegmentationLayer {
         WKWSegmentationLayer(
           name,
           boundingBox,
-          mag,
+          mags,
           elementClass,
           mappings,
           largestSegmentId,

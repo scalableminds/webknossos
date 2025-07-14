@@ -291,7 +291,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean => {
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
       // Navigation blocking can be triggered by two sources:
       // 1. The browser's native beforeunload event
       // 2. The React-Router block function (useBlocker or withBlocker HOC)
@@ -308,7 +308,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
 
-      return false;
+      // The native event requires an empty return value to not show a message
+      return;
     };
 
     const { unfinishedUploadToContinue } = this.state;

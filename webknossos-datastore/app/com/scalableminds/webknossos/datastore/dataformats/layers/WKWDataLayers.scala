@@ -9,13 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
-case class WKWResolution(resolution: Vec3Int,
-                         cubeLength: Int,
-                         path: Option[String] = None,
-                         credentialId: Option[String] = None) {
-  def toMagLocator: MagLocator =
-    MagLocator(mag = resolution, path = path, credentialId = credentialId)
-}
+case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
 
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
@@ -32,7 +26,7 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def mags: List[MagLocator] = wkwResolutions.map(_.toMagLocator)
+  def mags: List[MagLocator] = wkwResolutions.map(wkwResolution => MagLocator(wkwResolution.resolution))
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 

@@ -3,8 +3,8 @@ package com.scalableminds.util.io
 import java.io.File
 import java.nio.file.{Path, _}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala

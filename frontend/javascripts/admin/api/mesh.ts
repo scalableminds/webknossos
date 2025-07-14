@@ -22,7 +22,7 @@ type MeshSegmentInfo = {
 };
 
 type ListMeshChunksRequest = {
-  meshFileName: string;
+  meshFile: APIMeshFileInfo;
   segmentId: number;
 };
 
@@ -52,7 +52,7 @@ export function getMeshfileChunksForSegment(
       params.append("editableMappingTracingId", editableMappingTracingId);
     }
     const payload: ListMeshChunksRequest = {
-      meshFileName: meshFile.name,
+      meshFile,
       segmentId,
     };
     return Request.sendJSONReceiveJSON(
@@ -72,7 +72,7 @@ type MeshChunkDataRequest = {
 };
 
 type MeshChunkDataRequestList = {
-  meshFileName: string;
+  meshFile: APIMeshFileInfo;
   requests: MeshChunkDataRequest[];
 };
 

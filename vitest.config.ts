@@ -1,5 +1,5 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 // This config object is intentionally left under-specified (see config.test.include).
 // Other vitest_*.config.ts import this config. Vitest should always be called with

@@ -11,19 +11,18 @@ import {
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/rest_api";
-import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+import { Button, Divider, InputNumber, Modal } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import features from "features";
 import { formatCurrency } from "libs/format_utils";
-
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
-import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
+import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
 
@@ -223,26 +222,18 @@ function upgradePricingPlan(
       title = "Upgrade to unlock more features";
       okButtonCallback = undefined;
       modalBody = (
-        <Row gutter={16}>
-          <Col span={12}>
-            <TeamPlanUpgradeCard
-              teamUpgradeCallback={async () => {
-                await sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
-                Toast.success(messages["organization.plan.upgrage_request_sent"]);
-                destroyCallback();
-              }}
-            />
-          </Col>
-          <Col span={12}>
-            <PowerPlanUpgradeCard
-              powerUpgradeCallback={async () => {
-                await sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
-                Toast.success(messages["organization.plan.upgrage_request_sent"]);
-                destroyCallback();
-              }}
-            />
-          </Col>
-        </Row>
+        <TeamAndPowerPlanUpgradeCards
+          teamUpgradeCallback={() => {
+            sendUpgradePricingPlanEmail(PricingPlanEnum.Team);
+            Toast.success(messages["organization.plan.upgrage_request_sent"]);
+            destroyCallback();
+          }}
+          powerUpgradeCallback={() => {
+            sendUpgradePricingPlanEmail(PricingPlanEnum.Power);
+            Toast.success(messages["organization.plan.upgrage_request_sent"]);
+            destroyCallback();
+          }}
+        />
       );
     }
 
@@ -378,11 +369,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
           <p style={{ color: "#aaa", fontSize: 12 }}>
             Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
             sales team. We typically respond within one business day to discuss payment options and
-            purchasing requirements. See our{" "}
-            <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
-              FAQ
-            </a>{" "}
-            for more information.
+            purchasing requirements. See our <a href="https://webknossos.org/faq">FAQ</a> for more
+            information.
           </p>
         </>
       </div>

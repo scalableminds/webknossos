@@ -1,7 +1,7 @@
 package controllers
 
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -28,7 +28,7 @@ import com.typesafe.scalalogging.LazyLogging
 import files.WkTempFileService
 
 import javax.inject.Inject
-import com.scalableminds.util.tools.Empty
+import net.liftweb.common.Empty
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._

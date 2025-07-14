@@ -1,7 +1,7 @@
 package com.scalableminds.util.image
 
 import com.scalableminds.util.tools.ExtendedTypes._
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json._
 import play.api.libs.json.{Format, JsValue, _}
 

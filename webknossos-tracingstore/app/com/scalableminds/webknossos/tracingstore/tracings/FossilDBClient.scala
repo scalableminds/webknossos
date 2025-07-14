@@ -9,8 +9,8 @@ import com.typesafe.scalalogging.LazyLogging
 import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
-import com.scalableminds.util.tools.{Box, Empty, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
@@ -70,7 +70,7 @@ class FossilDBClient(collection: String,
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+        case net.liftweb.common.Failure(msg, _, _) =>
           val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
@@ -86,7 +86,7 @@ class FossilDBClient(collection: String,
         case Failure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-              new com.scalableminds.util.tools.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+              new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
             case e: Exception =>
               val messageWithCauses = new StringBuilder
               messageWithCauses.append(e.toString)
@@ -96,9 +96,7 @@ class FossilDBClient(collection: String,
                 messageWithCauses.append(cause.toString)
                 cause = cause.getCause
               }
-              new com.scalableminds.util.tools.Failure(s"Request to FossilDB failed: $messageWithCauses",
-                                                       Full(e),
-                                                       Empty)
+              new net.liftweb.common.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
           }
           Future.successful(box)
       }
@@ -176,11 +174,11 @@ class FossilDBClient(collection: String,
                 parsed <- fromByteArray(versionValuePair.value.toByteArray)
               } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
-              com.scalableminds.util.tools.Failure(s"Failed to get entry from FossilDB: $errorMessage")
+              net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")
             case VersionValueBoxProto(None, None, _) => Empty
-            case _                                   => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+            case _                                   => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
-        case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+        case _ => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 
@@ -210,7 +208,7 @@ class FossilDBClient(collection: String,
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+        case net.liftweb.common.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
           Fox.failure("Could not save to FossilDB: " + msg)
       }
@@ -248,7 +246,7 @@ class FossilDBClient(collection: String,
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
-        case com.scalableminds.util.tools.Failure(msg, _, _) =>
+        case net.liftweb.common.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("multi-put", msg)
           Fox.failure("Could not multi-put to FossilDB: " + msg)
       }

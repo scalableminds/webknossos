@@ -6,7 +6,7 @@ import {
   type UpdateUserBoundingBoxInSkeletonTracingAction,
   updateUserBoundingBoxInVolumeTracing,
   type UpdateUserBoundingBoxInVolumeTracingAction,
-} from "viewer/model/sagas/volume/update_actions";
+} from "viewer/model/sagas/update_actions";
 import type { SaveQueueEntry, UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";
 

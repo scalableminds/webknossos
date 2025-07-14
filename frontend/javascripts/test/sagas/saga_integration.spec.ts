@@ -3,7 +3,7 @@ import { setupWebknossosForTesting, type WebknossosTestContext } from "test/help
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/save_saga_constants";
 import Store from "viewer/store";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -19,7 +19,7 @@ import {
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
+import * as UpdateActions from "viewer/model/sagas/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {

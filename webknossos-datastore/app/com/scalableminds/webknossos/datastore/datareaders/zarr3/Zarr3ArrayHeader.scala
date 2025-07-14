@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -15,8 +16,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
@@ -63,8 +64,8 @@ case class Zarr3ArrayHeader(
 
   def assertValid: Box[Unit] =
     for {
-      _ <- Box.fromBool(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
-      _ <- Box.fromBool(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
+      _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
+      _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)

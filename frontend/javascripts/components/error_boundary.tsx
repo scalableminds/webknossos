@@ -52,7 +52,7 @@ export default class ErrorBoundary extends React.Component<
               <a href="#" onClick={this.clearLocalStorageAndReload}>
                 here
               </a>{" "}
-              to do so. If this does not help, please clear the browser cache.
+              to do so.
             </Typography.Paragraph>
             <Alert
               style={{ maxHeight: "70vh", overflow: "auto" }}

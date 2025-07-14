@@ -2,8 +2,7 @@ import { transferTask } from "admin/api/tasks";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Button, Modal } from "antd";
 import { handleGenericError } from "libs/error_handling";
-import type React from "react";
-import { memo, useCallback, useState } from "react";
+import * as React from "react";
 import type { APIAnnotation } from "types/api_types";
 
 type Props = {
@@ -12,53 +11,67 @@ type Props = {
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
 };
+type State = {
+  currentUserIdValue: string;
+};
 
-const TransferTaskModal: React.FC<Props> = ({ isOpen, onCancel, annotationId, onChange }) => {
-  const [currentUserIdValue, setCurrentUserIdValue] = useState("");
+class TransferTaskModal extends React.PureComponent<Props, State> {
+  state: State = {
+    currentUserIdValue: "",
+  };
 
-  const handleSelectChange = useCallback((userId: string) => {
-    setCurrentUserIdValue(userId);
-  }, []);
+  async transfer() {
+    const annotationId = this.props.annotationId;
 
-  const transfer = useCallback(async () => {
     if (!annotationId) {
       throw new Error("No annotation id provided");
     }
 
     try {
-      const updatedAnnotation = await transferTask(annotationId, currentUserIdValue);
-      onChange(updatedAnnotation);
-      setCurrentUserIdValue("");
+      const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
+      this.props.onChange(updatedAnnotation);
     } catch (error) {
       handleGenericError(error as Error);
     }
-  }, [annotationId, currentUserIdValue, onChange]);
-
-  if (!isOpen) {
-    return null;
   }
 
-  return (
-    <Modal
-      title="Transfer a Task"
-      open={isOpen}
-      onCancel={onCancel}
-      footer={() => (
-        <>
-          <Button type="primary" onClick={transfer} disabled={currentUserIdValue === ""}>
-            Transfer
-          </Button>
-          <Button onClick={onCancel}>Close</Button>
-        </>
-      )}
-    >
-      <div className="control-group">
-        <div className="form-group">
-          <UserSelectionComponent handleSelection={handleSelectChange} />
-        </div>
-      </div>
-    </Modal>
-  );
-};
+  handleSelectChange = (userId: string) => {
+    this.setState({
+      currentUserIdValue: userId,
+    });
+  };
 
-export default memo(TransferTaskModal);
+  render() {
+    if (!this.props.isOpen) {
+      return null;
+    }
+
+    return (
+      <Modal
+        title="Transfer a Task"
+        open={this.props.isOpen}
+        onCancel={this.props.onCancel}
+        footer={
+          <div>
+            <Button
+              type="primary"
+              onClick={() => this.transfer()}
+              disabled={this.state.currentUserIdValue === ""}
+            >
+              Transfer
+            </Button>
+            <Button onClick={() => this.props.onCancel()}>Close</Button>
+          </div>
+        }
+      >
+        <div className="control-group">
+          <div className="form-group">
+            <UserSelectionComponent handleSelection={this.handleSelectChange} />
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+}
+
+export default TransferTaskModal;

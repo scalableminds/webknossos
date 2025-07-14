@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 
 trait EditableMappingElementKeys {
 

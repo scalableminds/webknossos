@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   VersionedKeyValuePair
 }
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 
 import scala.annotation.tailrec
 

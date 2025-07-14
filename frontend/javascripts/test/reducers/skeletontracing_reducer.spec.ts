@@ -22,7 +22,6 @@ import {
   type Tree,
   MutableTreeMap,
 } from "viewer/model/types/tree_types";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -113,7 +112,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.activeNodeId).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(1).nodes.size()).toEqual(3);
     expect(newSkeletonTracing.trees.getOrThrow(1).edges.size()).toEqual(2);
-    expect(newSkeletonTracing.trees.getOrThrow(1).edges.toArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(1).edges.asArray()).toEqual([
       {
         source: 1,
         target: 2,
@@ -153,7 +152,7 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(2).nodes.size()).toEqual(0);
     expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toEqual(2);
     expect(newSkeletonTracing.trees.getOrThrow(2).edges.size()).toEqual(0);
-    expect(newSkeletonTracing.trees.getOrThrow(3).edges.toArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,
@@ -171,7 +170,7 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
-    const { createTreeAction } = SkeletonTracingActions;
+    const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
     const newState = applyActions(initialStateWithActiveTreeId2, [
       createTreeAction(),
       (currentState: WebknossosState) => deleteNodeAsUserAction(currentState),
@@ -1024,7 +1023,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.size()).toBe(2);
     expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(4);
-    expect(newSkeletonTracing.trees.getOrThrow(3).edges.toArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,
@@ -1090,7 +1089,7 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.size()).toBe(2);
     expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(4);
-    expect(newSkeletonTracing.trees.getOrThrow(3).edges.toArray()).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(3).edges.asArray()).toEqual([
       {
         source: 2,
         target: 3,

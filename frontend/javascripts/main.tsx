@@ -86,6 +86,7 @@ async function loadOrganization() {
     Store.dispatch(setActiveOrganizationAction(organization));
   }
 }
+
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,

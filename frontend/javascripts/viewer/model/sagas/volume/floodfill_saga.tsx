@@ -4,8 +4,14 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { call, put, takeEvery } from "typed-redux-saga";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
+import type {
+  BoundingBoxType,
+  FillMode,
+  LabeledVoxelsMap,
+  OrthoView,
+  Vector2,
+  Vector3,
+} from "viewer/constants";
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -126,7 +132,7 @@ function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
   finestSegmentationLayerMag: Vector3,
-): Saga<BoundingBoxMinMaxType | { failureReason: string }> {
+): Saga<BoundingBoxType | { failureReason: string }> {
   const isRestrictedToBoundingBox = yield* select(
     (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
@@ -340,7 +346,7 @@ function* notifyUserAboutResult(
   startTimeOfFloodfill: number,
   progressCallback: ProgressCallback,
   fillMode: FillMode,
-  coveredBoundingBox: BoundingBoxMinMaxType,
+  coveredBoundingBox: BoundingBoxType,
   oldSegmentIdAtSeed: number,
   activeCellId: number,
   seedPosition: Vector3,

@@ -360,10 +360,10 @@ function TaskListView({ initialFieldValues }: Props) {
             <div>
               <a
                 href={`/annotations/CompoundTask/${task.id}`}
-                title="Show Compound Annotation of All Finished Annotations"
+                title="View all Finished Annotations"
               >
                 <EyeOutlined className="icon-margin-right" />
-                View Merged
+                View
               </a>
             </div>
           ) : null}
@@ -389,7 +389,7 @@ function TaskListView({ initialFieldValues }: Props) {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
                 }}
-                title="Download All Finished Annotations"
+                title="Download all Finished Annotations"
                 icon={<DownloadOutlined className="icon-margin-right" />}
               >
                 Download

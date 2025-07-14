@@ -53,7 +53,7 @@ jobs:
 
       - name: Refresh datasets
         run: |
-          curl -X POST --fail https://${{ env.SUBDOMAIN }}.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_DEV_AUTH_TOKEN }}
+          curl -X POST --fail https://${{ env.SUBDOMAIN }}.webknossos.xyz/data/triggers/checkInboxBlocking?token=${{ secrets.WK_AUTH_TOKEN }}
 
       - name: Run screenshot tests
         run: |
@@ -62,7 +62,7 @@ jobs:
           yarn test-screenshot
         env:
           URL: https://${{ env.SUBDOMAIN }}.webknossos.xyz/
-          WK_AUTH_TOKEN: ${{ secrets.WK_DEV_AUTH_TOKEN }}
+          WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
           BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
           BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 

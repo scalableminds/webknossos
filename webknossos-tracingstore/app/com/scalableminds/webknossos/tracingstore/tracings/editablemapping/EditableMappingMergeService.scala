@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

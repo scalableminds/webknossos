@@ -154,7 +154,7 @@ class OrganizationController @Inject()(
           _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- organizationDAO.updateFields(organization._id, name, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
-          organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+          organizationJson <- organizationService.publicWrites(updated)
         } yield Ok(organizationJson)
     }
   }

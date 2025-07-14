@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import java.io.File
 

@@ -47,7 +47,6 @@ import {
   rgbToHex,
 } from "libs/utils";
 import _ from "lodash";
-import messages from "messages";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_types";
@@ -57,11 +56,7 @@ import {
   getMagInfo,
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
-import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
-import {
-  getTaskBoundingBoxes,
-  getUserBoundingBoxesFromState,
-} from "viewer/model/accessors/tracing_accessor";
+import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
@@ -641,19 +636,6 @@ function CollapsibleSplitMergerEvaluationSettings({
           children: (
             <Row>
               <Col style={{ width: "100%" }}>
-                <div style={{ marginBottom: 24 }}>
-                  You can evaluate splits/mergers on a given bounding box. <br />
-                  By default this is the user defined bounding box or the bounding box of a task.{" "}
-                  <br />
-                  Thus your annotation should contain
-                  <ul>
-                    <li> either one user defined bounding box or the bounding box of a task</li>
-                    <li>
-                      with at least one neuron (sparse) or all neurons (dense) annotated as
-                      skeletons.
-                    </li>
-                  </ul>
-                </div>
                 <Form.Item
                   layout="horizontal"
                   label="Use sparse ground truth tracing"
@@ -1072,10 +1054,9 @@ export function NucleiDetectionForm() {
 export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
+  const hasSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
-
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -1118,31 +1099,6 @@ export function NeuronSegmentationForm() {
             doSplitMergerEvaluation,
           );
         }
-
-        const state = Store.getState();
-        const userBoundingBoxCount = getUserBoundingBoxesFromState(state).length;
-
-        if (userBoundingBoxCount > 1) {
-          Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
-          return;
-        }
-
-        const taskBoundingBoxes = getTaskBoundingBoxes(state);
-        if (Object.values(taskBoundingBoxes).length + userBoundingBoxCount !== 1) {
-          Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
-          return;
-        }
-
-        if (skeletonAnnotation == null || skeletonAnnotation.trees.size() === 0) {
-          Toast.error(
-            "Please ensure that a skeleton tree exists within the selected bounding box.",
-          );
-          return;
-        }
-        if (hasEmptyTrees(skeletonAnnotation.trees)) {
-          Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
-          return;
-        }
         return startNeuronInferralJob(
           dataset.id,
           colorLayer.name,
@@ -1170,7 +1126,7 @@ export function NeuronSegmentationForm() {
         </>
       }
       jobSpecificInputFields={
-        skeletonAnnotation != null && (
+        hasSkeletonAnnotation && (
           <CollapsibleSplitMergerEvaluationSettings
             isActive={doSplitMergerEvaluation}
             setActive={setDoSplitMergerEvaluation}

@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util

@@ -89,7 +89,7 @@ describe("Volume Tracing", () => {
     );
 
     const cube = api.data.model.getCubeByLayerName(volumeTracingLayerName);
-    cube.removeAllBuckets();
+    cube.collectAllBuckets();
 
     await dispatchUndoAsync(Store.dispatch);
 

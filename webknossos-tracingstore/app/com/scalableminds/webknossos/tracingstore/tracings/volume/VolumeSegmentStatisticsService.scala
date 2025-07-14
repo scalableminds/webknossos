@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Elem
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
+import net.liftweb.common.Box
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

@@ -1,5 +1,4 @@
-import type { CoordinateTransformation } from "types/api_types";
-import type { StoreDataset } from "viewer/store";
+import type { APIDataset, CoordinateTransformation } from "types/api_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
 type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
@@ -17,7 +16,7 @@ export type DatasetAction =
   | SetLayerHasSegmentIndexAction
   | EnsureSegmentIndexIsLoadedAction;
 
-export const setDatasetAction = (dataset: StoreDataset) =>
+export const setDatasetAction = (dataset: APIDataset) =>
   ({
     type: "SET_DATASET",
     dataset,

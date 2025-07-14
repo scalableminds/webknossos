@@ -388,10 +388,10 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                 <span>
                   <Link
                     to={`/annotations/CompoundProject/${project.id}`}
-                    title="Show Compound Annotation of All Finished Annotations"
+                    title="View all Finished Annotations"
                   >
                     <EyeOutlined className="icon-margin-right" />
-                    View Merged
+                    View
                   </Link>
                   <br />
                   <Link to={`/projects/${project.id}/edit`} title="Edit Project">
@@ -429,7 +429,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                   <br />
                   <a
                     onClick={_.partial(increaseProjectTaskInstances, project)}
-                    title="Increase Task Instances"
+                    title="Increase Task instances"
                   >
                     <PlusSquareOutlined className="icon-margin-right" />
                     Increase Instances
@@ -441,7 +441,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                       maybeShowNoFallbackDataInfo(project.id);
                       await downloadAnnotation(project.id, "CompoundProject");
                     }}
-                    title="Download All Finished Annotations"
+                    title="Download all Finished Annotations"
                     icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
                   >
                     Download

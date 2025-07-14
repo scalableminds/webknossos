@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64With
 trait IdWithBoolUtils {
   // Protobuf classes Id32ToBool and Id64ToBool are used to store maps from id to boolean flags in annotation user state
   // This trait provides utility methods to mutate sequences of these, and conversions to and from Map and mutableMap
+  // TODO naming!
 
   protected def id32WithBoolsToMutableMap(idWithBools: Seq[Id32WithBool]): collection.mutable.Map[Int, Boolean] =
     idWithBools.map { idWithBool =>

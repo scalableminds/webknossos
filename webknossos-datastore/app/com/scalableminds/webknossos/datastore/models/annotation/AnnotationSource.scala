@@ -6,7 +6,6 @@ import play.api.libs.json.{Json, OFormat}
 case class AnnotationSource(id: ObjectId,
                             annotationLayers: List[AnnotationLayer],
                             datasetDirectoryName: String,
-                            datasetId: ObjectId,
                             organizationId: String,
                             dataStoreUrl: String,
                             tracingStoreUrl: String,

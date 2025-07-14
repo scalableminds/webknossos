@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
+import net.liftweb.common.Box.tryo
+import net.liftweb.common._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
@@ -226,10 +226,7 @@ class DataSourceService @Inject()(
       val uri = new URI(pathStr)
       if (DataVaultService.isRemoteScheme(uri.getScheme)) true
       else {
-        val path = organizationDir
-          .resolve(dataSource.id.directoryName)
-          .resolve(Path.of(new URI(pathStr).getPath).normalize())
-          .toAbsolutePath
+        val path = Path.of(new URI(pathStr).getPath).normalize().toAbsolutePath
         val allowedParent = organizationDir.toAbsolutePath
         if (path.startsWith(allowedParent)) true else false
       }
@@ -369,8 +366,6 @@ class DataSourceService @Inject()(
         dataLayer <- dataLayerOpt
         _ = dataLayer.mags.foreach(mag =>
           remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
-        _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
-          remoteSourceDescriptorService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 }

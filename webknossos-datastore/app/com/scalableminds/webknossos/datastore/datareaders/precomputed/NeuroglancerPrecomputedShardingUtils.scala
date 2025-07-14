@@ -5,8 +5,8 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.collection.immutable.NumericRange

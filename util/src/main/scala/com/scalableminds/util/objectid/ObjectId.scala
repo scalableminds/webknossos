@@ -20,7 +20,7 @@ object ObjectId extends FoxImplicits {
     parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   def fromStringSync(input: String): Option[ObjectId] = BSONObjectID.parse(input).map(fromBsonId).toOption
-  def dummyId: ObjectId = ObjectId("000000000000000000000000")
+  def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {
     override def reads(json: JsValue): JsResult[ObjectId] =

@@ -1,15 +1,21 @@
+import { Modal } from "antd";
+import renderIndependently from "libs/render_independently";
+import messages from "messages";
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
 import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
 import {
-  type AddNewUserBoundingBox,
-  AllUserBoundingBoxActions,
-} from "viewer/model/actions/annotation_actions";
+  enforceSkeletonTracing,
+  getTree,
+  getTreeAndNode,
+} from "viewer/model/accessors/skeletontracing_accessor";
+import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
-import type { SkeletonTracing } from "viewer/store";
-import type { ApplicableSkeletonUpdateAction } from "../sagas/volume/update_actions";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import Store from "viewer/store";
+import RemoveTreeModal from "viewer/view/remove_tree_modal";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -34,7 +40,7 @@ type RequestDeleteBranchPointAction = ReturnType<typeof requestDeleteBranchPoint
 type CreateTreeAction = ReturnType<typeof createTreeAction>;
 type SetEdgeVisibilityAction = ReturnType<typeof setTreeEdgeVisibilityAction>;
 type AddTreesAndGroupsAction = ReturnType<typeof addTreesAndGroupsAction>;
-export type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
+type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
 type DeleteTreesAction = ReturnType<typeof deleteTreesAction>;
 type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
 type SetActiveTreeAction = ReturnType<typeof setActiveTreeAction>;
@@ -59,11 +65,8 @@ type SetTreeGroupAction = ReturnType<typeof setTreeGroupAction>;
 type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
 type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
 type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
-type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
-  typeof applySkeletonUpdateActionsFromServerAction
->;
 export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
-export type NoAction = ReturnType<typeof noAction>;
+type NoAction = ReturnType<typeof noAction>;
 
 export type BatchableUpdateTreeAction =
   | SetTreeGroupAction
@@ -128,9 +131,7 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction
-  | ApplySkeletonUpdateActionsFromServerAction
-  | AddNewUserBoundingBox;
+  | LoadAgglomerateSkeletonAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -174,7 +175,7 @@ export const SkeletonTracingSaveRelevantActions = [
   ...AllUserBoundingBoxActions,
 ];
 
-export const noAction = () =>
+const noAction = () =>
   ({
     type: "NONE",
   }) as const;
@@ -238,7 +239,7 @@ export const deleteEdgeAction = (
   }) as const;
 
 export const setActiveNodeAction = (
-  nodeId: number | null,
+  nodeId: number,
   suppressAnimation: boolean = false,
   suppressCentering: boolean = false,
 ) =>
@@ -563,19 +564,79 @@ export const setMergerModeEnabledAction = (active: boolean) =>
     active,
   }) as const;
 
+// The following actions have the prefix "AsUser" which means that they
+// offer some additional logic which is sensible from a user-centered point of view.
+// For example, the deleteNodeAsUserAction also initiates the deletion of a tree,
+// when the current tree is empty.
+export const deleteNodeAsUserAction = (
+  state: WebknossosState,
+  nodeId?: number,
+  treeId?: number,
+): DeleteNodeAction | NoAction | DeleteTreeAction => {
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+
+  if (!treeAndNode) {
+    const tree = getTree(skeletonTracing, treeId);
+    if (!tree) return noAction();
+
+    // If the tree is empty, it will be deleted
+    return tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction();
+  }
+
+  const [tree, node] = treeAndNode;
+
+  if (state.task != null && node.id === 1) {
+    // Let the user confirm the deletion of the initial node (node with id 1) of a task
+    Modal.confirm({
+      title: messages["tracing.delete_initial_node"],
+      onOk: () => {
+        Store.dispatch(deleteNodeAction(node.id, tree.treeId));
+      },
+    });
+    // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+    // if the user confirms
+    return noAction();
+  }
+
+  return deleteNodeAction(node.id, tree.treeId);
+};
+
+// Let the user confirm the deletion of the initial node (node with id 1) of a task
+function confirmDeletingInitialNode(treeId: number) {
+  Modal.confirm({
+    title: messages["tracing.delete_tree_with_initial_node"],
+    onOk: () => {
+      Store.dispatch(deleteTreeAction(treeId));
+    },
+  });
+}
+
+export const handleDeleteTreeByUser = (treeId?: number) => {
+  const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
+  const tree = getTree(skeletonTracing, treeId);
+  if (!tree) return;
+
+  if (state.task != null && tree.nodes.has(1)) {
+    confirmDeletingInitialNode(tree.treeId);
+  } else if (state.userConfiguration.hideTreeRemovalWarning) {
+    Store.dispatch(deleteTreeAction(tree.treeId));
+  } else {
+    renderIndependently((destroy) => (
+      <RemoveTreeModal
+        onOk={() => Store.dispatch(deleteTreeAction(tree.treeId))}
+        destroy={destroy}
+      />
+    ));
+  }
+};
+
 export const updateNavigationListAction = (list: Array<number>, activeIndex: number) =>
   ({
     type: "UPDATE_NAVIGATION_LIST",
     list,
     activeIndex,
-  }) as const;
-
-export const applySkeletonUpdateActionsFromServerAction = (
-  actions: Array<ApplicableSkeletonUpdateAction>,
-) =>
-  ({
-    type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",
-    actions,
   }) as const;
 
 export const loadAgglomerateSkeletonAction = (

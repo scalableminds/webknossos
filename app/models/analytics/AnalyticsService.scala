@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 import play.api.http.Status.UNAUTHORIZED
 import play.api.libs.json._
 import utils.WkConf

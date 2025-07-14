@@ -38,7 +38,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants";
+import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/save_saga_constants";
 import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";

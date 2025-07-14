@@ -8,13 +8,13 @@ import type {
   UpdateActionWithoutIsolationRequirement,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeVisibilityUpdateAction,
-} from "viewer/model/sagas/volume/update_actions";
+} from "viewer/model/sagas/update_actions";
 import {
   updateSegmentGroupVisibilityVolumeAction,
   updateSegmentVisibilityVolumeAction,
   updateTreeGroupVisibility,
   updateTreeVisibility,
-} from "viewer/model/sagas/volume/update_actions";
+} from "viewer/model/sagas/update_actions";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {

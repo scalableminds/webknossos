@@ -43,6 +43,7 @@ import {
   deleteTreesAction,
   deselectActiveTreeAction,
   deselectActiveTreeGroupAction,
+  handleDeleteTreeByUser,
   selectNextTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
@@ -54,7 +55,6 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { handleDeleteTreeByUser } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import {
   importVolumeTracingAction,

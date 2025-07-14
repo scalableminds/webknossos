@@ -44,11 +44,11 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   createBranchPointAction,
   createTreeAction,
+  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
   cycleToolAction,
   enterAction,

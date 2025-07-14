@@ -1,32 +1,60 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.cache.AlfuCache
+
 import java.nio.file.Paths
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Full}
+import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 /*
- * The BinaryDataService needs to be instantiated as singleton to provide a shared bucketProviderCache.
+ * The BinaryDataService needs to be instantiated as singleton to provide a shared DataCubeCache.
  * There is, however an additional instance for volume tracings in the TracingStore
  * The TracingStore one (for VolumeTracings) already is a singleton, since the surrounding VolumeTracingService is a singleton.
  * The DataStore one is singleton-ized via this holder.
- * Also, this allows giving the datastore-only sharedChunkContentsCache to the DataStore one, while passing None to the TracingStore one.
  */
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         datasetErrorLoggingService: DSDatasetErrorLoggingService,
-                                        chunkCacheService: ChunkCacheService,
-                                        agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
+                                        dataVaultService: DataVaultService)(implicit ec: ExecutionContext)
+    extends LazyLogging {
+
+  lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
+    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
+
+    val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
+
+    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
+      arrayBox match {
+        case Full(array) =>
+          (array.getSizeBytes / 1000L).toInt
+        case _ => 0
+      }
+
+    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
+  }
+
+  val zarrAgglomerateService = new ZarrAgglomerateService(config, dataVaultService, sharedChunkContentsCache)
+  val hdf5AgglomerateService = new Hdf5AgglomerateService(config)
+
+  val agglomerateService = new AgglomerateService(
+    config,
+    zarrAgglomerateService,
+    hdf5AgglomerateService,
+    remoteSourceDescriptorService
+  )
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseDirectory),
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
-    Some(chunkCacheService.sharedChunkContentsCache),
+    Some(sharedChunkContentsCache),
     datasetErrorLoggingService
   )
 

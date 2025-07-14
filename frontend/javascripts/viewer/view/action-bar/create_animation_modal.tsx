@@ -258,7 +258,7 @@ function CreateAnimationModal(props: Props) {
       const adhocMagIndex = getMagInfo(layer.resolutions).getClosestExistingIndex(
         preferredQualityForMeshAdHocComputation,
       );
-      const adhocMag = getMagInfo(layer.resolutions).getMagByIndexOrThrow(adhocMagIndex);
+      const adhocMag = layer.resolutions[adhocMagIndex];
 
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)

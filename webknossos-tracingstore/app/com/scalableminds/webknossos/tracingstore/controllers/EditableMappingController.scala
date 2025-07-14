@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 

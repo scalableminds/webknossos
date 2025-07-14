@@ -1858,7 +1858,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <div style={{ flex: 0, display: "flex" }}>
+                <div style={{ flex: 0 }}>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
@@ -1929,6 +1929,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 switcherIcon={<DownOutlined />}
                                 titleRender={this.titleRender}
                                 style={{
+                                  marginTop: 12,
                                   marginLeft: -14, // hide switcherIcon for root group
                                   flex: "1 1 auto",
                                   overflow: "auto", // use hidden when not using virtualization

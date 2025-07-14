@@ -2,7 +2,7 @@ import type { InputProps } from "antd";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as React from "react";
-import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
+import type { ServerBoundingBoxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
 
@@ -206,11 +206,11 @@ export class ArbitraryVectorInput extends BaseVector<number[]> {
 }
 
 type BoundingBoxInputProps = Omit<InputProps, "value"> & {
-  value: ServerBoundingBoxMinMaxTypeTuple;
-  onChange: (arg0: ServerBoundingBoxMinMaxTypeTuple) => void;
+  value: ServerBoundingBoxTypeTuple;
+  onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };
 
-function boundingBoxToVector6(value: ServerBoundingBoxMinMaxTypeTuple): Vector6 {
+function boundingBoxToVector6(value: ServerBoundingBoxTypeTuple): Vector6 {
   const { topLeft, width, height, depth } = value;
   const [x, y, z] = topLeft;
   return [x, y, z, width, height, depth];

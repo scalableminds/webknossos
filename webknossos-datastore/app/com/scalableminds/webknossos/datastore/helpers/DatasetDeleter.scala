@@ -9,8 +9,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.FileUtils
 
 import java.io.File

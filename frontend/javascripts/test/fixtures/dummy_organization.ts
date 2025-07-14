@@ -16,19 +16,4 @@ const dummyOrga: APIOrganization = {
   ownerName: undefined,
 };
 
-export const powerOrga: APIOrganization = {
-  id: "organizationId",
-  name: "Test Organization",
-  additionalInformation: "",
-  pricingPlan: PricingPlanEnum.Power,
-  enableAutoVerify: true,
-  newUserMailingList: "",
-  paidUntil: 0,
-  includedUsers: 1000,
-  includedStorageBytes: 10000,
-  usedStorageBytes: 0,
-  ownerName: undefined,
-  creditBalance: undefined,
-};
-
 export default dummyOrga;

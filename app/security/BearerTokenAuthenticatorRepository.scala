@@ -3,6 +3,7 @@ package security
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.repositories.AuthenticatorRepository
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import TokenType.TokenType
@@ -18,15 +19,23 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
   override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
     add(authenticator, TokenType.Authentication)
 
-  override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
+  override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     (for {
-      _ <- tokenDAO.updateLastUsedDateTime(
+      oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID,
+                                                         newAuthenticator.loginInfo.providerKey,
+                                                         TokenType.Authentication)
+      _ <- tokenDAO.updateValues(
+        oldAuthenticatorSQL._id,
         newAuthenticator.id,
         Instant.fromZonedDateTime(newAuthenticator.lastUsedDateTime),
+        Instant.fromZonedDateTime(newAuthenticator.expirationDateTime),
+        newAuthenticator.idleTimeout
       )
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException(
       "Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
+  }
 
   override def remove(value: String): Future[Unit] =
     for {

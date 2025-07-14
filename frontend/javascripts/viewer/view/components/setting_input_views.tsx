@@ -24,8 +24,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import type * as React from "react";
-import { useEffect, useState } from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
@@ -52,75 +51,81 @@ type NumberSliderSettingProps = {
   value: number;
   label: string | React.ReactNode;
   max: number;
-  min?: number;
-  step?: number;
-  disabled?: boolean;
-  spans?: Vector3;
+  min: number;
+  step: number;
+  disabled: boolean;
+  spans: Vector3;
   defaultValue?: number;
   wheelFactor?: number;
 };
+export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
+  static defaultProps = {
+    min: 1,
+    step: 1,
+    disabled: false,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+  };
 
-export function NumberSliderSetting(props: NumberSliderSettingProps) {
-  const {
-    value: originalValue,
-    label,
-    max,
-    min = 1,
-    step = 1,
-    onChange,
-    disabled = false,
-    defaultValue,
-    wheelFactor: stepSize,
-    spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
-  } = props;
-
-  const isValueValid = (_value: number | null) =>
-    _.isNumber(_value) && _value >= min && _value <= max;
-
-  const _onChange = (_value: number | null) => {
-    if (_value != null && isValueValid(_value)) {
-      onChange(_value);
+  _onChange = (_value: number | null) => {
+    if (_value != null && this.isValueValid(_value)) {
+      this.props.onChange(_value);
     }
   };
 
-  // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
-  // This check guards against broken settings which could be introduced before this component
-  // checked more thoroughly against invalid values.
-  const value = isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
-  return (
-    <Row align="middle" gutter={ROW_GUTTER}>
-      <Col span={spans[0]}>
-        <label className="setting-label">{label}</label>
-      </Col>
-      <Col span={spans[1]}>
-        <Slider
-          min={min}
-          max={max}
-          onChange={onChange}
-          value={value}
-          step={step}
-          disabled={disabled}
-          defaultValue={defaultValue}
-          wheelFactor={stepSize}
-        />
-      </Col>
-      <Col span={spans[2]}>
-        <InputNumber
-          controls={false}
-          min={min}
-          max={max}
-          style={{
-            width: "100%",
-          }}
-          value={value}
-          onChange={_onChange}
-          size="small"
-          disabled={disabled}
-          variant="borderless"
-        />
-      </Col>
-    </Row>
-  );
+  isValueValid = (_value: number | null) =>
+    _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
+
+  render() {
+    const {
+      value: originalValue,
+      label,
+      max,
+      min,
+      step,
+      onChange,
+      disabled,
+      defaultValue,
+      wheelFactor: stepSize,
+    } = this.props;
+    // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
+    // This check guards against broken settings which could be introduced before this component
+    // checked more thoroughly against invalid values.
+    const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
+    return (
+      <Row align="middle" gutter={ROW_GUTTER}>
+        <Col span={this.props.spans[0]}>
+          <label className="setting-label">{label}</label>
+        </Col>
+        <Col span={this.props.spans[1]}>
+          <Slider
+            min={min}
+            max={max}
+            onChange={onChange}
+            value={value}
+            step={step}
+            disabled={disabled}
+            defaultValue={defaultValue}
+            wheelFactor={stepSize}
+          />
+        </Col>
+        <Col span={this.props.spans[2]}>
+          <InputNumber
+            controls={false}
+            min={min}
+            max={max}
+            style={{
+              width: "100%",
+            }}
+            value={value}
+            onChange={this._onChange}
+            size="small"
+            disabled={disabled}
+            variant="borderless"
+          />
+        </Col>
+      </Row>
+    );
+  }
 }
 
 type LogSliderSettingProps = {
@@ -131,7 +136,7 @@ type LogSliderSettingProps = {
   min: number;
   roundTo: number;
   disabled?: boolean;
-  spans?: Vector3;
+  spans: Vector3;
   precision?: number;
   defaultValue?: number;
 };
@@ -139,161 +144,201 @@ type LogSliderSettingProps = {
 const LOG_SLIDER_MIN = -100;
 const LOG_SLIDER_MAX = 100;
 
-export function LogSliderSetting(props: LogSliderSettingProps) {
-  const {
-    onChange,
-    value,
-    label,
-    max,
-    min,
-    roundTo = 3,
-    disabled = false,
-    spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
-    precision,
-    defaultValue,
-  } = props;
+export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps> {
+  static defaultProps = {
+    disabled: false,
+    roundTo: 3,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
+  };
 
-  const onChangeInput = (inputValue: number | null) => {
-    if (inputValue == null) {
+  onChangeInput = (value: number | null) => {
+    if (value == null) {
       return;
     }
-    if (min <= inputValue && inputValue <= max) {
-      onChange(inputValue);
+    if (this.props.min <= value && value <= this.props.max) {
+      this.props.onChange(value);
     } else {
       // reset to slider value
-      onChange(value);
+      this.props.onChange(this.props.value);
     }
   };
-  const onChangeSlider = (sliderValue: number) => {
-    onChange(calculateValue(sliderValue));
-  };
-  const calculateValue = (sliderValue: number) => {
-    const a = 200 / (Math.log(max) - Math.log(min));
-    const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
-    return Math.exp((sliderValue - b) / a);
+
+  onChangeSlider = (value: number) => {
+    this.props.onChange(this.calculateValue(value));
   };
 
-  const formatTooltip = (tooltipValue: number | undefined) => {
-    if (tooltipValue == null) {
+  calculateValue(value: number) {
+    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
+    const b =
+      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
+      (Math.log(this.props.min) - Math.log(this.props.max));
+    return Math.exp((value - b) / a);
+  }
+
+  formatTooltip = (value: number | undefined) => {
+    if (value == null) {
       return "invalid";
     }
-    const calculatedValue = calculateValue(tooltipValue);
+    const calculatedValue = this.calculateValue(value);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
-      : Utils.roundTo(calculatedValue, roundTo);
+      : Utils.roundTo(calculatedValue, this.props.roundTo);
   };
 
-  const getSliderValue = () => {
-    const a = 200 / (Math.log(max) - Math.log(min));
-    const b = (100 * (Math.log(min) + Math.log(max))) / (Math.log(min) - Math.log(max));
-    const scaleValue = a * Math.log(value) + b;
+  getSliderValue = () => {
+    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
+    const b =
+      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
+      (Math.log(this.props.min) - Math.log(this.props.max));
+    const scaleValue = a * Math.log(this.props.value) + b;
     return Math.round(scaleValue);
   };
 
-  const resetToDefaultValue = () => {
-    if (defaultValue == null) return;
-    onChangeInput(defaultValue);
+  resetToDefaultValue = () => {
+    if (this.props.defaultValue == null) return;
+    this.onChangeInput(this.props.defaultValue);
   };
 
-  return (
-    <Row align="middle" gutter={ROW_GUTTER}>
-      <Col span={spans[0]}>
-        <label className="setting-label">{label}</label>
-      </Col>
-      <Col span={spans[1]}>
-        <Slider
-          min={LOG_SLIDER_MIN}
-          max={LOG_SLIDER_MAX}
-          tooltip={{ formatter: formatTooltip }}
-          onChange={onChangeSlider}
-          value={getSliderValue()}
-          disabled={disabled}
-          defaultValue={defaultValue}
-          onResetToDefault={resetToDefaultValue}
-        />
-      </Col>
-      <Col span={spans[2]}>
-        <InputNumber
-          controls={false}
-          variant={"borderless"}
-          min={min}
-          max={max}
-          style={{
-            width: "100%",
-          }}
-          step={value / 10}
-          precision={precision ?? 2}
-          value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
-          onChange={onChangeInput}
-          disabled={disabled}
-          size="small"
-        />
-      </Col>
-    </Row>
-  );
+  render() {
+    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
+    return (
+      <Row align="middle" gutter={ROW_GUTTER}>
+        <Col span={this.props.spans[0]}>
+          <label className="setting-label">{label}</label>
+        </Col>
+        <Col span={this.props.spans[1]}>
+          <Slider
+            min={LOG_SLIDER_MIN}
+            max={LOG_SLIDER_MAX}
+            tooltip={{ formatter: this.formatTooltip }}
+            onChange={this.onChangeSlider}
+            value={this.getSliderValue()}
+            disabled={disabled}
+            defaultValue={defaultValue}
+            onResetToDefault={this.resetToDefaultValue}
+          />
+        </Col>
+        <Col span={this.props.spans[2]}>
+          <InputNumber
+            controls={false}
+            variant={"borderless"}
+            min={min}
+            max={max}
+            style={{
+              width: "100%",
+            }}
+            step={value / 10}
+            precision={this.props.precision ?? 2}
+            value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
+            onChange={this.onChangeInput}
+            disabled={disabled}
+            size="small"
+          />
+        </Col>
+      </Row>
+    );
+  }
 }
 
 type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
-  disabled?: boolean;
-  tooltipText?: string | null | undefined;
-  loading?: boolean;
+  disabled: boolean;
+  tooltipText: string | null | undefined;
+  loading: boolean;
   labelSpan?: number | null;
-  postSwitchIcon?: React.ReactNode | null | undefined;
+  postSwitchIcon: React.ReactNode | null | undefined;
   disabledReason?: string | null;
 }>;
 
-export function SwitchSetting(props: SwitchSettingProps) {
-  const {
-    label,
-    onChange,
-    value,
-    disabled = false,
-    tooltipText = null,
-    loading = false,
-    labelSpan = null,
-    postSwitchIcon = null,
-    disabledReason,
-    children,
-  } = props;
+export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
+  static defaultProps = {
+    disabled: false,
+    tooltipText: null,
+    loading: false,
+    postSwitchIcon: null,
+  };
 
-  const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
-  const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
-  return (
-    <Row className="margin-bottom" align="middle" gutter={ROW_GUTTER}>
-      <Col span={leftSpanValue}>
-        <label className="setting-label">{label}</label>
-      </Col>
-      <Col span={rightSpanValue}>
-        <FastTooltip title={tooltipText} placement="top">
-          {/* This div is necessary for the tooltip to be displayed */}
-          <div
-            style={{
-              display: "inline-flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <FastTooltip title={disabledReason}>
-              <Switch
-                onChange={onChange}
-                checked={value}
-                defaultChecked={value}
-                disabled={disabled}
-                loading={loading}
-              />
-            </FastTooltip>
-            {postSwitchIcon}
-          </div>
-        </FastTooltip>
-        {children}
-      </Col>
-    </Row>
-  );
+  render() {
+    const { label, onChange, value, disabled, tooltipText, loading, labelSpan, postSwitchIcon } =
+      this.props;
+    const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
+    const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
+    return (
+      <Row className="margin-bottom" align="middle" gutter={ROW_GUTTER}>
+        <Col span={leftSpanValue}>
+          <label className="setting-label">{label}</label>
+        </Col>
+        <Col span={rightSpanValue}>
+          <FastTooltip title={tooltipText} placement="top">
+            {/* This div is necessary for the tooltip to be displayed */}
+            <div
+              style={{
+                display: "inline-flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <FastTooltip title={this.props.disabledReason}>
+                <Switch
+                  onChange={onChange}
+                  checked={value}
+                  defaultChecked={value}
+                  disabled={disabled}
+                  loading={loading}
+                />
+              </FastTooltip>
+              {postSwitchIcon}
+            </div>
+          </FastTooltip>
+          {this.props.children}
+        </Col>
+      </Row>
+    );
+  }
 }
+type NumberInputSettingProps = {
+  onChange: (value: number | null) => void;
+  value: number | "";
+  label: string;
+  max?: number;
+  min?: number;
+  step?: number;
+};
+export class NumberInputSetting extends React.PureComponent<NumberInputSettingProps> {
+  static defaultProps = {
+    max: undefined,
+    min: 1,
+    step: 1,
+  };
 
+  render() {
+    const { onChange, value, label, max, min, step } = this.props;
+    return (
+      <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
+          <label className="setting-label">{label}</label>
+        </Col>
+        <Col span={SETTING_RIGHT_SPAN}>
+          <InputNumber
+            style={{
+              width: "100%",
+            }}
+            min={min}
+            max={max}
+            onChange={onChange}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | ""' is not assignable to type 'numb... Remove this comment to see the full error message
+            value={value}
+            step={step}
+            size="small"
+            variant="borderless"
+          />
+        </Col>
+      </Row>
+    );
+  }
+}
 type NumberInputPopoverSettingProps = {
   onChange: (value: number) => void;
   value: number | null | undefined;
@@ -304,7 +349,6 @@ type NumberInputPopoverSettingProps = {
   min?: number;
   step?: number;
 };
-
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
   const placement: PopoverProps["placement"] = props.placement || "top";
@@ -356,7 +400,6 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
     </Popover>
   );
 }
-
 type UserBoundingBoxInputProps = {
   value: Vector6;
   name: string;
@@ -377,276 +420,290 @@ type UserBoundingBoxInputProps = {
   onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
   onHideContextMenu?: () => void;
 };
+type State = {
+  isEditing: boolean;
+  isValid: boolean;
+  text: string;
+  name: string;
+};
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
-export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
-  const {
-    value: propValue,
-    name: propName,
-    color,
-    isVisible,
-    onDelete,
-    onExport,
-    isExportEnabled,
-    onGoToBoundingBox,
-    onVisibilityChange,
-    onNameChange,
-    onColorChange,
-    disabled,
-    isLockedByOwner,
-    isOwner,
-    onBoundingChange,
-    onOpenContextMenu,
-    onHideContextMenu,
-  } = props;
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+  constructor(props: UserBoundingBoxInputProps) {
+    super(props);
+    this.state = {
+      isEditing: false,
+      isValid: true,
+      text: this.computeText(props.value),
+      name: props.name,
+    };
+  }
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isValid, setIsValid] = useState(true);
-  const [text, setText] = useState(computeText(propValue));
-  const [name, setName] = useState(propName);
-
-  useEffect(() => {
-    if (!isEditing && propValue !== undefined) {
-      setIsValid(true);
-      setText(computeText(propValue));
+  componentDidUpdate(prevProps: UserBoundingBoxInputProps) {
+    if (!this.state.isEditing && prevProps.value !== this.props.value) {
+      this.setState({
+        isValid: true,
+        text: this.computeText(this.props.value),
+      });
     }
-  }, [propValue, isEditing]);
 
-  useEffect(() => {
-    if (propName !== undefined) {
-      setName(propName);
+    if (prevProps.name !== this.props.name) {
+      this.setState({
+        name: this.props.name,
+      });
     }
-  }, [propName]);
+  }
 
-  function computeText(vector: Vector6) {
+  computeText(vector: Vector6) {
     return vector.join(", ");
   }
 
-  const handleBlur = () => {
-    setIsEditing(false);
-    setIsValid(true);
-    setText(computeText(propValue));
+  handleBlur = () => {
+    this.setState({
+      isEditing: false,
+      isValid: true,
+      text: this.computeText(this.props.value),
+    });
   };
 
-  const handleFocus = () => {
-    setIsEditing(true);
-    setText(computeText(propValue));
-    setIsValid(true);
+  handleFocus = () => {
+    this.setState({
+      isEditing: true,
+      text: this.computeText(this.props.value),
+      isValid: true,
+    });
   };
 
-  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const newText = evt.target.value;
+  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
-    const isValidInput = /^[\d\s,]*$/g.test(newText);
-    const value = Utils.stringToNumberArray(newText);
+    const isValidInput = /^[\d\s,]*$/g.test(text);
+    const value = Utils.stringToNumberArray(text);
     const isValidLength = value.length === 6;
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      onBoundingChange(Utils.numberArrayToVector6(value));
+      this.props.onBoundingChange(Utils.numberArrayToVector6(value));
     }
 
-    setText(newText);
-    setIsValid(isValid);
+    this.setState({
+      text,
+      isValid,
+    });
   };
 
-  const handleColorChange = (newColor: Vector3) => {
-    const mappedColor = newColor.map((colorPart) => colorPart / 255) as any as Vector3;
-    onColorChange(mappedColor);
+  handleColorChange = (color: Vector3) => {
+    color = color.map((colorPart) => colorPart / 255) as any as Vector3;
+    this.props.onColorChange(color);
   };
 
-  const handleNameChanged = (evt: React.SyntheticEvent) => {
+  handleNameChanged = (evt: React.SyntheticEvent) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const currentEnteredName = evt.target.value;
 
-    if (currentEnteredName !== propName) {
-      onNameChange(currentEnteredName);
+    if (currentEnteredName !== this.props.name) {
+      this.props.onNameChange(currentEnteredName);
     }
   };
 
-  const maybeCloseContextMenu = () => {
-    if (onHideContextMenu) {
-      onHideContextMenu();
-    }
-  };
-
-  const onRegisterSegmentsForBB = (value: Vector6, name: string): void => {
+  onRegisterSegmentsForBB(value: Vector6, name: string): void {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
     api.tracing
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
-    maybeCloseContextMenu();
+    this.maybeCloseContextMenu();
+  }
+
+  maybeCloseContextMenu = () => {
+    if (this.props.onHideContextMenu) {
+      this.props.onHideContextMenu();
+    }
   };
 
-  const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-  const marginRightStyle = {
-    marginRight: 8,
-  };
-  const marginLeftStyle = {
-    marginLeft: 6,
-  };
-  const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
-  const exportButton = (
-    <>
-      <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
-      Export data
-    </>
-  );
-  const deleteButton = (
-    <>
-      <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
-      Delete
-    </>
-  );
-  const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
-    isLockedByOwner,
-    isOwner,
-  );
+  render() {
+    const { name } = this.state;
+    const {
+      color,
+      isVisible,
+      onDelete,
+      onExport,
+      isExportEnabled,
+      onGoToBoundingBox,
+      disabled,
+      isLockedByOwner,
+      isOwner,
+      onOpenContextMenu,
+    } = this.props;
+    const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
+    const marginRightStyle = {
+      marginRight: 8,
+    };
+    const marginLeftStyle = {
+      marginLeft: 6,
+    };
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportButton = (
+      <>
+        <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
+        Export data
+      </>
+    );
+    const deleteButton = (
+      <>
+        <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
+        Delete
+      </>
+    );
+    const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
+      isLockedByOwner,
+      isOwner,
+    );
 
-  const getContextMenu = () => {
-    const items: MenuProps["items"] = [
-      {
-        key: "registerSegments",
-        label: (
-          <>
-            Register all segments in this bounding box
-            <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
-              <InfoCircleOutlined style={marginLeftStyle} />
-            </FastTooltip>
-          </>
-        ),
-        icon: <ScanOutlined />,
-        onClick: () => onRegisterSegmentsForBB(propValue, name),
-        disabled: props.visibleSegmentationLayer == null || disabled,
-      },
-      {
-        key: "goToCenter",
-        label: "Go to center",
-        icon: <BorderInnerOutlined />,
-        onClick: onGoToBoundingBox,
-      },
-      {
-        key: "export",
-        label: isExportEnabled ? (
-          exportButton
-        ) : (
-          <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
-        ),
-        disabled: !isExportEnabled,
-        onClick: onExport,
-      },
-      {
-        key: "delete",
-        label: !disabled ? (
-          deleteButton
-        ) : (
-          <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
-        ),
-        onClick: onDelete,
-        disabled,
-      },
-    ];
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              Register all segments in this bounding box
+              <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </FastTooltip>
+            </>
+          ),
+          icon: <ScanOutlined />,
+          onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
+          disabled: this.props.visibleSegmentationLayer == null || disabled,
+        },
+        {
+          key: "goToCenter",
+          label: "Go to center",
+          icon: <BorderInnerOutlined />,
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: !disabled ? (
+            deleteButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
+          ),
+          onClick: onDelete,
+          disabled,
+        },
+      ];
 
-    return { items };
-  };
+      return { items };
+    };
 
-  return (
-    <div
-      onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-      onClick={onHideContextMenu}
-    >
-      <Row
-        style={{
-          marginTop: 10,
-          marginBottom: 10,
-        }}
+    return (
+      <div
+        onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+        onClick={this.props.onHideContextMenu}
       >
-        <Col span={5}>
-          <Switch
-            size="small"
-            onChange={onVisibilityChange}
-            checked={isVisible}
-            style={{
-              margin: "auto 0px",
-            }}
-            // To prevent centering the bounding box on every edit (e.g. upon visibility change)
-            // the click events are stopped from propagating to the parent div.
-            onClick={(_value, e) => e.stopPropagation()}
-          />
-        </Col>
+        <Row
+          style={{
+            marginTop: 10,
+            marginBottom: 10,
+          }}
+        >
+          <Col span={5}>
+            <Switch
+              size="small"
+              onChange={this.props.onVisibilityChange}
+              checked={isVisible}
+              style={{
+                margin: "auto 0px",
+              }}
+              // To prevent centering the bounding box on every edit (e.g. upon visibility change)
+              // the click events are stopped from propagating to the parent div.
+              onClick={(_value, e) => e.stopPropagation()}
+            />
+          </Col>
 
-        <Col span={SETTING_RIGHT_SPAN}>
-          <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <span>
+          <Col span={SETTING_RIGHT_SPAN}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <span>
+                <Input
+                  defaultValue={name}
+                  placeholder="Bounding Box Name"
+                  size="small"
+                  value={name}
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                    this.setState({ name: evt.target.value });
+                  }}
+                  onPressEnter={this.handleNameChanged}
+                  onBlur={this.handleNameChanged}
+                  disabled={disabled}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </span>
+            </FastTooltip>
+          </Col>
+          <Col span={2}>
+            <div
+              onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+              onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            >
+              <EllipsisOutlined style={marginLeftStyle} />
+            </div>
+          </Col>
+        </Row>
+        <Row
+          style={{
+            marginBottom: 10,
+          }}
+          align="top"
+        >
+          <Col span={5}>
+            <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+              <label className="settings-label"> Bounds: </label>
+            </FastTooltip>
+          </Col>
+          <Col span={SETTING_RIGHT_SPAN}>
+            <FastTooltip
+              title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+              placement="top-start"
+            >
               <Input
-                defaultValue={name}
-                placeholder="Bounding Box Name"
+                status={this.state.isValid ? "" : "error"}
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
                 size="small"
-                value={name}
-                onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-                  setName(evt.target.value);
-                }}
-                onPressEnter={handleNameChanged}
-                onBlur={handleNameChanged}
                 disabled={disabled}
                 onClick={(e) => e.stopPropagation()}
               />
-            </span>
-          </FastTooltip>
-        </Col>
-        <Col span={2}>
-          <div
-            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-          >
-            <EllipsisOutlined style={marginLeftStyle} />
-          </div>
-        </Col>
-      </Row>
-      <Row
-        style={{
-          marginBottom: 10,
-        }}
-        align="top"
-      >
-        <Col span={5}>
-          <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
-            <label className="settings-label"> Bounds: </label>
-          </FastTooltip>
-        </Col>
-        <Col span={SETTING_RIGHT_SPAN}>
-          <FastTooltip
-            title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
-            placement="top-start"
-          >
-            <Input
-              status={isValid ? "" : "error"}
-              onChange={handleChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              value={text}
-              placeholder="0, 0, 0, 512, 512, 512"
-              size="small"
-              disabled={disabled}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </FastTooltip>
-        </Col>
-        <Col span={2}>
-          <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={handleColorChange}
-              style={marginLeftStyle}
-              disabled={disabled}
-            />
-          </FastTooltip>
-        </Col>
-      </Row>
-    </div>
-  );
+            </FastTooltip>
+          </Col>
+          <Col span={2}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={this.handleColorChange}
+                style={marginLeftStyle}
+                disabled={disabled}
+              />
+            </FastTooltip>
+          </Col>
+        </Row>
+      </div>
+    );
+  }
 }
 
 const mapStateToProps = (state: WebknossosState) => ({
@@ -659,44 +716,49 @@ export default connector;
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;
-  disabled?: boolean;
+  disabled: boolean;
   style?: Record<string, any>;
 };
-
-export function ColorSetting(props: ColorSettingPropTypes) {
-  const { value, disabled = false, style } = props;
-
-  const onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    props.onChange(Utils.hexToRgb(evt.target.value));
+export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
+  static defaultProps = {
+    disabled: false,
   };
 
-  return (
-    <div
-      className="color-display-wrapper"
-      style={{
-        backgroundColor: value,
-        ...style,
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <input
-        type="color"
-        style={{
-          opacity: 0,
-          display: "block",
-          border: "none",
-          cursor: disabled ? "not-allowed" : "pointer",
-          width: "100%",
-          height: "100%",
-        }}
-        onChange={onColorChange}
-        value={value}
-        disabled={disabled}
-      />
-    </div>
-  );
-}
+  onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    this.props.onChange(Utils.hexToRgb(evt.target.value));
+  };
 
+  render() {
+    const { value, disabled } = this.props;
+    let { style } = this.props;
+    style = style || {};
+    return (
+      <div
+        className="color-display-wrapper"
+        style={{
+          backgroundColor: value,
+          ...style,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          type="color"
+          style={{
+            opacity: 0,
+            display: "block",
+            border: "none",
+            cursor: disabled ? "not-allowed" : "pointer",
+            width: "100%",
+            height: "100%",
+          }}
+          onChange={this.onColorChange}
+          value={value}
+          disabled={disabled}
+        />
+      </div>
+    );
+  }
+}
 type DropdownSettingProps = {
   onChange: (value: number) => void;
   label: React.ReactNode | string;
@@ -705,29 +767,30 @@ type DropdownSettingProps = {
   disabled?: boolean;
   disabledReason?: string | null;
 };
-
-export function DropdownSetting(props: DropdownSettingProps) {
-  const { onChange, label, value, options, disabled, disabledReason } = props;
-  return (
-    <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
-      <Col span={SETTING_LEFT_SPAN}>
-        <label className="setting-label">{label}</label>
-      </Col>
-      <Col span={SETTING_RIGHT_SPAN}>
-        <FastTooltip title={disabledReason}>
-          <Select
-            onChange={onChange}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            value={value.toString()}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            defaultValue={value.toString()}
-            size="small"
-            popupMatchSelectWidth={false}
-            options={options}
-            disabled={disabled}
-          />
-        </FastTooltip>
-      </Col>
-    </Row>
-  );
+export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
+  render() {
+    const { onChange, label, value } = this.props;
+    return (
+      <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
+          <label className="setting-label">{label}</label>
+        </Col>
+        <Col span={SETTING_RIGHT_SPAN}>
+          <FastTooltip title={this.props.disabledReason}>
+            <Select
+              onChange={onChange}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              value={value.toString()}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              defaultValue={value.toString()}
+              size="small"
+              popupMatchSelectWidth={false}
+              options={this.props.options}
+              disabled={this.props.disabled}
+            />
+          </FastTooltip>
+        </Col>
+      </Row>
+    );
+  }
 }

@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   LayerViewConfiguration
 }
-import com.scalableminds.util.tools.Box
+import net.liftweb.common.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
@@ -112,7 +112,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       }
   }
 
-  private def selectAxisUnit(axes: List[NgffAxis], axisOrder: AxisOrder)(
+  protected def selectAxisUnit(axes: List[NgffAxis], axisOrder: AxisOrder)(
       implicit ec: ExecutionContext): Fox[LengthUnit] =
     for {
       xUnit <- axes(axisOrder.x).lengthUnit.toFox
@@ -184,10 +184,10 @@ trait NgffExplorationUtils extends FoxImplicits {
 
   protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
 
-  private def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
+  protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {
       normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
-      _ <- Box(Option(bounds.length == 2).collect { case true => () })
+      _ <- Option(bounds.length == 2).collect { case true => () }
     } yield AdditionalAxis(normalizedName, bounds, index)
 
   protected def getAdditionalAxes(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(

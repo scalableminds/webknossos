@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TemporaryTracingService
 }
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext

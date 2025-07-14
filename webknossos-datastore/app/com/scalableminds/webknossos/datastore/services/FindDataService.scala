@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import play.api.libs.json.{Json, OFormat}
 import spire.math.{UByte, UInt, ULong, UShort}
 

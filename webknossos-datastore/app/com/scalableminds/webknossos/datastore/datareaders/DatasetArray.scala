@@ -3,12 +3,12 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.ByteOrder
@@ -193,8 +193,6 @@ class DatasetArray(vaultPath: VaultPath,
                                                                tc: TokenContext): Fox[MultiArray] =
     if (shape.contains(0)) {
       Fox.successful(MultiArrayUtils.createEmpty(header.resolvedDataType, rank))
-    } else if (shape.exists(_ < 0)) {
-      Fox.failure(s"Trying to read negative shape from DatasetArray: ${shape.mkString(",")}")
     } else {
       val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
       val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
@@ -250,15 +248,10 @@ class DatasetArray(vaultPath: VaultPath,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[MultiArray] =
     if (header.isSharded) {
-      val chunkShape = chunkShapeAtIndex(chunkIndex)
       for {
-        shardPathAndChunkRangeBox <- getShardedChunkPathAndRange(chunkIndex).shiftBox
-        multiArray <- shardPathAndChunkRangeBox match {
-          case Full((shardPath, chunkRange)) =>
-            chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
-          case Empty      => chunkReader.createFromFillValue(chunkShape, useSkipTypingShortcut)
-          case f: Failure => f.toFox
-        }
+        (shardPath, chunkRange) <- getShardedChunkPathAndRange(chunkIndex) ?~> "chunk.getShardedPathAndRange.failed"
+        chunkShape = chunkShapeAtIndex(chunkIndex)
+        multiArray <- chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)

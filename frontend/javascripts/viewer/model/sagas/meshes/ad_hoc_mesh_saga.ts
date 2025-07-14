@@ -6,7 +6,6 @@ import {
 import ThreeDMap from "libs/ThreeDMap";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
@@ -178,20 +177,15 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
   // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
-  try {
-    yield* call(
-      loadAdHocMesh,
-      action.seedPosition,
-      action.seedAdditionalCoordinates,
-      action.segmentId,
-      false,
-      layer.name,
-      action.extraInfo,
-    );
-  } catch (exc) {
-    Toast.error(`The mesh for segment ${action.segmentId} could not be loaded. Please try again.`);
-    ErrorHandling.notify(exc as any);
-  }
+  yield* call(
+    loadAdHocMesh,
+    action.seedPosition,
+    action.seedAdditionalCoordinates,
+    action.segmentId,
+    false,
+    layer.name,
+    action.extraInfo,
+  );
 }
 
 export function* getMeshExtraInfo(

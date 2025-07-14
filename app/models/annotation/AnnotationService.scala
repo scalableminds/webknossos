@@ -40,7 +40,7 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import com.scalableminds.util.tools.{Box, Full}
+import net.liftweb.common.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
@@ -313,7 +313,6 @@ class AnnotationService @Inject()(
       for {
         _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
-        _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       } yield {
         if (annotation._task.isEmpty)
           "annotation.finished"
@@ -805,7 +804,6 @@ class AnnotationService @Inject()(
         id = annotation._id,
         annotationLayers = annotation.annotationLayers,
         datasetDirectoryName = dataset.directoryName,
-        datasetId = dataset._id,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

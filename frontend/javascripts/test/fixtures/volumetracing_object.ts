@@ -1,26 +1,26 @@
 import update from "immutability-helper";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { combinedReducer } from "viewer/store";
-import { setDatasetAction } from "viewer/model/actions/dataset_actions";
-import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
-import { apiDatasetForVolumeTracing } from "./dataset_server_object";
-import { tracing as serverVolumeTracing } from "./volumetracing_server_objects";
-import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
-import { preprocessDataset } from "viewer/model_initialization";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
-const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
-
+const volumeTracing = {
+  type: "volume",
+  activeCellId: 0,
+  activeTool: AnnotationTool.MOVE,
+  largestSegmentId: 0,
+  contourList: [],
+  lastLabelActions: [],
+  tracingId: VOLUME_TRACING_ID,
+};
 const notEmptyViewportRect = {
   top: 0,
   left: 0,
   width: Constants.VIEWPORT_WIDTH,
   height: Constants.VIEWPORT_WIDTH,
 };
-
-const stateWithoutDatasetInitialization = update(defaultState, {
+export const initialState = update(defaultState, {
   annotation: {
     annotationType: {
       $set: "Explorational",
@@ -31,25 +31,22 @@ const stateWithoutDatasetInitialization = update(defaultState, {
     restrictions: {
       $set: {
         branchPointsAllowed: true,
-        initialAllowUpdate: true,
         allowUpdate: true,
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        allowedModes: [],
-        somaClickingAllowed: true,
-        volumeInterpolationAllowed: true,
-        mergerMode: false,
         magRestrictions: {
-          min: undefined,
-          max: undefined,
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
+          min: null,
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
+          max: null,
         },
       },
     },
     volumes: {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: string; activeCellId: number; active... Remove this comment to see the full error message
       $set: [volumeTracing],
     },
-    readOnly: { $set: null },
   },
   dataset: {
     dataSource: {
@@ -64,12 +61,12 @@ const stateWithoutDatasetInitialization = update(defaultState, {
               [4, 4, 4],
             ],
             category: "segmentation",
-            largestSegmentId: volumeTracing.largestSegmentId ?? 0,
             elementClass: "uint32",
             name: volumeTracing.tracingId,
             tracingId: volumeTracing.tracingId,
-            additionalAxes: [],
-            boundingBox: convertFrontendBoundingBoxToServer(volumeTracing.boundingBox!),
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
+            isDisabled: false,
+            alpha: 100,
           },
         ],
       },
@@ -111,8 +108,3 @@ const stateWithoutDatasetInitialization = update(defaultState, {
     },
   },
 });
-
-export const initialState = combinedReducer(
-  stateWithoutDatasetInitialization,
-  setDatasetAction(preprocessDataset(apiDatasetForVolumeTracing, [serverVolumeTracing])),
-);

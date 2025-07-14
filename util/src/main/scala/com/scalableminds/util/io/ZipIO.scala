@@ -5,8 +5,8 @@ import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import scala.concurrent.ExecutionContext

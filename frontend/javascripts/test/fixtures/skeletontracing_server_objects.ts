@@ -4,7 +4,6 @@ import {
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_types";
-import { ViewModeValues } from "viewer/constants";
 
 const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
 
@@ -206,7 +205,7 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
   },
   settings: {
-    allowedModes: ViewModeValues,
+    allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,

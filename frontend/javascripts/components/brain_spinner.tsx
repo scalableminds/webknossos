@@ -75,7 +75,7 @@ export function BrainSpinnerWithError({
     <BrainSpinner
       message={
         <>
-          <div className="initialization-error-message" style={{ textAlign: "center" }}>
+          <div style={{ textAlign: "center" }}>
             {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
           </div>
           <div className="flex-center-child" style={{ gap: 8 }}>

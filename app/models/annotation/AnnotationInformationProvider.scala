@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject

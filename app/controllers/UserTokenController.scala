@@ -17,7 +17,7 @@ import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
-import com.scalableminds.util.tools.{Box, Full}
+import net.liftweb.common.{Box, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
@@ -92,13 +92,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
-        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox.toOption))
+        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
-          case AccessResourceType.dataset =>
-            handleDataSetAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox)(
-              sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.directoryName, accessRequest.mode, userBox, token)
           case AccessResourceType.annotation =>
@@ -161,34 +158,6 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
   }
 
-  def handleDataSetAccess(id: String, mode: AccessMode.Value, userBox: Box[User])(
-      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
-
-    def tryRead: Fox[UserAccessAnswer] =
-      for {
-        datasetId <- ObjectId.fromString(id)
-        datasetBox <- datasetDAO.findOne(datasetId).shiftBox
-      } yield
-        datasetBox match {
-          case Full(_) => UserAccessAnswer(granted = true)
-          case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
-        }
-
-    def tryWrite: Fox[UserAccessAnswer] =
-      for {
-        datasetId <- ObjectId.fromString(id)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
-        user <- userBox.toFox ?~> "auth.token.noUser"
-        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
-      } yield UserAccessAnswer(isAllowed)
-
-    mode match {
-      case AccessMode.read  => tryRead
-      case AccessMode.write => tryWrite
-      case _                => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
-    }
-  }
-
   private def handleTracingAccess(tracingId: String,
                                   mode: AccessMode,
                                   userBox: Box[User],
@@ -210,8 +179,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
-        case AccessMode.read  => restrictions.allowAccess(userBox.toOption)
-        case AccessMode.write => restrictions.allowUpdate(userBox.toOption)
+        case AccessMode.read  => restrictions.allowAccess(userBox)
+        case AccessMode.write => restrictions.allowUpdate(userBox)
         case _                => Fox.successful(false)
       }
 
@@ -221,7 +190,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         annotationId <- ObjectId.fromString(annotationId)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
+          .provideAnnotation(annotationId, userBox)(GlobalAccessContext)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox
@@ -249,7 +218,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)
-        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox.toOption)).shiftBox
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).shiftBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
           case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))

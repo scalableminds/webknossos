@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.util.tools.{Box, Full}
+import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.ExecutionContext
 
@@ -87,17 +87,14 @@ class SkeletonTracingService @Inject()(
     if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
-  def merge(tracings: Seq[SkeletonTracing],
-            newVersion: Long,
-            additionalBoundingBoxes: Seq[NamedBoundingBox]): Box[SkeletonTracing] =
+  def merge(tracings: Seq[SkeletonTracing], newVersion: Long): Box[SkeletonTracing] =
     for {
       tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
         version = newVersion,
-        storedWithExternalTreeBodies = Some(false),
-        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
+        storedWithExternalTreeBodies = Some(false)
       )
 
   private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
@@ -149,7 +146,7 @@ class SkeletonTracingService @Inject()(
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Option[TreeBody] =
+  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
     for {
       tree <- tracing.trees.find(_.treeId == treeId)
     } yield TreeBody(nodes = tree.nodes, edges = tree.edges)

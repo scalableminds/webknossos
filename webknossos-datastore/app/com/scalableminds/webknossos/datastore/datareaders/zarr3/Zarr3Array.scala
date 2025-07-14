@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReade
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange
@@ -120,7 +120,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
                                                            tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
-      shardIndexRaw <- readShardIndex(shardPath) ?=> "zarr.readShardIndex.failed"
+      shardIndexRaw <- readShardIndex(shardPath) ?~> "zarr.readShardIndex.failed"
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 

@@ -2,8 +2,8 @@ package com.scalableminds.util.io
 
 import java.io._
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import java.nio.charset.Charset

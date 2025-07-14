@@ -19,8 +19,6 @@ export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): Volume
   throw new Error("Annotation is not of type volume!");
 }
 
-const INITIAL_LARGEST_SEGMENT_ID = initialState.annotation.volumes[0].largestSegmentId ?? 0;
-
 describe("VolumeTracing", () => {
   it("should set a new active cell", () => {
     const createCellAction = VolumeTracingActions.createCellAction(1000, 1000);
@@ -68,7 +66,7 @@ describe("VolumeTracing", () => {
     // Create cell
     const newState = VolumeTracingReducer(initialState, createCellAction);
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.activeCellId).toBe(INITIAL_LARGEST_SEGMENT_ID + 1);
+    expect(tracing.activeCellId).toBe(1);
   });
 
   it("should create a non-existing cell id and not update the largestSegmentId", () => {
@@ -81,7 +79,7 @@ describe("VolumeTracing", () => {
     const newState = VolumeTracingReducer(initialState, createCellAction);
 
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.largestSegmentId).toBe(INITIAL_LARGEST_SEGMENT_ID);
+    expect(tracing.largestSegmentId).toBe(0);
   });
 
   it("should create an existing cell and not update the largestSegmentId", () => {
@@ -121,9 +119,6 @@ describe("VolumeTracing", () => {
         volumes: {
           "0": {
             largestSegmentId: {
-              $set: LARGEST_SEGMENT_ID,
-            },
-            activeCellId: {
               $set: LARGEST_SEGMENT_ID,
             },
           },

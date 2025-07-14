@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.Category
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

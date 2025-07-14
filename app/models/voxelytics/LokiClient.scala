@@ -6,8 +6,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Failure, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Failure, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}

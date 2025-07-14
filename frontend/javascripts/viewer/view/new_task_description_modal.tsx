@@ -1,62 +1,76 @@
 import { Button, Modal } from "antd";
 import Markdown from "libs/markdown_adapter";
-import type React from "react";
-import { useCallback, useEffect, useState } from "react";
-
+import * as React from "react";
 type Props = {
   description: string;
   destroy: () => void;
   title: string;
 };
+type State = {
+  mayClose: boolean;
+  isOpen: boolean;
+};
+export default class NewTaskDescriptionModal extends React.Component<Props, State> {
+  timeoutId: ReturnType<typeof setTimeout> | undefined;
+  state: State = {
+    mayClose: false,
+    isOpen: true,
+  };
 
-const NewTaskDescriptionModal: React.FC<Props> = ({ description, destroy, title }) => {
-  const [mayClose, setMayClose] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(
+  componentDidMount() {
+    this.timeoutId = setTimeout(
       () => {
-        setMayClose(true);
+        this.allowClose();
       },
       process.env.NODE_ENV === "production" ? 10000 : 2000,
     );
+  }
 
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, []);
+  componentWillUnmount() {
+    if (this.timeoutId != null) {
+      clearTimeout(this.timeoutId);
+    }
+  }
 
-  const handleOk = useCallback(() => {
-    if (!mayClose) {
+  allowClose() {
+    this.setState({
+      mayClose: true,
+    });
+  }
+
+  handleOk = () => {
+    if (!this.state.mayClose) {
       return;
     }
 
-    setIsOpen(false);
-    destroy();
-  }, [mayClose, destroy]);
+    this.setState({
+      isOpen: false,
+    });
+    this.props.destroy();
+  };
 
-  return (
-    <Modal
-      maskClosable={false}
-      open={isOpen}
-      title={title}
-      onOk={handleOk}
-      onCancel={handleOk}
-      footer={[
-        <Button
-          key="submit"
-          type="primary"
-          loading={!mayClose}
-          onClick={handleOk}
-          disabled={!mayClose}
-        >
-          Ok
-        </Button>,
-      ]}
-    >
-      <Markdown>{description}</Markdown>
-    </Modal>
-  );
-};
-
-export default NewTaskDescriptionModal;
+  render() {
+    return (
+      <Modal
+        maskClosable={false}
+        open={this.state.isOpen}
+        title={this.props.title}
+        onOk={this.handleOk}
+        onCancel={this.handleOk}
+        footer={[
+          <Button
+            key="submit"
+            type="primary"
+            loading={!this.state.mayClose}
+            onClick={this.handleOk}
+            disabled={!this.state.mayClose}
+          >
+            Ok
+          </Button>,
+        ]}
+      >
+        <Markdown>{this.props.description}</Markdown>
+      </Modal>
+    );
+  }
+}

@@ -10,7 +10,7 @@ import play.api.libs.json._
 
 import javax.inject.Inject
 import models.annotation._
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import com.scalableminds.util.objectid.ObjectId

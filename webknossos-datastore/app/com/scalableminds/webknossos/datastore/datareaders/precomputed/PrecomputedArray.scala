@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -87,7 +87,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     val shardPath = shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
     for {
       _ <- Fox.fromBool(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
-      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?=> f"Could not get minishard index for chunkIndex ${chunkIndex
+      minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
         .mkString(",")}"
       chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
         .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."

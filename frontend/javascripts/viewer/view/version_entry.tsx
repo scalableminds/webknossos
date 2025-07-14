@@ -40,10 +40,10 @@ import type {
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
-  LEGACY_MergeTreeUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
+  MergeTreeUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -71,7 +71,7 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
-} from "viewer/model/sagas/volume/update_actions";
+} from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 type Description = {
@@ -387,7 +387,7 @@ const descriptionFns: Record<
     icon: <EditOutlined />,
   }),
   // This should never be shown since currently this update action is never dispatched.
-  mergeTree: (action: AsServerAction<LEGACY_MergeTreeUpdateAction>): Description => ({
+  mergeTree: (action: AsServerAction<MergeTreeUpdateAction>): Description => ({
     description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),

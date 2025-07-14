@@ -16,8 +16,8 @@ vi.mock("libs/keyboard", () => ({
 
 vi.mock("libs/toast", () => ({
   default: {
-    error: vi.fn((msg) => console.error(msg)),
-    warning: vi.fn((msg) => console.warn(msg)),
+    error: vi.fn(),
+    warning: vi.fn(),
     close: vi.fn(),
     success: vi.fn(),
     info: vi.fn(),
@@ -123,12 +123,10 @@ vi.mock("antd", () => {
     Dropdown: {},
     message: {
       hide: vi.fn(),
-      destroy: vi.fn(),
       // These return a "hide function"
       show: vi.fn(() => () => {}),
       loading: vi.fn(() => () => {}),
       success: vi.fn(() => () => {}),
-      error: vi.fn(() => () => {}),
     },
     Modal: {
       confirm: vi.fn(),

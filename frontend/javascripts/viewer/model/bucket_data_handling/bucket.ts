@@ -6,8 +6,7 @@ import { type Emitter, createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { BucketAddress, Vector3 } from "viewer/constants";
+import type { BoundingBoxType, BucketAddress, Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type { MaybeUnmergedBucketLoadedPromise } from "viewer/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "viewer/model/actions/volumetracing_actions";
@@ -166,7 +165,7 @@ export class DataBucket {
     this.emitter.emit(event, ...args);
   }
 
-  getBoundingBox(): BoundingBoxMinMaxType {
+  getBoundingBox(): BoundingBoxType {
     const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
     const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
@@ -625,7 +624,7 @@ export class DataBucket {
               expected: channelCount * Constants.BUCKET_SIZE,
               channelCount,
             };
-      console.warn(`bucket.data for ${this.zoomedAddress} has unexpected length`, debugInfo);
+      console.warn("bucket.data has unexpected length", debugInfo);
       ErrorHandling.notify(
         new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),
       );

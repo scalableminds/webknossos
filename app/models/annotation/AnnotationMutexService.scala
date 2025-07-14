@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{UserDAO, UserService}
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf

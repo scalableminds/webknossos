@@ -67,11 +67,9 @@ async function getClippingValues(
 
   const localHist = new Map();
   for (let i = 0; i < dataForAllViewPorts.length; i++) {
-    const value = dataForAllViewPorts[i];
-    // Don't use Number.abs because value can be BigInt
-    if (value !== 0 && value !== Number.POSITIVE_INFINITY && value !== Number.NEGATIVE_INFINITY) {
-      const counter = localHist.get(dataForAllViewPorts[i]);
-      localHist.set(dataForAllViewPorts[i], counter != null ? counter + 1 : 1);
+    if (dataForAllViewPorts[i] !== 0) {
+      const value = localHist.get(dataForAllViewPorts[i]);
+      localHist.set(dataForAllViewPorts[i], value != null ? value + 1 : 1);
     }
   }
 

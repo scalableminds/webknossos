@@ -10,13 +10,13 @@ import { UnitLong } from "viewer/constants";
 
 import { put, take, call } from "redux-saga/effects";
 import * as SaveActions from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
+import * as UpdateActions from "viewer/model/sagas/update_actions";
 import {
   pushSaveQueueAsync,
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-} from "viewer/model/sagas/saving/save_queue_draining";
+} from "viewer/model/sagas/save_saga";
 import { TIMESTAMP } from "test/global_mocks";
 import { sendSaveRequestWithToken } from "admin/rest_api";
 

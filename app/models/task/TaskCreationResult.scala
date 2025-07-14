@@ -2,7 +2,7 @@ package models.task
 
 import com.scalableminds.util.mvc.JsonResultAttribues
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full, ParamFailure}
+import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.http.Status
 import play.api.libs.json._
 

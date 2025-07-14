@@ -1,6 +1,6 @@
 import { Checkbox } from "antd";
 import _ from "lodash";
-import type React from "react";
+import * as React from "react";
 type CheckboxComponentProp = {
   onClick?: (...args: Array<any>) => any;
 };
@@ -9,17 +9,25 @@ type CheckboxComponentProp = {
  * after it was clicked.
  */
 
-function CheckboxComponent(props: CheckboxComponentProp) {
-  const { onClick = _.noop, ...restProps } = props;
+class CheckboxComponent extends React.PureComponent<CheckboxComponentProp> {
+  static defaultProps: CheckboxComponentProp = {
+    onClick: _.noop,
+  };
 
-  const handleClick: React.MouseEventHandler<HTMLElement> = (e) => {
+  handleClick = (e: React.SyntheticEvent<HTMLInputElement>) => {
     // For antd checkboxs e.target seems to be the span with the checkbox description, whereas
     // e.currentTarget is the actual checkbox
     e.currentTarget.blur();
-    onClick(e);
+
+    if (this.props.onClick) {
+      this.props.onClick(e);
+    }
   };
 
-  return <Checkbox {...restProps} onClick={handleClick} />;
+  render() {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '(e: React.SyntheticEvent<HTMLInputElement>) ... Remove this comment to see the full error message
+    return <Checkbox {...this.props} onClick={this.handleClick} />;
+  }
 }
 
 export default CheckboxComponent;

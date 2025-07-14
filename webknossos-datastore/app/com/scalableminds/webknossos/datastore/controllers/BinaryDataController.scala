@@ -20,8 +20,7 @@ import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
+import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}
@@ -39,7 +38,7 @@ class BinaryDataController @Inject()(
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService
+    findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MissingBucketHeaders {

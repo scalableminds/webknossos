@@ -5,16 +5,16 @@ import os
 import sys
 
 TEMPLATE = """### Added
-- Added xyz... This is an example. You may delete a section if it would become empty.
+- This is an example. You may delete a section if it would become empty.
 
 ### Changed
-- Changed xyz... This is an example. You may delete a section if it would become empty.
+- This is an example. You may delete a section if it would become empty.
 
 ### Fixed
-- Fixed xyz... This is an example. You may delete a section if it would become empty.
+- This is an example. You may delete a section if it would become empty.
 
 ### Removed
-- Removed xyz... This is an example. You may delete a section if it would become empty.
+- This is an example. You may delete a section if it would become empty.
 
 ### Breaking Changes
 - This is an example. You may delete a section if it would become empty.
@@ -66,9 +66,7 @@ def main():
     with open(file_path, "w") as f:
         f.write(TEMPLATE)
 
-    print(
-        f"✅ Created new file for a changelog entry. Please adapt its content here: {file_path}"
-    )
+    print(f"✅ Created changelog entry: {file_path}")
 
 
 if __name__ == "__main__":

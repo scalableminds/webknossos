@@ -1,14 +1,12 @@
 package models.annotation.handler
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
 import com.scalableminds.util.objectid.ObjectId
-import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
@@ -26,13 +24,9 @@ class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: 
 
 trait AnnotationInformationHandler extends FoxImplicits {
 
-  def datasetDAO: DatasetDAO
-  def datasetService: DatasetService
-  def annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
-
   implicit val ec: ExecutionContext
 
-  def useCache: Boolean = true
+  def cache: Boolean = true
 
   def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
@@ -49,7 +43,6 @@ trait AnnotationInformationHandler extends FoxImplicits {
         case List()       => true
         case head :: tail => head._dataset == datasetId && allOnSameDatasetIter(tail, datasetId)
       }
-
     annotations match {
       case List() => Fox.successful(true)
       case head :: _ =>
@@ -63,11 +56,4 @@ trait AnnotationInformationHandler extends FoxImplicits {
   def assertNonEmpty[T](seq: List[T]): Fox[Unit] =
     if (seq.isEmpty) Fox.failure("no annotations")
     else Fox.successful(())
-
-  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
-      _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource)
-    } yield ()
 }

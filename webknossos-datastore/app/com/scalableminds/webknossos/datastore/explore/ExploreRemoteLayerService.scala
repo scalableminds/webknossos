@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 

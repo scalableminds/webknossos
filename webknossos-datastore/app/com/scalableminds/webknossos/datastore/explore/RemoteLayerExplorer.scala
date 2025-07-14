@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.BoundingBox
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath

@@ -55,7 +55,7 @@ class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits
           val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(
             Seq(Some(Seq(axisT)), Some(Seq(axisT2))))
           assert(!merged.isEmpty)
-          assert(merged.getOrThrow("test").get.head.name == "t")
+          assert(merged.openOrThrowException("test").get.head.name == "t")
         }
       }
 

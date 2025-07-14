@@ -1,8 +1,7 @@
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
 import _ from "lodash";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
+import type { BoundingBoxType, OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
@@ -116,7 +115,7 @@ export type SelectedEdge = {
 type DistanceArray = [number, number, number, number];
 
 function computeDistanceArray(
-  boundingBoxBounds: BoundingBoxMinMaxType,
+  boundingBoxBounds: BoundingBoxType,
   globalPosition: Vector3,
   indices: DimensionMap,
   planeRatio: Vector3,

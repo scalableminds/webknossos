@@ -1,5 +1,5 @@
 import { getSystemColorTheme } from "theme";
-import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
+import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,
@@ -9,7 +9,6 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
   UnitLong,
-  ViewModeValues,
 } from "viewer/constants";
 import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
@@ -34,7 +33,7 @@ const initialAnnotationInfo = {
     somaClickingAllowed: false,
     mergerMode: false,
     volumeInterpolationAllowed: false,
-    allowedModes: ViewModeValues,
+    allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
     magRestrictions: {},
   },
   visibility: "Internal" as APIAnnotationVisibility,
@@ -123,7 +122,6 @@ const defaultState: WebknossosState = {
   },
   task: null,
   dataset: {
-    areLayersPreprocessed: true,
     id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",

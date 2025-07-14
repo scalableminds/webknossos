@@ -17,7 +17,7 @@ import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
 import models.project.ProjectDAO
-import models.task.{TaskDAO, TaskService}
+import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
@@ -52,7 +52,6 @@ class AnnotationController @Inject()(
     tracingStoreService: TracingStoreService,
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
-    taskService: TaskService,
     analyticsService: AnalyticsService,
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
@@ -159,7 +158,6 @@ class AnnotationController @Inject()(
       _ = logger.info(
         s"Reopening annotation $id, new state will be ${AnnotationState.Active.toString}, access context: ${request.identity.toStringAnonymous}")
       _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> "annotation.invalid"
-      _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
     } yield JsonOk(json, Messages("annotation.reopened"))
@@ -300,14 +298,13 @@ class AnnotationController @Inject()(
 
   def cancel(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
-      (annotation._task, annotation.typ) match {
-        case (Some(taskId), AnnotationType.Task) =>
+      annotation match {
+        case t if t.typ == AnnotationType.Task =>
           logger.info(
-            s"Canceling task annotation $id, new state will be ${AnnotationState.Cancelled}, access context: ${request.identity.toStringAnonymous}")
-          for {
-            _ <- Fox.runIf(annotation.state == AnnotationState.Finished)(taskService.clearCompoundCache(taskId))
-            _ <- annotationDAO.updateState(annotation._id, Cancelled)
-          } yield JsonOk(Messages("task.finished"))
+            s"Canceling annotation $id, new state will be ${AnnotationState.Cancelled.toString}, access context: ${request.identity.toStringAnonymous}")
+          annotationDAO.updateState(annotation._id, Cancelled).map { _ =>
+            JsonOk(Messages("task.finished"))
+          }
         case _ =>
           Fox.successful(JsonOk(Messages("annotation.finished")))
       }

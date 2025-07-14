@@ -43,11 +43,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
-        loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
+        loadFullMeshFromMeshfile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
     } yield data
 
-  private def loadFullMeshFromMeshFile(
+  private def loadFullMeshFromMeshfile(
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,

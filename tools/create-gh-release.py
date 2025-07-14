@@ -52,6 +52,7 @@ def extract_newest_changelog():
 
     release_header = f"""
 * [Docker Image](https://hub.docker.com/r/scalableminds/webknossos) `scalableminds/webknossos:{newest_version}` :whale:
+Run it via [`export DOCKER_TAG=="{newest_version}" && ./start-docker.sh`](https://github.com/scalableminds/webknossos#docker).
 * [Changelog](CHANGELOG.released.md#{newest_version_anchor}---{release_date})
 """.strip()
 

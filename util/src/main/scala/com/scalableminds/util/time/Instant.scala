@@ -3,7 +3,7 @@ package com.scalableminds.util.time
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.{LazyLogging, Logger}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
 import java.time.{ZoneId, ZonedDateTime}
@@ -79,7 +79,7 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
     tryo(java.time.Instant.parse(instantLiteral).toEpochMilli).toOption.map(timestamp => Instant(timestamp))
 
   private def fromEpochMillisString(instantLiteral: String): Option[Instant] =
-    tryo(instantLiteral.toLong).map(timestamp => Instant(timestamp)).toOption
+    tryo(instantLiteral.toLong).map(timestamp => Instant(timestamp))
 
   implicit object InstantFormat extends Format[Instant] {
     override def reads(json: JsValue): JsResult[Instant] =

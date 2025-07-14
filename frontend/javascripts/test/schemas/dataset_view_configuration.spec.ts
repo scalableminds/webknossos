@@ -1,3 +1,4 @@
+// @ts-nocheck
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
 import { validateObjectWithType } from "types/validation";
@@ -6,7 +7,7 @@ import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_
 import DATASET from "test/fixtures/dataset_server_object";
 
 const datasetViewConfigurationType = "types::DatasetViewConfiguration";
-const CORRECT_DATASET_CONFIGURATION: Record<any, any> = {
+const CORRECT_DATASET_CONFIGURATION = {
   fourBit: false,
   interpolation: true,
   renderMissingDataBlack: true,

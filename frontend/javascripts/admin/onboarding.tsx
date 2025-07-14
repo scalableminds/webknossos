@@ -561,7 +561,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           header="Skip"
           icon={<ClockCircleOutlined />}
           action={<LinkButton onClick={this.advanceStep}>Skip this step</LinkButton>}
-          height={250}
+          height={170}
         >
           You can always do this later!
         </OptionCard>

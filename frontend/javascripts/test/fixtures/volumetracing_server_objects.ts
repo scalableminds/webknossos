@@ -5,9 +5,7 @@ import {
   type APITracingStoreAnnotation,
 } from "types/api_types";
 
-const TRACING_ID = "volumeTracingId";
-
-// this is a uint16 segmentation layer
+const TRACING_ID = "volumeTracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -38,21 +36,43 @@ export const tracing: ServerVolumeTracing = {
   },
   additionalAxes: [],
   elementClass: "uint16",
-  id: TRACING_ID,
+  id: "segmentation",
   largestSegmentId: 21890,
   zoomLevel: 0,
   mags: [
-    { x: 1, y: 1, z: 1 },
-    { x: 2, y: 2, z: 2 },
-    { x: 4, y: 4, z: 4 },
-    { x: 8, y: 8, z: 8 },
-    { x: 16, y: 16, z: 16 },
-    { x: 32, y: 32, z: 32 },
+    {
+      x: 1,
+      y: 1,
+      z: 1,
+    },
+    {
+      x: 2,
+      y: 2,
+      z: 2,
+    },
+    {
+      x: 4,
+      y: 4,
+      z: 4,
+    },
+    {
+      x: 8,
+      y: 8,
+      z: 8,
+    },
+    {
+      x: 16,
+      y: 16,
+      z: 16,
+    },
+    {
+      x: 32,
+      y: 32,
+      z: 32,
+    },
   ],
   userStates: [],
-  fallbackLayer: "segmentation",
 };
-
 export const annotation: APIAnnotation = {
   datasetId: "66f3c82966010034942e9740",
   description: "",
@@ -72,7 +92,7 @@ export const annotation: APIAnnotation = {
   },
   annotationLayers: [
     {
-      name: "some volume name",
+      name: "volume",
       tracingId: TRACING_ID,
       typ: AnnotationLayerEnum.Volume,
       stats: {},
@@ -105,7 +125,6 @@ export const annotation: APIAnnotation = {
   othersMayEdit: false,
   isLockedByOwner: false,
 };
-
 export const annotationProto: APITracingStoreAnnotation = {
   description: "volume-annotation-description",
   version: 1,
@@ -113,7 +132,7 @@ export const annotationProto: APITracingStoreAnnotation = {
   annotationLayers: [
     {
       tracingId: TRACING_ID,
-      name: "some volume name",
+      name: "volume",
       typ: AnnotationLayerEnum.Volume,
     },
   ],

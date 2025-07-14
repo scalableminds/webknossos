@@ -8,8 +8,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobType } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { ControlModeEnum, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  type BoundingBoxType,
+  ControlModeEnum,
+  type Vector3,
+  type Vector6,
+} from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
@@ -43,7 +47,7 @@ export default function BoundingBoxTab() {
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
-  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxMinMaxType) =>
+  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxType) =>
     dispatch(
       changeUserBoundingBoxAction(id, {
         boundingBox,

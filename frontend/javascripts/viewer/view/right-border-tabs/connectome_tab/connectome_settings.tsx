@@ -7,7 +7,6 @@ import { connect } from "react-redux";
 import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import defaultState from "viewer/default_state";
-import { isTracingLayerWithoutFallback } from "viewer/model/accessors/volumetracing_accessor";
 import {
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,
@@ -68,12 +67,7 @@ class ConnectomeFilters extends React.Component<Props> {
       pendingConnectomeFileName,
     } = this.props;
     // If availableConnectomeFiles is not null, they have already been fetched
-    if (
-      segmentationLayer == null ||
-      isTracingLayerWithoutFallback(segmentationLayer) ||
-      availableConnectomeFiles != null
-    )
-      return;
+    if (segmentationLayer == null || availableConnectomeFiles != null) return;
     const connectomeFiles = await getConnectomeFilesForDatasetLayer(
       dataset.dataStore.url,
       dataset,

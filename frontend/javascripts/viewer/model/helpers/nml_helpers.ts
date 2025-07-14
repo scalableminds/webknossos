@@ -8,8 +8,13 @@ import messages from "messages";
 import Saxophone from "saxophone";
 import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
+import {
+  type BoundingBoxType,
+  IdentityTransform,
+  type TreeType,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import Constants from "viewer/constants";
 import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -196,7 +201,7 @@ function serializeMetaInformation(
 }
 
 function serializeTaskBoundingBox(
-  boundingBox: BoundingBoxMinMaxType | null | undefined,
+  boundingBox: BoundingBoxType | null | undefined,
   tagName: string,
 ): string {
   if (boundingBox) {
@@ -1115,7 +1120,6 @@ export function parseNml(nmlString: string): Promise<{
           case "volume": {
             isParsingVolumeTag = true;
             containedVolumes = true;
-            break;
           }
 
           default:
@@ -1168,7 +1172,6 @@ export function parseNml(nmlString: string): Promise<{
 
           case "volume": {
             isParsingVolumeTag = false;
-            break;
           }
 
           default:

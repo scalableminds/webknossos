@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext

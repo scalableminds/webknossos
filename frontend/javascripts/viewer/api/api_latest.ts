@@ -20,9 +20,9 @@ import messages from "messages";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Writeable } from "types/globals";
 import type {
+  BoundingBoxType,
   BucketAddress,
   ControlMode,
   LabeledVoxelsMap,
@@ -1638,7 +1638,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.removeBucketsIf(predicateFn || truePredicate);
+          dataLayer.cube.collectBucketsIf(predicateFn || truePredicate);
           dataLayer.layerRenderingManager.refresh();
         }
       }),
@@ -1654,7 +1654,7 @@ class DataApi {
     }
 
     Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
-      dataLayer.cube.removeAllBuckets();
+      dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
   }
@@ -1887,7 +1887,7 @@ class DataApi {
    */
   async getDataFor2DBoundingBox(
     layerName: string,
-    bbox: BoundingBoxMinMaxType,
+    bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
   ) {
     return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
@@ -1900,7 +1900,7 @@ class DataApi {
    */
   async getDataForBoundingBox(
     layerName: string,
-    mag1Bbox: BoundingBoxMinMaxType,
+    mag1Bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
@@ -1989,7 +1989,7 @@ class DataApi {
   }
 
   getBucketAddressesInCuboid(
-    bbox: BoundingBoxMinMaxType,
+    bbox: BoundingBoxType,
     magnifications: Array<Vector3>,
     zoomStep: number,
     additionalCoordinates: AdditionalCoordinate[] | null,
@@ -2036,7 +2036,7 @@ class DataApi {
 
   cutOutCuboid(
     buckets: Array<Bucket>,
-    bbox: BoundingBoxMinMaxType,
+    bbox: BoundingBoxType,
     elementClass: ElementClass,
     magnifications: Array<Vector3>,
     zoomStep: number,

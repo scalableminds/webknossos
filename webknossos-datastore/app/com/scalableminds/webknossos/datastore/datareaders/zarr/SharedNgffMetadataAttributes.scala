@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import com.scalableminds.util.tools.{Box, Failure, Full}
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
 case class NgffCoordinateTransformation(`type`: String = "scale",
@@ -27,7 +27,7 @@ case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
     else {
       unit match {
         case None | Some("") => Full(VoxelSize.DEFAULT_UNIT)
-        case Some(someUnit)  => Box(LengthUnit.fromString(someUnit))
+        case Some(someUnit)  => LengthUnit.fromString(someUnit)
       }
     }
 }

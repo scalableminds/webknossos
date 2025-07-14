@@ -1,12 +1,11 @@
-import { ConfigProvider, Layout } from "antd";
-import { Link } from "react-router-dom";
-import { getAntdTheme } from "theme";
+import { Layout } from "antd";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 const { Footer } = Layout;
 
 const creditsFooter = () => (
-  <ConfigProvider theme={getAntdTheme("dark")}>
-    <Footer id="credits">
-      <div style={{ maxWidth: 600 }}>
+  <Footer id="credits">
+    <div>
+      <div className="container">
         <h3>WEBKNOSSOS Credits</h3>
         <p>
           Developed by <a href="https://scalableminds.com">scalable minds</a> and{" "}
@@ -65,8 +64,8 @@ const creditsFooter = () => (
           </a>
         </p>
       </div>
-    </Footer>
-  </ConfigProvider>
+    </div>
+  </Footer>
 );
 
-export default creditsFooter;
+export default withRouter<RouteComponentProps, any>(creditsFooter);

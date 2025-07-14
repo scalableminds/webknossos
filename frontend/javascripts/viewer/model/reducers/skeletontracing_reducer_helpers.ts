@@ -707,7 +707,7 @@ export function mergeTrees(
   const updatedSourceTree: Tree = {
     ...sourceTree,
     nodes: newNodes,
-    edges: sourceTree.edges.addEdges(targetTree.edges.toArray().concat(newEdge)),
+    edges: sourceTree.edges.addEdges(targetTree.edges.asArray().concat(newEdge)),
     comments: sourceTree.comments.concat(targetTree.comments),
     branchPoints: sourceTree.branchPoints.concat(targetTree.branchPoints),
   };

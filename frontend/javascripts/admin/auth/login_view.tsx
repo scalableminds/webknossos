@@ -1,15 +1,16 @@
 import { Card, Col, Row } from "antd";
 import * as Utils from "libs/utils";
 import window from "libs/window";
-import { useHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import LoginForm from "./login_form";
 
 type Props = {
+  history: RouteComponentProps["history"];
   redirect?: string;
 };
 
-function LoginView({ redirect }: Props) {
-  const history = useHistory();
+function LoginView({ history, redirect }: Props) {
   const onLoggedIn = () => {
     if (!Utils.hasUrlParam("redirectPage")) {
       if (redirect) {
@@ -37,4 +38,4 @@ function LoginView({ redirect }: Props) {
   );
 }
 
-export default LoginView;
+export default withRouter<RouteComponentProps & Props, any>(LoginView);

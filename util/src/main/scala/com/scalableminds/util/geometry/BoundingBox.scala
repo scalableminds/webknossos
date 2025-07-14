@@ -1,6 +1,7 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.Math.ceilDiv
+import net.liftweb.common.Full
 import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -95,7 +96,7 @@ object BoundingBox {
     s match {
       case literalPattern(minX, minY, minZ, width, height, depth) =>
         try {
-          Some(
+          Full(
             BoundingBox(
               Vec3Int(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
               Integer.parseInt(width),

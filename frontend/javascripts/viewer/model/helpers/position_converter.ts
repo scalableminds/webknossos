@@ -18,22 +18,6 @@ export function globalPositionToBucketPosition(
     additionalCoordinates || [],
   ];
 }
-
-export function globalPositionToBucketPositionWithMag(
-  [x, y, z]: Vector3,
-  mag: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-): BucketAddress {
-  const magIndex = Math.log2(Math.max(...mag));
-  return [
-    Math.floor(x / (constants.BUCKET_WIDTH * mag[0])),
-    Math.floor(y / (constants.BUCKET_WIDTH * mag[1])),
-    Math.floor(z / (constants.BUCKET_WIDTH * mag[2])),
-    magIndex,
-    additionalCoordinates || [],
-  ];
-}
-
 export function scaleGlobalPositionWithMagnification(
   [x, y, z]: Vector3,
   mag: Vector3,

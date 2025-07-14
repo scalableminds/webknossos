@@ -3,8 +3,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange
@@ -25,21 +25,16 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) if useSkipTypingShortcut =>
           shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
+        case Empty if useSkipTypingShortcut =>
+          shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
         case Full(chunkBytes) =>
           chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          createFromFillValue(chunkShape, useSkipTypingShortcut)
+          chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }
     } yield typed
-
-  def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(
-      implicit ec: ExecutionContext): Fox[MultiArray] =
-    if (useSkipTypingShortcut)
-      shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
-    else
-      chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)

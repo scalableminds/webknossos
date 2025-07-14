@@ -12,7 +12,7 @@ import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, Json}
 import security.WkSilhouetteEnvironment

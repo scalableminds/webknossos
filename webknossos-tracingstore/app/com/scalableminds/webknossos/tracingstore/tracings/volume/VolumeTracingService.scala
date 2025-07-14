@@ -26,7 +26,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io._
@@ -241,7 +241,7 @@ class VolumeTracingService @Inject()(
                     segmentIndexBuffer,
                     bucketPosition,
                     filteredBytes,
-                    Full(data),
+                    Some(data),
                     editableMappingTracingId(volumeTracing, tracingId)
                   )
                 } yield ()
@@ -712,8 +712,7 @@ class VolumeTracingService @Inject()(
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
             newEditableMappingIdOpt: Option[String],
-            newVersion: Long,
-            additionalBoundingBoxes: Seq[NamedBoundingBox]): Box[VolumeTracing] = {
+            newVersion: Long): Box[VolumeTracing] = {
     def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
                           tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
       for {
@@ -731,8 +730,7 @@ class VolumeTracingService @Inject()(
         createdTimestamp = System.currentTimeMillis(),
         version = newVersion,
         mappingName = newEditableMappingIdOpt,
-        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
-        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
+        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex)
       )
   }
 

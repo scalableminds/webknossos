@@ -15,7 +15,7 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
-import com.scalableminds.util.tools.Full
+import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

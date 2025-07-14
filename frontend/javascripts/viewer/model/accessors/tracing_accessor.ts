@@ -86,10 +86,9 @@ export function selectTracing(
   return tracing;
 }
 
-function _getTaskBoundingBoxes(state: WebknossosState) {
-  const { annotation, task } = state;
-  if (task == null) return {};
-  const layers = _.compact([annotation.skeleton, ...annotation.volumes]);
+function _getTaskBoundingBoxes(annotation: StoreAnnotation) {
+  const layers = _.compact([annotation.skeleton, ...annotation.volumes, annotation.readOnly]);
+
   return Object.fromEntries(layers.map((l) => [l.tracingId, l.boundingBox]));
 }
 

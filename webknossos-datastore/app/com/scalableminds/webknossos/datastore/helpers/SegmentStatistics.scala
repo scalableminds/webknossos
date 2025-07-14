@@ -5,8 +5,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -35,10 +35,8 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
-      bucketPositionsInRequestedMag = bucketPositionsProtos.map(vec3IntFromProto)
-      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInRequestedMag.toSeq,
-                                                               mag,
-                                                               additionalCoordinates)
+      bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInMag.toSeq, mag, additionalCoordinates)
       counts <- Fox.serialCombined(bucketBoxes.toList) {
         case Full(bucketBytes) =>
           tryo(

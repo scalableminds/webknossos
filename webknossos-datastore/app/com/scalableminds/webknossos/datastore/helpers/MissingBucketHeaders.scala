@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 

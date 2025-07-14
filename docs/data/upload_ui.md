@@ -11,10 +11,10 @@ The easiest way to get started with working on your datasets is through the WEBK
 
 ![youtube-video](https://www.youtube.com/embed/ZvUJrv86w8w?start=17)
 
-Internally, WEBKNOSSOS uses the [Zarr3](./zarr.md) format by default to display your data.
-If your data is already in a data format like [WKW](./wkw.md), [Zarr or Zarr3](./zarr.md) you can simply drag your folder (or zip archive of that folder) into the upload view.
+Internally, WEBKNOSSOS uses the [WKW-format](./wkw.md) by default to display your data.
+If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
-If your data is not in WKW or Zarr format, you can either:
+If your data is not in WKW, you can either:
 
 - upload the data in a supported file format and WEBKNOSSOS will automatically import or convert it ([webknossos.org](https://webknossos.org) only). 
 Depending on the size of the dataset, the conversion will take some time. 
@@ -33,23 +33,5 @@ In particular, the following file formats are supported for uploading (and conve
 - [Single-file images](./image_stacks.md#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
 - [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
 - [N5 datasets](./n5.md)
-
-We support a variety of data types for the uploaded data. To make sure that your data can be uploaded to WEBKNOSSOS take a look into this table of supported data types for color and segmentation layers:
-
-|   dtype    | Color Layers  |       Segmentation Layers   |
-|------------|------------|------------|
-|   uint8    |       ✓     |   ✓                       |
-|   uint16   |       ✓     |   ✓                       |
-|   uint24  rgb  |       ✓   |   does not apply        |
-|   uint32   |       ✓     |   ✓                       |
-|   uint64   |       ✗     |   (✓)  [(til 2⁵³−1)](https://github.com/scalableminds/webknossos/issues/6921)          |
-|   |  |  |
-|    int8    |       ✓     |        ✓                   |
-|    int16   |       ✓     |        ✓                   |
-|    int32   |       ✓     |        ✓                   |
-|    int64   |       ✗     |        ✓                   |
-|   |  |  |
-|    float   |       ✓     |        ✗                   |
-|    double  |       ✗     |        ✗                   |
 
 Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](../datasets/settings.md) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.

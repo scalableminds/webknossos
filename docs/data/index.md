@@ -10,8 +10,8 @@ WEBKNOSSOS natively supports loading and streaming data in the following formats
 - [N5](./n5.md)
 - [Image Stacks (through Conversion)](./image_stacks.md)
 
-The Zarr3 format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
+The WEBKNOSSOS-wrap (WKW) container format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
 
-Any dataset uploaded to webknossos.org will automatically be converted to Zarr3 on upload - given its source file format is supported by WEBKNOSSOS. Alternatively, you can manually convert your datasets using the [WEBKNOSSOS CLI tool](https://docs.webknossos.org/cli) or use a custom script based on the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html).
+Any dataset uploaded to webknossos.org will automatically be converted to WKW on upload - given its source file format is supported by WEBKNOSSOS. Alternatively, you can manually convert your datasets using the [WEBKNOSSOS CLI tool](https://docs.webknossos.org/cli) or use a custom script based on the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html).
 
 Read more about uploading and configuring datasets on the [datasets page](../datasets/settings.md).

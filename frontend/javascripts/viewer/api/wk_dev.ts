@@ -27,9 +27,6 @@ export const WkDevFlags = {
     // it needs to be set to true before the rendering is initialized.
     disableLayerNameSanitization: false,
   },
-  debugging: {
-    showCurrentVersionInInfoTab: false,
-  },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
   },

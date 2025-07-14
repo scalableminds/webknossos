@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
-import com.scalableminds.util.tools.Box
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext

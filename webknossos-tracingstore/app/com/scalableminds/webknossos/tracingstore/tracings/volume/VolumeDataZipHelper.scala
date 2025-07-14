@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
+import net.liftweb.common.Box
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import java.util.zip.{ZipEntry, ZipFile}

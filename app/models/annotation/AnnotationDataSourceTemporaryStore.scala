@@ -11,7 +11,6 @@ import scala.concurrent.duration.DurationInt
 /**
   * Used to store a mapping from annotation id to datasource. This makes it possible for WK to answer a
   * /tracingstores/:name/dataSource request before an annotation is created. This happens when uploading an annotation.
-  * It also provides a mapping from temporary/compound annotation id (e.g. taskTypeId, projectId) to datasource
   */
 class AnnotationDataSourceTemporaryStore @Inject()(temporaryStore: TemporaryStore[ObjectId, DataSourceLike]) {
 

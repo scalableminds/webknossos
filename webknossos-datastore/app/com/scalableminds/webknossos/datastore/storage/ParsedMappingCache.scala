@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 import com.scalableminds.webknossos.datastore.storage
-import com.scalableminds.util.tools.Failure
+import net.liftweb.common.Failure
 
 case class CachedMapping(
     organization: String,

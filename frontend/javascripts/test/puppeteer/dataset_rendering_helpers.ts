@@ -243,20 +243,7 @@ async function waitForTracingViewLoad(page: Page) {
       console.log("Waiting suspiciously long for page to load...");
     }
     await sleep(500);
-    const inputCatcherPromise = page
-      .$(".inputcatcher")
-      .then((elements) => ({ type: "inputcatchers", elements }));
-    const errorPromise = page
-      .$(".initialization-error-message")
-      .then((elements) => ({ type: "error", elements }));
-
-    const raceResult = await Promise.race([inputCatcherPromise, errorPromise]);
-
-    if (raceResult.type === "error") {
-      throw new Error("Initialization error detected");
-    }
-
-    inputCatchers = raceResult.elements;
+    inputCatchers = await page.$(".inputcatcher");
   }
 }
 
@@ -479,7 +466,7 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
       browser: "chrome",
       browser_version: "latest",
       os: "os x",
-      os_version: "sequoia",
+      os_version: "mojave",
       name: context.task.name, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,

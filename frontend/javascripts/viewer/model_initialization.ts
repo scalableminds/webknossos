@@ -110,7 +110,6 @@ import DataLayer from "viewer/model/data_layer";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  StoreDataset,
   TraceOrViewCommand,
   UserConfiguration,
 } from "viewer/store";
@@ -119,7 +118,7 @@ import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
-  convertBoundingBoxProtoToObject,
+  convertPointToVecInBoundingBox,
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
@@ -207,17 +206,16 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [apiDataset, initialUserSettings, serverTracings] = await fetchParallel(
+  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
     version,
   );
-  maybeFixDatasetNameInURL(apiDataset, initialCommandType);
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
 
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
-  const dataset = preprocessDataset(apiDataset, serverTracings);
-  initializeDataset(initialFetch, dataset);
+  initializeDataset(initialFetch, dataset, serverTracings);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     serverVolumeTracingIds,
@@ -327,7 +325,7 @@ async function fetchEditableMappings(
   return Promise.all(promises);
 }
 
-function validateSpecsForLayers(dataset: StoreDataset, requiredBucketCapacity: number): any {
+function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): any {
   const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
@@ -449,25 +447,11 @@ function setInitialTool() {
   }
 }
 
-export function preprocessDataset(
+function initializeDataset(
+  initialFetch: boolean,
   dataset: APIDataset,
   serverTracings: Array<ServerTracing>,
-): StoreDataset {
-  const mutableDataset = dataset as any as MutableAPIDataset;
-  const volumeTracings = getServerVolumeTracings(serverTracings);
-
-  if (volumeTracings.length > 0) {
-    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
-    mutableDataset.dataSource.dataLayers = newDataLayers;
-    validateVolumeLayers(volumeTracings, newDataLayers);
-  }
-
-  (mutableDataset as StoreDataset).areLayersPreprocessed = true;
-
-  return mutableDataset as StoreDataset;
-}
-
-function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
+): void {
   let error;
 
   if (!dataset) {
@@ -493,13 +477,21 @@ function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
     datasetName: dataset.name,
     datasetId: dataset.id,
   });
+  const mutableDataset = dataset as any as MutableAPIDataset;
+  const volumeTracings = getServerVolumeTracings(serverTracings);
 
-  Store.dispatch(setDatasetAction(dataset));
-  initializeAdditionalCoordinates(dataset);
+  if (volumeTracings.length > 0) {
+    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
+    mutableDataset.dataSource.dataLayers = newDataLayers;
+    validateVolumeLayers(volumeTracings, newDataLayers);
+  }
+
+  Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
+  initializeAdditionalCoordinates(mutableDataset);
 }
 
-function initializeAdditionalCoordinates(dataset: StoreDataset) {
-  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
+function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
     ({ name, bounds }) => ({
       name,
@@ -620,7 +612,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox: convertBoundingBoxProtoToObject(tracing.boundingBox),
+      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
       resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
@@ -963,7 +955,7 @@ function enforcePricingRestrictionsOnUserConfiguration(
 
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
-  dataset: StoreDataset,
+  dataset: APIDataset,
   originalDatasetSettings: DatasetConfiguration,
 ): DatasetConfiguration {
   /**

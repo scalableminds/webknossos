@@ -96,7 +96,7 @@ import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
-  proofreadMergeAction,
+  proofreadMerge,
 } from "viewer/model/actions/proofread_actions";
 import {
   loadAdHocMeshAction,
@@ -108,6 +108,7 @@ import {
   createTreeAction,
   deleteBranchpointByIdAction,
   deleteEdgeAction,
+  deleteNodeAsUserAction,
   expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -124,8 +125,8 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/min_cut_saga";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
-import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/volume/min_cut_saga";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
 import type {
@@ -137,7 +138,6 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
@@ -449,9 +449,7 @@ function getMeshItems(
               // Should not happen due to the disabled property.
               return;
             }
-            return Store.dispatch(
-              proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId),
-            );
+            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
           },
           label: (
             <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
@@ -1138,7 +1136,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(proofreadMergeAction(globalPosition)),
+                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
                 label: (
                   <FastTooltip
                     title={

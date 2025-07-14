@@ -1,8 +1,7 @@
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
-import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
+import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
 import constants from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
 import Dimensions from "../dimensions";
@@ -12,7 +11,7 @@ class BoundingBox {
   min: Vector3;
   max: Vector3;
 
-  constructor(boundingBox: BoundingBoxMinMaxType | null | undefined) {
+  constructor(boundingBox: BoundingBoxType | null | undefined) {
     if (boundingBox == null) {
       this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
       this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
@@ -250,7 +249,7 @@ class BoundingBox {
     return { topLeft: this.min, width: size[0], height: size[1], depth: size[2] };
   }
 
-  toBoundingBoxMinMaxType(): BoundingBoxMinMaxType {
+  toBoundingBoxType(): BoundingBoxType {
     return {
       min: this.min,
       max: this.max,

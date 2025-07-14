@@ -20,7 +20,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTraci
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 
@@ -38,7 +38,7 @@ case class AnnotationWithTracings(
 
   def getSkeleton(tracingId: String): Box[SkeletonTracing] =
     for {
-      tracingEither <- tracingsById.get(tracingId)
+      tracingEither <- Box(tracingsById.get(tracingId))
       skeletonTracing <- tracingEither match {
         case Left(SkeletonTracingWithUpdatedTreeIds(skeletonTracing, _)) => Full(skeletonTracing)
         case _                                                           => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
@@ -53,7 +53,7 @@ case class AnnotationWithTracings(
 
   def getUpdatedTreeBodyIdsForSkeleton(tracingId: String): Box[Set[Int]] =
     for {
-      tracingEither <- tracingsById.get(tracingId)
+      tracingEither <- Box(tracingsById.get(tracingId))
       updatedTreeIds <- tracingEither match {
         case Left(SkeletonTracingWithUpdatedTreeIds(_, updatedTreeIds)) => Full(updatedTreeIds)
         case _                                                          => Failure(f"Tried to access tracing $tracingId as skeleton to access updated tree ids, but is volume")
@@ -68,7 +68,7 @@ case class AnnotationWithTracings(
 
   def getVolume(tracingId: String): Box[VolumeTracing] =
     for {
-      tracingEither <- tracingsById.get(tracingId)
+      tracingEither <- Box(tracingsById.get(tracingId))
       volumeTracing <- tracingEither match {
         case Right(vt: VolumeTracing) => Full(vt)
         case _                        => Failure(f"Tried to access tracing $tracingId as volume, but is skeleton")

@@ -415,7 +415,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.tos_check_required":
     "Unfortunately, we cannot provide the service without your consent to our terms of service.",
-  "auth.reset_logout": "You will be logged out, after successfully changing your password.",
+  "auth.reset_logout": "You will be logged out after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
   "auth.reset_new_password2": "Please repeat your new password!",
@@ -503,4 +503,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
   "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
     `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
+  "jobs.wrongNumberOfBoundingBoxes":
+    "To use the split/merger evaluation, make sure to have exactly one bounding box, either user-defined or from a task.",
 };

@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full, ParamFailure}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -87,8 +87,7 @@ object Fox extends FoxImplicits {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure
         case _ =>
-          Full(
-            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList)
+          Full(results.map(_.getOrThrow("An exception should never be thrown, all boxes must be full")).toList)
       }
     })
 
@@ -251,7 +250,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     })
 
   def getOrElse[B >: A](b: => B): Future[B] =
-    futureBox.map(_.getOrElse(b))
+    futureBox.map(_.toOption.getOrElse(b))
 
   def flatten[B](implicit ev: A <:< Fox[B]): Fox[B] =
     new Fox(futureBox.flatMap {
@@ -286,7 +285,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     futureBox.onComplete { t: Try[Box[A]] =>
       t match {
         case Success(resultBox)    => f(resultBox)
-        case scala.util.Failure(e) => f(Failure(e.toString, Some(e), None))
+        case scala.util.Failure(e) => f(Failure(e.toString, Full(e), Empty))
       }
     }
 
@@ -303,7 +302,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     for {
       box: Box[A] <- this.futureBox
     } yield {
-      box.openOrThrowException(justification)
+      box.getOrThrow(justification)
     }
 
   def toFutureWithEmptyToFailure: Future[A] =
@@ -323,7 +322,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   @deprecated(message = "Do not use this in production code", since = "forever")
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
     val box = await(justification, awaitTimeout)
-    box.openOrThrowException(justification)
+    box.getOrThrow(justification)
   }
 
   /**

@@ -1,7 +1,7 @@
 # API versioning is handled here. Higher-Priority routes first
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
-# Note: keep this in sync with the reported version numbers in the utils.ApiVersioning trait
+# Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log:updateDatasetV8
  # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a dataset id instead of a name and organization id tuple.

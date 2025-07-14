@@ -1,7 +1,6 @@
 import {
   BarChartOutlined,
   BellOutlined,
-  CheckOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -36,7 +35,6 @@ import {
   sendAnalyticsEvent,
   switchToOrganization,
   updateNovelUserExperienceInfos,
-  updateSelectedThemeOfUser,
 } from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
@@ -50,20 +48,14 @@ import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import { getAntdTheme, getSystemColorTheme } from "theme";
-import type {
-  APIOrganizationCompact,
-  APIUser,
-  APIUserCompact,
-  APIUserTheme,
-} from "types/api_types";
+import { getAntdTheme } from "theme";
+import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
   isAnnotationFromDifferentOrganization,
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -208,34 +200,34 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
     ? [
-        { key: "/users", label: <Link to="/users">Users</Link> },
-        { key: "/teams", label: <Link to="/teams">Teams</Link> },
-        {
-          key: "/projects",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/projects">Projects</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/tasks",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/tasks">Tasks</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/taskTypes",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/taskTypes">Task Types</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
-      ]
+      { key: "/users", label: <Link to="/users">Users</Link> },
+      { key: "/teams", label: <Link to="/teams">Teams</Link> },
+      {
+        key: "/projects",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/projects">Projects</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/tasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/tasks">Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/taskTypes",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/taskTypes">Task Types</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+    ]
     : [];
 
   if (features().jobsEnabled)
@@ -360,13 +352,13 @@ function getHelpSubMenu(
     },
     (!discussionBoardRequiresAdmin || isAdminOrManager) && discussionBoard !== false
       ? {
-          key: "discussion-board",
-          label: (
-            <a href={discussionBoard} target="_blank" rel="noreferrer noopener">
-              Community Support
-            </a>
-          ),
-        }
+        key: "discussion-board",
+        label: (
+          <a href={discussionBoard} target="_blank" rel="noreferrer noopener">
+            Community Support
+          </a>
+        ),
+      }
       : null,
     {
       key: "frontend-api",
@@ -488,7 +480,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
+      // Setting the target lazily, to finally let olvy load the "what's new" modal, as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
@@ -573,7 +565,7 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
   const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
@@ -593,30 +585,20 @@ function LoggedInAvatar({
     }
   };
 
-  const setSelectedTheme = async (newTheme: APIUserTheme) => {
-    if (newTheme === "auto") newTheme = getSystemColorTheme();
-
-    if (selectedTheme !== newTheme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
-      Store.dispatch(setThemeAction(newTheme));
-      Store.dispatch(setActiveUserAction(newUser));
-    }
-  };
-
   const maybeOrganizationFilterInput =
     switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
       ? [
-          {
-            key: "input",
-            label: (
-              <OrganizationFilterInput
-                onChange={onChangeOrganizationFilter}
-                isVisible={openKeys.includes("switch-organization")}
-                onPressEnter={onEnterOrganization}
-              />
-            ),
-          },
-        ]
+        {
+          key: "input",
+          label: (
+            <OrganizationFilterInput
+              onChange={onChangeOrganizationFilter}
+              isVisible={openKeys.includes("switch-organization")}
+              onPressEnter={onEnterOrganization}
+            />
+          ),
+        },
+      ]
       : [];
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -650,54 +632,34 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
+            {
+              type: "divider",
+            },
+            {
+              key: "account",
+              label: <Link to="/account">Account Settings</Link>,
+            },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
-                  key: "manage-organization",
-                  label: (
-                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
-                  ),
-                }
+                key: "manage-organization",
+                label: <Link to={"/organization/overview"}>Organization Settings</Link>,
+              }
               : null,
             isMultiMember
               ? {
-                  key: "switch-organization",
-                  label: "Switch Organization",
-                  popupClassName: "organization-switch-menu",
-                  children: [
-                    ...maybeOrganizationFilterInput,
-                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.id,
-                      onClick: () => switchTo(org),
-                      label: org.name || org.id,
-                    })),
-                  ],
-                }
+                key: "switch-organization",
+                label: "Switch Organization",
+                popupClassName: "organization-switch-menu",
+                children: [
+                  ...maybeOrganizationFilterInput,
+                  ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                    key: org.id,
+                    onClick: () => switchTo(org),
+                    label: org.name || org.id,
+                  })),
+                ],
+              }
               : null,
-            {
-              key: "resetpassword",
-              label: <Link to="/auth/changePassword">Change Password</Link>,
-            },
-            { key: "changeEmail", label: <Link to="/auth/changeEmail">Change Email</Link> },
-            { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
-            {
-              key: "theme",
-              label: "Theme",
-              children: [
-                ["auto", "System-default"],
-                ["light", "Light"],
-                ["dark", "Dark"],
-              ].map(([key, label]) => {
-                return {
-                  key,
-                  label: label,
-                  icon: selectedTheme === key ? <CheckOutlined /> : null,
-                  onClick: () => {
-                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-                    setSelectedTheme(key);
-                  },
-                };
-              }),
-            },
             {
               key: "logout",
               label: (

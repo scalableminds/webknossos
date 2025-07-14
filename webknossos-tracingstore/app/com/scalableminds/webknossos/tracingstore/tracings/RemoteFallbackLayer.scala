@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 

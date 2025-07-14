@@ -2,6 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation._
 import models.task.TaskDAO
@@ -9,14 +10,19 @@ import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import models.project.ProjectDAO
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
-class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
-                                       annotationDAO: AnnotationDAO,
-                                       userService: UserService,
-                                       annotationMerger: AnnotationMerger,
-                                       projectDAO: ProjectDAO)(implicit val ec: ExecutionContext)
+class TaskInformationHandler @Inject()(
+    taskDAO: TaskDAO,
+    annotationDAO: AnnotationDAO,
+    userService: UserService,
+    annotationMerger: AnnotationMerger,
+    projectDAO: ProjectDAO,
+    val datasetService: DatasetService,
+    val datasetDAO: DatasetDAO,
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with FoxImplicits {
 
@@ -31,13 +37,16 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       user <- userOpt.toFox ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
+      _ <- registerDataSourceInTemporaryStore(taskId, datasetId)
+      taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(task._id,
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   project._team,
                                                   AnnotationType.CompoundTask,
-                                                  finishedAnnotations) ?~> "annotation.merge.failed.compound"
+                                                  finishedAnnotations,
+                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

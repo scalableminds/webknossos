@@ -7,13 +7,8 @@ import _ from "lodash";
 
 import * as THREE from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
-import type {
-  BoundingBoxType,
-  OrthoView,
-  OrthoViewMap,
-  OrthoViewWithoutTDMap,
-  Vector3,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import constants, {
   OrthoViews,
   OrthoViewValuesWithoutTDView,
@@ -325,7 +320,7 @@ class SceneController {
   }
 
   updateTaskBoundingBoxes(
-    taskCubeByTracingId: Record<string, BoundingBoxType | null | undefined>,
+    taskCubeByTracingId: Record<string, BoundingBoxMinMaxType | null | undefined>,
   ): void {
     /*
      Ensures that a green task bounding box is rendered in the scene for
@@ -334,13 +329,18 @@ class SceneController {
      adding a new one. Since this function is executed very rarely,
      this is not a performance problem.
      */
-    for (const [tracingId, boundingBox] of Object.entries(taskCubeByTracingId)) {
+
+    // Clean up old entries
+    for (const [tracingId, _boundingBox] of Object.entries(this.taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
-      // Remove the old box if it exists
       if (taskCube != null) {
         taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
       }
       this.taskCubeByTracingId[tracingId] = null;
+    }
+    // Add new entries
+    for (const [tracingId, boundingBox] of Object.entries(taskCubeByTracingId)) {
+      let taskCube = this.taskCubeByTracingId[tracingId];
       if (boundingBox == null || Store.getState().task == null) {
         continue;
       }
@@ -733,7 +733,7 @@ class SceneController {
         this.updateMeshesAccordingToLayerVisibility(),
       ),
       listenToStoreProperty(
-        (storeState) => getTaskBoundingBoxes(storeState.annotation),
+        (storeState) => getTaskBoundingBoxes(storeState),
         (boundingBoxesByTracingId) => this.updateTaskBoundingBoxes(boundingBoxesByTracingId),
         true,
       ),

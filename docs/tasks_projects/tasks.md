@@ -10,6 +10,39 @@ First, a _Task Type_ needs to be created:
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](../users/organizations.md).
+   - Take a look at the additional settings to configure the new _Task&nbsp;Type_:
+
+??? settings
+      | Display Name                              | Key                        | Default Value           | Comment                                 |
+      |--------------------------------------------|----------------------------|------------------------|-----------------------------------------|
+      | Clipping Distance                         | `clippingDistance`           | 80                     | orthogonal mode                         |
+      | Move Value (nm/s)                         | `moveValue`                  | 500                    | orthogonal mode                         |
+      | Show Scalebars                            | `displayScalebars`           | false                  |                                         |
+      | Single-node-tree mode (Soma clicking)      | `newNodeNewTree`             | false                  |                                         |
+      | Auto-center Nodes                         | `centerNewNode`              | true                   |                                         |
+      | Plane Display Mode in 3D View              | `tdViewDisplayPlanes`        | WIREFRAME              | NONE or WIREFRAME or DATA               |
+      | Display Dataset Borders in 3D View         | `tdViewDisplayDatasetBorders`| true                   |                                         |
+      | Display Layer Borders in 3D View           | `tdViewDisplayLayerBorders`  | false                  |                                         |
+      | d/f-Switching                             | `dynamicSpaceDirection`      | true                   |                                         |
+      | Highlight Commented Nodes                  | `highlightCommentedNodes`    | false                  |                                         |
+      | Override Node Radius                       | `overrideNodeRadius`         | true                   |                                         |
+      | Particle Size                              | `particleSize`               | 5                      |                                         |
+      | Keyboard delay (ms)                        | `keyboardDelay`              | 0                      |                                         |
+      | Show Crosshairs                            | `displayCrosshair`           | true                   |                                         |
+      | Classic Controls                           | `useLegacyBindings`          | false                  |                                         |
+      | 4 Bit                                      | `fourBit`                    | false                  |                                         |
+      | Interpolation                              | `interpolation`              | true                   |                                         |
+      | Segmentation Opacity                       | `segmentationOpacity`        | 0                      |                                         |
+      | Pattern Opacity                            | `segmentationPatternOpacity` | 40                     |                                         |
+      | Zoom                                       | `zoom`                       | 0.8                    |                                         |
+      | Render Missing Data Black                  | `renderMissingDataBlack`     | false                  |                                         |
+      | Loading Strategy                           | `loadingStrategy`            | BEST_QUALITY_FIRST     | BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY|
+      | Clipping Distance                          | `clippingDistanceArbitrary`  | 60                     | flight/oblique mode                     |
+      | Move Value (nm/s)                          | `moveValue3d`                | 600                    | flight/oblique mode                     |
+      | Mouse Rotation                             | `mouseRotateValue`           | 0.001                  |                                         |
+      | Keyboard Rotation                          | `rotateValue`                | 0.01                   |                                         |
+      | Sphere Radius                              | `sphericalCapRadius`         | 500                    |                                         |
+      | Brush Size                                 | `brushSize`                  | 50                     |                                         |
 
 ![Create a Task Type](../images/tasks_tasktype.jpeg)
 

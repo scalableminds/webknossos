@@ -2359,6 +2359,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/query-async-storage-persister@npm:^5.83.0":
+  version: 5.83.0
+  resolution: "@tanstack/query-async-storage-persister@npm:5.83.0"
+  dependencies:
+    "@tanstack/query-persist-client-core": "npm:5.83.0"
+  checksum: 10c0/c6de0ed54a9e17ccf1c1715847bb46dfd23f63f1ef0fb02d3b57f51527b6907a6e918e4751e51f5972681fec006b428f77b85e06edd8e00f1785b5c23b538eb4
+  languageName: node
+  linkType: hard
+
 "@tanstack/query-core@npm:5.83.0":
   version: 5.83.0
   resolution: "@tanstack/query-core@npm:5.83.0"
@@ -2375,17 +2384,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/query-sync-storage-persister@npm:^5.0.0":
-  version: 5.83.0
-  resolution: "@tanstack/query-sync-storage-persister@npm:5.83.0"
-  dependencies:
-    "@tanstack/query-core": "npm:5.83.0"
-    "@tanstack/query-persist-client-core": "npm:5.83.0"
-  checksum: 10c0/c6c149b8d7e689b599c96a6af341db8e4b913ec6c86a3516521be9b0009e28c918710143330c78a63567af62805d7bee3e596c3c21562dc5194760cd96215b7c
-  languageName: node
-  linkType: hard
-
-"@tanstack/react-query-persist-client@npm:^5.0.0":
+"@tanstack/react-query-persist-client@npm:^5.83.0":
   version: 5.83.0
   resolution: "@tanstack/react-query-persist-client@npm:5.83.0"
   dependencies:
@@ -2397,7 +2396,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/react-query@npm:^5.0.0":
+"@tanstack/react-query@npm:^5.83.0":
   version: 5.83.0
   resolution: "@tanstack/react-query@npm:5.83.0"
   dependencies:
@@ -14867,9 +14866,9 @@ __metadata:
     "@rehooks/document-title": "npm:^1.0.2"
     "@scalableminds/prop-types": "npm:^15.8.1"
     "@shaderfrog/glsl-parser": "npm:^0.3.0"
-    "@tanstack/query-sync-storage-persister": "npm:^5.0.0"
-    "@tanstack/react-query": "npm:^5.0.0"
-    "@tanstack/react-query-persist-client": "npm:^5.0.0"
+    "@tanstack/query-async-storage-persister": "npm:^5.83.0"
+    "@tanstack/react-query": "npm:^5.83.0"
+    "@tanstack/react-query-persist-client": "npm:^5.83.0"
     "@types/color-hash": "npm:^1.0.2"
     "@types/cwise": "npm:^1.0.4"
     "@types/dagre": "npm:^0.7.48"

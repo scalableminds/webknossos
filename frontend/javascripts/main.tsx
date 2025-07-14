@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
 import UnthrottledStore, { startSaga } from "viewer/store";
 
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { checkAnyOrganizationExists, getActiveUser, getOrganization } from "admin/rest_api";
@@ -41,12 +41,12 @@ startSaga(warnIfEmailIsUnverified);
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: Number.POSITIVE_INFINITY,
+      gcTime: Number.POSITIVE_INFINITY,
     },
   },
 });
 
-const localStoragePersister = createSyncStoragePersister({
+const localStoragePersister = createAsyncStoragePersister({
   storage: UserLocalStorage,
   serialize: (data) => compress(JSON.stringify(data)),
   deserialize: (data) => JSON.parse(decompress(data) || "{}"),

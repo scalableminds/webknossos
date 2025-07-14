@@ -275,6 +275,9 @@ function sliceBufferIntoPieces(
   missingBuckets: Array<number>,
   buffer: Uint8Array<ArrayBuffer>,
 ): Array<Uint8Array<ArrayBuffer> | null | undefined> {
+  // if (Math.random() < 0.5) {
+  //   buffer = buffer.subarray(1, buffer.length - 1);
+  // }
   const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
   const availableBucketCount = batch.length - missingBuckets.length;
   const expectedTotalByteLength = availableBucketCount * BUCKET_BYTE_LENGTH;

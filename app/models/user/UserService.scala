@@ -13,8 +13,8 @@ import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team._
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._

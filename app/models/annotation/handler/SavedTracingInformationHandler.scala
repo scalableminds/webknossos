@@ -7,21 +7,24 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.annotation._
-import models.dataset.DatasetDAO
+import models.dataset.{DatasetDAO, DatasetService}
 import models.user.{User, UserService}
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
-                                               datasetDAO: DatasetDAO,
-                                               annotationRestrictionDefults: AnnotationRestrictionDefaults,
-                                               userService: UserService)(implicit val ec: ExecutionContext)
+class SavedTracingInformationHandler @Inject()(
+    annotationDAO: AnnotationDAO,
+    annotationRestrictionDefults: AnnotationRestrictionDefaults,
+    userService: UserService,
+    val datasetService: DatasetService,
+    val datasetDAO: DatasetDAO,
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with Formatter
     with FoxImplicits {
 
-  override val cache = false
+  override val useCache = false
 
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {

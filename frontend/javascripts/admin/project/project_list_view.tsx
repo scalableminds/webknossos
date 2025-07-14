@@ -28,35 +28,28 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 import {
   type APIProject,
   type APIProjectWithStatus,
-  type APIUser,
   type APIUserBase,
   TracingTypeEnum,
 } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;
 
-type OwnProps = {
+type Props = {
   initialSearchValue?: string;
   taskTypeId?: string;
 };
-type StateProps = {
-  activeUser: APIUser;
-};
-type Props = OwnProps & StateProps;
 
 const persistence = new Persistence<{ searchQuery: string }>(
   {
@@ -65,9 +58,10 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "projectList",
 );
 
-function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) {
+function ProjectListView({ initialSearchValue, taskTypeId }: Props) {
   const { modal } = App.useApp();
 
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<APIProjectWithStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -388,10 +382,10 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                 <span>
                   <Link
                     to={`/annotations/CompoundProject/${project.id}`}
-                    title="View all Finished Annotations"
+                    title="Show Compound Annotation of All Finished Annotations"
                   >
                     <EyeOutlined className="icon-margin-right" />
-                    View
+                    View Merged
                   </Link>
                   <br />
                   <Link to={`/projects/${project.id}/edit`} title="Edit Project">
@@ -429,7 +423,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                   <br />
                   <a
                     onClick={_.partial(increaseProjectTaskInstances, project)}
-                    title="Increase Task instances"
+                    title="Increase Task Instances"
                   >
                     <PlusSquareOutlined className="icon-margin-right" />
                     Increase Instances
@@ -441,7 +435,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
                       maybeShowNoFallbackDataInfo(project.id);
                       await downloadAnnotation(project.id, "CompoundProject");
                     }}
-                    title="Download all Finished Annotations"
+                    title="Download All Finished Annotations"
                     icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
                   >
                     Download
@@ -475,9 +469,4 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(ProjectListView);
+export default ProjectListView;

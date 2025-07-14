@@ -31,7 +31,7 @@ class Zarr3TestSuite extends PlaySpec {
           "node_type":"array"}""".stripMargin
 
       "read correct basic header data" in {
-        val header = JsonHelper.parseAs[Zarr3ArrayHeader](zarr3json).openOrThrowException("test execution")
+        val header = JsonHelper.parseAs[Zarr3ArrayHeader](zarr3json).getOrThrow("test execution")
         assert(header.shape.sameElements(Seq(64, 64, 64)))
         assert(header.data_type.left.getOrElse("notUint8") == "uint8")
         assert(header.zarr_format == 3)
@@ -40,7 +40,7 @@ class Zarr3TestSuite extends PlaySpec {
       }
 
       "parse basic codecs" in {
-        val header = JsonHelper.parseAs[Zarr3ArrayHeader](zarr3json).openOrThrowException("test execution")
+        val header = JsonHelper.parseAs[Zarr3ArrayHeader](zarr3json).getOrThrow("test execution")
         assert(header.codecs.length == 2)
         assert(header.codecs(0).isInstanceOf[BytesCodecConfiguration])
         assert(header.codecs(1).isInstanceOf[BloscCodecConfiguration])

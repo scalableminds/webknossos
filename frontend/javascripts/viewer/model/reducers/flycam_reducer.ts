@@ -305,15 +305,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         // if the action vector is invalid, do not update
         return state;
       }
-      console.log("translating by ", [...action.vector]);
-      console.log("prev pos", [
-        state.flycam.currentMatrix[12],
-        state.flycam.currentMatrix[13],
-        state.flycam.currentMatrix[14],
-      ]);
       const newMatrix = M4x4.translate(action.vector, state.flycam.currentMatrix, []);
-      console.log("after pos", [newMatrix[12], newMatrix[13], newMatrix[14]]);
-      // TODO: Check whether the output is correct. Else maybe use the move reducer!
       return update(state, {
         flycam: {
           currentMatrix: {

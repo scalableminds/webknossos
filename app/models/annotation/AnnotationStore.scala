@@ -25,7 +25,7 @@ class AnnotationStore @Inject()(
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
-    if (handler.cache) {
+    if (handler.useCache) {
       val cached = getFromCache(id)
       cached
     } else
@@ -37,7 +37,7 @@ class AnnotationStore @Inject()(
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)
     } yield {
-      if (handler.cache) {
+      if (handler.useCache) {
         storeInCache(id, annotation)
       }
       annotation
@@ -60,4 +60,6 @@ class AnnotationStore @Inject()(
       case None             => Empty
     }
   }
+
+  def removeFromCache(id: AnnotationIdentifier): Unit = temporaryAnnotationStore.remove(id.toUniqueString)
 }

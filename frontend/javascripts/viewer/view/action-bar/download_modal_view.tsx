@@ -42,7 +42,8 @@ import {
   type AdditionalAxis,
   type VoxelSize,
 } from "types/api_types";
-import type { BoundingBoxType, Vector3 } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import {
   getByteCountFromLayer,
   getDataLayers,
@@ -123,7 +124,7 @@ function getExportLayerInfos(
   };
 }
 
-export function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vector3) {
+export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag: Vector3) {
   const shape = computeShapeFromBoundingBox(boundingBox);
   const volume =
     Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]);
@@ -164,7 +165,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxType, mag: Vecto
 function estimateFileSize(
   selectedLayer: APIDataLayer,
   mag: Vector3,
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBoxMinMaxType,
   exportFormat: ExportFormat,
 ) {
   const shape = computeShapeFromBoundingBox(boundingBox);

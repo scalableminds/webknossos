@@ -8,6 +8,7 @@ import {
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
+import window from "libs/window";
 import _ from "lodash";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -68,14 +69,14 @@ import {
   type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,
   splitAgglomerate,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { Model, Store, api } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
-import { getCurrentMag } from "../accessors/flycam_accessor";
-import type { Action } from "../actions/actions";
-import type { Tree } from "../types/tree_types";
-import { ensureWkReady } from "./ready_sagas";
-import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "./saga_helpers";
+import { getCurrentMag } from "../../accessors/flycam_accessor";
+import type { Action } from "../../actions/actions";
+import type { Tree } from "../../types/tree_types";
+import { ensureWkReady } from "../ready_sagas";
+import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -396,16 +397,12 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         volumeTracingId,
       ),
     );
-    const mergedMapping = yield* call(
-      mergeAgglomeratesInMapping,
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
       activeMapping,
-      targetAgglomerateId,
       sourceAgglomerateId,
-    );
-    yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: mergedMapping,
-      }),
+      targetAgglomerateId,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -536,12 +533,19 @@ function* performMinCut(
     editableMappingId: volumeTracingId,
   };
 
-  const edgesToRemove = yield* call(
-    getEdgesForAgglomerateMinCut,
-    tracingStoreUrl,
-    volumeTracingId,
-    segmentsInfo,
-  );
+  let edgesToRemove;
+  try {
+    edgesToRemove = yield* call(
+      getEdgesForAgglomerateMinCut,
+      tracingStoreUrl,
+      volumeTracingId,
+      segmentsInfo,
+    );
+  } catch (exception) {
+    console.error(exception);
+    Toast.error("Could not determine which edges to delete for cut. Please try again.");
+    return true;
+  }
 
   // Use untransformedPosition below because agglomerate trees should not have
   // any transforms, anyway.
@@ -601,12 +605,19 @@ function* performCutFromNeighbors(
     editableMappingId: volumeTracingId,
   };
 
-  const neighborInfo = yield* call(
-    getNeighborsForAgglomerateNode,
-    tracingStoreUrl,
-    volumeTracingId,
-    segmentsInfo,
-  );
+  let neighborInfo;
+  try {
+    neighborInfo = yield* call(
+      getNeighborsForAgglomerateNode,
+      tracingStoreUrl,
+      volumeTracingId,
+      segmentsInfo,
+    );
+  } catch (exception) {
+    console.error(exception);
+    Toast.error("Could not load neighbors of agglomerate node. Please try again.");
+    return { didCancel: true };
+  }
 
   const edgesToRemove: Array<
     | {
@@ -702,6 +713,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const idInfos = yield* call(gatherInfoForOperation, action, preparation);
 
   if (idInfos == null) {
+    console.warn("[Proofreading] Could not gather id infos.");
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
@@ -741,17 +753,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
     );
-    const mergedMapping = yield* call(
-      mergeAgglomeratesInMapping,
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
       activeMapping,
-      targetAgglomerateId,
       sourceAgglomerateId,
-    );
-
-    yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: mergedMapping,
-      }),
+      targetAgglomerateId,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -1119,7 +1126,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
   );
 
   if (activeMapping.mapping == null) {
-    Toast.error("Mapping is not available, cannot proofread.");
+    Toast.error("Active mapping is not available, cannot proofread.");
     return null;
   }
 
@@ -1249,10 +1256,9 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
   return position;
 }
 
-function* splitAgglomerateInMapping(
+function getSegmentIdsThatMapToAgglomerate(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
-  volumeTracingId: string,
 ) {
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
@@ -1264,10 +1270,17 @@ function* splitAgglomerateInMapping(
 
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
-  const splitSegmentIds = mappingEntries
+  return mappingEntries
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
+}
 
+function* splitAgglomerateInMapping(
+  activeMapping: ActiveMappingInfo,
+  sourceAgglomerateId: number,
+  volumeTracingId: string,
+) {
+  const splitSegmentIds = getSegmentIdsThatMapToAgglomerate(activeMapping, sourceAgglomerateId);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
@@ -1292,13 +1305,14 @@ function* splitAgglomerateInMapping(
       return [segmentId, agglomerateId];
     }),
   ) as Mapping;
+
   return splitMapping;
 }
 
 function mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  targetAgglomerateId: number,
   sourceAgglomerateId: number,
+  targetAgglomerateId: number,
 ): Mapping {
   const adaptToType =
     activeMapping.mapping && isNumberMap(activeMapping.mapping)
@@ -1314,6 +1328,60 @@ function mergeAgglomeratesInMapping(
   ) as Mapping;
 }
 
+export function* updateMappingWithMerge(
+  volumeTracingId: string,
+  activeMapping: ActiveMappingInfo,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
+) {
+  const mergedMapping = yield* call(
+    mergeAgglomeratesInMapping,
+    activeMapping,
+    sourceAgglomerateId,
+    targetAgglomerateId,
+  );
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: mergedMapping,
+    }),
+  );
+}
+
+export function* removeAgglomerateFromActiveMapping(
+  volumeTracingId: string,
+  activeMapping: ActiveMappingInfo,
+  agglomerateId: number,
+) {
+  /*
+   * This function removes all super-voxels segments from the active mapping
+   * that map to the specified agglomerateId.
+   */
+
+  const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
+
+  const adaptToType =
+    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
+      ? (el: number) => BigInt(el)
+      : (el: number) => el;
+  // If the mapping contains BigInts, we need a BigInt for the filtering
+  const comparableSourceAgglomerateId = adaptToType(agglomerateId);
+
+  const newMapping = new Map();
+
+  for (const entry of mappingEntries) {
+    const [key, value] = entry;
+    if (value !== comparableSourceAgglomerateId) {
+      newMapping.set(key, value);
+    }
+  }
+
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: newMapping,
+    }),
+  );
+}
+
 function* gatherInfoForOperation(
   action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
   preparation: Preparation,
@@ -1324,13 +1392,22 @@ function* gatherInfoForOperation(
 }> | null> {
   const { volumeTracing } = preparation;
   const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
-  if (activeCellId === 0) return null;
+  if (activeCellId === 0) {
+    console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
+    return null;
+  }
 
   const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
   const activeSegment = segments.getNullable(activeCellId);
-  if (activeSegment == null) return null;
+  if (activeSegment == null) {
+    console.warn("[Proofreading] Cannot execute operation because no active segment item exists");
+    return null;
+  }
   const activeSegmentPositionFloat = activeSegment.somePosition;
-  if (activeSegmentPositionFloat == null) return null;
+  if (activeSegmentPositionFloat == null) {
+    console.warn("[Proofreading] Cannot execute operation because active segment has no position");
+    return null;
+  }
 
   const activeSegmentPosition = V3.floor(activeSegmentPositionFloat);
 
@@ -1354,6 +1431,9 @@ function* gatherInfoForOperation(
       targetPosition,
     ]);
     if (idInfos == null) {
+      console.warn(
+        "[Proofreading] Cannot execute operation because agglomerate infos couldn't be determined for source and target position.",
+      );
       return null;
     }
     const [idInfo1, idInfo2] = idInfos;

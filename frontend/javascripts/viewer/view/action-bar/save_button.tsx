@@ -11,7 +11,7 @@ import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { Model, Store } from "viewer/singletons";
@@ -92,15 +92,13 @@ function SaveButton() {
     };
   }, [_forceUpdate]);
 
-  const getSaveButtonIcon = useMemo(() => {
-    if (isStateSaved) {
-      return <CheckOutlined />;
-    } else if (isBusy) {
-      return <LoadingOutlined />;
-    } else {
-      return <HourglassOutlined />;
-    }
-  }, [isStateSaved, isBusy]);
+  const saveButtonIcon = isStateSaved ? (
+    <CheckOutlined />
+  ) : isBusy ? (
+    <LoadingOutlined />
+  ) : (
+    <HourglassOutlined />
+  );
 
   const shouldShowProgress = isBusy && progressFraction != null;
 
@@ -113,7 +111,7 @@ function SaveButton() {
       key="save-button"
       type="primary"
       onClick={handleSave}
-      icon={getSaveButtonIcon}
+      icon={saveButtonIcon}
       className="narrow"
       style={{
         background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,

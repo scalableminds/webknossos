@@ -358,7 +358,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const { agglomerateFileMag, getDataValue, activeMapping, volumeTracing } = preparation;
+  let { agglomerateFileMag, getDataValue, activeMapping, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   // Use untransformedPosition because agglomerate trees should not have
@@ -395,8 +395,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -427,6 +427,22 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
+
+  activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+  );
+
+  if (action.type === "MERGE_TREES") {
+    console.log("Calling updateMappingWithMerge again after saving was done.");
+    // During saving, newer versions might have been pulled from the server.
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
+      activeMapping,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
+    );
+  }
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -678,7 +694,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, volumeTracing, activeMapping } = preparation;
+  let { agglomerateFileMag, volumeTracing, activeMapping } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
   const idInfos = yield* call(gatherInfoForOperation, action, preparation);
 
@@ -695,7 +711,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateActionWithoutIsolationRequirement[] = [];
+  const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
     if (sourceAgglomerateId === targetAgglomerateId) {
@@ -703,7 +719,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
+    updateActions.push(
+      mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId),
+    );
 
     console.log(
       "Merging agglomerate",
@@ -718,8 +736,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -737,19 +755,35 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       agglomerateFileMag,
       volumeTracingId,
       null,
-      items,
+      updateActions,
     );
     if (hasErrored) {
       return;
     }
   }
 
-  if (items.length === 0) {
+  if (updateActions.length === 0) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items));
+  yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
+
+  activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+  );
+
+  if (action.type === "PROOFREAD_MERGE") {
+    console.log("Calling updateMappingWithMerge again after saving was done.");
+    // During saving, newer versions might have been pulled from the server.
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
+      activeMapping,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
+    );
+  }
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
@@ -890,7 +924,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateActionWithoutIsolationRequirement[] = [];
+  const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   const { didCancel, neighborInfo } = yield* call(
     performCutFromNeighbors,
@@ -900,13 +934,13 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     agglomerateFileMag,
     volumeTracingId,
     action.tree,
-    items,
+    updateActions,
   );
-  if (didCancel || items.length === 0) {
+  if (didCancel || updateActions.length === 0) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items));
+  yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
@@ -1272,19 +1306,43 @@ function* splitAgglomerateInMapping(
 
 function mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceUnmappedId: number,
+  targetUnmappedId: number,
 ): Mapping {
   const adaptToType =
     activeMapping.mapping && isNumberMap(activeMapping.mapping)
       ? (el: number) => el
       : (el: number) => BigInt(el);
 
-  const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
-  const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
+    adaptToType(sourceUnmappedId),
+  );
+  const targetAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
+    adaptToType(targetUnmappedId),
+  );
+  console.log(
+    "Updating local mapping by merging segments",
+    sourceUnmappedId,
+    "and",
+    targetUnmappedId,
+    "(sourceAgglomerateId: ",
+    sourceAgglomerateId,
+    "targetAgglomerateId: ",
+    targetAgglomerateId,
+    ")",
+  );
+
+  if (
+    sourceAgglomerateId === targetAgglomerateId ||
+    sourceAgglomerateId == null ||
+    targetAgglomerateId == null
+  ) {
+    return activeMapping.mapping as Mapping;
+  }
+
   return new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
-      value === typedTargetAgglomerateId ? [key, typedSourceAgglomerateId] : [key, value],
+      value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
     ),
   ) as Mapping;
 }
@@ -1292,15 +1350,37 @@ function mergeAgglomeratesInMapping(
 export function* updateMappingWithMerge(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
+  sourceUnmappedId: number,
+  targetUnmappedId: number,
 ) {
+  // todop: the agglomerate ids might be outdated?
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
     activeMapping,
-    sourceAgglomerateId,
-    targetAgglomerateId,
+    sourceUnmappedId,
+    targetUnmappedId,
   );
+  if (mergedMapping === activeMapping.mapping) {
+    /* todop: in case setMappingAction is called with the same mapping
+     * as already active, the reducer will set the state to ACTIVATING
+     * but the listenToStoreProperty handler in mappings.ts will never be
+     * triggered, because the callback is only called if the identity of the
+     * watched property changes.
+     * three possible solutions:
+     *   a) avoid dispatching setMappingAction when the mapping did not change
+     *      (this is the current solution here) .
+     *   b) Don't set the state to activating in the reducer if the mapping identity,
+     *      did not change.
+     *      (I feel like this makes the logic that controls the lifecycle of the mapping status
+     *      more complicated?)
+     *   c) Refactor the mappings.ts code so that it reacts to all setMapping actions.
+     *      (for example, this could happen in a saga. this would also solve the problem
+     *      that the mapping_saga currently dispatches finishMappingInitializationAction
+     *      when IS_TESTING is true).
+     *      <-- my favorite
+     */
+    return;
+  }
   yield* put(
     setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
       mapping: mergedMapping,

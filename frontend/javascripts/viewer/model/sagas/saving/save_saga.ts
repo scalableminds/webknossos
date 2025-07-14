@@ -324,12 +324,15 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
+          // todop: segmentId1 and segmentId2 might not exist in the local mapping. this does not
+          // mean that the action can be ignored, though, because the agglomerates themselves might
+          // exist. we need to map the ids and find out whether these exist in the mapping.
           // yield* call(
           //   updateMappingWithMerge,
           //   action.value.actionTracingId,
           //   activeMapping,
-          //   action.value.agglomerateId1,
-          //   action.value.agglomerateId2,
+          //   action.value.segmentId1,
+          //   action.value.segmentId2,
           // );
           const layerName = action.value.actionTracingId;
           const mappingInfo = yield* select((state) =>

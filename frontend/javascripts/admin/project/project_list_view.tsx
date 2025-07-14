@@ -59,8 +59,8 @@ function ProjectListView() {
   const { modal } = App.useApp();
   const location = useLocation();
   const initialSearchValue = location.hash.slice(1);
-  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
 
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [isLoading, setIsLoading] = useState(true);
   const [projects, setProjects] = useState<APIProjectWithStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState("");

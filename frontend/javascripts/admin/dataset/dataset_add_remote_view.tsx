@@ -60,12 +60,13 @@ type Props = {
   // the exploration and import.
   defaultDatasetUrl?: string | null | undefined;
 };
+
 function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
   for (const layer of datasource.dataLayers) {
     if (layer.category === "color" || layer.largestSegmentId != null) {
       continue;
     }
-    // Make sure the property exists. Otherwise, the field would not be
+    // Make sure the property exists. Otherwise, a field would not be
     // rendered in the form.
     layer.largestSegmentId = null;
   }
@@ -174,10 +175,8 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const { activeUser } = useWkSelector((state) => ({
-    activeUser: state.activeUser,
-  }));
   const { onAdded, datastores, defaultDatasetUrl } = props;
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
   const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;

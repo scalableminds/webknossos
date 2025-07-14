@@ -16,6 +16,7 @@ function ScriptCreateView() {
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
+
   useEffect(() => {
     fetchData();
     applyDefaults();

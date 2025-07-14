@@ -63,7 +63,6 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def loadFullMeshFromAdHoc(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
-      m: MessagesProvider,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"

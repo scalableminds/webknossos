@@ -973,10 +973,10 @@ class VolumeTracingService @Inject()(
       implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
     for {
       dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
-      dataSourceId = dataSource.id
       layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+      datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
       fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
-        RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+        RemoteFallbackLayer.fromDataLayerAndDatasetId(layerWithFallback, datasetId).toFox
       }
     } yield fallbackLayer
 

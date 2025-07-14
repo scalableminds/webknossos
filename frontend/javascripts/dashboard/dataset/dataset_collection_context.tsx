@@ -25,7 +25,7 @@ import {
 
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
-  isLoading: boolean;
+  isPending: boolean;
   isChecking: boolean;
   checkDatasets: () => Promise<void>;
   fetchDatasets: () => void;
@@ -189,10 +189,10 @@ export default function DatasetCollectionContextProvider({
     return folderHierarchyQuery.data?.itemById[activeFolderId ?? ""]?.children || [];
   };
 
-  const isLoading =
+  const isPending =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
-      : folderHierarchyQuery.isLoading ||
+      : folderHierarchyQuery.isPending ||
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
@@ -203,7 +203,7 @@ export default function DatasetCollectionContextProvider({
     () => ({
       supportsFolders: true as const,
       datasets,
-      isLoading,
+      isPending,
       fetchDatasets,
       reloadDataset,
       updateCachedDataset,
@@ -258,7 +258,7 @@ export default function DatasetCollectionContextProvider({
     [
       isChecking,
       datasets,
-      isLoading,
+      isPending,
       showCreateFolderPrompt,
       activeFolderId,
       mostRecentlyUsedActiveFolderId,

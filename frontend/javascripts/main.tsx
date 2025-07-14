@@ -6,8 +6,8 @@ import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
 import UnthrottledStore, { startSaga } from "viewer/store";
 
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { persistQueryClient } from "@tanstack/react-query-persist-client";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { checkAnyOrganizationExists, getActiveUser, getOrganization } from "admin/rest_api";
 import ErrorBoundary from "components/error_boundary";
 import { RootForFastTooltips } from "components/fast_tooltip";
@@ -62,10 +62,6 @@ async function tryToLoadActiveUser() {
     Store.dispatch(setActiveUserAction(user));
     Store.dispatch(setThemeAction(getThemeFromUser(user)));
     ErrorHandling.setCurrentUser(user);
-    persistQueryClient({
-      queryClient: reactQueryClient,
-      persister: localStoragePersister,
-    });
   } catch (_e) {
     // pass
   }
@@ -124,7 +120,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       <ErrorBoundary>
         {/* @ts-ignore */}
         <Provider store={Store}>
-          <QueryClientProvider client={reactQueryClient}>
+          <PersistQueryClientProvider
+            client={reactQueryClient}
+            persistOptions={{ persister: localStoragePersister }}
+          >
             {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
         certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
         The fix is inspired by:
@@ -135,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <Router />
               </GlobalThemeProvider>
             </DndProvider>
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </Provider>
       </ErrorBoundary>,
     );

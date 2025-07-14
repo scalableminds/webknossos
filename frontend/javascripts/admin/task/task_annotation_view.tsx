@@ -23,25 +23,21 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { formatSeconds } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { APIAnnotation, APITask, APIUser } from "types/api_types";
+import type { APIAnnotation, APITask } from "types/api_types";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
-import type { WebknossosState } from "viewer/store";
 
-type OwnProps = {
+type Props = {
   task: APITask;
 };
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-};
-type Props = OwnProps & StateProps;
 
-function TaskAnnotationView({ task, activeUser }: Props) {
+function TaskAnnotationView({ task }: Props) {
   const { modal } = App.useApp();
 
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [currentAnnotation, setCurrentAnnotation] = useState<APIAnnotation | undefined>(undefined);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [annotations, setAnnotations] = useState<APIAnnotation[]>([]);
@@ -231,9 +227,4 @@ function TaskAnnotationView({ task, activeUser }: Props) {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(TaskAnnotationView);
+export default TaskAnnotationView;

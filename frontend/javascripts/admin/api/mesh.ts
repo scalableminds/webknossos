@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import type { APIDataSourceId, APIMeshFileInfo } from "types/api_types";
+import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
 

@@ -101,7 +101,8 @@ export async function requestWithFallback(
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.annotation.tracingStore.url;
 
-  const getDataStoreUrl = (optLayerName?: string) => `${dataStoreHost}/data/datasets/${datasetId}/layers/${optLayerName || layerInfo.name}`;
+  const getDataStoreUrl = (optLayerName?: string) =>
+    `${dataStoreHost}/data/datasets/${datasetId}/layers/${optLayerName || layerInfo.name}`;
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =

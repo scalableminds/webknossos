@@ -81,7 +81,7 @@ function RootLayout() {
 
   return (
     <Layout>
-      {/* TODO: always show command pallete; remove logic from router
+      {/* TODO: always show command palette; remove logic from router
       within tracing view, the command palette is rendered in the status bar. */}
       {isAuthenticated && isAdminView && <CommandPalette label={null} />}
       <Navbar isAuthenticated={isAuthenticated} />

@@ -80,6 +80,20 @@ describe("Flycam", () => {
     equalWithEpsilon(getPosition(newState.flycam), [-2, -4, 6]);
   });
 
+  it("should move the flycam absolute without taking base rotation into account", () => {
+    const moveAction = FlycamActions.moveFlycamAbsoluteAction([1, 2, 3]);
+    const newState = FlycamReducer(initialState, moveAction);
+    // The absolute action should move the flycam without taking the rotation into account. So no invert.
+    equalWithEpsilon(getPosition(newState.flycam), [1, 2, 3]);
+  });
+
+  it("should move the flycam absolute backwards without taking base rotation into account", () => {
+    const moveAction = FlycamActions.moveFlycamAbsoluteAction([-1, -2, -3]);
+    const newState = FlycamReducer(initialState, moveAction);
+    // The absolute action should move the flycam without taking the rotation into account. So no invert.
+    equalWithEpsilon(getPosition(newState.flycam), [-1, -2, -3]);
+  });
+
   it("should set the rotation the flycam", () => {
     const rotateAction = FlycamActions.setRotationAction([180, 0, 0]);
     const newState = FlycamReducer(initialState, rotateAction);

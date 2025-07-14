@@ -1,9 +1,11 @@
+import { V3 } from "libs/mjs";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { calculateGlobalPos, getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
+  moveFlycamAbsoluteAction,
   moveFlycamOrthoAction,
   movePlaneFlycamOrthoAction,
   zoomByDeltaAction,
@@ -93,7 +95,7 @@ function getMousePosition() {
   return calculateGlobalPos(state, {
     x: mousePosition[0],
     y: mousePosition[1],
-  }).rounded;
+  }).floating;
 }
 
 export function zoomPlanes(value: number, zoomToMouse: boolean): void {
@@ -122,12 +124,7 @@ function finishZoom(oldMousePosition: Vector3): void {
       return;
     }
 
-    const moveVector = [
-      oldMousePosition[0] - mousePos[0],
-      oldMousePosition[1] - mousePos[1],
-      oldMousePosition[2] - mousePos[2],
-    ];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-    Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
+    const moveVector = V3.sub(oldMousePosition, mousePos);
+    Store.dispatch(moveFlycamAbsoluteAction(moveVector));
   }
 }

@@ -339,16 +339,16 @@ export const getBrushOverlay: ShaderModule = {
   `,
 };
 
-export const getCrossHairOverlay: ShaderModule = {
+export const getProofreadingCrossHairOverlay: ShaderModule = {
   code: `
-    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+    vec4 getProofreadingCrossHairOverlay(vec3 worldCoordUVW) {
       // An active segment position of -1, -1, -1 indicates that the position is not available
-      if (activeSegmentPosition == vec3(-1.0)) {
+      if (proofreadingMarkerPosition == vec3(-1.0)) {
         return vec4(0.0);
       }
 
       vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
-      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+      vec3 activeSegmentPosUVW = transDim(proofreadingMarkerPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport

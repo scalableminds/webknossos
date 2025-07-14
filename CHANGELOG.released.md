@@ -7,6 +7,32 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
+
+### Highlights
+- When you are viewing an annotation and another user changes that annotation, these changes will be automatically shown. For some changes (e.g., when adding a new annotation layer), you will still need to reload the page, but most of the time WEBKNOSSOS will update the annotation automatically. [#8648](https://github.com/scalableminds/webknossos/pull/8648)
+
+### Added
+- Segment index files can now also be read from the new zarr3-based format, and from remote object storage. [#8711](https://github.com/scalableminds/webknossos/pull/8711)
+- Connectomes can now also be read from the new zarr3-based format, and from remote object storage. [#8717](https://github.com/scalableminds/webknossos/pull/8717)
+
+### Changed
+- Compound annotations (merged views of finished task annotations) now show the task bounding boxes. [#8735](https://github.com/scalableminds/webknossos/pull/8735)
+- Adapted zarr mesh loading to skip segments missing in the meshfile. This was already the case for the hdf5 variant. [#8771](https://github.com/scalableminds/webknossos/pull/8771)
+- Users of organizations with a trial pricing plan can now join other organizations as guests. [#8772](https://github.com/scalableminds/webknossos/pull/8772)
+
+### Fixed
+- Fixed a bug where segment index files for segmentation layers with no mag1 would be read incorrectly. [#8711](https://github.com/scalableminds/webknossos/pull/8711)
+- Fixed a bug where authentication tokens would sometimes expire too soon. [#8738](https://github.com/scalableminds/webknossos/pull/8738)
+- Fixed a bug where duplicating a compound annotation would fail if it has volume annotation layers. [#8743](https://github.com/scalableminds/webknossos/pull/8743)
+- Fixed that compound (merged) views of tasks, projects and task types would sometimes show outdated annotation data, leaving out the data from recently finished tasks annotations. [#8756](https://github.com/scalableminds/webknossos/pull/8756)
+- Fixed a bug where dataset layer attachments with absolute paths would not get loaded unless the paths are specified with file:// scheme. [#8761](https://github.com/scalableminds/webknossos/pull/8761)
+- Fixed that WEBKNOSSOS would crash directly if the communication with the server was interrupted while using the proofreading tool. [#8767](https://github.com/scalableminds/webknossos/pull/8767)
+- Fixed a bug where WEBKNOSSOS would show an error toast for volume annotations that have no fallback segmentation layer. [#8768](https://github.com/scalableminds/webknossos/pull/8768)
+- Fixed broken node selection in 3d viewport when continuous drawing was enabled in skeleton tool. [#8769](https://github.com/scalableminds/webknossos/pull/8769)
+- Fixed layer linking to support non-WKW layers. [#8773](https://github.com/scalableminds/webknossos/pull/8773)
+
 ## [25.07.0](https://github.com/scalableminds/webknossos/releases/tag/25.07.0) - 2025-07-01
 [Commits](https://github.com/scalableminds/webknossos/compare/25.06.2...25.07.0)
 

@@ -7,34 +7,17 @@ import {
 import { Tooltip } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
+import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import _ from "lodash";
-import React from "react";
-import { connect } from "react-redux";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
+
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
-import { Model } from "viewer/singletons";
-import Store, { type SaveState } from "viewer/store";
-import type { WebknossosState } from "viewer/store";
+import { Model, Store } from "viewer/singletons";
+import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 
-type OwnProps = {
-  onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
-  className?: string;
-};
-type StateProps = {
-  progressFraction: number | null | undefined;
-  isBusy: boolean;
-};
-type Props = OwnProps & StateProps;
-type State = {
-  isStateSaved: boolean;
-  showUnsavedWarning: boolean;
-  saveInfo: {
-    outstandingBucketDownloadCount: number;
-    compressingBucketCount: number;
-    waitingForCompressionBucketCount: number;
-  };
-};
 const SAVE_POLLING_INTERVAL = 1000; // 1s
 
 const UNSAVED_WARNING_THRESHOLD = 2 * 60 * 1000; // 2 min
@@ -51,28 +34,35 @@ const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
   );
 }, REPORT_THROTTLE_THRESHOLD);
 
-class SaveButton extends React.PureComponent<Props, State> {
-  savedPollingInterval: number = 0;
-  state: State = {
-    isStateSaved: false,
-    showUnsavedWarning: false,
-    saveInfo: {
-      outstandingBucketDownloadCount: 0,
-      compressingBucketCount: 0,
-      waitingForCompressionBucketCount: 0,
-    },
-  };
-
-  componentDidMount() {
-    // Polling can be removed once VolumeMode saving is reactive
-    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVE_POLLING_INTERVAL);
+const handleSave = (event?: React.MouseEvent<HTMLElement>) => {
+  if (event != null) {
+    (event.target as HTMLButtonElement).blur();
   }
 
-  componentWillUnmount() {
-    window.clearInterval(this.savedPollingInterval);
-  }
+  Model.forceSave();
+};
 
-  _forceUpdate = () => {
+function SaveButton() {
+  const progressFraction = useWkSelector((state) => {
+    // For a low action count, the progress info would show only for a very short amount of time.
+    // Therefore, the progressFraction is set to null, if the count is low.
+    // This is an optimization to avoid unnecessary re-renders by keeping the fraction a constant value.
+    const progressInfo = state.save.progressInfo;
+    return progressInfo.totalActionCount > 5000
+      ? progressInfo.processedActionCount / progressInfo.totalActionCount
+      : null;
+  });
+  const isBusy = useWkSelector((state) => state.save.isBusy);
+
+  const [isStateSaved, setIsStateSaved] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [saveInfo, setSaveInfo] = useState({
+    outstandingBucketDownloadCount: 0,
+    compressingBucketCount: 0,
+    waitingForCompressionBucketCount: 0,
+  });
+
+  const _forceUpdate = useCallback(() => {
     const isStateSaved = Model.stateSaved();
     const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
 
@@ -86,89 +76,86 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const newSaveInfo = this.getPushQueueStats();
-    this.setState({
-      isStateSaved,
-      showUnsavedWarning,
-      saveInfo: newSaveInfo,
-    });
-  };
+    const getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
-  getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
+    const newSaveInfo = getPushQueueStats();
+    setIsStateSaved(isStateSaved);
+    setShowUnsavedWarning(showUnsavedWarning);
+    setSaveInfo(newSaveInfo);
+  }, []);
 
-  getSaveButtonIcon() {
-    if (this.state.isStateSaved) {
-      return <CheckOutlined />;
-    } else if (this.props.isBusy) {
-      return <LoadingOutlined />;
-    } else {
-      return <HourglassOutlined />;
-    }
-  }
+  useEffect(() => {
+    // Polling can be removed once VolumeMode saving is reactive
+    const savedPollingInterval = window.setInterval(_forceUpdate, SAVE_POLLING_INTERVAL);
+    return () => {
+      window.clearInterval(savedPollingInterval);
+    };
+  }, [_forceUpdate]);
 
-  shouldShowProgress(): boolean {
-    return this.props.isBusy && this.props.progressFraction != null;
-  }
+  const saveButtonIcon = isStateSaved ? (
+    <CheckOutlined />
+  ) : isBusy ? (
+    <LoadingOutlined />
+  ) : (
+    <HourglassOutlined />
+  );
 
-  render() {
-    const { progressFraction } = this.props;
-    const { showUnsavedWarning } = this.state;
-    const { outstandingBucketDownloadCount } = this.state.saveInfo;
+  const shouldShowProgress = isBusy && progressFraction != null;
 
-    const totalBucketsToCompress =
-      this.state.saveInfo.waitingForCompressionBucketCount +
-      this.state.saveInfo.compressingBucketCount;
-    return (
-      <ButtonComponent
-        key="save-button"
-        type="primary"
-        onClick={this.props.onClick}
-        icon={this.getSaveButtonIcon()}
-        className={this.props.className}
-        style={{
-          background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
-        }}
+  const { outstandingBucketDownloadCount } = saveInfo;
+
+  const totalBucketsToCompress =
+    saveInfo.waitingForCompressionBucketCount + saveInfo.compressingBucketCount;
+  return (
+    <ButtonComponent
+      key="save-button"
+      type="primary"
+      onClick={handleSave}
+      icon={saveButtonIcon}
+      className="narrow"
+      style={{
+        background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
+      }}
+    >
+      <FastTooltip
+        title={
+          // Downloading the buckets often takes longer and the progress
+          // is visible (as the count will decrease continually).
+          // If lots of buckets need compression, this can also take a bit.
+          // Don't show both labels at the same time, because the compression
+          // usually can only start after the download is finished.
+          outstandingBucketDownloadCount > 0
+            ? `${outstandingBucketDownloadCount} items remaining to download...`
+            : totalBucketsToCompress > 0
+              ? `${totalBucketsToCompress} items remaining to compress...`
+              : null
+        }
       >
-        <FastTooltip
-          title={
-            // Downloading the buckets often takes longer and the progress
-            // is visible (as the count will decrease continually).
-            // If lots of buckets need compression, this can also take a bit.
-            // Don't show both labels at the same time, because the compression
-            // usually can only start after the download is finished.
-            outstandingBucketDownloadCount > 0
-              ? `${outstandingBucketDownloadCount} items remaining to download...`
-              : totalBucketsToCompress > 0
-                ? `${totalBucketsToCompress} items remaining to compress...`
-                : null
-          }
-        >
-          {this.shouldShowProgress() ? (
-            <span
-              style={{
-                marginLeft: 8,
-              }}
-            >
-              {Math.floor((progressFraction || 0) * 100)} %
-            </span>
-          ) : (
-            <span className="hide-on-small-screen">Save</span>
-          )}
-        </FastTooltip>
-        {showUnsavedWarning ? (
-          <Tooltip
-            open
-            title={`There are unsaved changes which are older than ${Math.ceil(
-              UNSAVED_WARNING_THRESHOLD / 1000 / 60,
-            )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}
-            placement="bottom"
+        {shouldShowProgress ? (
+          <span
+            style={{
+              marginLeft: 8,
+            }}
           >
-            <ExclamationCircleOutlined />
-          </Tooltip>
-        ) : null}
-      </ButtonComponent>
-    );
-  }
+            {Math.floor((progressFraction || 0) * 100)} %
+          </span>
+        ) : (
+          <span className="hide-on-small-screen">Save</span>
+        )}
+      </FastTooltip>
+      {showUnsavedWarning ? (
+        <Tooltip
+          open
+          title={`There are unsaved changes which are older than ${Math.ceil(
+            UNSAVED_WARNING_THRESHOLD / 1000 / 60,
+          )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}
+          placement="bottom"
+        >
+          <ExclamationCircleOutlined />
+        </Tooltip>
+      ) : null}
+    </ButtonComponent>
+  );
 }
 
 function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null | undefined {
@@ -181,18 +168,4 @@ function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null
   return oldestUnsavedTimestamp;
 }
 
-function mapStateToProps(state: WebknossosState): StateProps {
-  const { progressInfo, isBusy } = state.save;
-  return {
-    isBusy,
-    // For a low action count, the progress info would show only for a very short amount of time.
-    // Therefore, the progressFraction is set to null, if the count is low.
-    progressFraction:
-      progressInfo.totalActionCount > 5000
-        ? progressInfo.processedActionCount / progressInfo.totalActionCount
-        : null,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(SaveButton);
+export default SaveButton;

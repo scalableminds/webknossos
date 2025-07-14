@@ -2001,15 +2001,17 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
+      ),
     );
   });
   // Ensure that the values are bigint if the keys are bigint
@@ -2041,15 +2043,18 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          showErrorToast: false,
         },
-      },
+      ),
     );
   });
 
@@ -2231,17 +2236,19 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-      {
-        data: {
-          ...segmentsInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId1: Number(segmentsInfo.segmentId1),
-          segmentId2: Number(segmentsInfo.segmentId2),
-          agglomerateId: Number(segmentsInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            ...segmentsInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId1: Number(segmentsInfo.segmentId1),
+            segmentId2: Number(segmentsInfo.segmentId2),
+            agglomerateId: Number(segmentsInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2262,16 +2269,18 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-      {
-        data: {
-          ...segmentInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId: Number(segmentInfo.segmentId),
-          agglomerateId: Number(segmentInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+        {
+          data: {
+            ...segmentInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId: Number(segmentInfo.segmentId),
+            agglomerateId: Number(segmentInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }

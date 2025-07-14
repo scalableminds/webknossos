@@ -15,7 +15,6 @@ import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotati
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
-import models.organization.OrganizationDAO
 import models.user.UserDAO
 import models.user.time.TimeSpanService
 import play.api.libs.json.Json

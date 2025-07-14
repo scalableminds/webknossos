@@ -65,9 +65,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
   private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val virtualRemoteDatasetStatus = "Virtual remote dataset" // Virtual datasets should not be deleted when not reported
   private val inactiveStatusList =
-    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus, virtualRemoteDatasetStatus)
+    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
@@ -117,11 +116,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(_.asAbstractLayer))
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               abstractDataSource,
-                               status = Some(virtualRemoteDatasetStatus))
+      dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -145,7 +140,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetName: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None,
-      status: Option[String] = None
+      status: Option[String] = None,
+      isVirtual: Boolean = false
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val metadata =
@@ -175,6 +171,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         directoryName = dataSource.id.directoryName,
         isPublic = false,
         isUsable = dataSource.isUsable,
+        isVirtual = isVirtual,
         name = datasetName,
         voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,

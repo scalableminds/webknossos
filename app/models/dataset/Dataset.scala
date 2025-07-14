@@ -62,6 +62,7 @@ case class Dataset(_id: ObjectId,
                    directoryName: String,
                    isPublic: Boolean,
                    isUsable: Boolean,
+                   isVirtual: Boolean,
                    name: String,
                    voxelSize: Option[VoxelSize],
                    sharingToken: Option[String],
@@ -145,6 +146,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.directoryname,
         r.ispublic,
         r.isusable,
+        r.isvirtual,
         r.name,
         voxelSize,
         r.sharingtoken,
@@ -522,7 +524,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT _id
                        FROM webknossos.datasets_
-                       WHERE status = 'Virtual remote dataset'
+                       WHERE isVirtual
                        AND $accessQuery""".as[ObjectId])
     } yield rList.toList
 
@@ -688,6 +690,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           SET isUsable = false, status = $unreportedStatus, voxelSizeFactor = NULL, voxelSizeUnit = NULL, inboxSourceHash = NULL
           WHERE _dataStore = $dataStoreName
           AND $inclusionPredicate
+          AND NOT isVirtual
           AND $statusNotAlreadyInactive""".asUpdate
     for {
       _ <- run(DBIO.sequence(List(deleteMagsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)

@@ -778,8 +778,9 @@ export function getUpdateActionLog(
   oldestVersion?: number,
   newestVersion?: number,
   truncateActionLog: boolean = false,
+  sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) => {
+  return doWithToken(async (token) => {
     const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
     params.set("token", token);
     if (oldestVersion != null) {
@@ -788,9 +789,14 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    return Request.receiveJSON(
+    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
+
+    if (sortAscending) {
+      log.reverse();
+    }
+    return log;
   });
 }
 
@@ -1990,18 +1996,23 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
+      ),
     );
   });
   // Ensure that the values are bigint if the keys are bigint
@@ -2020,6 +2031,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());
@@ -2030,15 +2044,18 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          showErrorToast: false,
         },
-      },
+      ),
     );
   });
 
@@ -2202,7 +2219,7 @@ export function getSynapseTypes(
   );
 }
 
-type MinCutTargetEdge = {
+export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
   segmentId1: number;
@@ -2220,17 +2237,19 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-      {
-        data: {
-          ...segmentsInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId1: Number(segmentsInfo.segmentId1),
-          segmentId2: Number(segmentsInfo.segmentId2),
-          agglomerateId: Number(segmentsInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            ...segmentsInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId1: Number(segmentsInfo.segmentId1),
+            segmentId2: Number(segmentsInfo.segmentId2),
+            agglomerateId: Number(segmentsInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2251,16 +2270,18 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-      {
-        data: {
-          ...segmentInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId: Number(segmentInfo.segmentId),
-          agglomerateId: Number(segmentInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+        {
+          data: {
+            ...segmentInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId: Number(segmentInfo.segmentId),
+            agglomerateId: Number(segmentInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }

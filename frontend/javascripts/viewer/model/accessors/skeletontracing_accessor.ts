@@ -73,7 +73,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return skeletonTracing.trees.getOrThrow(activeTreeId).nodes.getOrThrow(activeNodeId);
+    return skeletonTracing.trees.getNullable(activeTreeId)?.nodes.getNullable(activeNodeId) ?? null;
   }
 
   return null;
@@ -86,7 +86,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefine
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return skeletonTracing.trees.getNullable(activeTreeId) || null;
+    return skeletonTracing.trees.getNullable(activeTreeId) ?? null;
   }
 
   return null;
@@ -115,6 +115,10 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
 export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
   return trees.values().find((tree) => tree.nodes.has(nodeId));
+}
+
+export function hasEmptyTrees(trees: TreeMap): boolean {
+  return trees.values().some((tree: Tree) => tree.nodes.size() === 0);
 }
 
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {

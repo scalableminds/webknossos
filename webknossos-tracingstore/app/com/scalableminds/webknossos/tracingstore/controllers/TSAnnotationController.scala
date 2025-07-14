@@ -35,7 +35,9 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-case class MergedFromIdsRequest(annotationIds: Seq[ObjectId], ownerIds: Seq[ObjectId])
+case class MergedFromIdsRequest(annotationIds: Seq[ObjectId],
+                                ownerIds: Seq[ObjectId],
+                                additionalBoundingBoxes: Seq[NamedBoundingBox])
 
 object MergedFromIdsRequest {
   implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
@@ -245,7 +247,11 @@ class TSAnnotationController @Inject()(
                                                                       toTemporaryStore) ?~> "mergeVolumeData.failed"
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
-                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)
+                .merge(volumeTracings,
+                       mergedVolumeStats,
+                       newMappingName,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
@@ -256,7 +262,11 @@ class TSAnnotationController @Inject()(
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
+              skeletonTracingService
+                .merge(skeletonTracings,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
+                .toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

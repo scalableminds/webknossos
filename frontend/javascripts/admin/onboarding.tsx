@@ -19,6 +19,7 @@ import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import Toast from "libs/toast";
@@ -528,12 +529,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
       )}
       {this.state.datasetIdToImport != null && (
         <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
-          <DatasetSettingsView
+          <DatasetSettingsProvider
             isEditingMode={false}
             datasetId={this.state.datasetIdToImport}
             onComplete={this.advanceStep}
             onCancel={this.advanceStep}
-          />
+          >
+            <DatasetSettingsView />
+          </DatasetSettingsProvider>
         </Modal>
       )}
       <Row gutter={16} justify="center" align="bottom">

@@ -8,7 +8,7 @@ import { Vector3Input } from "libs/vector_input";
 import _ from "lodash";
 import messages, { layerViewConfigurations, settings, settingsTooltips } from "messages";
 import { useMemo, useState } from "react";
-import type { APIDataSourceId } from "types/api_types";
+import type { APIDataSourceId, APIDataset } from "types/api_types";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import { BLEND_MODES } from "viewer/constants";
@@ -20,18 +20,23 @@ import { jsonEditStyle } from "./helper_components";
 const FormItem = Form.Item;
 
 export default function DatasetSettingsViewConfigTab() {
+  const { dataset } = useDatasetSettingsContext();
+  if (dataset == null) {
+    return null;
+  }
+  return <DatasetSettingsViewConfigTabWithDataset dataset={dataset} />;
+}
+
+const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIDataset }) => {
   const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
     Record<string, [string[], string[]]>
   >({});
 
-  const { dataset } = useDatasetSettingsContext();
-  const dataStoreURL = dataset?.dataStore.url;
-  const dataSourceId: APIDataSourceId | null = dataset
-    ? {
-        owningOrganization: dataset.owningOrganization,
-        directoryName: dataset.directoryName,
-      }
-    : null;
+  const dataStoreURL = dataset.dataStore.url;
+  const dataSourceId: APIDataSourceId = {
+    owningOrganization: dataset.owningOrganization,
+    directoryName: dataset.directoryName,
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: validate on dataset change
   const validateDefaultMappings = useMemo(
@@ -305,7 +310,6 @@ export default function DatasetSettingsViewConfigTab() {
                   {
                     validator: (_rule, config: string) =>
                       Promise.all([
-                        // Use dataset.dataSource.id for dataSourceId
                         validateLayerViewConfigurationObjectJSON(_rule, config),
                         dataStoreURL
                           ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
@@ -340,4 +344,4 @@ export default function DatasetSettingsViewConfigTab() {
       </Row>
     </div>
   );
-}
+};

@@ -118,7 +118,6 @@ const DatasetSettingsView: React.FC = () => {
     <Tooltip title="Some fields in this tab require your attention.">
       <ExclamationCircleOutlined
         style={{
-          marginLeft: 4,
           color: "var(--ant-color-error)",
         }}
       />

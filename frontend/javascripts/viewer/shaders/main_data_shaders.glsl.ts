@@ -501,7 +501,7 @@ void main() {
   // In general, an index i is computed for each vertex so that each vertex can be moved
   // to the right/bottom border of the i-th bucket.
   // To ensure that the outer vertices are not moved to the next lower / higher bucket border
-  // the vertices are clamp to stay in range of worldCoordTopLeft and worldCoordBottomRight.
+  // the vertices are clamped to stay in range of worldCoordTopLeft and worldCoordBottomRight.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
   // Let's only consider x:

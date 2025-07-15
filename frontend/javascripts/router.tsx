@@ -1,4 +1,5 @@
 import AcceptInviteView from "admin/auth/accept_invite_view";
+import ChangeEmailView from "admin/auth/change_email_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -15,7 +16,6 @@ import {
   getShortLink,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import ChangeEmailView from "admin/auth/change_email_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";

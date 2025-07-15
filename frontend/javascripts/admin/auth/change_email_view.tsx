@@ -1,8 +1,7 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { updateUser } from "admin/rest_api";
+import { logoutUser, updateUser } from "admin/rest_api";
 import { Alert, Button, Col, Form, Input, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
@@ -34,9 +33,9 @@ function ChangeEmailView() {
       .then(async () => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
-        await Request.receiveJSON("/api/auth/logout");
-        window.location.href = "/auth/login";
+        await logoutUser();
         Store.dispatch(logoutUserAction());
+        window.location.href = "/auth/login";
       })
       .catch((error) => {
         const errorMsg = "An unexpected error occurred while changing the email address.";

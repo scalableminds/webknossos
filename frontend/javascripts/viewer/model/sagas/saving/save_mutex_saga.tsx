@@ -94,12 +94,12 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 
   if (DISABLE_EAGER_MUTEX_ACQUISITION) {
-    console.log("listening to all ENSURE_MAY_SAVE_NOW");
+    // console.log("listening to all ENSURE_MAY_SAVE_NOW");
     yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
     while (true) {
-      console.log("taking ENSURE_MAY_SAVE_NOW");
+      // console.log("taking ENSURE_MAY_SAVE_NOW");
       yield* take("ENSURE_MAY_SAVE_NOW");
-      console.log("took ENSURE_MAY_SAVE_NOW");
+      // console.log("took ENSURE_MAY_SAVE_NOW");
       const { doneSaving } = yield race({
         tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
         doneSaving: take("DONE_SAVING"),

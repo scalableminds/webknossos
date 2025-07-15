@@ -27,12 +27,14 @@ import {
 } from "typed-redux-saga";
 import type { APIDataLayer, APIMapping } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   type BucketRetrievalSource,
   getActiveCellId,
@@ -40,7 +42,6 @@ import {
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
-  getVolumeTracingById,
   getVolumeTracingByLayerName,
   isMappingActivationAllowed,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -78,8 +79,6 @@ import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetr
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkReady } from "../ready_sagas";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };

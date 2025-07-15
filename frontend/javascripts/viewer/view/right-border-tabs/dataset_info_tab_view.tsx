@@ -44,9 +44,9 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
-import { MarkdownModal } from "../components/markdown_modal";
-import { Store } from "viewer/singletons";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
+import { Store } from "viewer/singletons";
+import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
   annotation: StoreAnnotation;

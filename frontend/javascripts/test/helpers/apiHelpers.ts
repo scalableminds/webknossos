@@ -1,4 +1,4 @@
-import { vi, type TestContext as BaseTestContext } from "vitest";
+import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
@@ -38,8 +38,10 @@ import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
 import {
+  acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
+  getUpdateActionLog,
   sendSaveRequestWithToken,
   type MinCutTargetEdge,
 } from "admin/rest_api";
@@ -63,6 +65,9 @@ export interface WebknossosTestContext extends BaseTestContext {
     Request: typeof Request;
     getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
     getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
+    acquireAnnotationMutex: Mock<typeof acquireAnnotationMutex>;
+    getUpdateActionLog: Mock<typeof getUpdateActionLog>;
+    sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -153,6 +158,8 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
   };
 });
 
@@ -213,7 +220,7 @@ vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importO
   };
 });
 
-type Override = {
+export type BucketOverride = {
   position: [number, number, number]; // [x, y, z]
   value: number;
 };
@@ -222,7 +229,7 @@ export function createBucketResponseFunction(
   TypedArrayClass: any,
   fillValue: number,
   delay = 0,
-  overrides: Override[] = [],
+  overrides: BucketOverride[] = [],
 ) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
     await sleep(delay);
@@ -312,6 +319,9 @@ export async function setupWebknossosForTesting(
     Request: vi.mocked(Request),
     getCurrentMappingEntriesFromServer,
     getEdgesForAgglomerateMinCut,
+    acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
+    getUpdateActionLog: vi.mocked(getUpdateActionLog),
+    sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>

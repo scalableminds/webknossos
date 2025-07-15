@@ -37,10 +37,10 @@ import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
-  getProofreadingMarkerPosition,
   getActiveSegmentationTracing,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
+  getProofreadingMarkerPosition,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";

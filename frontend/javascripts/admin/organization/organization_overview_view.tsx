@@ -159,7 +159,9 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
-      value: formatCreditsString(organization.creditBalance || "N/A"),
+      value: organization.creditBalance != null
+        ? formatCreditsString(organization.creditBalance)
+        : "N/A",
       action: buyMoreCreditsAction,
     },
   ];

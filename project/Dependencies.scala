@@ -109,7 +109,8 @@ object Dependencies {
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
+    // Play framework relies on an older version of jackson-databind than webauthn4j, because of that we set the version
+    // to the version required by Play.
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
   )
 }

@@ -29,7 +29,7 @@ function ChangePasswordView() {
   function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): () => Promise<void> {
     return async function () {
       await removeWebAuthnKey(passkey.id);
-      Toast.success("Passkey '" + passkey.name + "' is removed");
+      Toast.success("Passkey '" + passkey.name + "' is removed.");
       await fetchPasskeys();
     };
   }
@@ -37,15 +37,15 @@ function ChangePasswordView() {
   const registerNewPasskey = async () => {
     const passkeyName = newPasskeyName.trim();
     if (passkeyName.length < 3) {
-      Toast.error("Passkey name must be at least 3 characters");
+      Toast.error("Passkey name must be at least 3 characters.");
       return;
     } else if (passkeys.some((pk) => pk.name.toLowerCase() === passkeyName.toLowerCase())) {
-      Toast.error("A passkey with this name already exists");
+      Toast.error("A passkey with this name already exists.");
       return;
     }
     setIsPasskeyNameModalOpen(false);
     await doWebAuthnRegistration(passkeyName);
-    Toast.success("Passkey registered successfully");
+    Toast.success("Passkey registered successfully.");
     setNewPasskeyName("");
     fetchPasskeys();
   };

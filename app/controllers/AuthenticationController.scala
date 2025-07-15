@@ -585,8 +585,8 @@ class AuthenticationController @Inject()(
 
   def webauthnAuthStart(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
-      _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+      _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
       sessionId = UUID.randomUUID().toString
       cookie = Cookie(name = "webauthn-session",
                       value = sessionId,
@@ -610,21 +610,21 @@ class AuthenticationController @Inject()(
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+        _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
           .pop(sessionId)
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
-        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
         multiUserId <- ObjectId
-          .fromString(new String(authData.getUserHandle)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .fromString(new String(authData.getUserHandle)) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         multiUser <- multiUserDAO
-          .findOneById(multiUserId)(GlobalAccessContext) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .findOneById(multiUserId)(GlobalAccessContext) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO
-          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
         params = new AuthenticationParameters(
@@ -634,15 +634,15 @@ class AuthenticationController @Inject()(
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
 
         // Sign count is 0 if not used by the authenticator.
         _ <- Fox
-          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~> "Passkey Authentication Failed" ~> UNAUTHORIZED
+          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
         result <- Fox.fromFuture(authenticateInner(loginInfo))
@@ -651,8 +651,8 @@ class AuthenticationController @Inject()(
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
-      _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+      _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
       email <- userService.emailFor(request.identity)
       user = WebAuthnCreationOptionsUser(
         displayName = request.identity.name,
@@ -697,8 +697,8 @@ class AuthenticationController @Inject()(
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
     sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "Passkeys are only supported with HTTPS"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+        _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
@@ -732,7 +732,8 @@ class AuthenticationController @Inject()(
   def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+        _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
         keys <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
         reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
       } yield Ok(Json.toJson(reducedKeys))
@@ -742,7 +743,8 @@ class AuthenticationController @Inject()(
   def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "Passkeys Disabled"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Messages("auth.passkeys.disabled")
+        _ <- Fox.fromBool(usesHttps) ?~> Messages("auth.passkeys.requiresHttps")
         _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser) ?~> "Passkey not found" ~> NOT_FOUND
       } yield Ok(Json.obj())
     }

@@ -134,12 +134,11 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val backupState = c.credentialRecord.isBackedUp.booleanValue
     for {
       serializedAuthenticatorExtensions <- c.serializedExtensions(converter)
-      attestationStatement <- c.serializeAttestationStatement(converter)
-      _ = println(attestationStatement)
+      serializedAttestationStatement <- c.serializeAttestationStatement(converter)
       _ <- run(
         q"""INSERT INTO $existingCollectionName (_id, _multiUser, credentialId, name, userVerified, backupEligible, backupState,
                                                  serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${userVerified}, ${backupEligible}, ${backupState}, ${attestationStatement},
+                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${userVerified}, ${backupEligible}, ${backupState}, ${serializedAttestationStatement},
                          ${serializedAttestedCredential}, ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate)
     } yield ()
   }

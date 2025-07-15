@@ -7,12 +7,9 @@ import features from "features";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import React, { useState } from "react";
-import { connect } from "react-redux";
 import { useHistory } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
-import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;
@@ -261,12 +258,7 @@ function VoxelyticsBanner() {
   );
 }
 
-const mapStateToProps = (state: WebknossosState) => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(DatasetAddView);
+export default DatasetAddView;
 
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,

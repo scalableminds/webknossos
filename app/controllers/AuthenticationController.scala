@@ -617,14 +617,16 @@ class AuthenticationController @Inject()(
         challenge <- temporaryAssertionStore
           .pop(sessionId)
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
-        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
+        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~> Messages(
+          "auth.passkeys.unauthorized") ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
-        multiUserId <- ObjectId
-          .fromString(new String(authData.getUserHandle)) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
-        multiUser <- multiUserDAO
-          .findOneById(multiUserId)(GlobalAccessContext) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
+        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~> Messages(
+          "auth.passkeys.unauthorized") ~> UNAUTHORIZED
+        multiUser <- multiUserDAO.findOneById(multiUserId)(GlobalAccessContext) ??~> Messages(
+          "auth.passkeys.unauthorized") ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO
-          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
+          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~> Messages(
+          "auth.passkeys.unauthorized") ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
         params = new AuthenticationParameters(
@@ -638,11 +640,12 @@ class AuthenticationController @Inject()(
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO
+          .updateSignCount(credential) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
 
         // Sign count is 0 if not used by the authenticator.
-        _ <- Fox
-          .fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~> Messages("auth.passkeys.unauthorized") ~> UNAUTHORIZED
+        _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~> Messages(
+          "auth.passkeys.unauthorized") ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
         result <- Fox.fromFuture(authenticateInner(loginInfo))

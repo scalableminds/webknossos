@@ -1,14 +1,9 @@
-import type {
-  Action as HistoryAction,
-  Location as HistoryLocation,
-  UnregisterCallback,
-} from "history";
 import { useCallback, useEffect, useRef } from "react";
-import { useHistory } from "react-router-dom";
+import { type BlockerFunction, useBlocker } from "react-router-dom";
 
 const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
-  const history = useHistory();
-  const unblockRef = useRef<UnregisterCallback | null>(null);
+  // @ts-ignore beforeUnload signature is overloaded
+  const blocker = useBlocker(beforeUnload);
   const blockTimeoutIdRef = useRef<number | null>(null);
 
   const unblockHistory = useCallback(() => {
@@ -17,42 +12,35 @@ const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
       clearTimeout(blockTimeoutIdRef.current);
       blockTimeoutIdRef.current = null;
     }
-    if (unblockRef.current != null) {
-      unblockRef.current();
-      unblockRef.current = null;
+    blocker.reset ? blocker.reset() : void 0;
+  }, [blocker.reset]);
+
+  function beforeUnload(args: BeforeUnloadEvent | BlockerFunction): boolean | undefined {
+    // Navigation blocking can be triggered by two sources:
+    // 1. The browser's native beforeunload event
+    // 2. The React-Router block function (useBlocker or withBlocker HOC)
+
+    if (hasUnsavedChanges) {
+      window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+      blockTimeoutIdRef.current = window.setTimeout(() => {
+        // restore the event handler in case a user chose to stay on the page
+        window.onbeforeunload = beforeUnload;
+      }, 500);
+      // The native event requires a truthy return value to show a generic message
+      // The React Router blocker accepts a boolean
+      return "preventDefault" in args ? true : !confirm(message);
     }
-  }, []);
+    // The native event requires an empty return value to not show a message
+    return;
+  }
 
   useEffect(() => {
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        if (hasUnsavedChanges) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-          blockTimeoutIdRef.current = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return message;
-        }
-      }
-      return;
-    };
-
-    unblockRef.current = history.block(beforeUnload);
-    // @ts-ignore
     window.onbeforeunload = beforeUnload;
 
     return () => {
       unblockHistory();
     };
-  }, [history, hasUnsavedChanges, message, unblockHistory]);
+  }, [unblockHistory, beforeUnload]);
 };
 
 export default useBeforeUnload;

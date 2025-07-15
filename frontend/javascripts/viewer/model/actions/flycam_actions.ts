@@ -12,6 +12,7 @@ type SetDirectionAction = ReturnType<typeof setDirectionAction>;
 type MoveFlycamOrthoAction = ReturnType<typeof moveFlycamOrthoAction>;
 type MovePlaneFlycamOrthoAction = ReturnType<typeof movePlaneFlycamOrthoAction>;
 type MoveFlycamAction = ReturnType<typeof moveFlycamAction>;
+type MoveFlycamAbsoluteAction = ReturnType<typeof moveFlycamAbsoluteAction>;
 type YawFlycamAction = ReturnType<typeof yawFlycamAction>;
 type RollFlycamAction = ReturnType<typeof rollFlycamAction>;
 type PitchFlycamAction = ReturnType<typeof pitchFlycamAction>;
@@ -27,6 +28,7 @@ export type FlycamAction =
   | SetRotationAction
   | SetDirectionAction
   | MoveFlycamAction
+  | MoveFlycamAbsoluteAction
   | MoveFlycamOrthoAction
   | MovePlaneFlycamOrthoAction
   | YawFlycamAction
@@ -45,6 +47,7 @@ export const FlycamActions = [
   "MOVE_FLYCAM_ORTHO",
   "MOVE_PLANE_FLYCAM_ORTHO",
   "MOVE_FLYCAM",
+  "MOVE_FLYCAM_ABSOLUTE",
   "YAW_FLYCAM",
   "ROLL_FLYCAM",
   "PITCH_FLYCAM",
@@ -120,6 +123,13 @@ export const movePlaneFlycamOrthoAction = (
 export const moveFlycamAction = (vector: Vector3) =>
   ({
     type: "MOVE_FLYCAM",
+    vector,
+  }) as const;
+
+// Use when a translation should be done directly to the position and rotation, zoom and more should be ignored.
+export const moveFlycamAbsoluteAction = (vector: Vector3) =>
+  ({
+    type: "MOVE_FLYCAM_ABSOLUTE",
     vector,
   }) as const;
 

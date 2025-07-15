@@ -5,7 +5,7 @@ import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { confirmAsync } from "./helper_components";
 
 type Props = {
@@ -15,7 +15,7 @@ type Props = {
 const DatasetSettingsDeleteTab = ({ datasetId }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
 
@@ -51,7 +51,7 @@ const DatasetSettingsDeleteTab = ({ datasetId }: Props) => {
     });
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
-    history.push("/dashboard");
+    navigate("/dashboard");
   }
 
   return (

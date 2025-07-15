@@ -49,7 +49,6 @@ type DatasetSettingsViewProps = {
   onComplete: () => void;
   onCancel: () => void;
 };
-
 type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
 
 export type FormData = {

@@ -2,19 +2,17 @@ import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } fro
 import { Button, Card, Form, Input, Select } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
 
-type Props = {
-  scriptId?: string | null | undefined;
-};
+function ScriptCreateView() {
+  const { scriptId } = useParams();
 
-function ScriptCreateView({ scriptId }: Props) {
+  const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const history = useHistory();
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
@@ -49,7 +47,7 @@ function ScriptCreateView({ scriptId }: Props) {
       await createScript(formValues);
     }
 
-    history.push("/scripts");
+    navigate("/scripts");
   };
 
   const titlePrefix = scriptId ? "Update" : "Create";

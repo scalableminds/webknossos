@@ -86,7 +86,7 @@ function AccountAuthTokenView() {
     <div>
       <SettingsTitle
         title="API Authorization"
-        description="Access the WEBKNOSSO Python API with your API token"
+        description="Access the WEBKNOSSOS Python API with your API token"
       />
       <Spin size="large" spinning={isLoading}>
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>

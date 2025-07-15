@@ -1391,3 +1391,24 @@ export const ColoredLogger = {
     console.log(chalk.bgBlue(str), ...args);
   },
 };
+
+export async function retryAsyncFunction<T>(
+  fn: () => Promise<T>,
+  retryCount: number = 3, // 0 retries would only do 1 attempt
+  exponentialDelayFactor: number = 1000,
+): Promise<T> {
+  let currentAttempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (exception) {
+      if (currentAttempt === retryCount) {
+        throw exception;
+      } else {
+        console.warn("Failed to run async function due to", exception, ". Will retry now.");
+      }
+      currentAttempt++;
+      await sleep(exponentialDelayFactor * 2 ** currentAttempt);
+    }
+  }
+}

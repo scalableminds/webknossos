@@ -533,12 +533,19 @@ function* performMinCut(
     editableMappingId: volumeTracingId,
   };
 
-  const edgesToRemove = yield* call(
-    getEdgesForAgglomerateMinCut,
-    tracingStoreUrl,
-    volumeTracingId,
-    segmentsInfo,
-  );
+  let edgesToRemove;
+  try {
+    edgesToRemove = yield* call(
+      getEdgesForAgglomerateMinCut,
+      tracingStoreUrl,
+      volumeTracingId,
+      segmentsInfo,
+    );
+  } catch (exception) {
+    console.error(exception);
+    Toast.error("Could not determine which edges to delete for cut. Please try again.");
+    return true;
+  }
 
   // Use untransformedPosition below because agglomerate trees should not have
   // any transforms, anyway.
@@ -598,12 +605,19 @@ function* performCutFromNeighbors(
     editableMappingId: volumeTracingId,
   };
 
-  const neighborInfo = yield* call(
-    getNeighborsForAgglomerateNode,
-    tracingStoreUrl,
-    volumeTracingId,
-    segmentsInfo,
-  );
+  let neighborInfo;
+  try {
+    neighborInfo = yield* call(
+      getNeighborsForAgglomerateNode,
+      tracingStoreUrl,
+      volumeTracingId,
+      segmentsInfo,
+    );
+  } catch (exception) {
+    console.error(exception);
+    Toast.error("Could not load neighbors of agglomerate node. Please try again.");
+    return { didCancel: true };
+  }
 
   const edgesToRemove: Array<
     | {

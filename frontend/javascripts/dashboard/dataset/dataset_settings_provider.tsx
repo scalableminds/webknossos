@@ -17,7 +17,7 @@ import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { useCallback, useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
@@ -53,7 +53,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 }) => {
   const [form] = Form.useForm<FormData>();
   const queryClient = useQueryClient();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
@@ -68,8 +68,8 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     APIDataSource | null | undefined
   >(null);
 
-  onComplete = onComplete ? onComplete : () => history.push("/dashboard");
-  onCancel = onCancel ? onCancel : () => history.push("/dashboard");
+  onComplete = onComplete ? onComplete : () => navigate("/dashboard");
+  onCancel = onCancel ? onCancel : () => navigate("/dashboard");
 
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {

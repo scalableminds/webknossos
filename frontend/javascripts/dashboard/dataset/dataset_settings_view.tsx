@@ -10,26 +10,15 @@ import {
 import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
-import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
-import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
-import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
-import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
+
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
-import {
-  Redirect,
-  Route,
-  type RouteComponentProps,
-  Switch,
-  useHistory,
-  useLocation,
-} from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Unicode } from "viewer/constants";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
-import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 
 const { Sider, Content } = Layout;
 const FormItem = Form.Item;
@@ -56,7 +45,7 @@ const DatasetSettingsView: React.FC = () => {
   } = useDatasetSettingsContext();
   const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "data";
 
   // const switchToProblematicTab = useCallback(() => {
@@ -229,7 +218,7 @@ const DatasetSettingsView: React.FC = () => {
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
           items={menuItems}
-          onClick={({ key }) => history.push(`/datasets/${datasetId}/edit/${key}`)}
+          onClick={({ key }) => navigate(`/datasets/${datasetId}/edit/${key}`)}
         />
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
@@ -242,34 +231,7 @@ const DatasetSettingsView: React.FC = () => {
           onValuesChange={onValuesChange}
           layout="vertical"
         >
-          <Switch>
-            <Route
-              path="/datasets/:datasetNameAndId/edit/data"
-              component={DatasetSettingsDataTab}
-            />
-            <Route
-              path="/datasets/:datasetNameAndId/edit/sharing"
-              component={DatasetSettingsSharingTab}
-            />
-            <Route
-              path="/datasets/:datasetNameAndId/edit/metadata"
-              component={DatasetSettingsMetadataTab}
-            />
-            <Route
-              path="/datasets/:datasetNameAndId/edit/defaultConfig"
-              component={DatasetSettingsViewConfigTab}
-            />
-            <Route
-              path="/datasets/:datasetNameAndId/edit/delete"
-              component={DatasetSettingsDeleteTab}
-            />
-            <Route
-              path="/datasets/:datasetNameAndId/edit"
-              render={({ match }: RouteComponentProps<{ datasetNameAndId: string }>) => (
-                <Redirect to={`/datasets/${match.params.datasetNameAndId}/edit/data`} />
-              )}
-            />
-          </Switch>
+          <Outlet />
           <FormItem
             style={{
               marginTop: 8,

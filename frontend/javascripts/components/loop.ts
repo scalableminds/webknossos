@@ -1,28 +1,21 @@
 import window from "libs/window";
-import { Component } from "react";
-import type { EmptyObject } from "types/globals";
+import { useCallback, useEffect } from "react";
+
 type LoopProps = {
   interval: number;
   onTick: (...args: Array<any>) => any;
 };
 
-class Loop extends Component<LoopProps, EmptyObject> {
-  intervalId: number | null | undefined = null;
+export default function Loop({ interval, onTick }: LoopProps) {
+  const _onTick = useCallback(onTick, []);
 
-  componentDidMount() {
-    this.intervalId = window.setInterval(this.props.onTick, this.props.interval);
-  }
+  useEffect(() => {
+    const intervalId = window.setInterval(_onTick, interval);
 
-  componentWillUnmount() {
-    if (this.intervalId != null) {
-      window.clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [interval, _onTick]);
 
-  render() {
-    return null;
-  }
+  return null;
 }
-
-export default Loop;

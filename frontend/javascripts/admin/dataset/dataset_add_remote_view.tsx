@@ -25,6 +25,7 @@ import DatasetSettingsDataTab, {
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { formatScale } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { jsonStringify } from "libs/utils";
@@ -32,13 +33,11 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { Unicode } from "viewer/constants";
-
-import { useWkSelector } from "libs/react_hooks";
 import { Hint } from "viewer/view/action-bar/download_modal_view";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 
@@ -189,7 +188,7 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
-  const history = useHistory();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -210,7 +209,7 @@ function DatasetAddRemoteView(props: Props) {
       .getFieldError("datasetName")
       .filter((error) => error === messages["dataset.name.already_taken"]);
     if (maybeDSNameError == null) return;
-    history.push(
+    navigate(
       `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
     );
   };

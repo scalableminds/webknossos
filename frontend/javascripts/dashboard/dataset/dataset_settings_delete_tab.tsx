@@ -6,7 +6,7 @@ import { Button, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useCallback, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { confirmAsync } from "./helper_components";
 
@@ -14,7 +14,7 @@ const DatasetSettingsDeleteTab = () => {
   const { dataset } = useDatasetSettingsContext();
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleDeleteButtonClicked = useCallback(async () => {
     if (!dataset) {
@@ -49,8 +49,8 @@ const DatasetSettingsDeleteTab = () => {
     });
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
-    history.push("/dashboard");
-  }, [dataset, history, queryClient]);
+    navigate("/dashboard");
+  }, [dataset, navigate, queryClient]);
 
   return (
     <div>

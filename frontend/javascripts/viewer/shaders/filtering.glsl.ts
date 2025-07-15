@@ -90,7 +90,11 @@ const getMaybeFilteredColor: ShaderModule = {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
         <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          if(isFlycamRotated){
+            color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          } else {
+            color = getBilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+          }
         <% } else { %>
           color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } %>

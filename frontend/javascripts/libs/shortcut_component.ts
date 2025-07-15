@@ -1,5 +1,5 @@
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import * as React from "react";
+import { useEffect } from "react";
 // This component provides a lightweight wrapper around the input library.
 // It leverages reacts lifecycle hooks to allow rendering-sensitive activation of shortcuts.
 type Props = {
@@ -8,26 +8,21 @@ type Props = {
   supportLoop?: boolean;
   supportInputElements?: boolean;
 };
-export default class Shortcut extends React.Component<Props> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
-  keyboardNoLoop: InputKeyboardNoLoop | InputKeyboard;
-
-  componentDidMount() {
-    this.keyboardNoLoop = new (this.props.supportLoop ? InputKeyboard : InputKeyboardNoLoop)(
+export default function Shortcut(props: Props) {
+  useEffect(() => {
+    const keyboard = new (props.supportLoop ? InputKeyboard : InputKeyboardNoLoop)(
       {
-        [this.props.keys]: this.props.onTrigger,
+        [props.keys]: props.onTrigger,
       },
       {
-        supportInputElements: this.props.supportInputElements,
+        supportInputElements: props.supportInputElements,
       },
     );
-  }
 
-  componentWillUnmount() {
-    this.keyboardNoLoop.destroy();
-  }
+    return () => {
+      keyboard.destroy();
+    };
+  }, [props.keys, props.onTrigger, props.supportLoop, props.supportInputElements]);
 
-  render() {
-    return null;
-  }
+  return null;
 }

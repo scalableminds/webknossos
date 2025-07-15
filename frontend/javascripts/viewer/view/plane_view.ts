@@ -104,15 +104,15 @@ class PlaneView {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
     TWEEN.update();
-    const SceneController = getSceneController();
+    const sceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
-      const { renderer, scene } = SceneController;
-      SceneController.update();
+      const { renderer, scene } = sceneController;
+      sceneController.update();
       const storeState = Store.getState();
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
@@ -124,7 +124,7 @@ class PlaneView {
       clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
-        SceneController.updateSceneForCam(plane);
+        sceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
 
         if (width > 0 && height > 0) {
@@ -139,8 +139,8 @@ class PlaneView {
 
   performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
-    const SceneController = getSceneController();
-    const { segmentMeshController } = SceneController;
+    const sceneController = getSceneController();
+    const { segmentMeshController } = sceneController;
     const { meshesLayerLODRootGroup } = segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
@@ -230,8 +230,8 @@ class PlaneView {
 
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {
-      const SceneController = getSceneController();
-      const { segmentMeshController } = SceneController;
+      const sceneController = getSceneController();
+      const { segmentMeshController } = sceneController;
       segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
       oldRaycasterHit = null;
     }
@@ -275,8 +275,8 @@ class PlaneView {
   }
 
   start(): void {
-    const SceneController = getSceneController();
-    const { segmentMeshController } = SceneController;
+    const sceneController = getSceneController();
+    const { segmentMeshController } = sceneController;
 
     this.unsubscribeFunctions.push(
       app.vent.on("rerender", () => {

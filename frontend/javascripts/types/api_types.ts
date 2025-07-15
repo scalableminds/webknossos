@@ -1,6 +1,8 @@
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
+import type { BoundingBoxProto } from "types/bounding_box";
 import type {
+  AdditionalCoordinate,
   ColorObject,
   LOG_LEVELS,
   NestedMatrix4,
@@ -15,7 +17,7 @@ import type {
   TracingStats,
   VolumeTracingStats,
 } from "viewer/model/accessors/annotation_accessor";
-import type { ServerUpdateAction } from "viewer/model/sagas/update_actions";
+import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
@@ -25,7 +27,9 @@ import type {
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
 
-export type AdditionalCoordinate = { name: string; value: number };
+// Re-export
+export type { BoundingBoxProto } from "types/bounding_box";
+export type { AdditionalCoordinate } from "viewer/constants";
 
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
@@ -67,7 +71,7 @@ export type AdditionalAxis = {
   name: string;
 };
 
-export type ServerAdditionalAxis = {
+export type AdditionalAxisProto = {
   bounds: { x: number; y: number };
   index: number;
   name: string;
@@ -603,11 +607,20 @@ type APITracingStoreAnnotationLayer = {
   readonly typ: AnnotationLayerType;
 };
 
+export type APIAnnotationUserState = {
+  userId: string;
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
+};
+
 export type APITracingStoreAnnotation = {
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
+  readonly userStates: APIAnnotationUserState[];
 };
 
 export type APITimeTrackingPerUser = {
@@ -671,7 +684,7 @@ export type APIPricingPlanStatus = {
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
 };
 
-export type APIBuildInfo = {
+export type APIBuildInfoWk = {
   webknossos: {
     name: string;
     commitHash: string;
@@ -693,7 +706,14 @@ export type APIBuildInfo = {
     sbtVersion: string;
     builtAtString: string;
   };
-  webknossosDatastore?: {
+  schemaVersion: number;
+  httpApiVersioning: { currentApiVersion: number; oldestSupportedApiVersion: number };
+  localDataStoreEnabled: boolean;
+  localTracingStoreEnabled: boolean;
+};
+
+export type APIBuildInfoDatastore = {
+  webknossosDatastore: {
     name: string;
     commitHash: string;
     scalaVersion: string;
@@ -702,13 +722,25 @@ export type APIBuildInfo = {
     commitDate: string;
     ciTag: string;
     ciBuild: string;
-    gitTag: string;
     datastoreApiVersion: string;
   };
-  schemaVersion: number;
-  localDataStoreEnabled: boolean;
-  localTracingStoreEnabled: boolean;
 };
+
+export type APIBuildInfoTracingstore = {
+  webknossosTracingstore: {
+    name: string;
+    commitHash: string;
+    scalaVersion: string;
+    version: string;
+    sbtVersion: string;
+    commitDate: string;
+    ciTag: string;
+    ciBuild: string;
+  };
+};
+
+export type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
+
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
@@ -826,20 +858,14 @@ export type ServerBranchPoint = {
   createdTimestamp: number;
   nodeId: number;
 };
-export type ServerBoundingBox = {
-  topLeft: Point3;
-  width: number;
-  height: number;
-  depth: number;
-};
-export type UserBoundingBoxFromServer = {
-  boundingBox: ServerBoundingBox;
+export type UserBoundingBoxProto = {
+  boundingBox: BoundingBoxProto;
   id: number;
   name?: string;
   color?: ColorObject;
   isVisible?: boolean;
 };
-export type ServerBoundingBoxTypeTuple = {
+export type ServerBoundingBoxMinMaxTypeTuple = {
   topLeft: Vector3;
   width: number;
   height: number;
@@ -887,38 +913,65 @@ type ServerSegment = {
 };
 export type ServerTracingBase = {
   id: string;
-  userBoundingBoxes: Array<UserBoundingBoxFromServer>;
-  userBoundingBox?: ServerBoundingBox;
+  userBoundingBoxes: Array<UserBoundingBoxProto>;
+  userBoundingBox?: BoundingBoxProto;
   createdTimestamp: number;
-  editPosition: Point3;
-  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
-  editRotation: Point3;
   error?: string;
-  zoomLevel: number;
-  additionalAxes: ServerAdditionalAxis[];
+  additionalAxes: AdditionalAxisProto[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove
   // the property.
   version?: number;
+  // The following properties should only be used if the
+  // annotation.userStates array does not contain any information.
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
 };
+
+export type MapEntries<K extends number | string | symbol, V> = Array<{ id: K; value: V }>;
+
+export type SkeletonUserState = {
+  userId: string;
+  activeNodeId: number | null;
+  // The following properties are the values of a
+  // id->boolean dictionary.
+  treeVisibilities: MapEntries<number, boolean>;
+  treeGroupExpandedStates: MapEntries<number, boolean>;
+  boundingBoxVisibilities: MapEntries<number, boolean>;
+};
+
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Skeleton";
-  activeNodeId?: number;
-  boundingBox?: ServerBoundingBox;
+  activeNodeId?: number; // only use as a fallback if userStates is empty
+  boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
+  userStates: SkeletonUserState[];
 };
+
+export type VolumeUserState = {
+  userId: string;
+  activeSegmentId?: number;
+  // The following properties are the values of a
+  // id->boolean dictionary.
+  segmentVisibilities: MapEntries<number, boolean>;
+  segmentGroupExpandedStates: MapEntries<number, boolean>;
+  boundingBoxVisibilities: MapEntries<number, boolean>;
+};
+
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number;
-  boundingBox: ServerBoundingBox;
+  activeSegmentId?: number; // only use as a fallback if userStates is empty
+  boundingBox: BoundingBoxProto;
   elementClass: ElementClass;
   fallbackLayer?: string;
   segments: Array<ServerSegment>;
@@ -937,6 +990,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // once a bucket was mutated. There is no need to send an explicit UpdateAction
   // for that.
   volumeBucketDataHasChanged?: boolean;
+  userStates: VolumeUserState[];
   hideUnregisteredSegments?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
@@ -949,12 +1003,10 @@ export type ServerEditableMapping = {
 
 export type APIMeshFileInfo = {
   name: string;
-  path: string | null | undefined;
-  fileType: string | null | undefined;
   mappingName?: string | null | undefined;
-  // 0   - is the first mesh file version
-  // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
-  // 3   - is the newer version with draco encoding.
+  // 0   - unsupported (is the first mesh file version)
+  // 1-2 - unsupported (the format should behave as v0; refer to voxelytics for actual differences)
+  // 3+  - is the newer version with draco encoding.
   formatVersion: number;
 };
 export type APIConnectomeFile = {

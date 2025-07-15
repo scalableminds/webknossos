@@ -1,5 +1,5 @@
 import { getSystemColorTheme } from "theme";
-import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
+import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,
@@ -9,6 +9,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
   UnitLong,
+  ViewModeValues,
 } from "viewer/constants";
 import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
@@ -33,7 +34,7 @@ const initialAnnotationInfo = {
     somaClickingAllowed: false,
     mergerMode: false,
     volumeInterpolationAllowed: false,
-    allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
+    allowedModes: ViewModeValues,
     magRestrictions: {},
   },
   visibility: "Internal" as APIAnnotationVisibility,
@@ -70,6 +71,7 @@ const defaultState: WebknossosState = {
     newNodeNewTree: false,
     continuousNodeCreation: false,
     centerNewNode: true,
+    applyNodeRotationOnActivation: false,
     overrideNodeRadius: true,
     particleSize: 5,
     presetBrushSizes: null,
@@ -122,6 +124,7 @@ const defaultState: WebknossosState = {
   },
   task: null,
   dataset: {
+    areLayersPreprocessed: true,
     id: "dummy-dataset-id",
     name: "Loading",
     folderId: "dummy-folder-id",
@@ -197,6 +200,10 @@ const defaultState: WebknossosState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+    // The flycam matrix has a default rotation of 180° around the z axis (see flycam_reducer.tsx resetMatrix) which is already
+    // calculated out of the rotation value shown to the user and stored in this property. But as the initial matrix above
+    // does not have this default rotation, the correct resulting rotation value matching the identity matrix is [0,0,180].
+    rotation: [0, 0, 180],
   },
   flycamInfoCache: {
     maximumZoomForAllMags: {},

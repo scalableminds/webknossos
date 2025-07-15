@@ -6,10 +6,11 @@ import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import * as THREE from "three";
 import {
   actionChannel,
   all,
@@ -22,9 +23,13 @@ import {
   throttle,
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
-import { TreeTypeEnum } from "viewer/constants";
+import {
+  NumberToOrthoView,
+  OrthoBaseRotations,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -58,36 +63,51 @@ import {
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
-  addUserBoundingBoxInSkeletonTracing,
-  addUserBoundingBoxInVolumeTracing,
   createEdge,
   createNode,
   createTree,
   deleteEdge,
   deleteNode,
   deleteTree,
-  deleteUserBoundingBoxInSkeletonTracing,
-  deleteUserBoundingBoxInVolumeTracing,
+  updateActiveNode,
   updateNode,
-  updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeGroupsExpandedState,
   updateTreeVisibility,
-  updateUserBoundingBoxInSkeletonTracing,
-  updateUserBoundingBoxInVolumeTracing,
-  updateUserBoundingBoxVisibilityInSkeletonTracing,
-  updateUserBoundingBoxVisibilityInVolumeTracing,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { api } from "viewer/singletons";
-import type { UserBoundingBox } from "viewer/store";
-import type { Flycam, SkeletonTracing, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
+import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+
+function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
+  // In orthogonal view mode, this active planes default rotation is added to the flycam rotation upon node creation.
+  // To get the same flycam rotation as was active during node creation, the default rotation is calculated out from the nodes rotation.
+  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
+  const nodeRotationInReducerFormatMatrix = eulerAngleToReducerInternalMatrix(nodeRotationRadian);
+  const viewportRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+    OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
+  );
+  // Invert the rotation of the viewport to get the rotation configured during node creation.
+  const viewportRotationMatrixInverted = viewportRotationMatrix.invert();
+  const rotationWithoutViewportRotation = nodeRotationInReducerFormatMatrix.multiply(
+    viewportRotationMatrixInverted,
+  );
+  const rotationInRadian = reducerInternalMatrixToEulerAngle(rotationWithoutViewportRotation);
+  const flycamOnlyRotationInDegree = V3.round(map3(THREE.MathUtils.radToDeg, rotationInRadian));
+  return flycamOnlyRotationInDegree;
+}
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -107,16 +127,34 @@ function* centerActiveNode(action: Action): Saga<void> {
   const activeNode = getActiveNode(
     yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
+  const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const userApplyRotation = yield* select(
+    (state: WebknossosState) => state.userConfiguration.applyNodeRotationOnActivation,
+  );
+  const applyRotation =
+    "suppressRotation" in action && action.suppressRotation != null
+      ? !action.suppressRotation
+      : userApplyRotation;
 
   if (activeNode != null) {
+    let nodeRotation = activeNode.rotation;
+    if (applyRotation && viewMode === "orthogonal") {
+      nodeRotation = yield* call(getNodeRotationWithoutPlaneRotation, activeNode);
+    }
     const activeNodePosition = yield* select((state: WebknossosState) =>
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
       Store.dispatch(setPositionAction(activeNodePosition));
-      Store.dispatch(setRotationAction(activeNode.rotation));
+      if (applyRotation) {
+        Store.dispatch(setRotationAction(nodeRotation));
+      }
     } else {
-      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+      api.tracing.centerPositionAnimated(
+        activeNodePosition,
+        false,
+        applyRotation ? nodeRotation : undefined,
+      );
     }
     if (activeNode.additionalCoordinates) {
       Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
@@ -135,7 +173,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: WebknossosState) => (getBranchPoints(state.annotation)?.toArray() ?? []).length > 0,
+        (state: WebknossosState) => (getBranchPoints(state.annotation) ?? []).length > 0,
       );
 
       if (hasBranchPoints) {
@@ -527,15 +565,6 @@ function* diffEdges(
   }
 }
 
-function updateTracingPredicate(
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
-): boolean {
-  return prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId || prevFlycam !== flycam;
-}
-
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     // branchPoints and comments are arrays and therefore checked for
@@ -605,96 +634,43 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
   Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
 
-export function* diffBoundingBoxes(
-  prevBoundingBoxes: UserBoundingBox[],
-  currentBoundingBoxes: UserBoundingBox[],
-  tracingId: string,
-  tracingType: AnnotationLayerEnum,
-) {
-  if (prevBoundingBoxes === currentBoundingBoxes) return;
-  const {
-    onlyA: deletedBBoxIds,
-    onlyB: addedBBoxIds,
-    both: maybeChangedBBoxIds,
-  } = Utils.diffArrays(
-    prevBoundingBoxes.map((bbox) => bbox.id),
-    currentBoundingBoxes.map((bbox) => bbox.id),
-  );
-  const [addBBoxAction, deleteBBoxAction, updateBBoxAction, updateBBoxVisibilityAction] =
-    tracingType === AnnotationLayerEnum.Skeleton
-      ? [
-          addUserBoundingBoxInSkeletonTracing,
-          deleteUserBoundingBoxInSkeletonTracing,
-          updateUserBoundingBoxInSkeletonTracing,
-          updateUserBoundingBoxVisibilityInSkeletonTracing,
-        ]
-      : [
-          addUserBoundingBoxInVolumeTracing,
-          deleteUserBoundingBoxInVolumeTracing,
-          updateUserBoundingBoxInVolumeTracing,
-          updateUserBoundingBoxVisibilityInVolumeTracing,
-        ];
-  const getErrorMessage = (id: number) =>
-    `User bounding box with id ${id} not found in ${tracingType} tracing.`;
-  for (const id of deletedBBoxIds) {
-    yield deleteBBoxAction(id, tracingId);
-  }
-  for (const id of addedBBoxIds) {
-    const bbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
-    if (bbox) {
-      yield addBBoxAction(bbox, tracingId);
-    } else {
-      throw new Error(getErrorMessage(id));
-    }
-  }
-  for (const id of maybeChangedBBoxIds) {
-    const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
-    const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
-    if (currentBbox == null || prevBbox == null) {
-      throw new Error(getErrorMessage(id));
-    }
-    if (currentBbox === prevBbox) continue;
-
-    const diffBbox = Utils.diffObjects(prevBbox, currentBbox);
-
-    const { isVisible: maybeIsVisible, ...changedKeys } = diffBbox;
-    if (maybeIsVisible != null) {
-      yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
-    }
-    if (!_.isEmpty(changedKeys)) {
-      yield updateBBoxAction(currentBbox.id, changedKeys, tracingId);
-    }
-  }
-}
-
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (prevSkeletonTracing !== skeletonTracing) {
-    for (const action of cachedDiffTrees(
-      skeletonTracing.tracingId,
-      prevSkeletonTracing.trees,
-      skeletonTracing.trees,
-    )) {
-      yield action;
-    }
+  if (prevSkeletonTracing === skeletonTracing) {
+    return;
+  }
+  yield* cachedDiffTrees(
+    skeletonTracing.tracingId,
+    prevSkeletonTracing.trees,
+    skeletonTracing.trees,
+  );
 
-    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
-      yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
-    }
+  const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);
+
+  if (groupDiff.didContentChange) {
+    // The groups (without isExpanded) actually changed. Save them to the server.
+    yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
   }
 
-  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
-    yield updateSkeletonTracing(
-      skeletonTracing,
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
+  if (groupDiff.newlyExpandedIds.length > 0) {
+    yield updateTreeGroupsExpandedState(
+      groupDiff.newlyExpandedIds,
+      true,
+      skeletonTracing.tracingId,
     );
+  }
+  if (groupDiff.newlyNotExpandedIds.length > 0) {
+    yield updateTreeGroupsExpandedState(
+      groupDiff.newlyNotExpandedIds,
+      false,
+      skeletonTracing.tracingId,
+    );
+  }
+
+  if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
+    yield updateActiveNode(skeletonTracing);
   }
 
   yield* diffBoundingBoxes(

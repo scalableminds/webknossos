@@ -8,24 +8,21 @@ import {
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APITeam, APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
-type OwnProps = {
-  projectId?: string | null | undefined;
-};
-type Props = OwnProps;
-type PropsWithRouter = Props;
 
-function ProjectCreateView({ projectId }: PropsWithRouter) {
+function ProjectCreateView() {
+  const { projectId } = useParams();
+
   const [teams, setTeams] = useState<APITeam[]>([]);
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
-  const history = useHistory();
+  const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
@@ -61,7 +58,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
       await createProject(formValues);
     }
 
-    history.push("/projects");
+    navigate("/projects");
   };
 
   const isEditMode = projectId != null;

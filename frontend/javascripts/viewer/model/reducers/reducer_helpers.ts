@@ -2,59 +2,97 @@ import * as Utils from "libs/utils";
 import type {
   APIAnnotation,
   AdditionalAxis,
-  ServerAdditionalAxis,
-  ServerBoundingBox,
-  UserBoundingBoxFromServer,
+  AdditionalAxisProto,
+  BoundingBoxProto,
+  SkeletonUserState,
+  UserBoundingBoxProto,
+  VolumeUserState,
 } from "types/api_types";
-import type { BoundingBoxType } from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
-import type { BoundingBoxObject, UserBoundingBox, UserBoundingBoxToServer } from "viewer/store";
-import type { Annotation, WebknossosState } from "viewer/store";
+import type {
+  Annotation,
+  BoundingBoxObject,
+  SegmentGroup,
+  UserBoundingBox,
+  UserBoundingBoxForServer,
+  UserBoundingBoxWithOptIsVisible,
+  WebknossosState,
+} from "viewer/store";
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/volume/update_actions";
+import type { Tree, TreeGroup } from "../types/tree_types";
 
-export function convertServerBoundingBoxToBoundingBox(
-  boundingBox: ServerBoundingBox,
-): BoundingBoxType {
-  return Utils.computeBoundingBoxFromArray(
-    Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
-      boundingBox.width,
-      boundingBox.height,
-      boundingBox.depth,
-    ]),
-  );
+function convertServerBoundingBoxToBoundingBoxMinMaxType(
+  boundingBox: BoundingBoxProto,
+): BoundingBoxMinMaxType {
+  const min = Utils.point3ToVector3(boundingBox.topLeft);
+  const max: Vector3 = [
+    min[0] + boundingBox.width,
+    min[1] + boundingBox.height,
+    min[2] + boundingBox.depth,
+  ];
+  return { min, max };
 }
+
 export function convertServerBoundingBoxToFrontend(
-  boundingBox: ServerBoundingBox | null | undefined,
-): BoundingBoxType | null | undefined {
-  if (!boundingBox) return null;
-  return convertServerBoundingBoxToBoundingBox(boundingBox);
+  boundingBox: BoundingBoxProto | null | undefined,
+): BoundingBoxMinMaxType | null | undefined {
+  if (!boundingBox) return boundingBox;
+  return convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
 }
+
+export function convertUserBoundingBoxFromUpdateActionToFrontend(
+  bboxValue: UpdateUserBoundingBoxInSkeletonTracingAction["value"],
+): Partial<UserBoundingBox> {
+  const {
+    boundingBox,
+    boundingBoxId: _boundingBoxId,
+    actionTracingId: _actionTracingId,
+    ...valueWithoutBoundingBox
+  } = bboxValue;
+  const maybeBoundingBoxValue =
+    boundingBox != null
+      ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
+      : {};
+
+  return {
+    ...valueWithoutBoundingBox,
+    ...maybeBoundingBoxValue,
+  };
+}
+
 export function convertUserBoundingBoxesFromServerToFrontend(
-  boundingBoxes: Array<UserBoundingBoxFromServer>,
+  boundingBoxes: Array<UserBoundingBoxProto>,
+  userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
+  const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};
+
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
-    const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
+    const convertedBoundingBox = convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
       name: name || `Bounding box ${id}`,
-      isVisible: isVisible != null ? isVisible : true,
+      isVisible: idToVisible[id] ?? isVisible ?? true,
     };
   });
 }
 
 export function convertUserBoundingBoxFromFrontendToServer(
-  boundingBox: UserBoundingBox,
-): UserBoundingBoxToServer {
+  boundingBox: UserBoundingBoxWithOptIsVisible,
+): UserBoundingBoxForServer {
   const { boundingBox: bb, ...rest } = boundingBox;
   return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }
+
 export function convertFrontendBoundingBoxToServer(
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBoxMinMaxType,
 ): BoundingBoxObject {
   return {
     topLeft: boundingBox.min,
@@ -64,7 +102,7 @@ export function convertFrontendBoundingBoxToServer(
   };
 }
 
-export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
+export function convertBoundingBoxProtoToObject(boundingBox: BoundingBoxProto): BoundingBoxObject {
   return {
     width: boundingBox.width,
     height: boundingBox.height,
@@ -72,6 +110,7 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
     topLeft: Utils.point3ToVector3(boundingBox.topLeft),
   };
 }
+
 export function convertServerAnnotationToFrontendAnnotation(
   annotation: APIAnnotation,
   version: number,
@@ -121,7 +160,7 @@ export function convertServerAnnotationToFrontendAnnotation(
 }
 
 export function convertServerAdditionalAxesToFrontEnd(
-  additionalAxes: ServerAdditionalAxis[],
+  additionalAxes: AdditionalAxisProto[],
 ): AdditionalAxis[] {
   return additionalAxes.map((coords) => ({
     ...coords,
@@ -164,6 +203,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
@@ -184,6 +224,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;
@@ -191,10 +232,51 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
 
   const disabledToolInfo = getDisabledInfoForTools(state);
   if (!isToolAvailable(state, disabledToolInfo, tool)) {
+    console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }
 
   return updateKey(state, "uiInformation", {
     activeTool: tool,
   });
+}
+
+export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
+  groups: Group[],
+  userState: SkeletonUserState | VolumeUserState | undefined,
+): Group[] {
+  if (userState == null) {
+    return groups;
+  }
+
+  const expandedStates =
+    "segmentGroupExpandedStates" in userState
+      ? userState.segmentGroupExpandedStates
+      : userState.treeGroupExpandedStates;
+
+  const groupIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(expandedStates);
+  return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
+    return {
+      ...group,
+      isExpanded: groupIdToExpanded[group.groupId] ?? group.isExpanded,
+      children,
+    };
+  });
+}
+
+export function getApplyUserStateToTreeFn(
+  userState: SkeletonUserState | undefined,
+): ((tree: Tree) => Tree) | undefined {
+  if (userState == null) {
+    return undefined;
+  }
+
+  const visibilities = userState.treeVisibilities;
+  const treeIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(visibilities);
+  return (tree) => {
+    return {
+      ...tree,
+      isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
+    };
+  };
 }

@@ -1,7 +1,6 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
@@ -9,6 +8,7 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
+import _ from "lodash";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -17,7 +17,6 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -58,31 +57,33 @@ import {
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
-import listenToMinCut from "viewer/model/sagas/min_cut_saga";
-import listenToQuickSelect from "viewer/model/sagas/quick_select_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
+import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
+import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import {
   type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
+  updateActiveSegmentId,
+  updateLargestSegmentId,
   updateMappingName,
   updateSegmentGroups,
+  updateSegmentGroupsExpandedState,
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
-  updateVolumeTracingAction,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import type { Flycam, SegmentMap, VolumeTracing } from "viewer/store";
+import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkReady } from "./ready_sagas";
-import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -400,19 +401,6 @@ export function* ensureToolIsAllowedInMag(): Saga<void> {
   }
 }
 
-function updateTracingPredicate(
-  prevVolumeTracing: VolumeTracing,
-  volumeTracing: VolumeTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
-): boolean {
-  return (
-    prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
-    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId ||
-    prevFlycam !== flycam
-  );
-}
-
 export const cachedDiffSegmentLists = memoizeOne(
   (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
     Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
@@ -472,20 +460,19 @@ function* uncachedDiffSegmentLists(
     }
   }
 }
+
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
-    yield updateVolumeTracingAction(
-      volumeTracing,
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
-    );
+  if (prevVolumeTracing === volumeTracing) {
+    return;
+  }
+  if (prevVolumeTracing.activeCellId !== volumeTracing.activeCellId) {
+    yield updateActiveSegmentId(volumeTracing.activeCellId, volumeTracing.tracingId);
+  }
+  if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
+    yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
   }
 
   yield* diffBoundingBoxes(
@@ -495,39 +482,55 @@ export function* diffVolumeTracing(
     AnnotationLayerEnum.Volume,
   );
 
-  if (prevVolumeTracing !== volumeTracing) {
-    if (prevVolumeTracing.segments !== volumeTracing.segments) {
-      for (const action of cachedDiffSegmentLists(
-        volumeTracing.tracingId,
-        prevVolumeTracing.segments,
-        volumeTracing.segments,
-      )) {
-        yield action;
-      }
-    }
-
-    if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
-      yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
-    }
-
-    if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-      yield removeFallbackLayer(volumeTracing.tracingId);
-    }
-
-    if (
-      prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
-      prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
-    ) {
-      // Once the first volume action is performed on a volume layer, the mapping state is locked.
-      // In case no mapping is active, this is denoted by setting the mapping name to null.
-      const action = updateMappingName(
-        volumeTracing.mappingName || null,
-        volumeTracing.hasEditableMapping || null,
-        volumeTracing.mappingIsLocked,
-        volumeTracing.tracingId,
-      );
+  if (prevVolumeTracing.segments !== volumeTracing.segments) {
+    for (const action of cachedDiffSegmentLists(
+      volumeTracing.tracingId,
+      prevVolumeTracing.segments,
+      volumeTracing.segments,
+    )) {
       yield action;
     }
+  }
+
+  const groupDiff = diffGroups(prevVolumeTracing.segmentGroups, volumeTracing.segmentGroups);
+
+  if (groupDiff.didContentChange) {
+    // The groups (without isExpanded) actually changed. Save them to the server.
+    yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
+  }
+
+  if (groupDiff.newlyExpandedIds.length > 0) {
+    yield updateSegmentGroupsExpandedState(
+      groupDiff.newlyExpandedIds,
+      true,
+      volumeTracing.tracingId,
+    );
+  }
+  if (groupDiff.newlyNotExpandedIds.length > 0) {
+    yield updateSegmentGroupsExpandedState(
+      groupDiff.newlyNotExpandedIds,
+      false,
+      volumeTracing.tracingId,
+    );
+  }
+
+  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+    yield removeFallbackLayer(volumeTracing.tracingId);
+  }
+
+  if (
+    prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
+    prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
+  ) {
+    // Once the first volume action is performed on a volume layer, the mapping state is locked.
+    // In case no mapping is active, this is denoted by setting the mapping name to null.
+    const action = updateMappingName(
+      volumeTracing.mappingName || null,
+      volumeTracing.hasEditableMapping || null,
+      volumeTracing.mappingIsLocked,
+      volumeTracing.tracingId,
+    );
+    yield action;
   }
 }
 
@@ -611,7 +614,7 @@ function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
       return calculateMaybeGlobalPos(state, {
         x,
         y,
-      });
+      })?.rounded;
     }
 
     return undefined;

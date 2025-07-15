@@ -6,6 +6,27 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
+
+### Postgres Evolutions
+None.
+
+## [25.07.0](https://github.com/scalableminds/webknossos/releases/tag/25.07.0) - 2025-07-01
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.2...25.07.0)
+
+- The default thread pool size was increased from 5 to 10 times the number of available CPUs (capped at 1000). Note that wk may need slightly more memory because of this.
+
+### Postgres Evolutions
+- [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)
+- [135-neuroglancer-attachment.sql](conf/evolutions/135-neuroglancer-attachment.sql)
+
+## [25.06.2](https://github.com/scalableminds/webknossos/releases/tag/25.06.2) - 2025-06-17
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...25.06.2)
+
+### Postgres Evolutions:
+None.
+
 ## [25.06.1](https://github.com/scalableminds/webknossos/releases/tag/25.06.1) - 2025-06-03
 [Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...25.06.1)
 

@@ -31,7 +31,7 @@ const createDummyNode = (id: number): Node => ({
 const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
-  tracingId: "tracingId",
+  tracingId: "skeletonTracingId",
   cachedMaxNodeId: 7,
   trees: new DiffableMap([
     [
@@ -555,7 +555,9 @@ describe("NML", () => {
   });
 
   it("Serialized nml should be correctly named", async () => {
-    expect(getNmlName(initialState)).toBe("Test Dataset__5b1fd1cb97000027049c67ec____tionId.nml");
+    expect(getNmlName(initialState)).toBe(
+      "Test Dataset__taskId-5b1fd1cb97000027049c67ec____tionId.nml",
+    );
 
     const stateWithoutTask = { ...initialState, task: null };
 
@@ -767,7 +769,7 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.size()).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.getOrThrow(12).id).toBe(12);
 
-    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
+    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.toArray(), "source");
 
     // And node ids in edges, branchpoints and comments should have been replaced
     expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(3).edges)).toEqual([

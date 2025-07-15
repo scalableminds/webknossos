@@ -10,15 +10,15 @@ import { UnitLong } from "viewer/constants";
 
 import { put, take, call } from "redux-saga/effects";
 import * as SaveActions from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/update_actions";
+import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
 import {
   pushSaveQueueAsync,
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-  sendRequestWithToken,
-} from "viewer/model/sagas/save_saga";
+} from "viewer/model/sagas/saving/save_queue_draining";
 import { TIMESTAMP } from "test/global_mocks";
+import { sendSaveRequestWithToken } from "admin/rest_api";
 
 vi.mock("viewer/model/sagas/root_saga", () => {
   return {
@@ -74,12 +74,17 @@ describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveSegmentId(3, initialState.annotation.tracingId)],
+        [UpdateActions.updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
+
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveSegmentId(4, initialState.annotation.tracingId)],
+        [UpdateActions.updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
       ],
       TIMESTAMP,
     );
-    expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[1]]);
+    expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[3], saveQueue[4], saveQueue[5]]);
   });
 
   it("should send update actions", () => {
@@ -139,7 +144,7 @@ describe("Save Saga", () => {
       expect,
       saga.next(TRACINGSTORE_URL),
       call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -162,7 +167,7 @@ describe("Save Saga", () => {
     const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
     expect(versionIncrement).toBe(2);
     const requestWithTokenCall = call(
-      sendRequestWithToken,
+      sendSaveRequestWithToken,
       `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
       {
         method: "POST",
@@ -210,7 +215,7 @@ describe("Save Saga", () => {
       expect,
       saga.next(TRACINGSTORE_URL),
       call(
-        sendRequestWithToken,
+        sendSaveRequestWithToken,
         `${TRACINGSTORE_URL}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -290,8 +295,8 @@ describe("Save Saga", () => {
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -337,9 +342,9 @@ describe("Save Saga", () => {
   it("should set the correct version numbers if the save queue was compacted", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [3, 4, 5], [], [0, 0, 1], 3)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
       ],
       TIMESTAMP,
     );

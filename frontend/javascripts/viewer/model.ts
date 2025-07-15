@@ -10,7 +10,10 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { getActiveSegmentationTracingLayer } from "viewer/model/accessors/volumetracing_accessor";
-import { saveNowAction } from "viewer/model/actions/save_actions";
+import {
+  ensureTracingsWereDiffedToSaveQueueAction,
+  saveNowAction,
+} from "viewer/model/actions/save_actions";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type LayerRenderingManager from "viewer/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
@@ -19,10 +22,13 @@ import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 
+import Deferred from "libs/async/deferred";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
-// TODO: Non-reactive
+const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
+
+// TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
@@ -340,9 +346,40 @@ export class WebKnossosModel {
   };
 
   ensureSavedState = async () => {
-    // This function will only return once all state is saved
-    // even if new updates are pushed to the save queue during saving
-    while (!this.stateSaved()) {
+    /* This function will only return once all state is saved
+     * even if new updates are pushed to the save queue during saving
+     */
+
+    // This is a helper function which ensures that the diffing sagas
+    // have seen the newest tracings. These sagas are responsible for diffing
+    // old vs. new tracings to fill the save queue with update actions.
+    // waitForDifferResponses dispatches a special action which the diffing sagas
+    // will respond to by calling the callback that is attached to the action.
+    // That way, we can be sure that the diffing sagas have processed all user actions
+    // up until the time of where waitForDifferResponses was invoked.
+    async function waitForDifferResponses() {
+      const { annotation } = Store.getState();
+      // All skeleton and volume tracings should respond to the dispatched action.
+      const tracingIds = new Set(
+        _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
+      );
+      const reportedTracingIds = new Set();
+      const deferred = new Deferred();
+      function callback(tracingId: string) {
+        reportedTracingIds.add(tracingId);
+        if (Utils.areSetsEqual(tracingIds, reportedTracingIds)) {
+          deferred.resolve(null);
+        }
+      }
+
+      if (tracingIds.size > 0) {
+        Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
+        await deferred.promise();
+      }
+      return true;
+    }
+
+    while ((await waitForDifferResponses()) && !this.stateSaved()) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
@@ -350,7 +387,7 @@ export class WebKnossosModel {
         Store.dispatch(saveNowAction());
       }
 
-      await Utils.sleep(500);
+      await Utils.sleep(WAIT_AFTER_SAVE_TRIGGER);
     }
   };
 

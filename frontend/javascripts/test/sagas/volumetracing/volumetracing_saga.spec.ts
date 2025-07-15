@@ -1,7 +1,6 @@
-import { vi, it, expect, describe } from "vitest";
+import { it, expect, describe, beforeEach, afterEach } from "vitest";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { take, put, call } from "redux-saga/effects";
-import update from "immutability-helper";
-import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_types";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   OrthoViews,
@@ -9,17 +8,10 @@ import {
   OverwriteModeEnum,
   MappingStatusEnum,
 } from "viewer/constants";
-import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
-import { enforce } from "libs/utils";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
-import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import defaultState from "viewer/default_state";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
-import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 import type { ActiveMappingInfo } from "viewer/store";
 import { askUserForLockingActiveMapping } from "viewer/model/sagas/saga_helpers";
-import { setupSavingForTracingType } from "viewer/model/sagas/save_saga";
 import { editVolumeLayerAsync, finishLayer } from "viewer/model/sagas/volumetracing_saga";
 import {
   requestBucketModificationInVolumeTracing,
@@ -27,84 +19,11 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
+import { Model, Store } from "viewer/singletons";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
 
-// Mock dependencies
-vi.mock("viewer/model/sagas/root_saga", () => ({
-  default: function* () {
-    yield;
-  },
-}));
-
-const serverVolumeTracing: ServerVolumeTracing = {
-  typ: "Volume",
-  id: "tracingId",
-  elementClass: "uint32",
-  createdTimestamp: 0,
-  boundingBox: {
-    topLeft: {
-      x: 0,
-      y: 0,
-      z: 0,
-    },
-    width: 10,
-    height: 10,
-    depth: 10,
-  },
-  zoomLevel: 0,
-  segments: [],
-  segmentGroups: [],
-  editPosition: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  additionalAxes: [],
-  userBoundingBoxes: [],
-  largestSegmentId: 0,
-};
-
-const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
-const volumeTracingLayer: APISegmentationLayer = {
-  name: volumeTracing.tracingId,
-  category: "segmentation",
-  boundingBox: enforce(convertFrontendBoundingBoxToServer)(volumeTracing.boundingBox),
-  resolutions: [[1, 1, 1]],
-  elementClass: serverVolumeTracing.elementClass,
-  largestSegmentId: serverVolumeTracing.largestSegmentId,
-  tracingId: volumeTracing.tracingId,
-  additionalAxes: [],
-};
-
-const initialState = update(defaultState, {
-  annotation: {
-    volumes: {
-      $set: [volumeTracing],
-    },
-  },
-  dataset: {
-    dataSource: {
-      dataLayers: {
-        $set: [volumeTracingLayer],
-      },
-    },
-  },
-  datasetConfiguration: {
-    layers: {
-      $set: {
-        [volumeTracing.tracingId]: {
-          isDisabled: false,
-          alpha: 100,
-        },
-      },
-    },
-  },
-});
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
@@ -124,46 +43,40 @@ const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 
 describe("VolumeTracingSaga", () => {
-  it("shouldn't do anything if unchanged (saga test)", () => {
-    const saga = setupSavingForTracingType(
-      VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
-    );
+  describe("With Saga Middleware", () => {
+    beforeEach<WebknossosTestContext>(async (context) => {
+      await setupWebknossosForTesting(context, "volume");
+    });
 
-    saga.next();
-    saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
-    saga.next(initialState.viewModeData.plane.tdCamera);
-    saga.next();
-    saga.next();
-    saga.next(true);
-    saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
-    // only updateTracing
-    const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
-    expect(withoutUpdateTracing(items).length).toBe(0);
-  });
+    afterEach<WebknossosTestContext>(async (context) => {
+      context.tearDownPullQueues();
+      // Saving after each test and checking that the root saga didn't crash,
+      expect(hasRootSagaCrashed()).toBe(false);
+    });
 
-  it("should do something if changed (saga test)", () => {
-    const newState = VolumeTracingReducer(initialState, setActiveCellAction);
-    const saga = setupSavingForTracingType(
-      VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
-    );
+    it("shouldn't do anything if unchanged (saga test)", async (context: WebknossosTestContext) => {
+      await Model.ensureSavedState();
+      expect(context.receivedDataPerSaveRequest.length).toBe(0);
+    });
 
-    saga.next();
-    saga.next(initialState.annotation.volumes[0]);
-    saga.next(initialState.flycam);
-    saga.next(initialState.viewModeData.plane.tdCamera);
-    saga.next();
-    saga.next();
-    saga.next(true);
-    saga.next(newState.annotation.volumes[0]);
-    saga.next(newState.flycam);
+    it("should do something if changed (saga test)", async (context: WebknossosTestContext) => {
+      Store.dispatch(setActiveCellAction);
+      await Model.ensureSavedState();
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      const requestBatches = context.receivedDataPerSaveRequest[0];
+      expect(requestBatches.length).toBe(1);
+      const updateBatch = requestBatches[0];
+      expect(updateBatch.actions.map((action) => action.name)).toEqual(["updateActiveSegmentId"]);
+      const action = updateBatch.actions[0];
 
-    const items = execCall(expect, saga.next(newState.viewModeData.plane.tdCamera));
-
-    expect(withoutUpdateTracing(items).length).toBe(0);
-    expect(items[0].value.activeSegmentId).toBe(ACTIVE_CELL_ID);
-    expectValueDeepEqual(expect, saga.next(items), put(pushSaveQueueTransaction(items)));
+      expect(action).toMatchObject({
+        name: "updateActiveSegmentId",
+        value: {
+          actionTracingId: volumeTracing.tracingId,
+          activeSegmentId: 5,
+        },
+      });
+    });
   });
 
   it("should create a volume layer (saga test)", () => {

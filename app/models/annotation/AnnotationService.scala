@@ -40,7 +40,7 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
@@ -313,6 +313,7 @@ class AnnotationService @Inject()(
       for {
         _ <- annotationDAO.updateModified(annotation._id, Instant.now)
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
+        _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       } yield {
         if (annotation._task.isEmpty)
           "annotation.finished"
@@ -363,6 +364,8 @@ class AnnotationService @Inject()(
       duplicatedAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotationBaseId,
         initializingAnnotationId,
+        annotationBase._user,
+        user._id,
         version = None,
         isFromTask = false, // isFromTask is when duplicate is called on a task annotation, not when a task is assigned
         datasetBoundingBox = None
@@ -531,8 +534,11 @@ class AnnotationService @Inject()(
                                                                                               volumeTracingIdOpt,
                                                                                               skeletonTracingOpt,
                                                                                               volumeTracingOpt)
+            // user state is not used in compound download, so the annotationProto can be a dummy one and requestingUser can be None.
+            annotationProto = AnnotationProto("", 0L, Seq.empty, 0L)
             nml = nmlWriter.toNmlStream(
               name,
+              annotationProto,
               fetchedAnnotationLayersForAnnotation,
               Some(annotation),
               voxelSizeOpt,
@@ -541,10 +547,11 @@ class AnnotationService @Inject()(
               conf.Http.uri,
               datasetName,
               datasetId,
-              Some(user),
+              user,
               taskOpt,
               skipVolumeData,
-              volumeDataZipFormat
+              volumeDataZipFormat,
+              requestingUser = None
             )
           } yield (nml, volumeDataOpt)
       }
@@ -795,9 +802,10 @@ class AnnotationService @Inject()(
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
       tracingStore <- tracingStoreDAO.findFirst
       annotationSource = AnnotationSource(
-        id = annotation.id,
+        id = annotation._id,
         annotationLayers = annotation.annotationLayers,
         datasetDirectoryName = dataset.directoryName,
+        datasetId = dataset._id,
         organizationId = organization._id,
         dataStoreUrl = dataStore.publicUrl,
         tracingStoreUrl = tracingStore.publicUrl,

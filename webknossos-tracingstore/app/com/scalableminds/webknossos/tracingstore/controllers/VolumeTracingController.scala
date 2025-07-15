@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import collections.SequenceUtils
 import com.google.inject.Inject
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.optionFormat
@@ -35,7 +36,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -87,7 +87,7 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -111,7 +111,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialData(annotationId: String,
+  def initialData(annotationId: ObjectId,
                   tracingId: String,
                   minMag: Option[Int],
                   maxMag: Option[Int]): Action[AnyContent] =
@@ -144,7 +144,11 @@ class VolumeTracingController @Inject()(
           val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
             mergedTracingRaw <- volumeTracingService
-              .merge(tracingsFlat, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty, newVersion = 0L)
+              .merge(tracingsFlat,
+                     MergedVolumeStats.empty(shouldCreateSegmentIndex),
+                     None,
+                     newVersion = 0L,
+                     additionalBoundingBoxes = Seq.empty)
               .toFox
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)
@@ -154,7 +158,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialDataMultiple(annotationId: String, tracingId: String): Action[AnyContent] =
+  def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -175,7 +179,7 @@ class VolumeTracingController @Inject()(
     }
 
   def allDataZip(tracingId: String,
-                 annotationId: Option[String],
+                 annotationId: Option[ObjectId],
                  version: Option[Long],
                  volumeDataZipFormat: String,
                  voxelSizeFactor: Option[String],
@@ -207,7 +211,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def data(tracingId: String, annotationId: String): Action[List[WebknossosDataRequest]] =
+  def data(tracingId: String, annotationId: ObjectId): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -374,8 +378,10 @@ class VolumeTracingController @Inject()(
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
-                newAnnotationId: String,
+                newAnnotationId: ObjectId,
                 newTracingId: String,
+                ownerId: ObjectId,
+                requestingUserId: ObjectId,
                 minMag: Option[Int],
                 maxMag: Option[Int],
                 editPosition: Option[String],
@@ -399,6 +405,8 @@ class VolumeTracingController @Inject()(
                 newAnnotationId = newAnnotationId,
                 newTracingId = newTracingId,
                 newVersion = 0,
+                ownerId = ownerId,
+                requestingUserId = requestingUserId,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,
                 boundingBox = boundingBoxParsed,

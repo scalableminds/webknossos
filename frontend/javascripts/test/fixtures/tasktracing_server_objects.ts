@@ -4,8 +4,9 @@ import {
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_types";
+import { ViewModeValues } from "viewer/constants";
 
-const TRACING_ID = "e90133de-b2db-4912-8261-8b6f84f7edab";
+const TRACING_ID = "skeletonTracingId-e90133de-b2db-4912-8261-8b6f84f7edab";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -42,7 +43,7 @@ export const tracing: ServerSkeletonTracing = {
         b: 0,
         a: 1,
       },
-      name: "",
+      name: "", // there is a test that asserts that empty names will be renamed automatically
       isVisible: true,
       createdTimestamp: 1528811979356,
       metadata: [],
@@ -51,7 +52,8 @@ export const tracing: ServerSkeletonTracing = {
   treeGroups: [],
   createdTimestamp: 1528811983951,
   userBoundingBoxes: [],
-  activeNodeId: 1,
+  additionalAxes: [],
+  userStates: [],
   editPosition: {
     x: 0,
     y: 0,
@@ -63,21 +65,20 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
-  additionalAxes: [],
   zoomLevel: 2,
-  id: "e90133de-b2db-4912-8261-8b6f84f7edab",
+  id: TRACING_ID,
 };
 export const annotation: APIAnnotation = {
-  datasetId: "66f3c82966010034942e9740",
+  datasetId: "datasetId-66f3c82966010034942e9740",
   modified: 1529066010230,
   state: "Active",
-  id: "5b1fd1cf97000027049c67ee",
+  id: "annotationId-5b1fd1cf97000027049c67ee",
   name: "",
   description: "",
   stats: {},
   typ: "Task",
   task: {
-    id: "5b1fd1cb97000027049c67ec",
+    id: "taskId-5b1fd1cb97000027049c67ec",
     projectName: "sampleProject",
     projectId: "dummy-project-id",
     team: "Connectomics department",
@@ -85,10 +86,10 @@ export const annotation: APIAnnotation = {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",
       description: "Description",
-      teamId: "5b1e45f9a00000a000abc2c3",
+      teamId: "teamId-5b1e45f9a00000a000abc2c3",
       teamName: "Connectomics department",
       settings: {
-        allowedModes: ["orthogonal", "oblique", "flight"],
+        allowedModes: ViewModeValues,
         branchPointsAllowed: true,
         somaClickingAllowed: true,
         volumeInterpolationAllowed: false,
@@ -98,7 +99,7 @@ export const annotation: APIAnnotation = {
       recommendedConfiguration: null,
       tracingType: "skeleton",
     },
-    datasetId: "66f3c82966010034942e9740",
+    datasetId: "datasetId-66f3c82966010034942e9740",
     datasetName: "ROI2017_wkw",
     neededExperience: {
       domain: "oxalis",
@@ -146,7 +147,7 @@ export const annotation: APIAnnotation = {
   },
   visibility: "Internal",
   settings: {
-    allowedModes: ["orthogonal", "oblique", "flight"],
+    allowedModes: ViewModeValues,
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
@@ -156,7 +157,7 @@ export const annotation: APIAnnotation = {
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
   owner: {
-    id: "5b1e45faa00000a900abc2c5",
+    id: "userId-5b1e45faa00000a900abc2c5",
     email: "sample@scm.io",
     firstName: "Sample",
     lastName: "User",
@@ -165,7 +166,7 @@ export const annotation: APIAnnotation = {
     isDatasetManager: true,
     teams: [
       {
-        id: "5b1e45f9a00000a000abc2c3",
+        id: "teamId-5b1e45f9a00000a000abc2c3",
         name: "Connectomics department",
         isTeamManager: true,
       },
@@ -176,7 +177,7 @@ export const annotation: APIAnnotation = {
   isLockedByOwner: false,
   teams: [
     {
-      id: "5b1e45f9a00000a000abc2c3",
+      id: "teamId-5b1e45f9a00000a000abc2c3",
       name: "Connectomics department",
       organization: "Connectomics department",
     },
@@ -193,4 +194,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  userStates: [],
 };

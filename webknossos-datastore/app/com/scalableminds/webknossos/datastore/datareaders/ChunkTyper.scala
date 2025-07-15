@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream

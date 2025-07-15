@@ -9,8 +9,7 @@ import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   type APIAllowedMode,
   type APIMagRestrictions,
@@ -24,11 +23,6 @@ import { syncValidator } from "types/validation";
 const RadioGroup = Radio.Group;
 const FormItem = Form.Item;
 const { TextArea } = Input;
-
-type Props = {
-  taskTypeId?: string | null | undefined;
-  history: RouteComponentProps["history"];
-};
 
 type FormValues = {
   isMagRestricted: boolean;
@@ -75,7 +69,10 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
   );
 }
 
-function TaskTypeCreateView({ taskTypeId, history }: Props) {
+function TaskTypeCreateView() {
+  const { taskTypeId } = useParams();
+
+  const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
   const [isFetchingData, setIsFetchingData] = useState(true);
   const [form] = Form.useForm<FormValues>();
@@ -166,7 +163,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       await createTaskType(newTaskType);
     }
 
-    history.push("/taskTypes");
+    navigate("/taskTypes");
   }
 
   function onChangeUseRecommendedConfiguration(useRecommendedConfiguration: boolean) {
@@ -502,4 +499,4 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskTypeCreateView);
+export default TaskTypeCreateView;

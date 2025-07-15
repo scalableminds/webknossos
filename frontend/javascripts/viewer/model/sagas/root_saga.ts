@@ -8,15 +8,15 @@ import listenToClipHistogramSaga from "viewer/model/sagas/clip_histogram_saga";
 import DatasetSagas from "viewer/model/sagas/dataset_saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
-import MappingSaga from "viewer/model/sagas/mapping_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
-import ProofreadSaga from "viewer/model/sagas/proofread_saga";
 import ReadySagas from "viewer/model/sagas/ready_sagas";
-import SaveSagas, { toggleErrorHighlighting } from "viewer/model/sagas/save_saga";
+import SaveSagas from "viewer/model/sagas/saving/save_saga";
 import SettingsSaga from "viewer/model/sagas/settings_saga";
 import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "viewer/model/sagas/task_saga";
 import UndoSaga from "viewer/model/sagas/undo_saga";
+import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
+import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
@@ -24,6 +24,7 @@ import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import adHocMeshSaga from "./meshes/ad_hoc_mesh_saga";
 import commonMeshSaga, { handleAdditionalCoordinateUpdate } from "./meshes/common_mesh_saga";
 import precomputedMeshSaga from "./meshes/precomputed_mesh_saga";
+import { toggleErrorHighlighting } from "./saving/save_queue_draining";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
@@ -88,13 +89,13 @@ function* restartableSaga(): Saga<void> {
       call(splitBoundaryMeshSaga),
       call(toolSaga),
     ]);
-  } catch (err) {
+  } catch (err: any) {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
     if (!process.env.IS_TESTING) {
-      // @ts-ignore
-      ErrorHandling.notify(err, {});
+      ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
+
       // Hide potentially old error highlighting which mentions a retry mechanism.
       toggleErrorHighlighting(false);
       // Show error highlighting which mentions the permanent error.
@@ -103,10 +104,7 @@ function* restartableSaga(): Saga<void> {
 Internal error.
 Please reload the page to avoid losing data.
 
-${
-  JSON.stringify(err)
-  // @ts-ignore
-} ${err.stack || ""}`);
+${JSON.stringify(err)} ${err.stack || ""}`);
     }
   }
 }

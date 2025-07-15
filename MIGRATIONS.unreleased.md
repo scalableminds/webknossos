@@ -1,12 +1,1 @@
-# Migration Guide (Unreleased)
-All migrations (for unreleased versions) of WEBKNOSSOS are documented in this file.
-See `MIGRATIONS.released.md` for the migrations which are part of official releases.
-
-This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
-User-facing changes are documented in the [changelog](CHANGELOG.released.md).
-
-## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...HEAD)
-
-### Postgres Evolutions:
-- [134-dataset-layer-attachments.sql](conf/evolutions/134-dataset-layer-attachments.sql)
+WARNING: This file will be deleted in the next release. If you have a merge conflict in this file, please ensure that the file only contains this warning text after the merge. Please execute `./tools/create-changelog-entry.py` and move the changelog for your PR into the file that was created by the script. From now on, this will be the new way of adding changelog and migration guide entries for a PR. The created files will be aggregated when a release is created.

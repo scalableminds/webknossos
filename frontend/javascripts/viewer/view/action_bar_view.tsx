@@ -1,14 +1,15 @@
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational } from "admin/rest_api";
-import { Alert, Popover, Space } from "antd";
+import { Alert, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import * as React from "react";
 import { connect, useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_types";
+import { useNavigate } from "react-router-dom";
+import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
@@ -16,8 +17,9 @@ import {
   doesSupportVolumeWithFallback,
   getColorLayers,
   getMappingInfoForSupportedLayer,
+  getSegmentationLayers,
   getUnifiedAdditionalCoordinates,
-  getVisibleSegmentationLayer,
+  getVisibleSegmentationLayers,
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
@@ -25,7 +27,7 @@ import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionView from "viewer/view/action-bar/dataset_position_view";
+import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
 import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
@@ -137,20 +139,25 @@ function AdditionalCoordinatesInputView() {
 }
 
 function CreateAnnotationButton() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
+  const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
+  const dataset = useWkSelector((state) => state.dataset);
+  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] =
+    React.useState<boolean>(false);
+  const [selectedLayerName, setSelectedLayerName] = React.useState<string | undefined>(undefined);
 
-  const onClick = async () => {
-    const state = Store.getState();
-    const { dataset } = state;
+  const getUnambiguousSegmentationLayer = () => {
+    if (visibleSegmentationLayers?.length === 1) return visibleSegmentationLayers[0];
+    if (segmentationLayers.length === 1) return segmentationLayers[0];
+    return null;
+  };
+
+  const continueWithLayer = async (layer: APISegmentationLayer | null | undefined) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(state);
-    const fallbackLayerName =
-      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
-        ? maybeSegmentationLayer.name
-        : null;
-
+    const fallbackLayerName = getFallbackLayerName(layer);
     const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
     let maybeMappingName = null;
     if (
@@ -167,24 +174,63 @@ function CreateAnnotationButton() {
       fallbackLayerName,
       maybeMappingName,
     );
-    history.push(`/annotations/${annotation.id}${location.hash}`);
+    navigate(`/annotations/${annotation.id}${location.hash}`);
+  };
+
+  const getFallbackLayerName = (segmentationLayer: APISegmentationLayer | null | undefined) => {
+    return segmentationLayer && doesSupportVolumeWithFallback(dataset, segmentationLayer)
+      ? segmentationLayer.name
+      : null;
+  };
+
+  const onClick = async () => {
+    // This will be set in cases where it is clear which layer to use.
+    const unambiguousSegmentationLayer = getUnambiguousSegmentationLayer();
+    if (unambiguousSegmentationLayer == null && segmentationLayers.length > 1) {
+      setLayerSelectionModalVisible(true);
+      return;
+    }
+    await continueWithLayer(unambiguousSegmentationLayer);
+  };
+
+  const handleLayerSelected = async () => {
+    setLayerSelectionModalVisible(false);
+    const selectedLayer = selectedLayerName
+      ? segmentationLayers.find((layer) => layer.name === selectedLayerName)
+      : null;
+    await continueWithLayer(selectedLayer);
   };
 
   const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
     AsyncButton,
   );
   return (
-    <ButtonWithAuthentication
-      activeUser={activeUser}
-      authenticationMessage="You have to register or login to create an annotation."
-      style={{
-        marginLeft: 12,
-      }}
-      type="primary"
-      onClick={onClick}
-    >
-      Create Annotation
-    </ButtonWithAuthentication>
+    <>
+      <ButtonWithAuthentication
+        activeUser={activeUser}
+        authenticationMessage="You have to register or login to create an annotation."
+        style={{
+          marginLeft: 12,
+        }}
+        type="primary"
+        onClick={onClick}
+      >
+        Create Annotation
+      </ButtonWithAuthentication>
+
+      <Modal
+        open={isLayerSelectionModalVisible}
+        onCancel={() => setLayerSelectionModalVisible(false)}
+        onOk={handleLayerSelected}
+      >
+        <NewVolumeLayerSelection
+          segmentationLayers={segmentationLayers}
+          dataset={dataset}
+          selectedSegmentationLayerName={selectedLayerName}
+          setSelectedSegmentationLayerName={setSelectedLayerName}
+        />
+      </Modal>
+    </>
   );
 }
 
@@ -311,7 +357,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
-          <DatasetPositionView />
+          <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
           <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager

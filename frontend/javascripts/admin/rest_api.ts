@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { V3 } from "libs/mjs";
-import type { RequestOptions } from "libs/request";
+import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
@@ -15,7 +15,9 @@ import {
   type APIAnnotationType,
   type APIAnnotationVisibility,
   type APIAvailableTasksReport,
-  type APIBuildInfo,
+  type APIBuildInfoDatastore,
+  type APIBuildInfoTracingstore,
+  type APIBuildInfoWk,
   type APICompoundType,
   type APIConnectomeFile,
   type APIDataSource,
@@ -90,6 +92,7 @@ import type {
   MappingType,
   NumberLike,
   PartialDatasetConfiguration,
+  SaveQueueEntry,
   StoreAnnotation,
   TraceOrViewCommand,
   UserConfiguration,
@@ -145,6 +148,10 @@ export async function loginUser(formValues: {
   const organization = await getOrganization(activeUser.organization);
 
   return [activeUser, organization];
+}
+
+export async function logoutUser(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logout");
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {
@@ -231,6 +238,12 @@ export async function getAuthToken(): Promise<string> {
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
+  });
+}
+
+export async function changePassword(data: Record<string, string>): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
+    data: data,
   });
 }
 
@@ -742,7 +755,7 @@ export async function getTracingForAnnotationType(
 
   if (!process.env.IS_TESTING) {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
-    console.log("Parsed protobuf tracing:", tracing);
+    console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
@@ -764,8 +777,9 @@ export function getUpdateActionLog(
   annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
+  sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) => {
+  return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);
     if (oldestVersion != null) {
@@ -774,9 +788,14 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    return Request.receiveJSON(
+    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
+
+    if (sortAscending) {
+      log.reverse();
+    }
+    return log;
   });
 }
 
@@ -1065,10 +1084,12 @@ export function getDatasetDefaultConfiguration(datasetId: string): Promise<Datas
 export function updateDatasetDefaultConfiguration(
   datasetId: string,
   datasetConfiguration: DatasetConfiguration,
+  options?: RequestOptions,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
     method: "PUT",
     data: datasetConfiguration,
+    ...options,
   });
 }
 
@@ -1717,13 +1738,23 @@ export async function updateOrganization(
   name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
-    method: "PATCH",
-    data: {
-      name,
-      newUserMailingList,
+  const updatedOrganization = await Request.sendJSONReceiveJSON(
+    `/api/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      data: {
+        name,
+        newUserMailingList,
+      },
     },
-  });
+  );
+
+  return {
+    ...updatedOrganization,
+    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function isDatasetAccessibleBySwitching(
@@ -1788,17 +1819,31 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 
 export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
 
-// ### BuildInfo webknossos
-export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo", {
+// ### Health
+export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
+  const healthEndpoint = `${url}/${path}/health`;
+  return Request.triggerRequest(healthEndpoint, {
     doNotInvestigate: true,
+    mode: "cors",
+    timeout: 5000,
   });
 }
 
-// ### BuildInfo datastore
-export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, {
+// ### BuildInfo webknossos
+export function getBuildInfo(): Promise<APIBuildInfoWk> {
+  return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
+    mode: "cors",
+  });
+}
+
+// ### BuildInfo datastore/tracingstore
+export function getDataOrTracingStoreBuildInfo(
+  dataOrTracingStoreUrl: string,
+): Promise<APIBuildInfoDatastore | APIBuildInfoTracingstore> {
+  return Request.receiveJSON(`${dataOrTracingStoreUrl}/api/buildinfo`, {
+    doNotInvestigate: true,
+    mode: "cors",
   });
 }
 
@@ -1950,18 +1995,23 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
+      ),
     );
   });
   // Ensure that the values are bigint if the keys are bigint
@@ -1980,6 +2030,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());
@@ -1990,15 +2043,18 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          showErrorToast: false,
         },
-      },
+      ),
     );
   });
 
@@ -2162,7 +2218,7 @@ export function getSynapseTypes(
   );
 }
 
-type MinCutTargetEdge = {
+export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
   segmentId1: number;
@@ -2180,17 +2236,19 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-      {
-        data: {
-          ...segmentsInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId1: Number(segmentsInfo.segmentId1),
-          segmentId2: Number(segmentsInfo.segmentId2),
-          agglomerateId: Number(segmentsInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            ...segmentsInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId1: Number(segmentsInfo.segmentId1),
+            segmentId2: Number(segmentsInfo.segmentId2),
+            agglomerateId: Number(segmentsInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2211,16 +2269,18 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-      {
-        data: {
-          ...segmentInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId: Number(segmentInfo.segmentId),
-          agglomerateId: Number(segmentInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+        {
+          data: {
+            ...segmentInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId: Number(segmentInfo.segmentId),
+            agglomerateId: Number(segmentInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2397,4 +2457,13 @@ export function requestVerificationMail() {
   return Request.receiveJSON("/api/verifyEmail", {
     method: "POST",
   });
+}
+
+export function sendSaveRequestWithToken(
+  urlWithoutToken: string,
+  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
+): Promise<void> {
+  // Ideally, this function should be refactored further so that it generates the
+  // correct urlWithoutToken itself.
+  return doWithToken((token) => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }

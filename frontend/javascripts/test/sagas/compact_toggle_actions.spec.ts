@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Flycam, WebknossosState, Segment, SegmentGroup } from "viewer/store";
+import type { WebknossosState, Segment, SegmentGroup } from "viewer/store";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -7,10 +7,10 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateTreeGroupVisibility,
   updateTreeVisibility,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import {
   withoutUpdateSegment,
-  withoutUpdateTracing,
+  withoutUpdateActiveItemTracing,
   withoutUpdateTree,
 } from "test/helpers/saveHelpers";
 import DiffableMap from "libs/diffable_map";
@@ -75,7 +75,6 @@ const genericGroups: TreeGroup[] = [
     children: [],
   },
 ];
-const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
 const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): WebknossosState => ({
   ...defaultState,
@@ -163,13 +162,11 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateTree(
-    withoutUpdateTracing(
+    withoutUpdateActiveItemTracing(
       Array.from(
         diffSkeletonTracing(
           enforceSkeletonTracing(prevState.annotation),
           enforceSkeletonTracing(nextState.annotation),
-          flycamMock,
-          flycamMock,
         ),
       ),
     ),
@@ -182,14 +179,9 @@ function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosStat
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateSegment(
-    withoutUpdateTracing(
+    withoutUpdateActiveItemTracing(
       Array.from(
-        diffVolumeTracing(
-          prevState.annotation.volumes[0],
-          nextState.annotation.volumes[0],
-          flycamMock,
-          flycamMock,
-        ),
+        diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
       ),
     ),
   );

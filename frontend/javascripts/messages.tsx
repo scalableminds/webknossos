@@ -22,6 +22,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
+  applyNodeRotationOnActivation: "Auto-rotate to Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
@@ -159,7 +160,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard",
-  "tracing.copy_rotation": "Copy rotation to clipboard",
   "tracing.copy_sharing_link": "Copy sharing link to clipboard",
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
@@ -415,7 +415,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.tos_check_required":
     "Unfortunately, we cannot provide the service without your consent to our terms of service.",
-  "auth.reset_logout": "You will be logged out, after successfully changing your password.",
+  "auth.reset_logout": "You will be logged out after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
   "auth.reset_new_password2": "Please repeat your new password!",
@@ -503,4 +503,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
   "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
     `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
+  "jobs.wrongNumberOfBoundingBoxes":
+    "To use the split/merger evaluation, make sure to have exactly one bounding box, either user-defined or from a task.",
 };

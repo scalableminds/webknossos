@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -25,7 +25,7 @@ class AnnotationStore @Inject()(
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
-    if (handler.cache) {
+    if (handler.useCache) {
       val cached = getFromCache(id)
       cached
     } else
@@ -37,7 +37,7 @@ class AnnotationStore @Inject()(
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)
     } yield {
-      if (handler.cache) {
+      if (handler.useCache) {
         storeInCache(id, annotation)
       }
       annotation
@@ -50,7 +50,7 @@ class AnnotationStore @Inject()(
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] =
     temporaryAnnotationStore.get(annotationId.toUniqueString).map(Fox.successful(_))
 
-  def findInCache(annotationId: ObjectId): Box[Annotation] =
+  def findInCache(annotationId: ObjectId): Option[Annotation] =
     temporaryAnnotationStore.getAll.find(a => a._id == annotationId)
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
@@ -60,4 +60,6 @@ class AnnotationStore @Inject()(
       case None             => Empty
     }
   }
+
+  def removeFromCache(id: AnnotationIdentifier): Unit = temporaryAnnotationStore.remove(id.toUniqueString)
 }

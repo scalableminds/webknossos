@@ -11,8 +11,9 @@ import com.scalableminds.webknossos.datastore.datavault.{
   S3DataVault,
   VaultPath
 }
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.libs.ws.WSClient
 
 import javax.inject.Inject
@@ -34,6 +35,9 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
   private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
     AlfuCache(maxCapacity = 100)
 
+  def getVaultPath(layerAttachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[VaultPath] =
+    getVaultPath(RemoteSourceDescriptor(layerAttachment.path, None))
+
   def getVaultPath(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
       vault <- vaultCache.getOrLoad(remoteSourceDescriptor, createVault) ?~> "dataVault.setup.failed"
@@ -51,7 +55,7 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
         S3DataVault.create(remoteSource, ws)
       } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
         HttpsDataVault.create(remoteSource, ws, config.Http.uri)
-      } else if (scheme == DataVaultService.schemeFile) {
+      } else if (scheme == DataVaultService.schemeFile || scheme == null) {
         FileSystemDataVault.create
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")

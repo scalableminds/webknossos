@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.organization.{Organization, OrganizationDAO}
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 
@@ -89,11 +89,15 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
       dataStore <- datasetService.dataStoreFor(dataset)
-      dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-      organization <- organizationDAO.findOne(dataset._organization)
-      report <- dataStoreClient.fetchStorageReport(organization._id, Some(dataset.name))
-      _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
-      _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
+      _ <- if (dataStore.reportUsedStorageEnabled) {
+        val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        for {
+          organization <- organizationDAO.findOne(dataset._organization)
+          report <- dataStoreClient.fetchStorageReport(organization._id, Some(dataset.name))
+          _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
+          _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
+        } yield ()
+      } else Fox.successful(())
     } yield ()
 
 }

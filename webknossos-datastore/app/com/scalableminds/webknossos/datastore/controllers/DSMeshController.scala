@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -10,8 +9,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   ListMeshChunksRequest,
   MeshChunkDataRequestList,
   MeshFileService,
-  MeshMappingHelper,
-  NeuroglancerPrecomputedMeshFileService
+  MeshMappingHelper
 }
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -21,8 +19,8 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     fullMeshService: DSFullMeshService,
+    dataSourceRepository: DataSourceRepository,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     val binaryDataServiceHolder: BinaryDataServiceHolder
@@ -37,22 +35,21 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshFiles(organizationId,
-                                                                                       datasetDirectoryName,
-                                                                                       dataLayerName)
-          allMeshFiles = meshFiles ++ neuroglancerMeshFiles
-        } yield Ok(Json.toJson(allMeshFiles))
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileInfos <- meshFileService.listMeshFiles(dataSource.id, dataLayer)
+        } yield Ok(Json.toJson(meshFileInfos))
       }
     }
 
   def listMeshChunksForSegment(organizationId: String,
                                datasetDirectoryName: String,
                                dataLayerName: String,
-                               /* If targetMappingName is set, assume that meshfile contains meshes for
+                               /* If targetMappingName is set, assume that meshFile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                             belonging to the supplied agglomerate id.
-                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
+                                            If it is not set, use meshFile as is, assume passed id is present in meshFile
                                    Note: in case of an editable mapping, targetMappingName is its baseMapping name.
                                 */
                                targetMappingName: Option[String],
@@ -61,30 +58,21 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          _ <- Fox.successful(())
-          mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
-                                                                          datasetDirectoryName,
-                                                                          dataLayerName,
-                                                                          request.body.meshFile.name)
-          segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName,
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
+          mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
+          segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
+            dataSource.id,
+            dataLayer,
             targetMappingName,
             editableMappingTracingId,
             request.body.segmentId,
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
-            neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFile.path, segmentIds)
-          } else {
-            meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                            datasetDirectoryName,
-                                                            dataLayerName,
-                                                            request.body.meshFile.name,
-                                                            segmentIds)
-          }
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(meshFileKey, segmentIds)
         } yield Ok(Json.toJson(chunkInfos))
       }
     }
@@ -96,13 +84,11 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
-            neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFile.path, request.body.requests)
-          } else {
-            meshFileService
-              .readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body)
-              .toFox ?~> "mesh.file.loadChunk.failed"
-          }
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
+          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

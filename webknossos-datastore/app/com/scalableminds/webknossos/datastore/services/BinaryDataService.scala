@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.services
 
-import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,9 +11,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Full}
 import ucar.ma2.{Array => MultiArray}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
@@ -136,7 +137,8 @@ class BinaryDataService(val dataBaseDir: Path,
     Full(outputArray)
   }
 
-  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
+  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
@@ -148,7 +150,7 @@ class BinaryDataService(val dataBaseDir: Path,
         convertIfNecessary(
           request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
           clippedData,
-          data => agglomerateService.applyAgglomerate(request)(data).toFox,
+          data => agglomerateService.applyAgglomerate(request)(data),
           request
         )
       }.toFox.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
@@ -258,15 +260,11 @@ class BinaryDataService(val dataBaseDir: Path,
   def clearCache(organizationId: String, datasetDirectoryName: String, layerName: Option[String]): (Int, Int, Int) = {
     val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
 
-    def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.datasetDirectoryName == datasetDirectoryName && agglomerateKey.organizationId == organizationId && layerName
-        .forall(_ == agglomerateKey.layerName)
-
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
       key._1 == DataSourceId(datasetDirectoryName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
-      agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
+      agglomerateServiceOpt.map(_.clearCaches(dataSourceId, layerName)).getOrElse(0)
 
     val clearedBucketProviderCount = bucketProviderCache.clear(bucketProviderPredicate)
 
@@ -278,4 +276,5 @@ class BinaryDataService(val dataBaseDir: Path,
 
     (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
+
 }

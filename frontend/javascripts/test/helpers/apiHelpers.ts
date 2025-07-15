@@ -1,6 +1,6 @@
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
-import { ControlModeEnum } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
@@ -20,7 +20,7 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
+import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "viewer/api/api_latest";
 import type { ModelType } from "viewer/model";
 
@@ -29,7 +29,7 @@ import Model from "viewer/model";
 import UrlManager from "viewer/controller/url_manager";
 
 import WebknossosApi from "viewer/api/api_loader";
-import { default as Store, startSaga } from "viewer/store";
+import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { setStore, setModel } from "viewer/singletons";
 import { setupApi } from "viewer/api/internal_api";
@@ -37,6 +37,20 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
+import {
+  getDataset,
+  getEdgesForAgglomerateMinCut,
+  sendSaveRequestWithToken,
+  type MinCutTargetEdge,
+} from "admin/rest_api";
+import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import {
+  tracings as HYBRID_TRACINGS,
+  annotation as HYBRID_ANNOTATION,
+  annotationProto as HYBRID_ANNOTATION_PROTO,
+} from "test/fixtures/hybridtracing_server_objects";
+import type { ServerTracing } from "types/api_types";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -47,10 +61,13 @@ export interface WebknossosTestContext extends BaseTestContext {
   model: ModelType;
   mocks: {
     Request: typeof Request;
+    getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
+    getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
   tearDownPullQueues: () => void;
+  receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
 }
 
 // Create mock objects
@@ -66,6 +83,78 @@ vi.mock("libs/request", () => ({
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
+
+const getCurrentMappingEntriesFromServer = vi.fn((): Array<[number, number]> => {
+  return [];
+});
+
+vi.mock("admin/rest_api.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
+
+  const receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
+  const mockedSendRequestWithToken = vi.fn((_, payload) => {
+    receivedDataPerSaveRequest.push(payload.data);
+    return Promise.resolve();
+  });
+  (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
+
+  const getAgglomeratesForSegmentsImpl = async (segmentIds: Array<NumberLike>) => {
+    const segmentIdSet = new Set(segmentIds);
+    const entries = getCurrentMappingEntriesFromServer().filter(([id]) =>
+      segmentIdSet.has(id),
+    ) as Vector2[];
+    if (entries.length < segmentIdSet.size) {
+      throw new Error(
+        "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
+      );
+    }
+    return new Map(entries);
+  };
+  const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(
+    (
+      _dataStoreUrl: string,
+      _dataSourceId: unknown,
+      _layerName: string,
+      _mappingId: string,
+      segmentIds: Array<NumberLike>,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds);
+    },
+  );
+
+  const getAgglomeratesForSegmentsFromTracingstoreMock = vi.fn(
+    (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      segmentIds: Array<NumberLike>,
+      _annotationId: string,
+      _version?: number | null | undefined,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds);
+    },
+  );
+
+  return {
+    ...actual,
+    getDataset: vi.fn(),
+    sendSaveRequestWithToken: mockedSendRequestWithToken,
+    getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
+    getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
+    getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
+    getEdgesForAgglomerateMinCut: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _segmentsInfo: unknown,
+      ): Promise<Array<MinCutTargetEdge>> => {
+        // This simply serves as a preparation so that specs can mock the function
+        // when needed. Without this stub, it's harder to mock this specific function
+        // later.
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+  };
+});
 
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
@@ -97,10 +186,6 @@ function receiveJSONMockImplementation(
     return Promise.resolve({});
   }
 
-  if (url === `/api/datasets/${annotationFixture.datasetId}`) {
-    return Promise.resolve(_.cloneDeep(DATASET));
-  }
-
   if (url === "/api/userToken/generate" && options && options.method === "POST") {
     return Promise.resolve({
       token: TOKEN,
@@ -128,13 +213,36 @@ vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importO
   };
 });
 
-export function createBucketResponseFunction(TypedArrayClass: any, fillValue: number, delay = 0) {
+type Override = {
+  position: [number, number, number]; // [x, y, z]
+  value: number;
+};
+
+export function createBucketResponseFunction(
+  TypedArrayClass: any,
+  fillValue: number,
+  delay = 0,
+  overrides: Override[] = [],
+) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
-    const bucketCount = payload.data.length;
     await sleep(delay);
+    const bucketCount = payload.data.length;
+    const typedArray = new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue);
+
+    for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
+      for (const { position, value } of overrides) {
+        const [x, y, z] = position;
+        const indexInBucket =
+          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
+          z * Constants.BUCKET_WIDTH ** 2 +
+          y * Constants.BUCKET_WIDTH +
+          x;
+        typedArray[indexInBucket] = value;
+      }
+    }
+
     return {
-      buffer: new Uint8Array(new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue).buffer)
-        .buffer,
+      buffer: new Uint8Array(typedArray.buffer).buffer,
       headers: {
         "missing-buckets": "[]",
       },
@@ -152,17 +260,26 @@ vi.mock("libs/keyboard", () => ({
 
 const modelData = {
   skeleton: {
-    tracing: SKELETON_TRACING,
+    dataset: DATASET,
+    tracings: [SKELETON_TRACING],
     annotation: SKELETON_ANNOTATION,
     annotationProto: SKELETON_ANNOTATION_PROTO,
   },
   volume: {
-    tracing: VOLUME_TRACING,
+    dataset: DATASET,
+    tracings: [VOLUME_TRACING],
     annotation: VOLUME_ANNOTATION,
     annotationProto: VOLUME_ANNOTATION_PROTO,
   },
+  hybrid: {
+    dataset: DATASET,
+    tracings: HYBRID_TRACINGS,
+    annotation: HYBRID_ANNOTATION,
+    annotationProto: HYBRID_ANNOTATION_PROTO,
+  },
   task: {
-    tracing: TASK_TRACING,
+    dataset: DATASET,
+    tracings: [TASK_TRACING],
     annotation: TASK_ANNOTATION,
     annotationProto: TASK_ANNOTATION_PROTO,
   },
@@ -176,8 +293,15 @@ startSaga(rootSaga);
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
-  apiVersion?: number,
+  options?: { dontDispatchWkReady?: boolean },
 ): Promise<void> {
+  /*
+   * This will execute model.fetch(...) and initialize the store with the tracing, etc.
+   */
+  Store.dispatch(restartSagaAction());
+  Store.dispatch(resetStoreAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
+
   Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
@@ -185,23 +309,46 @@ export async function setupWebknossosForTesting(
 
   testContext.model = Model;
   testContext.mocks = {
-    Request,
+    Request: vi.mocked(Request),
+    getCurrentMappingEntriesFromServer,
+    getEdgesForAgglomerateMinCut,
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
     Model.getAllLayers().map((layer) => {
       layer.pullQueue.destroy();
     });
+  testContext.receivedDataPerSaveRequest = (
+    sendSaveRequestWithToken as any
+  ).receivedDataPerSaveRequest;
 
   const webknossos = new WebknossosApi(Model);
-  const annotationFixture = modelData[mode].annotation;
+  const { tracings, annotationProto, dataset, annotation } = modelData[mode];
 
   vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
-    receiveJSONMockImplementation(url, options, annotationFixture),
+    receiveJSONMockImplementation(url, options, annotation),
   );
 
-  vi.mocked(parseProtoTracing).mockReturnValue(_.cloneDeep(modelData[mode].tracing));
-  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
+  vi.mocked(getDataset).mockImplementation(
+    async (
+      _datasetId: string,
+      _sharingToken?: string | null | undefined,
+      _options: RequestOptions = {},
+    ) => {
+      return _.cloneDeep(dataset);
+    },
+  );
+
+  vi.mocked(parseProtoTracing).mockImplementation(
+    (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
+      const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
+      if (tracing == null) {
+        throw new Error(`Could not find tracing for ${annotationType}.`);
+      }
+      return tracing;
+    },
+  );
+  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
@@ -221,8 +368,16 @@ export async function setupWebknossosForTesting(
     // Trigger the event ourselves, as the webKnossosController is not instantiated
     app.vent.emit("webknossos:ready");
 
-    const api = await webknossos.apiReady(apiVersion);
+    const api = await webknossos.apiReady();
     testContext.api = api;
+
+    // Ensure the slow compression is disabled by default. Tests may change
+    // this individually.
+    testContext.setSlowCompression(false);
+    if (!options?.dontDispatchWkReady) {
+      // Dispatch the wkReadyAction, so the sagas are started
+      Store.dispatch(wkReadyAction());
+    }
   } catch (error) {
     console.error("model.fetch() failed", error);
     if (error instanceof Error) {

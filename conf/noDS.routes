@@ -1,4 +1,4 @@
--> /api/                         webknossos.versioned.Routes
--> /tracings/                    com.scalableminds.webknossos.tracingstore.Routes
+->   /api/                         webknossos.versioned.Routes
+->   /tracings/                    tracingstore.versioned.Routes
 
-GET   /.well-known/security.txt  controllers.Application.getSecurityTxt
+GET  /.well-known/security.txt     controllers.Application.getSecurityTxt

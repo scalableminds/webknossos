@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -18,7 +19,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -77,7 +78,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       }
   }
 
-  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -107,7 +108,9 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
-            mergedTracing <- skeletonTracingService.merge(tracings.flatten, newVersion = 0L).toFox
+            mergedTracing <- skeletonTracingService
+              .merge(tracings.flatten, newVersion = 0L, additionalBoundingBoxes = Seq.empty)
+              .toFox
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
             _ <- skeletonTracingService.saveSkeleton(newTracingId, processedTracing.version, processedTracing)
           } yield Ok
@@ -118,6 +121,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
                 newTracingId: String,
+                ownerId: ObjectId,
+                requestingUserId: ObjectId,
                 editPosition: Option[String],
                 editRotation: Option[String],
                 boundingBox: Option[String]): Action[AnyContent] =
@@ -136,6 +141,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newTracingId = newTracingId,
+                ownerId = ownerId,
+                requestingUserId = requestingUserId,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

@@ -21,13 +21,14 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
+import com.scalableminds.webknossos.tracingstore.controllers.MergedFromIdsRequest
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, TracingSelector}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 
@@ -99,9 +100,17 @@ class WKRemoteTracingStoreClient(
       .postProto[AnnotationProto](annotationProto)
   }
 
+  def getAnnotationProto(annotationId: ObjectId, version: Option[Long]): Fox[AnnotationProto] =
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId")
+      .addQueryStringOptional("version", version.map(_.toString))
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .getWithProtoResponse[AnnotationProto](AnnotationProto)
+
   // Used in duplicate route. History and version are kept
   def duplicateAnnotation(annotationId: ObjectId,
                           newAnnotationId: ObjectId,
+                          ownerId: ObjectId,
+                          requestingUserId: ObjectId,
                           version: Option[Long],
                           isFromTask: Boolean,
                           datasetBoundingBox: Option[BoundingBox]): Fox[AnnotationProto] = {
@@ -112,6 +121,8 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("version", version.map(_.toString))
       .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
       .addQueryString("isFromTask" -> isFromTask.toString)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .postEmptyWithProtoResponse[AnnotationProto]()(AnnotationProto)
   }
 
@@ -119,6 +130,8 @@ class WKRemoteTracingStoreClient(
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                newAnnotationId: ObjectId,
                                newTracingId: String,
+                               ownerId: ObjectId,
+                               requestingUserId: ObjectId,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
                                boundingBox: Option[BoundingBox] = None): Fox[Unit] =
@@ -126,6 +139,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("newTracingId" -> newTracingId)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -135,6 +150,8 @@ class WKRemoteTracingStoreClient(
   def duplicateVolumeTracing(volumeTracingId: String,
                              newAnnotationId: ObjectId,
                              newTracingId: String,
+                             ownerId: ObjectId,
+                             requestingUserId: ObjectId,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
@@ -145,6 +162,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("newTracingId" -> newTracingId)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -153,15 +172,20 @@ class WKRemoteTracingStoreClient(
       .postEmpty()
   }
 
-  def mergeAnnotationsByIds(annotationIds: List[String],
+  def mergeAnnotationsByIds(annotationIds: List[ObjectId],
+                            ownerIds: List[ObjectId],
                             newAnnotationId: ObjectId,
-                            toTemporaryStore: Boolean): Fox[AnnotationProto] = {
+                            toTemporaryStore: Boolean,
+                            requestingUserId: ObjectId,
+                            additionalBoundingBoxes: Seq[NamedBoundingBox]): Fox[AnnotationProto] = {
     logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("toTemporaryStore" -> toTemporaryStore.toString)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
-      .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
+      .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
+        MergedFromIdsRequest(annotationIds, ownerIds, additionalBoundingBoxes))(AnnotationProto)
   }
 
   def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {

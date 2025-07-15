@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMetadataV0_5,
   ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, NgffZarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -83,7 +83,7 @@ class ZarrStreamingController @Inject()(
                                                                       dataSource.scale,
                                                                       dataLayer.sortedMags,
                                                                       dataLayer.additionalAxes)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV0_5))
+        zarr3GroupHeader = NgffZarr3GroupHeader(3, "group", omeNgffHeaderV0_5)
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }
@@ -132,7 +132,7 @@ class ZarrStreamingController @Inject()(
                                                                                 dataSource.scale,
                                                                                 dataLayer.sortedMags,
                                                                                 dataLayer.additionalAxes)
-            zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
+            zarr3GroupHeader = NgffZarr3GroupHeader(3, "group", dataSourceOmeNgffHeader)
           } yield Ok(Json.toJson(zarr3GroupHeader))
       )
     }
@@ -168,7 +168,14 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          mags = s.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+          mags = s.sortedMags.map(
+            m =>
+              MagLocator(m,
+                         Some(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         None,
+                         Some(AxisOrder.cAdditionalxyz(rank)),
+                         None,
+                         None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
@@ -185,7 +192,14 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          mags = d.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+          mags = d.sortedMags.map(
+            m =>
+              MagLocator(m,
+                         Some(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         None,
+                         Some(AxisOrder.cAdditionalxyz(rank)),
+                         None,
+                         None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,

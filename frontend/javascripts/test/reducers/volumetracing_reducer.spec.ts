@@ -6,7 +6,7 @@ import * as UiActions from "viewer/model/actions/ui_actions";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import { describe, it, expect } from "vitest";
-import { initialState } from "test/fixtures/volumetracing_object";
+import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 
@@ -18,6 +18,8 @@ export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): Volume
 
   throw new Error("Annotation is not of type volume!");
 }
+
+const INITIAL_LARGEST_SEGMENT_ID = initialState.annotation.volumes[0].largestSegmentId ?? 0;
 
 describe("VolumeTracing", () => {
   it("should set a new active cell", () => {
@@ -66,7 +68,7 @@ describe("VolumeTracing", () => {
     // Create cell
     const newState = VolumeTracingReducer(initialState, createCellAction);
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.activeCellId).toBe(1);
+    expect(tracing.activeCellId).toBe(INITIAL_LARGEST_SEGMENT_ID + 1);
   });
 
   it("should create a non-existing cell id and not update the largestSegmentId", () => {
@@ -79,7 +81,7 @@ describe("VolumeTracing", () => {
     const newState = VolumeTracingReducer(initialState, createCellAction);
 
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.largestSegmentId).toBe(0);
+    expect(tracing.largestSegmentId).toBe(INITIAL_LARGEST_SEGMENT_ID);
   });
 
   it("should create an existing cell and not update the largestSegmentId", () => {
@@ -113,12 +115,15 @@ describe("VolumeTracing", () => {
         LARGEST_SEGMENT_ID,
       );
     const finishAnnotationStrokeAction =
-      VolumeTracingActions.finishAnnotationStrokeAction("tracingId");
+      VolumeTracingActions.finishAnnotationStrokeAction(VOLUME_TRACING_ID);
     const alteredState = update(initialState, {
       annotation: {
         volumes: {
           "0": {
             largestSegmentId: {
+              $set: LARGEST_SEGMENT_ID,
+            },
+            activeCellId: {
               $set: LARGEST_SEGMENT_ID,
             },
           },
@@ -160,7 +165,7 @@ describe("VolumeTracing", () => {
       },
     });
 
-    expect(getActiveMagIndexForLayer(alteredState, "tracingId") > 1).toBe(true);
+    expect(getActiveMagIndexForLayer(alteredState, VOLUME_TRACING_ID) > 1).toBe(true);
 
     // Try to change tool to Trace
     const newState = UiReducer(alteredState, setToolAction);
@@ -230,7 +235,7 @@ describe("VolumeTracing", () => {
         },
       },
     });
-    expect(getActiveMagIndexForLayer(alteredState, "tracingId") > 1).toBe(true);
+    expect(getActiveMagIndexForLayer(alteredState, VOLUME_TRACING_ID) > 1).toBe(true);
 
     const { newState, contourList } = prepareContourListTest(alteredState);
     expect(newState).not.toBe(initialState);

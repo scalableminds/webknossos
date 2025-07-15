@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -24,7 +25,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   TransposeCodecConfiguration,
   TransposeSetting,
   Zarr3ArrayHeader,
-  Zarr3GroupHeader
+  NgffZarr3GroupHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -159,7 +160,7 @@ class VolumeTracingZarrStreamingController @Inject()(
           chunks = Array(channels, cubeLength, cubeLength, cubeLength)
 
           zarrHeader = ZarrHeader(zarr_format = 2,
-                                  shape = shape,
+                                  shape = shape.map(_.toLong),
                                   chunks = chunks,
                                   compressor = compressor,
                                   dtype = dtype,
@@ -188,11 +189,11 @@ class VolumeTracingZarrStreamingController @Inject()(
             zarr_format = 3,
             node_type = "array",
             // channel, additional axes, XYZ
-            shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ Array(
+            shape = (Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ Array(
               (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
               (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
               (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
-            ),
+            )).map(_.toLong),
             data_type = Left(tracing.elementClass.toString),
             chunk_grid = Left(
               ChunkGridSpecification(
@@ -257,7 +258,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                                   dataSourceVoxelSize = dataSource.scale,
                                                                   mags = sortedExistingMags,
                                                                   additionalAxes = dataSource.additionalAxesUnion)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
+        zarr3GroupHeader = NgffZarr3GroupHeader(3, "group", omeNgffHeader)
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }
@@ -329,7 +330,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   private def getFallbackLayerDataIfEmpty(
       tracing: VolumeTracing,
-      annotationId: String,
+      annotationId: ObjectId,
       data: Array[Byte],
       missingBucketIndices: List[Int],
       mag: Vec3Int,

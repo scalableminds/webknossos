@@ -6,7 +6,7 @@ import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = {
@@ -23,6 +23,9 @@ export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
 export type RedoAction = ReturnType<typeof redoAction>;
 type DisableSavingAction = ReturnType<typeof disableSavingAction>;
+export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
+  typeof ensureTracingsWereDiffedToSaveQueueAction
+>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -34,7 +37,8 @@ export type SaveAction =
   | SetVersionNumberAction
   | UndoAction
   | RedoAction
-  | DisableSavingAction;
+  | DisableSavingAction
+  | EnsureTracingsWereDiffedToSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -121,3 +125,10 @@ export const dispatchRedoAsync = async (dispatch: Dispatch<any>): Promise<void> 
   dispatch(action);
   await readyDeferred.promise();
 };
+
+// See Model.ensureSavedState for an explanation of this action.
+export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: string) => void) =>
+  ({
+    type: "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+    callback,
+  }) as const;

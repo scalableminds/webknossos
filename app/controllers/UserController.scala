@@ -1,7 +1,7 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService

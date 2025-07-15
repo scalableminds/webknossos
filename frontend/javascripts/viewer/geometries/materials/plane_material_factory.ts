@@ -29,8 +29,11 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
+  getPosition,
+  getRotationInRadian,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
@@ -159,7 +162,10 @@ class PlaneMaterialFactory {
       is3DViewBeingRendered: {
         value: true,
       },
-      globalPosition: {
+      // This offset represent the offset of the plane during rendering its viewport. The offset is needed to see the skeleton behind the plane
+      // configured by the clippingDistance setting. It is necessary to calculate the position of the data that should be rendered by subtracting
+      // the offset in the shader. Note, that the position offset should already be in world scale.
+      positionOffset: {
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomValue: {
@@ -246,6 +252,8 @@ class PlaneMaterialFactory {
         value: false,
       },
       blendMode: { value: 1.0 },
+      isFlycamRotated: { value: false },
+      inverseFlycamRotationMatrix: { value: new THREE.Matrix4() },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -448,9 +456,9 @@ class PlaneMaterialFactory {
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-    this.material.setGlobalPosition = (x, y, z) => {
-      this.uniforms.globalPosition.value.set(x, y, z);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setPositionOffset' does not exist on typ... Remove this comment to see the full error message
+    this.material.setPositionOffset = (x, y, z) => {
+      this.uniforms.positionOffset.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
@@ -582,6 +590,29 @@ class PlaneMaterialFactory {
         },
         true,
       ),
+      listenToStoreProperty(
+        (storeState) => isRotated(storeState.flycam),
+        (isRotated) => {
+          this.uniforms.isFlycamRotated.value = isRotated;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => getRotationInRadian(storeState.flycam),
+        (rotation) => {
+          const state = Store.getState();
+          const position = getPosition(state.flycam);
+
+          const toOrigin = new THREE.Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
+          const backToFlycamCenter = new THREE.Matrix4().makeTranslation(...position);
+          const invertRotation = new THREE.Matrix4()
+            .makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
+            .invert();
+          const inverseFlycamRotationMatrix = toOrigin
+            .multiply(invertRotation)
+            .multiply(backToFlycamCenter);
+          this.uniforms.inverseFlycamRotationMatrix.value = inverseFlycamRotationMatrix;
+        },
+      ),
     );
     const oldVisibilityPerLayer: Record<string, boolean> = {};
     this.storePropertyUnsubscribers.push(
@@ -658,7 +689,7 @@ class PlaneMaterialFactory {
             const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
-            });
+            }).rounded;
             this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
           },
@@ -1081,6 +1112,7 @@ class PlaneMaterialFactory {
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const code = getMainFragmentShader({
       globalLayerCount,
       orderedColorLayerNames,
@@ -1089,6 +1121,7 @@ class PlaneMaterialFactory {
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
+      voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
@@ -1115,6 +1148,7 @@ class PlaneMaterialFactory {
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
 
     return getMainVertexShader({
       globalLayerCount,
@@ -1124,6 +1158,7 @@ class PlaneMaterialFactory {
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
+      voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });

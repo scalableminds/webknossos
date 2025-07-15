@@ -6,14 +6,15 @@ export function almostEqual(
   vec1: Vector3,
   vec2: Vector3,
   threshold: number = 1,
+  message?: string,
 ) {
   const diffX = Math.abs(vec1[0] - vec2[0]);
   const diffY = Math.abs(vec1[1] - vec2[1]);
   const diffZ = Math.abs(vec1[2] - vec2[2]);
 
-  expect(diffX).toBeLessThan(threshold);
-  expect(diffY).toBeLessThan(threshold);
-  expect(diffZ).toBeLessThan(threshold);
+  expect(diffX, message).toBeLessThan(threshold);
+  expect(diffY, message).toBeLessThan(threshold);
+  expect(diffZ, message).toBeLessThan(threshold);
 }
 
 export function getPointsC555() {

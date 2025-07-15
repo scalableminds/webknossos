@@ -17,6 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -57,7 +58,7 @@ import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transfo
 import {
   getActiveMagIndexForLayer,
   getPosition,
-  getRotation,
+  getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
@@ -283,10 +284,15 @@ class TracingApi {
   /**
    * Sets the active node given a node id.
    */
-  setActiveNode(id: number) {
+  setActiveNode(
+    id: number,
+    suppressAnimation?: boolean,
+    suppressCentering?: boolean,
+    suppressRotation?: boolean,
+  ) {
     assertSkeleton(Store.getState().annotation);
     assertExists(id, "Node id is missing.");
-    Store.dispatch(setActiveNodeAction(id));
+    Store.dispatch(setActiveNodeAction(id, suppressAnimation, suppressCentering, suppressRotation));
   }
 
   /**
@@ -348,9 +354,14 @@ class TracingApi {
   }
 
   /**
-   * Creates a new node in the current tree. If the active tree
-   * is not empty, the node will be connected with an edge to
-   * the currently active node.
+   * Creates a new node in the current tree.
+   * If the active tree already contains nodes, the new node will be connected to the currently active one via an edge.
+   *
+   * When the camera is rotated and centering animation is enabled, using unrounded (floating-point)
+   * coordinates [x, y, z] helps maintain a consistent viewing slice. This prevents the viewports from jumping
+   * between slices due to the animation.
+   *
+   * In scenarios without rotation or centering animation, rounded integer coordinates are sufficient.
    */
   createNode(
     position: Vector3,
@@ -363,10 +374,11 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
+    const globalPosition = { rounded: Utils.map3(Math.round, position), floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
-      position,
+      globalPosition,
       options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
       options?.rotation ?? defaultOptions.rotation,
       options?.center ?? defaultOptions.center,
@@ -1399,31 +1411,36 @@ class TracingApi {
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    const { activeViewport } = Store.getState().viewModeData.plane;
+    const { viewModeData, flycam } = Store.getState();
+    const { activeViewport } = viewModeData.plane;
+    const curPosition = getPosition(flycam);
+    // As the node rotation was calculated in the way the flycam reducer does its matrix rotation
+    // by using the rotation_helpers.ts there is no need to invert z and we must use XYZ ordered euler angles.
+    const curRotation = getRotationInRadian(flycam, false);
+    const startQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...curRotation, "XYZ"),
+    );
+    const isNotRotated = V3.equals(curRotation, [0, 0, 0]);
     const dimensionToSkip =
-      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
-    const curPosition = getPosition(Store.getState().flycam);
-    const curRotation = getRotation(Store.getState().flycam);
-    if (!Array.isArray(rotation)) rotation = curRotation;
-    rotation = this.getShortestRotation(curRotation, rotation);
+    if (rotation == null) {
+      rotation = curRotation;
+    } else {
+      rotation = Utils.map3(THREE.MathUtils.degToRad, rotation);
+    }
+    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation, "XYZ"));
 
     type Tweener = {
       positionX: number;
       positionY: number;
       positionZ: number;
-      rotationX: number;
-      rotationY: number;
-      rotationZ: number;
     };
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
       positionZ: curPosition[2],
-      rotationX: curRotation[0],
-      rotationY: curRotation[1],
-      rotationZ: curRotation[2],
     });
     tween
       .to(
@@ -1431,18 +1448,30 @@ class TracingApi {
           positionX: position[0],
           positionY: position[1],
           positionZ: position[2],
-          rotationX: rotation[0],
-          rotationY: rotation[1],
-          rotationZ: rotation[2],
         },
         200,
       )
-      .onUpdate(function (this: Tweener) {
+      .onUpdate(function (this: Tweener, t: number) {
         // needs to be a normal (non-bound) function
         Store.dispatch(
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
-        Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
+        // Interpolating rotation via quaternions to get shortest rotation.
+        const interpolatedQuaternion = new THREE.Quaternion().slerpQuaternions(
+          startQuaternion,
+          endQuaternion,
+          t,
+        );
+        const interpolatedEuler = new THREE.Euler().setFromQuaternion(
+          interpolatedQuaternion,
+          "XYZ",
+        );
+        const interpolatedEulerInDegree = Utils.map3(THREE.MathUtils.radToDeg, [
+          interpolatedEuler.x,
+          interpolatedEuler.y,
+          interpolatedEuler.z,
+        ]);
+        Store.dispatch(setRotationAction(interpolatedEulerInDegree));
       })
       .start();
   }

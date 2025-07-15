@@ -1410,6 +1410,12 @@ const DatasetSettings: React.FC = () => {
               tooltipText="When disabled, the active node will not be centered after node creation/deletion."
             />
             <SwitchSetting
+              label={settings.applyNodeRotationOnActivation}
+              value={userConfiguration.applyNodeRotationOnActivation}
+              onChange={this.onChangeUser.applyNodeRotationOnActivation}
+              tooltipText="If enabled, the rotation that was active when a node was created will be set when activating the node."
+            />
+            <SwitchSetting
               label={settings.highlightCommentedNodes}
               value={userConfiguration.highlightCommentedNodes}
               onChange={onChangeUser.bind(null, "highlightCommentedNodes")}

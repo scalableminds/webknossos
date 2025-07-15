@@ -4,7 +4,7 @@ import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
 import { SettingsCard } from "./helpers/settings_card";
@@ -15,7 +15,7 @@ const { Password } = Input;
 const MIN_PASSWORD_LENGTH = 8;
 
 function AccountPasswordView() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
@@ -25,7 +25,7 @@ function AccountPasswordView() {
         Toast.success(messages["auth.reset_pw_confirmation"]);
         await logoutUser();
         Store.dispatch(logoutUserAction());
-        history.push("/auth/login");
+        navigate("/auth/login");
       })
       .catch((error) => {
         console.error("Password change failed:", error);

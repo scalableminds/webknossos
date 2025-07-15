@@ -25,16 +25,12 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
-import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser } from "types/api_types";
+import { Link, useNavigate } from "react-router-dom";
+import type { APIDataStore } from "types/api_types";
 import Store from "viewer/store";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-};
-type Props = StateProps & RouteComponentProps;
 
 function StepHeader({
   header,
@@ -388,7 +384,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
   );
 };
 
-function OnboardingView(props: Props) {
+function OnboardingView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const [currentStep, setCurrentStep] = useState(0);
   const [datastores, setDatastores] = useState<APIDataStore[]>([]);
@@ -397,11 +393,13 @@ function OnboardingView(props: Props) {
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
   const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (activeUser != null) {
-      props.history.push("/dashboard");
+      navigate("/dashboard");
     }
-  }, [activeUser, props.history]);
+  }, [activeUser, navigate]);
 
   const fetchDatastores = async () => {
     const fetchedDatastores = await getDatastores();
@@ -692,4 +690,4 @@ function OnboardingView(props: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(OnboardingView);
+export default OnboardingView;

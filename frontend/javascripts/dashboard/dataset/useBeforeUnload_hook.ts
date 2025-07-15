@@ -8,7 +8,7 @@ const useBeforeUnload = (hasUnsavedChanges: boolean, message: string) => {
       // 1. The browser's native beforeunload event
       // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges && location.pathname.includes("/datasets")) {
         window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
         blockTimeoutIdRef.current = window.setTimeout(() => {
           // restore the event handler in case a user chose to stay on the page

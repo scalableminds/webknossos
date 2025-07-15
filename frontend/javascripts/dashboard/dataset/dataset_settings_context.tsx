@@ -26,6 +26,7 @@ export type DatasetSettingsContextValue = {
   handleDataSourceEditModeChange: (activeEditMode: "simple" | "advanced") => void;
   onValuesChange: (changedValues: FormData, allValues: FormData) => void;
   getFormValidationSummary: () => Record<string, any>;
+  hasFormErrors: boolean;
 };
 
 export const DatasetSettingsContext = createContext<DatasetSettingsContextValue | undefined>(

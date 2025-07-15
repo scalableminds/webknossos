@@ -100,12 +100,7 @@ export function DatasetSettingsRouteWrapper() {
     );
   }
   return (
-    <DatasetSettingsProvider
-      isEditingMode
-      datasetId={datasetId || ""}
-      onComplete={() => window.history.back()}
-      onCancel={() => window.history.back()}
-    >
+    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
       <DatasetSettingsView />
     </DatasetSettingsProvider>
   );

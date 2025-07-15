@@ -42,29 +42,12 @@ const DatasetSettingsView: React.FC = () => {
     handleCancel,
     onValuesChange,
     getFormValidationSummary,
+    hasFormErrors,
   } = useDatasetSettingsContext();
   const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
   const location = useLocation();
   const navigate = useNavigate();
   const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "data";
-
-  // const switchToProblematicTab = useCallback(() => {
-  //   const validationSummary = getFormValidationSummary();
-
-  //   if (validationSummary[activeTabKey]) {
-  //     // Active tab is already problematic
-  //     return;
-  //   }
-
-  //   // Switch to the earliest, problematic tab
-  //   const problematicTab = ["data", "general", "defaultConfig"].find(
-  //     (key) => validationSummary[key],
-  //   );
-
-  //   if (problematicTab) {
-  //     setActiveTabKey(problematicTab as TabKey);
-  //   }
-  // }, [getFormValidationSummary, activeTabKey]);
 
   const getMessageComponents = useCallback(() => {
     if (dataset == null) {
@@ -131,7 +114,6 @@ const DatasetSettingsView: React.FC = () => {
 
   const confirmString =
     isEditingMode || (dataset != null && dataset.dataSource.status == null) ? "Save" : "Import";
-  const formErrors = getFormValidationSummary();
   const errorIcon = (
     <Tooltip title="Some fields in this tab require your attention.">
       <ExclamationCircleOutlined
@@ -143,6 +125,7 @@ const DatasetSettingsView: React.FC = () => {
     </Tooltip>
   );
 
+  const formErrors = hasFormErrors ? getFormValidationSummary() : {};
   const menuItems: ItemType[] = [
     {
       label: titleString,
@@ -155,12 +138,12 @@ const DatasetSettingsView: React.FC = () => {
         },
         {
           key: "sharing",
-          icon: formErrors.sharing ? errorIcon : <TeamOutlined />,
+          icon: formErrors.general ? errorIcon : <TeamOutlined />,
           label: "Sharing & Permissions",
         },
         {
           key: "metadata",
-          icon: formErrors.metadata ? errorIcon : <FileTextOutlined />,
+          icon: formErrors.general ? errorIcon : <FileTextOutlined />,
           label: "Metadata",
         },
         {
@@ -208,6 +191,14 @@ const DatasetSettingsView: React.FC = () => {
     },
   ];
 
+  const navigateToTab = useCallback(
+    ({ key }: { key: string }) => {
+      if (key === selectedKey || key === "open") return;
+      navigate(key);
+    },
+    [navigate, selectedKey],
+  );
+
   return (
     <Layout
       style={{ minHeight: "calc(100vh - 64px)", backgroundColor: "var(--ant-layout-body-bg)" }}
@@ -218,7 +209,7 @@ const DatasetSettingsView: React.FC = () => {
           selectedKeys={[selectedKey]}
           style={{ height: "100%", padding: 24 }}
           items={menuItems}
-          onClick={({ key }) => navigate(`/datasets/${datasetId}/edit/${key}`)}
+          onClick={navigateToTab}
         />
       </Sider>
       <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>

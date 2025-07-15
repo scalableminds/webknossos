@@ -55,6 +55,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const [hasFormErrors, setHasFormErrors] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
   const [datasetDefaultConfiguration, setDatasetDefaultConfiguration] = useState<
@@ -164,7 +165,10 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     }
   }, [datasetId, form.setFieldsValue, form.validateFields]);
 
-  const getFormValidationSummary = useCallback((): Record<string, any> => {
+  const getFormValidationSummary = useCallback((): Record<
+    "data" | "general" | "defaultConfig",
+    boolean
+  > => {
     const err = form.getFieldsError();
     const formErrors: Record<string, any> = {};
 
@@ -172,17 +176,22 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       return formErrors;
     }
 
-    const hasErr = hasFormError;
-
-    if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
+    if (
+      hasFormError(err, "dataSource") ||
+      hasFormError(err, "dataSourceJson") ||
+      hasFormError(err, "datasetRotation")
+    ) {
       formErrors.data = true;
     }
 
-    if (hasErr(err, "dataset")) {
+    if (hasFormError(err, "dataset")) {
       formErrors.general = true;
     }
 
-    if (hasErr(err, "defaultConfiguration") || hasErr(err, "defaultConfigurationLayersJson")) {
+    if (
+      hasFormError(err, "defaultConfiguration") ||
+      hasFormError(err, "defaultConfigurationLayersJson")
+    ) {
       formErrors.defaultConfig = true;
     }
 
@@ -282,17 +291,34 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     form.getFieldsValue,
   ]);
 
+  const switchToProblematicTab = useCallback(() => {
+    const validationSummary = getFormValidationSummary();
+
+    // Switch to the earliest, problematic tab
+    switch (Object.keys(validationSummary)) {
+      case ["data"]:
+        return navigate("data");
+      case ["general"]:
+        // "general" is very broad and there is no specific tab for it.
+        return;
+      case ["defaultConfig"]:
+        return navigate("defaultConfig");
+      default:
+        return;
+    }
+  }, [getFormValidationSummary, navigate]);
+
   const handleValidationFailed = useCallback(() => {
     const isOnlyDatasourceIncorrectAndNotEditedResult = isOnlyDatasourceIncorrectAndNotEdited();
 
     if (!isOnlyDatasourceIncorrectAndNotEditedResult || !dataset) {
-      // TODO: Add logic to switch to problematic tab
-      console.warn("Validation failed, switching to problematic tab logic needed.");
+      switchToProblematicTab();
+      setHasFormErrors(true);
       Toast.warning(messages["dataset.import.invalid_fields"]);
     } else {
       submitForm();
     }
-  }, [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm]);
+  }, [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm, switchToProblematicTab]);
 
   const handleSubmit = useCallback(() => {
     syncDataSourceFields(form, activeDataSourceEditMode === "simple" ? "advanced" : "simple");
@@ -345,6 +371,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     handleDataSourceEditModeChange,
     onValuesChange,
     getFormValidationSummary,
+    hasFormErrors,
   };
 
   return (

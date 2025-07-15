@@ -225,6 +225,9 @@ class DataVaultTestSuite extends PlaySpec {
 
         override def listDirectory(path: VaultPath,
                                    maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = ???
+
+        override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+          ???
       }
 
       "Uri has no trailing slash" should {

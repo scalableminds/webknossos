@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
+import models.dataset.{DataStore, DataStoreDAO, Dataset, DatasetMagsDAO, DatasetService, WKRemoteDataStoreClient}
 import models.organization.{Organization, OrganizationDAO}
 import com.scalableminds.util.tools.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
@@ -23,6 +23,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
                                    dataStoreDAO: DataStoreDAO,
+                                   datasetMagDAO: DatasetMagsDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
     extends LazyLogging
@@ -76,7 +77,13 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private def refreshStorageReports(dataStore: DataStore,
                                     organization: Organization): Fox[List[DirectoryStorageReport]] = {
     val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-    dataStoreClient.fetchStorageReport(organization._id, datasetName = None)
+    for {
+      relevantMags <- datasetMagDAO.findAllStorageRelevantMags(organization._id, dataStore.name)
+      _ <- Fox.fromBool(relevantMags.forall(mag => mag.path.isDefined || mag.hasLocalData)) ?~> "Storage path is missing"
+      relevantPaths = relevantMags.map(mag =>
+        mag.realPath.getOrElse(mag.path.getOrElse(s"${mag.directoryName}/${mag.dataLayerName}/${mag.mag}")))
+      reports <- dataStoreClient.fetchStorageReport(organization._id, relevantPaths)
+    } yield reports
   }
 
   private def upsertUsedStorage(organization: Organization,

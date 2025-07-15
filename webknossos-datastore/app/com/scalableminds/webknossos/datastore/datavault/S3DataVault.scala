@@ -136,6 +136,16 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     } yield s3SubPrefixes.map(_.prefix())
   }
 
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      listObjectsRequest = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefixKey).maxKeys(1000).build()
+      client <- clientFox
+      objectListing: ListObjectsV2Response <- notFoundToFailure(client.listObjectsV2(listObjectsRequest).asScala)
+      // TODOM: Ensure working correctly with continuation tokens!
+      size = objectListing.contents().asScala.map(_.size()).foldLeft(0L)(_ + _)
+    } yield size
+
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential
 

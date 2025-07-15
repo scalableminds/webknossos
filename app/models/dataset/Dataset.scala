@@ -728,7 +728,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
-case class MagWithPaths(layerName: String,
+case class MagWithPaths(datasetId: ObjectId,
+                        layerName: String,
                         mag: Vec3Int,
                         path: Option[String],
                         realPath: Option[String],
@@ -767,6 +768,19 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         .map(_.toList)
       mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
     } yield mags
+
+  // TODO: Mention in docs & migration guide that postgres now needs to be at least 16+.
+  def findAllStorageRelevantMags(organizationId: String, dataStoreId: String): Fox[List[DataSourceMagRow]] =
+    for {
+      storageRelevantMags <- run(
+        q"""SELECT ds._id, ds._directoryName, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData, mag._organization, mag.directoryName
+            FROM webknossos.dataset_mags AS mag
+            JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+            WHERE ds._organization = $organizationId
+              AND ds._dataStore = $dataStoreId
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) = 1;
+         """.as[DataSourceMagRow])
+    } yield storageRelevantMags.toList
 
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate

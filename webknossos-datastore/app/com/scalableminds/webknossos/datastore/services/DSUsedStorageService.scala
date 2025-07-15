@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -7,9 +8,11 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
+import java.net.URI
 import java.nio.file.{Files, Path, Paths}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -26,7 +29,7 @@ object DirectoryStorageReport {
   implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
 }
 
-class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
     extends FoxImplicits
     with LazyLogging {
 
@@ -40,6 +43,22 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     if (Files.exists(organizationDirectory)) {
       measureStorage(organizationId, datasetName, organizationDirectory)
     } else Fox.successful(List())
+  }
+
+  def measureStorageUsedByPaths(paths: List[String], organizationId: String)(
+    implicit ec: ExecutionContext, tc: TokenContext): Fox[List[DirectoryStorageReport]] = {
+    val organizationDirectory = baseDir.resolve(organizationId)
+    val pathsAsURIs = paths.map(new URI(_))
+    val pathsWithAbsoluteURIs = pathsAsURIs.map(uri => {
+      if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
+        organizationDirectory.resolve(uri.getPath).normalize().toAbsolutePath.toUri
+      } else
+        uri
+    })
+    for {
+      vaultPaths <- Fox.serialCombined(pathsWithAbsoluteURIs)(uri => dataVaultService.getVaultPath(RemoteSourceDescriptor(uri, None)))
+      usedBytes <- Fox.serialCombined(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes)
+    } yield usedBytes
   }
 
   def measureStorage(organizationId: String, datasetName: Option[String], organizationDirectory: Path)(

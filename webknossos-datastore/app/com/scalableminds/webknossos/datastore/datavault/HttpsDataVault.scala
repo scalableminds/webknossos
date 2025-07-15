@@ -54,6 +54,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     // HTTP file listing is currently not supported.
     Fox.successful(List.empty)
 
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    // paid HTTP file storage is not supported.
+    Fox.successful(0L)
+
   private val headerInfoCache: AlfuCache[URI, (Boolean, Long)] = AlfuCache()
 
   private def getHeaderInformation(uri: URI)(implicit ec: ExecutionContext): Fox[(Boolean, Long)] =

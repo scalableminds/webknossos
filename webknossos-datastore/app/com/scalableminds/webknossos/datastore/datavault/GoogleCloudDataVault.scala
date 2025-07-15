@@ -12,7 +12,7 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters.IterableHasAsScala
+import scala.jdk.CollectionConverters.{IterableHasAsScala, IteratorHasAsScala}
 
 class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential])
     extends DataVault
@@ -86,6 +86,16 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       val paths = subDirectories.map(dirBlob =>
         new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
       paths
+    }).toFox
+
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    tryo({
+      val objName = path.toUri.getPath.tail
+      val blobs =
+        storage.list(bucket,
+                     Storage.BlobListOption.prefix(objName) /* no currentDirectory(); Do deep recursive listing */ )
+      val totalSize = blobs.iterateAll().iterator().asScala.map(_.getSize).foldLeft(0L)(_ + _)
+      totalSize
     }).toFox
 
   private def getUri = uri

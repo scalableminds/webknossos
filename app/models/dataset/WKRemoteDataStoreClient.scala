@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import play.utils.UriEncoding
 
 import scala.concurrent.ExecutionContext
@@ -64,22 +64,19 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
-    rpc(
-      s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReport(organizationId: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
+  def fetchStorageReport(organizationId: String, paths: List[String]): Fox[List[DirectoryStorageReport]] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryStringOptional("datasetName", datasetName)
       .silent
-      .getWithJsonResponse[List[DirectoryStorageReport]]
+      .postJsonWithJsonResponse[List[String], List[DirectoryStorageReport]](paths)
 
-  def hasSegmentIndexFile(datasetId: String, layerName: String)(
-      implicit ec: ExecutionContext): Fox[Boolean] = {
+  def hasSegmentIndexFile(datasetId: String, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
     val cacheKey = (datasetId, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,

@@ -379,7 +379,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def measureUsedStorage(organizationId: String, datasetDirectoryName: Option[String] = None): Action[AnyContent] =
+  def measureUsedStorage(organizationId: String): Action[List[String]] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {

@@ -24,6 +24,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImpl
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
+  def getUsedStorageBytes(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = dataVault.getUsedStorageBytes(this)
+
   def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount)) ?=> "Failed to read from vault path"

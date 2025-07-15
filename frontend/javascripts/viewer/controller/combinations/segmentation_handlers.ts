@@ -20,7 +20,7 @@ import Store from "viewer/store";
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
-  loadAgglomerateSkeletonAtPosition(globalPosition);
+  loadAgglomerateSkeletonAtPosition(globalPosition.rounded);
 }
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<string | null> {
   const segmentation = Model.getVisibleSegmentationLayer();
@@ -78,10 +78,10 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
 export function handleClickSegment(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
-  const segmentId = getSegmentIdForPosition(globalPosition);
+  const segmentId = getSegmentIdForPosition(globalPosition.rounded);
   const { additionalCoordinates } = state.flycam;
 
   if (segmentId > 0) {
-    Store.dispatch(clickSegmentAction(segmentId, globalPosition, additionalCoordinates));
+    Store.dispatch(clickSegmentAction(segmentId, globalPosition.rounded, additionalCoordinates));
   }
 }

@@ -387,6 +387,8 @@ const V3 = {
   prod(a: Vector3) {
     return a[0] * a[1] * a[2];
   },
+
+  multiply: scale3,
 };
 
 const V4 = {

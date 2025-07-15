@@ -1,9 +1,11 @@
+import { V3 } from "libs/mjs";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { calculateGlobalPos, getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import {
+  moveFlycamAbsoluteAction,
   moveFlycamOrthoAction,
   movePlaneFlycamOrthoAction,
   zoomByDeltaAction,
@@ -35,12 +37,12 @@ export const moveV = (deltaV: number): void => {
   movePlane([0, deltaV, 0]);
 };
 export const moveW = (deltaW: number, oneSlide: boolean): void => {
-  if (is2dDataset(Store.getState().dataset)) {
+  const state = Store.getState();
+  if (is2dDataset(state.dataset)) {
     return;
   }
 
-  const { activeViewport } = Store.getState().viewModeData.plane;
-
+  const { activeViewport } = state.viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {
     return;
   }
@@ -49,7 +51,7 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
     // problems occur. Tracked in #6926.
-    const { representativeMag } = getActiveMagInfo(Store.getState());
+    const { representativeMag } = getActiveMagInfo(state);
     const wDim = Dimensions.getIndices(activeViewport)[2];
     const wStep = (representativeMag || [1, 1, 1])[wDim];
     Store.dispatch(
@@ -59,7 +61,7 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
       ),
     );
   } else {
-    movePlane([0, 0, deltaW], false);
+    Store.dispatch(movePlaneFlycamOrthoAction([0, 0, deltaW], activeViewport, false));
   }
 };
 export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {
@@ -93,7 +95,7 @@ function getMousePosition() {
   return calculateGlobalPos(state, {
     x: mousePosition[0],
     y: mousePosition[1],
-  });
+  }).floating;
 }
 
 export function zoomPlanes(value: number, zoomToMouse: boolean): void {
@@ -122,12 +124,7 @@ function finishZoom(oldMousePosition: Vector3): void {
       return;
     }
 
-    const moveVector = [
-      oldMousePosition[0] - mousePos[0],
-      oldMousePosition[1] - mousePos[1],
-      oldMousePosition[2] - mousePos[2],
-    ];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-    Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
+    const moveVector = V3.sub(oldMousePosition, mousePos);
+    Store.dispatch(moveFlycamAbsoluteAction(moveVector));
   }
 }

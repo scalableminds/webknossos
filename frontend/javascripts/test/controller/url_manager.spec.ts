@@ -12,6 +12,7 @@ import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
 import _ from "lodash";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -192,7 +193,7 @@ describe("UrlManager", () => {
       additionalCoordinates: [],
       mode,
       zoomStep: 1.3,
-      rotation: [0, 0, 180] as Vector3 as Vector3,
+      rotation: [0, 0, 180] as Vector3,
     };
     const initialState = update(defaultState, {
       temporaryConfiguration: {
@@ -206,10 +207,62 @@ describe("UrlManager", () => {
     expect(UrlManager.parseUrlHash()).toEqual(urlState as Partial<UrlManagerState>);
   });
 
+  it("should support hashes with active node id and without a rotation", () => {
+    location.hash = "#3705,5200,795,0,1.3,15";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3705, 5200, 795],
+      mode: "orthogonal",
+      zoomStep: 1.3,
+      activeNode: 15,
+    });
+  });
+
+  it("should parse an empty rotation", () => {
+    location.hash = "#3584,3584,1024,0,2,0,0,0";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3584, 3584, 1024],
+      mode: "orthogonal",
+      zoomStep: 2,
+      rotation: [0, 0, 0],
+    });
+  });
+
+  it("should parse a rotation and active node id correctly", () => {
+    location.hash = "#3334,3235,999,0,2,282,308,308,11";
+    const urlState = UrlManager.parseUrlHash();
+    expect(urlState).toStrictEqual({
+      position: [3334, 3235, 999],
+      mode: "orthogonal",
+      zoomStep: 2,
+      rotation: [282, 308, 308],
+      activeNode: 11,
+    });
+  });
+
   it("should build default url in csv format", () => {
     UrlManager.initialize();
     const url = UrlManager.buildUrl();
-    expect(url).toBe("#0,0,0,0,1.3");
+    // The default state in the store does not include the rotation of 180 degrees around z axis which is always subtracted from the rotation.
+    // Thus, the rotation of 180 around z is present.
+    expect(url).toBe("#0,0,0,0,1.3,0,0,180");
+  });
+
+  it("should build csv url hash without rotation if it is [0,0,0]", () => {
+    const rotationMatrixWithDefaultRotation = FlycamMatrixWithDefaultRotation;
+    const initialState = update(defaultState, {
+      flycam: {
+        currentMatrix: {
+          $set: rotationMatrixWithDefaultRotation,
+        },
+        rotation: {
+          $set: [0, 0, 0],
+        },
+      },
+    });
+    const hash = `#${UrlManager.buildUrlHashCsv(initialState)}`;
+    expect(hash).toBe("#0,0,0,0,1.3");
   });
 
   it("The dataset name should be correctly extracted from view URLs", () => {

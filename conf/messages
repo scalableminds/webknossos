@@ -59,6 +59,7 @@ user.email.verification.keyInvalid=Verification key is invalid.
 user.email.verification.keyUsed=Verification key has already been used.
 user.email.verification.emailDoesNotMatch=This verification key is associated with a different email address.
 user.email.verification.linkExpired=The email verification link is expired.
+user.email.change.passwordWrong=The password you entered is incorrect.
 user.firstName.invalid=Please check your first name for any special characters
 user.lastName.invalid=Please check your last name for any special characters
 user.configuration.invalid=Could not parse configuration

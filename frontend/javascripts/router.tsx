@@ -15,6 +15,7 @@ import {
   getShortLink,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
+import ChangeEmailView from "admin/auth/change_email_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
@@ -652,6 +653,11 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 render={() => <Redirect to="/account/token" />}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/auth/changeEmail"
+                component={ChangeEmailView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

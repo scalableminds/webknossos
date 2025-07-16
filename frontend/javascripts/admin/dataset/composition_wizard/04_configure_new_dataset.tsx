@@ -168,7 +168,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     const newDatasetName = form.getFieldValue(["name"]);
     setIsLoading(true);
     try {
-      const { newDatasetId } = await createDatasetComposition(datastoreToUse.url, {
+      const { newDatasetId } = await createDatasetComposition({
         // keep identifying dataset at orgaId & directoryPath as this is a datastore request.
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),

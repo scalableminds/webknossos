@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(136);
 COMMIT TRANSACTION;
 
 
@@ -107,6 +107,7 @@ CREATE TABLE webknossos.datasets(
   name TEXT NOT NULL,
   isPublic BOOLEAN NOT NULL DEFAULT FALSE,
   isUsable BOOLEAN NOT NULL DEFAULT FALSE,
+  isVirtual BOOLEAN NOT NULL DEFAULT FALSE,
   directoryName TEXT NOT NULL,
   voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,

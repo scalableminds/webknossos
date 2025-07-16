@@ -366,7 +366,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       if (this.didDatasourceIdChange(dataSource)) {
         Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
       }
-      await updateDatasetDatasource(dataset.directoryName, dataset.dataStore.url, dataSource);
+      await updateDatasetDatasource(dataset.dataStore.url, dataSource, dataset.id);
       this.setState({
         savedDataSourceOnServer: dataSource,
       });
@@ -583,7 +583,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
             {
               maybeDataSourceId ? (
                 <DatasetSettingsViewConfigTab
-                  dataSourceId={maybeDataSourceId}
+                  dataset={this.state.dataset}
                   dataStoreURL={this.state.dataset?.dataStore.url}
                 />
               ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */

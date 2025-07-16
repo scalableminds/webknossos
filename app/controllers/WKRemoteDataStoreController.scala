@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLink
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -242,13 +242,23 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def getPaths(name: String, key: String, organizationId: String, directoryName: String): Action[AnyContent] =
+  def deleteVirtualDataset(name: String, key: String): Action[String] =
+    Action.async(validateJson[String]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          datasetIdValidated <- ObjectId.fromString(request.body) ?~> "dataset.delete.invalidId" ~> BAD_REQUEST
+          dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
+          _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
+        } yield Ok
+      }
+    }
+
+  def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
-          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(directoryName, organization._id)(
-            GlobalAccessContext)
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
           magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
@@ -268,6 +278,34 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(dataSource))
       }
 
+    }
+
+  // Register a datasource from the datastore as a dataset in the database.
+  // This is called when adding remote virtual datasets (that should only exist in the database)
+  // by the data store after exploration.
+  def registerDataSource(name: String,
+                         key: String,
+                         organizationId: String,
+                         directoryName: String,
+                         token: String): Action[DataSourceRegistrationInfo] =
+    Action.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          user <- bearerTokenService.userForToken(token)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId) ~> NOT_FOUND
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          dataset <- datasetService.createVirtualDataset(
+            directoryName,
+            organizationId,
+            dataStore,
+            request.body.dataSource,
+            request.body.folderId,
+            user
+          )
+        } yield Ok(dataset._id.toString)
+      }
     }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {

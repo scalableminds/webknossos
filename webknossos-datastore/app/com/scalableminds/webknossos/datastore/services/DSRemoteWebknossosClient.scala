@@ -6,13 +6,14 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
@@ -47,6 +48,12 @@ case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: 
 
 object MagPathInfo {
   implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+}
+
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String])
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
 trait RemoteWebknossosClient {
@@ -120,9 +127,8 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSourcePaths)
 
-  def fetchPaths(dataSourceId: DataSourceId): Fox[List[LayerMagLinkInfo]] =
-    rpc(
-      s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}/paths")
+  def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId}/paths")
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[List[LayerMagLinkInfo]]
 
@@ -135,8 +141,26 @@ class DSRemoteWebknossosClient @Inject()(
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
+  def registerDataSource(dataSource: DataSource, dataSourceId: DataSourceId, folderId: Option[String])(
+      implicit tc: TokenContext): Fox[String] =
+    for {
+      _ <- Fox.successful(())
+      info = DataSourceRegistrationInfo(dataSource, folderId)
+      response <- rpc(
+        s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}")
+        .addQueryString("key" -> dataStoreKey)
+        .withTokenFromContext
+        .postJson[DataSourceRegistrationInfo](info)
+      datasetId = response.body
+    } yield datasetId
+
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
+      .addQueryString("key" -> dataStoreKey)
+      .postJson(id)
+
+  def deleteVirtualDataset(id: ObjectId): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteVirtualDataset")
       .addQueryString("key" -> dataStoreKey)
       .postJson(id)
 

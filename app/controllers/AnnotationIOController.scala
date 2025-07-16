@@ -337,8 +337,7 @@ class AnnotationIOController @Inject()(
       else volumeTracing.boundingBox
 
     for {
-      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationId,
-                                                        dataset.name,
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(dataset._id.toString,
                                                         fallbackLayerOpt.map(_.name),
                                                         remoteDataStoreClient)
       elementClassProto <- fallbackLayerOpt
@@ -358,13 +357,12 @@ class AnnotationIOController @Inject()(
   }
 
   private def canHaveSegmentIndex(
-      organizationId: String,
-      datasetName: String,
+      datasetId: String,
       fallbackLayerName: Option[String],
       remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
     fallbackLayerName match {
       case Some(layerName) =>
-        remoteDataStoreClient.hasSegmentIndexFile(organizationId, datasetName, layerName)
+        remoteDataStoreClient.hasSegmentIndexFile(datasetId, layerName)
       case None =>
         Fox.successful(true)
     }

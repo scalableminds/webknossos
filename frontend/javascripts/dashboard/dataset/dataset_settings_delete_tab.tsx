@@ -40,13 +40,9 @@ const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
     if (!deleteDataset) {
       return;
     }
-    const dataSourceId = {
-      owningOrganization: dataset.owningOrganization,
-      directoryName: dataset.directoryName,
-    };
 
     setIsDeleting(true);
-    await deleteDatasetOnDisk(dataset.dataStore.url, dataSourceId);
+    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
     Toast.success(
       messages["dataset.delete_success"]({
         datasetName: dataset.name,

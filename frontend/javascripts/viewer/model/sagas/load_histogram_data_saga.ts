@@ -37,7 +37,7 @@ function* loadHistogramForLayer(layerName: string): Saga<void> {
 
   let histogram;
   try {
-    histogram = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset, layerName);
+    histogram = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset.id, layerName);
 
     if (!Array.isArray(histogram) || histogram.length === 0) {
       yield* put(setHistogramDataForLayerAction(layerName, null));

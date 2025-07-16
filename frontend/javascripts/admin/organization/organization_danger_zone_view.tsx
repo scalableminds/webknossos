@@ -54,7 +54,7 @@ export function OrganizationDangerZoneView() {
       />
       <SettingsCard
         title="Danger Zone"
-        description={
+        content={
           <Button
             danger
             loading={isDeleting}

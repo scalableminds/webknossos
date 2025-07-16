@@ -4,11 +4,26 @@ import * as React from "react";
 import FastTooltip from "./fast_tooltip";
 const { useState, useEffect, useRef } = React;
 
+/**
+ * Props for the AsyncButton component.
+ */
 export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
+  /**
+   * If true, the button's content will be hidden when it is in the loading state.
+   */
   hideContentWhenLoading?: boolean;
+  /**
+   * The async function to be called when the button is clicked.
+   * It should return a promise that resolves when the async operation is complete.
+   */
   onClick: (event: React.MouseEvent) => Promise<any>;
 };
 
+/**
+ * A React hook that wraps an async onClick handler to manage a loading state.
+ * @param originalOnClick The async function to be called when the element is clicked.
+ * @returns A tuple containing a boolean `isLoading` state and the wrapped `onClick` handler.
+ */
 function useLoadingClickHandler(
   originalOnClick: (event: React.MouseEvent) => Promise<any>,
 ): [boolean, React.MouseEventHandler] {
@@ -41,6 +56,11 @@ function useLoadingClickHandler(
   return [isLoading, onClick];
 }
 
+/**
+ * A button component that handles asynchronous actions.
+ * It displays a loading indicator while the `onClick` promise is pending.
+ * It is a wrapper around the antd Button component.
+ */
 export function AsyncButton(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const { children, hideContentWhenLoading, title, ...rest } = props;
@@ -56,14 +76,25 @@ export function AsyncButton(props: AsyncButtonProps) {
     </FastTooltip>
   );
 }
+
+/**
+ * An icon button component that handles asynchronous actions.
+ * It displays a loading indicator in place of the icon while the `onClick` promise is pending.
+ */
 export function AsyncIconButton(
   props: Omit<AsyncButtonProps, "icon"> & {
+    /** The icon to be displayed on the button. */
     icon: React.ReactElement<any>;
   },
 ) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   return React.cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { ...props, onClick });
 }
+
+/**
+ * A link component that handles asynchronous actions.
+ * Prepends a loading icon while the promise is pending.
+ */
 export function AsyncLink(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const icon = isLoading ? (

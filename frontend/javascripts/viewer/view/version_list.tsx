@@ -168,6 +168,7 @@ async function getUpdateActionLogPage(
     annotationId,
     oldestVersionInPage,
     newestVersionInPage,
+    true,
   );
 
   // The backend won't send the version 0 as that does not exist. The frontend however

@@ -10,7 +10,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
 
 import java.io.File
-import java.nio.file.Paths
+import java.nio.file.Path
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.sys.process._
@@ -64,7 +64,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
     if (!dataDirectory.listFiles().exists(_.getName == "test-dataset"))
       ZipIO.unzipToDirectory(
         testDatasetZip,
-        Paths.get(dataDirectory.toPath.toString, "test-dataset"),
+        Path.of(dataDirectory.toPath.toString, "test-dataset"),
         includeHiddenFiles = true,
         hiddenFilesWhitelist = List(),
         truncateCommonPrefix = true,

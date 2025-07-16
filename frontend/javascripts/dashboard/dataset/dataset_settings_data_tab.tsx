@@ -17,6 +17,7 @@ import {
   Switch,
   Tooltip,
 } from "antd";
+import { useWatch } from "antd/es/form/Form";
 import {
   FormItemWithInfo,
   Hideable,
@@ -85,10 +86,11 @@ export default function DatasetSettingsDataTab() {
     useDatasetSettingsContext();
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
-  Form.useWatch("dataSource", form);
+  // TODO: The "preserve" option probably fixes this, e.g. useWatch("dataSource", { form, preserve: true });
+  useWatch("dataSource", { form, preserve: true });
   // Then, the newest value can be retrieved with getFieldValue
   const dataSource = form.getFieldValue("dataSource");
-  const dataSourceJson = Form.useWatch("dataSourceJson", form);
+  const dataSourceJson = useWatch("dataSourceJson", form);
   const datasetStoredLocationInfo = dataset
     ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
     : "";
@@ -345,10 +347,11 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
+  const dataLayers = useWatch(["dataSource", "dataLayers"], form);
+  const category = useWatch(["dataSource", "dataLayers", index, "category"], form);
+
   const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
-  const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
-  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
   const isSegmentation = category === "segmentation";
   const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
 

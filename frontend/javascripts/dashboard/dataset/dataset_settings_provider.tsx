@@ -9,7 +9,7 @@ import {
   updateDatasetPartial,
   updateDatasetTeams,
 } from "admin/rest_api";
-import { Form } from "antd";
+import { Form, type FormInstance } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
@@ -42,6 +42,7 @@ type DatasetSettingsProviderProps = {
   isEditingMode: boolean;
   onComplete?: () => void;
   onCancel?: () => void;
+  form?: FormInstance<FormData>;
 };
 
 export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = ({
@@ -50,8 +51,9 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   isEditingMode,
   onComplete,
   onCancel,
+  form: formProp, // In case of Remote Dataset Upload, we start with a prefilled form containing the DS information
 }) => {
-  const [form] = Form.useForm<FormData>();
+  const [form] = Form.useForm<FormData>(formProp);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -351,12 +353,16 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
   useEffect(() => {
-    fetchData().then((datasetName) => {
-      sendAnalyticsEvent("open_dataset_settings", {
-        datasetName: datasetName ?? "Not found dataset",
+    // In case of Remote Dataset Upload, we start with a prefilled form containing the DS information
+    if (formProp === undefined) {
+      // For all other cases, i.e. editting existing datasets, we fetch the dataset information from the backend
+      fetchData().then((datasetName) => {
+        sendAnalyticsEvent("open_dataset_settings", {
+          datasetName: datasetName ?? "Not found dataset",
+        });
       });
-    });
-  }, [fetchData]);
+    }
+  }, [fetchData, formProp]);
 
   const contextValue: DatasetSettingsContextValue = {
     form,

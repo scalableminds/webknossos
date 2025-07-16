@@ -72,6 +72,12 @@ export class ContourGeometry {
   }
 
   addEdgePoint(pos: Vector3) {
+    const pointCount = this.vertexBuffer.getLength();
+    const lastPoint = this.vertexBuffer.getBuffer().subarray((pointCount - 1) * 3, pointCount * 3);
+    if (V3.equals(pos, lastPoint)) {
+      // Skip adding the point if it is the same as the last one.
+      return;
+    }
     this.vertexBuffer.push(pos);
     const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
     // Setting start and end point to form the connecting line.

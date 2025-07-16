@@ -31,7 +31,7 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import type { FormData } from "./dataset_settings_context";
+import type { DataSourceEditMode, FormData } from "./dataset_settings_context";
 import { syncDataSourceFields } from "./dataset_settings_data_tab";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
@@ -126,7 +126,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
           description: fetchedDataset.description || undefined,
           allowedTeams: fetchedDataset.allowedTeams || [],
           // @ts-ignore: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
-          sortingKey: dayjs(fetchedDataset.sortingKey),
+          sortingKey: dayjs(fetchedDataset.sortingKey as any as Dayjs),
         },
       });
 
@@ -341,7 +341,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, [onCancel]);
 
   const handleDataSourceEditModeChange = useCallback(
-    (activeEditMode: "simple" | "advanced") => {
+    (activeEditMode: DataSourceEditMode) => {
       syncDataSourceFields(form, activeEditMode);
       form.validateFields();
       setActiveDataSourceEditMode(activeEditMode);

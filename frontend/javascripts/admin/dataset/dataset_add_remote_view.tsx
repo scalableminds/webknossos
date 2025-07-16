@@ -228,7 +228,7 @@ function DatasetAddRemoteView(props: Props) {
 
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
-            <DatasetSettingsProvider form={form} isEditingMode={false}>
+            <DatasetSettingsProvider form={form} isEditingMode={false} datasetId="new-import">
               <DatasetSettingsDataTab />
             </DatasetSettingsProvider>
           </Hideable>

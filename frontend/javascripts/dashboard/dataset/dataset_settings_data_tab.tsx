@@ -42,14 +42,14 @@ import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
-import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { type DataSourceEditMode, useDatasetSettingsContext } from "./dataset_settings_context";
 import { getRotationFromCoordinateTransformations } from "./dataset_settings_provider";
 
 const FormItem = Form.Item;
 
 export const syncDataSourceFields = (
   form: FormInstance, // Keep form as a prop for this utility function
-  syncTargetTabKey: "simple" | "advanced",
+  syncTargetTabKey: DataSourceEditMode,
   // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
   // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
   syncDatasetName = false,

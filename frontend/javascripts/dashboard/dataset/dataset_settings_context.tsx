@@ -4,6 +4,8 @@ import type { APIDataSource, APIDataset } from "types/api_types";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 
+export type DataSourceEditMode = "simple" | "advanced";
+
 export type FormData = {
   dataSource: APIDataSource;
   dataSourceJson: string;
@@ -19,11 +21,11 @@ export type DatasetSettingsContextValue = {
   dataset: APIDataset | null | undefined;
   datasetId: string;
   datasetDefaultConfiguration: DatasetConfiguration | null | undefined;
-  activeDataSourceEditMode: "simple" | "advanced";
+  activeDataSourceEditMode: DataSourceEditMode;
   isEditingMode: boolean;
   handleSubmit: () => void;
   handleCancel: () => void;
-  handleDataSourceEditModeChange: (activeEditMode: "simple" | "advanced") => void;
+  handleDataSourceEditModeChange: (activeEditMode: DataSourceEditMode) => void;
   onValuesChange: (changedValues: FormData, allValues: FormData) => void;
   getFormValidationSummary: () => Record<string, any>;
   hasFormErrors: boolean;

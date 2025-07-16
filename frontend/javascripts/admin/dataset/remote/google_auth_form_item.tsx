@@ -1,4 +1,5 @@
 import { UnlockOutlined } from "@ant-design/icons";
+import type { FileList } from "admin/dataset/composition_wizard/common.ts";
 import { Form, Upload } from "antd";
 import { Fragment } from "react";
 import { Unicode } from "viewer/constants";
@@ -6,7 +7,6 @@ import { Unicode } from "viewer/constants";
 import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
 
 const FormItem = Form.Item;
-type FileList = UploadFile<any>[];
 
 export function GoogleAuthFormItem({
   fileList,

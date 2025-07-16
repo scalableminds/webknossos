@@ -2,7 +2,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Alert, Form, Modal, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
-import { sum } from "lodash";
+import sum from "lodash/sum";
 import type { FieldError } from "rc-field-form/es/interface";
 import React from "react";
 

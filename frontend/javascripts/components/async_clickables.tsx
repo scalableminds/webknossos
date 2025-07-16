@@ -93,7 +93,7 @@ export function AsyncIconButton(
 
 /**
  * A link component that handles asynchronous actions.
- * It displays a loading indicator before the link text while the `onClick` promise is pending.
+ * Prepends a loading icon while the promise is pending.
  */
 export function AsyncLink(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);

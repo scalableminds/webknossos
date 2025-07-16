@@ -44,7 +44,6 @@ function DatasetAddRemoteView(props: Props) {
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
-  const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
@@ -115,8 +114,6 @@ function DatasetAddRemoteView(props: Props) {
   };
 
   async function handleStoreDataset() {
-    // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     try {
       await form.validateFields();
     } catch (_e) {
@@ -188,7 +185,6 @@ function DatasetAddRemoteView(props: Props) {
               uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
-              dataSourceEditMode={dataSourceEditMode}
             />
           </Modal>
 
@@ -197,7 +193,6 @@ function DatasetAddRemoteView(props: Props) {
               form={form}
               uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
-              dataSourceEditMode={dataSourceEditMode}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
               onSuccess={(defaultDatasetUrl: string) => onSuccesfulExplore(defaultDatasetUrl)}
@@ -233,15 +228,7 @@ function DatasetAddRemoteView(props: Props) {
 
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
-            <DatasetSettingsProvider
-              form={form}
-              activeDataSourceEditMode={dataSourceEditMode}
-              onChange={(activeEditMode) => {
-                syncDataSourceFields(form, activeEditMode, true);
-                form.validateFields();
-                setDataSourceEditMode(activeEditMode);
-              }}
-            >
+            <DatasetSettingsProvider form={form} isEditingMode={false}>
               <DatasetSettingsDataTab />
             </DatasetSettingsProvider>
           </Hideable>

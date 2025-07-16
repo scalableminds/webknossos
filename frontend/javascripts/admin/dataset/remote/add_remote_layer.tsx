@@ -2,10 +2,6 @@ import { exploreRemoteDataset } from "admin/rest_api";
 import { Col, Collapse, Form, type FormInstance, Input, Radio, Row } from "antd";
 import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
-import {
-  // Sync simple with advanced and get newest datasourceJson
-  syncDataSourceFields,
-} from "dashboard/dataset/dataset_settings_data_tab";
 import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
@@ -93,7 +89,6 @@ export function AddRemoteLayer({
   setDatasourceConfigStr,
   onSuccess,
   onError,
-  dataSourceEditMode,
   defaultUrl,
 }: {
   form: FormInstance;
@@ -101,7 +96,6 @@ export function AddRemoteLayer({
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: (datasetUrl: string) => Promise<void> | void;
   onError?: () => void;
-  dataSourceEditMode: "simple" | "advanced";
   defaultUrl?: string | null | undefined;
 }) {
   const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
@@ -167,8 +161,6 @@ export function AddRemoteLayer({
       return;
     }
 
-    // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,

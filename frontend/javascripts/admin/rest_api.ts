@@ -1346,16 +1346,13 @@ export async function triggerDatasetClearCache(
 
 export async function deleteDatasetOnDisk(
   datastoreHost: string,
-  dataSourceId: APIDataSourceId,
+  dataset: APIDataset,
 ): Promise<void> {
   await doWithToken((token) =>
-    Request.triggerRequest(
-      `/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/deleteOnDisk?token=${token}`,
-      {
-        host: datastoreHost,
-        method: "DELETE",
-      },
-    ),
+    Request.triggerRequest(`/data/datasets/${dataset.id}/deleteOnDisk?token=${token}`, {
+      host: datastoreHost,
+      method: "DELETE",
+    }),
   );
 }
 

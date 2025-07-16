@@ -64,8 +64,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
-    rpc(
-      s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
@@ -78,8 +77,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def hasSegmentIndexFile(datasetId: String, layerName: String)(
-      implicit ec: ExecutionContext): Fox[Boolean] = {
+  def hasSegmentIndexFile(datasetId: String, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
     val cacheKey = (datasetId, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,

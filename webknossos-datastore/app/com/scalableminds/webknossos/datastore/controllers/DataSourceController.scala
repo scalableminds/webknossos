@@ -428,17 +428,24 @@ class DataSourceController @Inject()(
       }
     }
 
-  def deleteOnDisk(organizationId: String, datasetDirectoryName: String): Action[AnyContent] =
+  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
-      val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
         for {
-          _ <- Fox.fromBool(dataSourceService.existsOnDisk(organizationId, datasetDirectoryName)) ?~> "The dataset does not exist on disk"
-          _ <- dataSourceService.deleteOnDisk(
-            organizationId,
-            datasetDirectoryName,
-            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-          _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
+          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+          dataSourceId = dataSource.id
+          _ <- if (dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
+            for {
+              _ <- dataSourceService.deleteOnDisk(
+                dataSourceId.organizationId,
+                dataSourceId.directoryName,
+                Some(datasetId),
+                reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+              _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
+            } yield ()
+          } else {
+            dsRemoteWebknossosClient.deleteVirtualDataset(datasetId)
+          }
         } yield Ok
       }
     }

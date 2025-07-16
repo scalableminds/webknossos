@@ -6,6 +6,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
@@ -126,9 +127,8 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSourcePaths)
 
-  def fetchPaths(dataSourceId: DataSourceId): Fox[List[LayerMagLinkInfo]] =
-    rpc(
-      s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}/paths")
+  def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId}/paths")
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[List[LayerMagLinkInfo]]
 
@@ -156,6 +156,11 @@ class DSRemoteWebknossosClient @Inject()(
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
+      .addQueryString("key" -> dataStoreKey)
+      .postJson(id)
+
+  def deleteVirtualDataset(id: ObjectId): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteVirtualDataset")
       .addQueryString("key" -> dataStoreKey)
       .postJson(id)
 

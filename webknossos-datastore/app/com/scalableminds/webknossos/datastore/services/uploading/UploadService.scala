@@ -441,6 +441,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Empty =>
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
@@ -448,6 +449,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         logger.warn(s"Error while $label: $msg, $e")
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
         dataSourceRepository.removeDataSource(dataSourceId)

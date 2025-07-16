@@ -583,7 +583,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
             {
               maybeDataSourceId ? (
                 <DatasetSettingsViewConfigTab
-                  dataSourceId={maybeDataSourceId}
+                  dataset={this.state.dataset}
                   dataStoreURL={this.state.dataset?.dataStore.url}
                 />
               ) : null /* null case should never be rendered as tabs are only rendered when the dataset is loaded. */

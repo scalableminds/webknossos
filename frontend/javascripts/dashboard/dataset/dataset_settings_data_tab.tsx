@@ -39,6 +39,7 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { getRotationFromCoordinateTransformations } from "./dataset_settings_provider";
 
 const FormItem = Form.Item;
 
@@ -77,6 +78,9 @@ export const syncDataSourceFields = (
     }
     form.setFieldsValue({
       dataSource: dataSourceFromAdvancedTab,
+    });
+    form.setFieldsValue({
+      datasetRotation: getRotationFromCoordinateTransformations(dataSourceFromAdvancedTab),
     });
   }
 };

@@ -45,6 +45,32 @@ type DatasetSettingsProviderProps = {
   form?: FormInstance<FormData>;
 };
 
+export function getRotationFromCoordinateTransformations(
+  dataSource: APIDataSource,
+): DatasetRotationAndMirroringSettings | undefined {
+  if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
+    const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
+    let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
+    if (
+      !firstLayerTransformations ||
+      firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+    ) {
+      3;
+      const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
+      initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
+    } else {
+      initialDatasetRotationSettings = {
+        x: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
+        y: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[2], "y"),
+        z: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[3], "z"),
+      };
+    }
+    return initialDatasetRotationSettings;
+  }
+
+  return undefined;
+}
+
 export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = ({
   children,
   datasetId,
@@ -109,36 +135,9 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         dataSource,
       });
 
-      if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
-        const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
-        let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
-        if (
-          !firstLayerTransformations ||
-          firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
-        ) {
-          3;
-          const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
-          initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
-        } else {
-          initialDatasetRotationSettings = {
-            x: getRotationSettingsFromTransformationIn90DegreeSteps(
-              firstLayerTransformations[1],
-              "x",
-            ),
-            y: getRotationSettingsFromTransformationIn90DegreeSteps(
-              firstLayerTransformations[2],
-              "y",
-            ),
-            z: getRotationSettingsFromTransformationIn90DegreeSteps(
-              firstLayerTransformations[3],
-              "z",
-            ),
-          };
-        }
-        form.setFieldsValue({
-          datasetRotation: initialDatasetRotationSettings,
-        });
-      }
+      form.setFieldsValue({
+        datasetRotation: getRotationFromCoordinateTransformations(dataSource),
+      });
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
       enforceValidatedDatasetViewConfiguration(

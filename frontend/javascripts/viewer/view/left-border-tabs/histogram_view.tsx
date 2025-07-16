@@ -3,7 +3,8 @@ import { Alert, Col, InputNumber, Row, Spin } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
-import { debounce, range } from "lodash";
+import debounce from "lodash/debounce";
+import range from "lodash/range";
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -240,15 +241,16 @@ const Histogram: React.FC<Props> = (props) => {
       ? value.toExponential()
       : roundTo(value, getPrecision()).toString();
   };
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update debounced function when handler changes.
   const updateMinimumDebounced = useCallback(
     debounce((value, layerName) => onChangeLayer(layerName, "min", value), 500),
-    [],
+    [onChangeLayer],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update debounced function when handler changes.
   const updateMaximumDebounced = useCallback(
     debounce((value, layerName) => onChangeLayer(layerName, "max", value), 500),
-    [],
+    [onChangeLayer],
   );
 
   const maybeWarning =

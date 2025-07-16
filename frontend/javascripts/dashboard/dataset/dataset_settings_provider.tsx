@@ -55,7 +55,6 @@ export function getRotationFromCoordinateTransformations(
       !firstLayerTransformations ||
       firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
     ) {
-      3;
       const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
       initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
     } else {

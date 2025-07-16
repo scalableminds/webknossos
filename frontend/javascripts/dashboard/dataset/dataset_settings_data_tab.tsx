@@ -30,7 +30,12 @@ import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
+import {
+  type APIDataLayer,
+  type APIDataset,
+  APIJobType,
+  type MutableAPIDataSource,
+} from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
@@ -80,7 +85,9 @@ export const syncDataSourceFields = (
       dataSource: dataSourceFromAdvancedTab,
     });
     form.setFieldsValue({
-      datasetRotation: getRotationFromCoordinateTransformations(dataSourceFromAdvancedTab),
+      datasetRotation: getRotationFromCoordinateTransformations(
+        dataSourceFromAdvancedTab as MutableAPIDataSource,
+      ),
     });
   }
 };

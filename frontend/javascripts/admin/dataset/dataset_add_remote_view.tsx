@@ -137,23 +137,23 @@ function DatasetAddRemoteView(props: Props) {
       return;
     }
 
+    // The dataset name is not synced with the datasource.id.name in the advanced settings: See DatasetSettingsDataTab.
+    const datasetName = form.getFieldValue(["dataset", "name"]);
     const dataSourceJsonStr = form.getFieldValue("dataSourceJson");
     if (dataSourceJsonStr && activeUser) {
-      let configJSON;
       try {
-        configJSON = JSON.parse(dataSourceJsonStr);
-        const nameValidationResult = await isDatasetNameValid(configJSON.id.name);
+        const nameValidationResult = await isDatasetNameValid(datasetName);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
         const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.url,
-          configJSON.id.name,
+          datasetName,
           activeUser.organization,
           dataSourceJsonStr,
           targetFolderId,
         );
-        onAdded(newDatasetId, configJSON.id.name);
+        onAdded(newDatasetId, datasetName);
       } catch (e) {
         setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);

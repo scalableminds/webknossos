@@ -234,8 +234,7 @@ describe("wkstore_adapter", () => {
   }) => {
     setFourBit(true);
     const { batch } = prepare();
-    const expectedUrl =
-      "url/data/datasets/datasetId/layers/segmentation/data?token=token2";
+    const expectedUrl = "url/data/datasets/datasetId/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
 
     const RequestMock = vi.mocked(Request);

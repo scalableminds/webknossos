@@ -5,7 +5,6 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
 import { Col, Collapse, Form, Row, Space, Switch, Tooltip, Typography } from "antd";
-import { useWatch } from "antd/es/form/Form";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -22,7 +21,7 @@ export default function DatasetSettingsSharingTab() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
 
-  const isDatasetPublic = useWatch(["dataset", "isPublic"], form);
+  const isDatasetPublic = Form.useWatch(["dataset", "isPublic"], form);
   const { data: sharingToken, refetch } = useQuery({
     queryKey: ["datasetSharingToken", datasetId],
     queryFn: () => getDatasetSharingToken(datasetId),

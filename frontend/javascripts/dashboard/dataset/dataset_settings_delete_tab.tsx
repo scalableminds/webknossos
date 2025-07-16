@@ -1,31 +1,23 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { Button } from "antd";
+import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import messages from "messages";
-import { useEffect, useState } from "react";
-import type { APIDataset } from "types/api_types";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { confirmAsync } from "./helper_components";
 
 type Props = {
   datasetId: string;
-} & RouteComponentProps;
+};
 
-const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
+const DatasetSettingsDeleteTab = ({ datasetId }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  async function fetch() {
-    const newDataset = await getDataset(datasetId);
-    setDataset(newDataset);
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
-  useEffect(() => {
-    fetch();
-  }, []);
+  const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
 
   async function handleDeleteButtonClicked(): Promise<void> {
     if (!dataset) {
@@ -74,4 +66,4 @@ const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
   );
 };
 
-export default withRouter(DatasetSettingsDeleteTab);
+export default DatasetSettingsDeleteTab;

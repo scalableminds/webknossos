@@ -166,6 +166,7 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
 CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
 CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json', 'neuroglancerPrecomputed');
 CREATE TABLE webknossos.dataset_layer_attachments(
+   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
    _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
    layerName TEXT NOT NULL,
    name TEXT NOT NULL,
@@ -182,6 +183,7 @@ CREATE TABLE webknossos.dataset_allowedTeams(
 );
 
 CREATE TABLE webknossos.dataset_mags(
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   dataLayerName TEXT,
   mag webknossos.VECTOR3 NOT NULL,
@@ -353,15 +355,20 @@ CREATE TABLE webknossos.organizations(
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TABLE webknossos.organization_usedStorage(
+CREATE TABLE webknossos.organization_usedStorage (
   _organization TEXT NOT NULL,
-  _dataStore TEXT NOT NULL,
-  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
-  layerName TEXT NOT NULL,
-  magOrDirectoryName TEXT NOT NULL,
+  _dataset TEXT NOT NULL,
+  _dataset_mag TEXT CONSTRAINT _dataset_mag_objectId CHECK (_dataset_mag IS NULL OR _dataset_mag ~ '^[0-9a-f]{24}$'),
+  _layer_attachment TEXT CONSTRAINT _layer_attachment_objectId CHECK (_layer_attachment IS NULL OR _layer_attachment ~ '^[0-9a-f]{24}$'),
+  path TEXT NOT NULL,
   usedStorageBytes BIGINT NOT NULL,
   lastUpdated TIMESTAMPTZ,
-  PRIMARY KEY(_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
+  PRIMARY KEY(_dataset_mag, _layer_attachment),
+  CHECK (
+    (_dataset_mag IS NOT NULL AND _layer_attachment IS NULL)
+    OR
+    (_dataset_mag IS NULL AND _layer_attachment IS NOT NULL)
+  )
 );
 
 -- Create the enum types for transaction states and credit states

@@ -380,16 +380,15 @@ class DataSourceController @Inject()(
   }
 
   def measureUsedStorage(organizationId: String): Action[List[String]] =
-    Action.async { implicit request =>
+    Action.async(validateJson[List[String]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
           for {
             before <- Instant.nowFox
-            usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationId,
-                                                                                                   datasetDirectoryName)
+            usedStorageInBytes <- storageUsageService.measureStorageForPaths(
+              request.body, organizationId)
             _ = if (Instant.since(before) > (10 seconds)) {
-              val datasetLabel = datasetDirectoryName.map(n => s" dataset $n of").getOrElse("")
-              Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId", logger)
+              Instant.logSince(before, s"Measuring storage for orga $organizationId for ${request.body.length} paths.", logger)
             }
           } yield Ok(Json.toJson(usedStorageInBytes))
         }

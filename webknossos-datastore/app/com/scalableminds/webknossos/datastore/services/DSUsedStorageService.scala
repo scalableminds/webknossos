@@ -29,6 +29,14 @@ object DirectoryStorageReport {
   implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
 }
 
+case class PathStorageReport(
+    path: String,
+    usedStorageBytes: Long
+)
+object PathStorageReport {
+  implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
+}
+
 class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
     extends FoxImplicits
     with LazyLogging {
@@ -37,16 +45,9 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
 
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 
-  def measureStorage(organizationId: String, datasetName: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
-    val organizationDirectory = baseDir.resolve(organizationId)
-    if (Files.exists(organizationDirectory)) {
-      measureStorage(organizationId, datasetName, organizationDirectory)
-    } else Fox.successful(List())
-  }
-
-  def measureStorageUsedByPaths(paths: List[String], organizationId: String)(
-    implicit ec: ExecutionContext, tc: TokenContext): Fox[List[DirectoryStorageReport]] = {
+  def measureStorageForPaths(paths: List[String], organizationId: String)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[PathStorageReport]] = {
     val organizationDirectory = baseDir.resolve(organizationId)
     val pathsAsURIs = paths.map(new URI(_))
     val pathsWithAbsoluteURIs = pathsAsURIs.map(uri => {
@@ -56,10 +57,21 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
         uri
     })
     for {
-      vaultPaths <- Fox.serialCombined(pathsWithAbsoluteURIs)(uri => dataVaultService.getVaultPath(RemoteSourceDescriptor(uri, None)))
+      vaultPaths <- Fox.serialCombined(pathsWithAbsoluteURIs)(uri =>
+        dataVaultService.getVaultPath(RemoteSourceDescriptor(uri, None)))
       usedBytes <- Fox.serialCombined(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes)
-    } yield usedBytes
+      pathStorageReports = paths.zip(usedBytes).map(p => PathStorageReport(p._1, p._2))
+    } yield pathStorageReports
   }
+
+  /*def measureStorage(organizationId: String, datasetName: Option[String])(
+      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
+    val organizationDirectory = baseDir.resolve(organizationId)
+    if (Files.exists(organizationDirectory)) {
+      measureStorage(organizationId, datasetName, organizationDirectory)
+    } else Fox.successful(List())
+  }
+
 
   def measureStorage(organizationId: String, datasetName: Option[String], organizationDirectory: Path)(
       implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
@@ -116,6 +128,6 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
     }
 
   def measureStorage(path: Path): Box[Long] =
-    tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue)
+    tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue)*/
 
 }

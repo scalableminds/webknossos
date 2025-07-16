@@ -728,14 +728,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
-case class MagWithPaths(datasetId: ObjectId,
-                        layerName: String,
+case class MagWithPaths(layerName: String,
                         mag: Vec3Int,
                         path: Option[String],
                         realPath: Option[String],
                         hasLocalData: Boolean)
 
-case class DataSourceMagRow(_dataset: ObjectId,
+case class DataSourceMagRow(_id: ObjectId,
+                            _dataset: ObjectId,
                             dataLayerName: String,
                             mag: String,
                             path: Option[String],
@@ -772,14 +772,17 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   // TODO: Mention in docs & migration guide that postgres now needs to be at least 16+.
   def findAllStorageRelevantMags(organizationId: String, dataStoreId: String): Fox[List[DataSourceMagRow]] =
     for {
-      storageRelevantMags <- run(
-        q"""SELECT ds._id, ds._directoryName, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData, mag._organization, mag.directoryName
-            FROM webknossos.dataset_mags AS mag
-            JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
-            WHERE ds._organization = $organizationId
-              AND ds._dataStore = $dataStoreId
-            QUALIFY ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) = 1;
-         """.as[DataSourceMagRow])
+      storageRelevantMags <- run(q"""SELECT *
+            FROM (
+              SELECT mag._id, ds._id AS dataset_id, ds.directoryName AS dataset_directory, mag.dataLayerName,
+                     mag.mag, mag.path, mag.realPath, mag.hasLocalData, ds._organization, ds.directoryName,
+                     ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
+              FROM webknossos.dataset_mags AS mag
+              JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+              WHERE ds._organization = $organizationId
+                AND ds._dataStore = $dataStoreId
+            ) AS ranked
+            WHERE rn = 1;""".as[DataSourceMagRow])
     } yield storageRelevantMags.toList
 
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
@@ -788,9 +791,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       layer.magsOpt match {
         case Some(mags) =>
           mags.map(mag => {
-            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
-                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder
-              .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+            q"""INSERT INTO webknossos.dataset_mags(_id, _dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
+                VALUES(${ObjectId.generate}, $datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(
+              Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
           })
         case None =>
@@ -836,14 +839,17 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     GetResult(
       r =>
-        DataSourceMagRow(ObjectId(r.nextString()),
-                         r.nextString(),
-                         r.nextString(),
-                         r.nextStringOption(),
-                         r.nextStringOption(),
-                         r.nextBoolean(),
-                         r.nextString(),
-                         r.nextString()))
+        DataSourceMagRow(
+          ObjectId(r.nextString()),
+          ObjectId(r.nextString()),
+          r.nextString(),
+          r.nextString(),
+          r.nextStringOption(),
+          r.nextStringOption(),
+          r.nextBoolean(),
+          r.nextString(),
+          r.nextString()
+      ))
 
   private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): Fox[List[DataSourceMagInfo]] =
     for {
@@ -857,7 +863,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
     for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+      rows <- run(
+        q"""SELECT _id, _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
             FROM webknossos.dataset_mags
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE _dataset = $datasetId
@@ -867,7 +874,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
     for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+      rows <- run(
+        q"""SELECT _id, _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
             FROM webknossos.dataset_mags
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE realPath = $realPath""".as[DataSourceMagRow])
@@ -1109,7 +1117,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
+      rows <- run(q"""SELECT _id, _dataset, layerName, name, path, type, dataFormat
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
@@ -1142,6 +1150,18 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+
+  def findAllStorageRelevantAttachments(organizationId: String,
+                                        dataStoreId: String): Fox[List[DatasetLayerAttachmentsRow]] =
+    for {
+      storageRelevantAttachments <- run(q"""SELECT att.*
+            FROM webknossos.dataset_layer_attachments AS att
+            JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+            WHERE ds._organization = $organizationId
+              AND ds._dataStore = $dataStoreId
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) = 1;
+         """.as[DatasetLayerAttachmentsRow])
+    } yield storageRelevantAttachments.toList
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

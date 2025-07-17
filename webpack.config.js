@@ -141,6 +141,7 @@ module.exports = function (env = {}) {
       modules: [srcPath, nodePath, protoPath],
       alias: {
         react: path.resolve("./node_modules/react"),
+        three: path.resolve(__dirname, "node_modules/three/src/Three.js") // build three js from source instead of using their prebuild "binaries"
       },
       extensions: [".ts", ".tsx", ".js", ".json"],
       fallback: {
@@ -210,3 +211,5 @@ module.exports = function (env = {}) {
     ],
   };
 };
+
+

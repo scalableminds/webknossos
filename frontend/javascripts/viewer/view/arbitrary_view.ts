@@ -1,7 +1,7 @@
 import app from "app";
 import window from "libs/window";
 import _ from "lodash";
-import { Object3D, PerspectiveCamera, OrthographicCamera, Vector3, Matrix4 } from "three";
+import { Matrix4, Object3D, OrthographicCamera, PerspectiveCamera, Vector3 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Viewport } from "viewer/constants";
 import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";

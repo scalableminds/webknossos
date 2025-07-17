@@ -5,21 +5,20 @@ import window from "libs/window";
 import _ from "lodash";
 
 import {
-  BufferGeometry,
-  Mesh,
-  Group,
-  WebGLRenderer,
-  Scene,
-  Vector3 as ThreeVector3,
-  Euler,
-  Matrix4,
   BoxGeometry,
+  BufferGeometry,
   EdgesGeometry,
+  Euler,
+  Group,
+  Line,
   LineBasicMaterial,
   LineSegments,
+  Matrix4,
+  Mesh,
   MeshBasicMaterial,
-  Line,
-  Color,
+  Scene,
+  Vector3 as ThreeVector3,
+  type WebGLRenderer,
 } from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";

@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import { mod } from "libs/utils";
-import { Matrix4, Euler } from "three";
+import { Euler, Matrix4 } from "three";
 import type { Vector3 } from "viewer/constants";
 
 // Pre definitions to avoid redundant object creation.

@@ -2,23 +2,23 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import ResizableBuffer from "libs/resizable_buffer";
 import {
-  Color,
-  Line,
-  BufferGeometry,
-  LineBasicMaterial,
   BufferAttribute,
-  DynamicDrawUsage,
-  Vector2,
-  Euler,
-  PlaneGeometry,
-  MeshBasicMaterial,
-  DoubleSide,
-  Mesh,
+  BufferGeometry,
+  Color,
   DataTexture,
+  DoubleSide,
+  DynamicDrawUsage,
+  Euler,
+  Group,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
   RGBAFormat,
   RepeatWrapping,
   Vector3 as ThreeVector3,
-  Group,
+  Vector2,
 } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import Dimensions from "viewer/model/dimensions";

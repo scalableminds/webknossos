@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { Scene, BufferGeometry, Vector3 } from "three";
+import { BufferGeometry, Scene, Vector3 } from "three";
 
 // Original Source: https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/STLExporter.js
 // Manual changes:

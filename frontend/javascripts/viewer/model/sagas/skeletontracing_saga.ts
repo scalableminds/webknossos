@@ -10,7 +10,7 @@ import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { MathUtils, Euler, Matrix4 } from "three";
+import { MathUtils, Matrix4 } from "three";
 import {
   actionChannel,
   all,

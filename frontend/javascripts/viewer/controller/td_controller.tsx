@@ -5,7 +5,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,

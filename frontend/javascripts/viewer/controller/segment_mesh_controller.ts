@@ -2,15 +2,15 @@ import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
 import {
-  Mesh,
-  Color,
-  MeshLambertMaterial,
-  FrontSide,
-  BufferGeometry,
-  BufferAttribute,
-  Group,
   AmbientLight,
+  BufferAttribute,
+  BufferGeometry,
+  Color,
   DirectionalLight,
+  FrontSide,
+  Group,
+  Mesh,
+  MeshLambertMaterial,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";

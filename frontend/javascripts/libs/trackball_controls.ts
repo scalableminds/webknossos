@@ -1,5 +1,5 @@
 import window, { document } from "libs/window";
-import {OrthographicCamera, Vector2, Vector3, Quaternion, EventDispatcher} from "three";
+import {EventDispatcher, OrthographicCamera, Quaternion, Vector2, Vector3 } from "three";
 
 /**
  * The MIT License

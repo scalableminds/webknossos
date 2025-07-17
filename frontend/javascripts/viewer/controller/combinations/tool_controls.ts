@@ -3,7 +3,7 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
-import { Vector3 as ThreeVector3, Color } from "three";
+import { Color } from "three";
 import {
   ContourModeEnum,
   type OrthoView,

@@ -1,16 +1,16 @@
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import {
-  BufferGeometry,
   BufferAttribute,
+  BufferGeometry,
+  DataTexture,
+  FloatType,
+  Group,
+  LineSegments,
   Object3D,
   Points,
-  LineSegments,
-  Group,
-  DataTexture,
   RGBAFormat,
-  FloatType,
-  RawShaderMaterial,
+  type RawShaderMaterial,
 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";

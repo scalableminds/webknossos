@@ -17,7 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import { Vector3 as ThreeVector3, Matrix4, Euler, Quaternion, MathUtils } from "three";
+import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";

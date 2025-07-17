@@ -3,15 +3,7 @@ import { castForArrayType, mod } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import {
-  Color,
-  BufferGeometry,
-  LineBasicMaterial,
-  Line,
-  DataTexture,
-  RGBAFormat,
-  FloatType,
-} from "three";
+import { Color } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";

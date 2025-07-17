@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Mesh, Matrix4, DoubleSide, PlaneGeometry, ShaderMaterial } from "three";
+import { DoubleSide, Matrix4, Mesh, PlaneGeometry, ShaderMaterial } from "three";
 import constants, { OrthoViews } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";

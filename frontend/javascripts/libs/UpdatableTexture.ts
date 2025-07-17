@@ -1,4 +1,10 @@
-import { Texture, WebGLRenderer, WebGLUtils, LinearFilter, LinearMipMapLinearFilter } from "three";
+import {
+  LinearFilter,
+  LinearMipMapLinearFilter,
+  Texture,
+  type WebGLRenderer,
+  WebGLUtils,
+} from "three";
 import type { TypedArray } from "viewer/constants";
 
 /* The UpdatableTexture class exposes a way to partially update a texture.

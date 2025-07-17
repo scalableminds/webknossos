@@ -2,7 +2,13 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as React from "react";
-import { OrthographicCamera, Euler, Matrix4, Vector3 as ThreeVector3, Quaternion } from "three";
+import {
+  Euler,
+  Matrix4,
+  type OrthographicCamera,
+  Quaternion,
+  Vector3 as ThreeVector3,
+} from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import {

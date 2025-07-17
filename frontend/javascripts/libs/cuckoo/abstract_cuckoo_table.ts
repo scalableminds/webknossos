@@ -1,5 +1,5 @@
 import type UpdatableTexture from "libs/UpdatableTexture";
-import { UnsignedIntType, RGBAIntegerFormat, type PixelFormatGPU, type PixelFormat } from "three";
+import { type PixelFormat, type PixelFormatGPU, RGBAIntegerFormat, UnsignedIntType } from "three";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 

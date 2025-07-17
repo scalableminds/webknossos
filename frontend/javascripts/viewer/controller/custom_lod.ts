@@ -1,4 +1,4 @@
-import { LOD, Group } from "three";
+import { Group, LOD } from "three";
 import { getTDViewZoom } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 

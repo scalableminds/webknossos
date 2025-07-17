@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 /* eslint-disable */
-import { BufferGeometry, BufferAttribute, Vector3, Float32BufferAttribute, LoaderUtils } from "three";
+import { BufferAttribute, BufferGeometry, Float32BufferAttribute, LoaderUtils, Vector3 } from "three";
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/

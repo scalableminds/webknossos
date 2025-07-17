@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
 import _ from "lodash";
-import { Euler, Matrix4, Vector3 as ThreeVector3, Scene } from "three";
+import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
 import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";

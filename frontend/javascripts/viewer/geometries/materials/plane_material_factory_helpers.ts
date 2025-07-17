@@ -1,12 +1,12 @@
 import UpdatableTexture from "libs/UpdatableTexture";
 import {
-  type TextureDataType,
-  type WebGLRenderer,
-  type PixelFormat,
-  type PixelFormatGPU,
-  UVMapping,
   ClampToEdgeWrapping,
   NearestFilter,
+  type PixelFormat,
+  type PixelFormatGPU,
+  type TextureDataType,
+  UVMapping,
+  type WebGLRenderer,
 } from "three";
 
 // This function has to be in its own file as non-resolvable cycles are created otherwise

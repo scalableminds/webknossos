@@ -11,7 +11,7 @@ import {
 } from "libs/utils";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import { Color, Mesh, Raycaster, Vector3 as ThreeVector3, Ray } from "three";
+import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";

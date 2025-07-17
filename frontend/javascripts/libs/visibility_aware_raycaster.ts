@@ -1,4 +1,4 @@
-import { Object3D, Intersection, Raycaster } from "three";
+import { type Intersection, type Object3D, Raycaster } from "three";
 
 export type RaycastIntersection<TIntersected extends Object3D> = Intersection<TIntersected>;
 

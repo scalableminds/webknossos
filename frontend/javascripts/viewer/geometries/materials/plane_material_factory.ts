@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { Vector3 as ThreeVector3, ShaderMaterial, DoubleSide, Matrix4, Euler } from "three";
+import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "viewer/constants";

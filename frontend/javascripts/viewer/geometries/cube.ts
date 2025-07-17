@@ -1,6 +1,6 @@
 import app from "app";
 import _ from "lodash";
-import { Line, BufferGeometry, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
+import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";

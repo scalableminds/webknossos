@@ -3,7 +3,7 @@ import MultiKeyMap from "libs/multi_key_map";
 import { mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { Matrix4, Euler, Vector3 as ThreeVector3, Quaternion } from "three";
+import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {
   APIDataLayer,
   APIDataset,

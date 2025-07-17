@@ -1,11 +1,11 @@
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
-  type WebGLRenderer,
-  type Scene,
   type OrthographicCamera,
   type PerspectiveCamera,
+  type Scene,
   WebGLRenderTarget,
+  type WebGLRenderer,
 } from "three";
 import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "viewer/constants";
 import constants, {

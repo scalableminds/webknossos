@@ -1,4 +1,4 @@
-import { RGIntegerFormat, type PixelFormatGPU } from "three";
+import { type PixelFormatGPU, RGIntegerFormat } from "three";
 import type { NumberLike } from "viewer/store";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 

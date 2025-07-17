@@ -2,9 +2,9 @@
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
 import _ from "lodash";
+import type { Vector3 as ThreeVector3 } from "three";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
-import type { Vector3 as ThreeVector3 } from "three";
 
 import mjs from "mjs";
 

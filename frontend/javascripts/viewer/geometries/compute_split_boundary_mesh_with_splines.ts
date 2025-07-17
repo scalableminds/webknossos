@@ -1,16 +1,16 @@
 import { orderPointsWithMST } from "libs/order_points_with_mst";
 import _ from "lodash";
 import {
-  Vector3 as ThreeVector3,
-  CatmullRomCurve3,
-  MathUtils,
   BufferGeometry,
-  LineBasicMaterial,
-  Line,
-  Float32BufferAttribute,
-  MeshStandardMaterial,
+  CatmullRomCurve3,
   DoubleSide,
+  Float32BufferAttribute,
+  Line,
+  LineBasicMaterial,
+  MathUtils,
   Mesh,
+  MeshStandardMaterial,
+  Vector3 as ThreeVector3,
 } from "three";
 import type { Vector3 } from "viewer/constants";
 

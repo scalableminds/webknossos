@@ -1,8 +1,8 @@
+import type { Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAIJobModalState } from "viewer/view/action-bar/starting_job_modals";
-import type { Vector3 as ThreeVector3 } from "three";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;

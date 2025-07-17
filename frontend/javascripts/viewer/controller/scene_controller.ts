@@ -16,6 +16,7 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  type Object3D,
   Scene,
   Vector3 as ThreeVector3,
   type WebGLRenderer,

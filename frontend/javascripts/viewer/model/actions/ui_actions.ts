@@ -1,4 +1,3 @@
-import type { Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
@@ -226,7 +225,7 @@ export const showContextMenuAction = (
   globalPosition: Vector3 | null | undefined,
   viewport: OrthoView,
   meshId: number | null | undefined,
-  meshIntersectionPosition: ThreeVector3 | null | undefined,
+  meshIntersectionPosition: Vector3 | null | undefined,
   unmappedSegmentId: number | undefined | null,
 ) =>
   ({

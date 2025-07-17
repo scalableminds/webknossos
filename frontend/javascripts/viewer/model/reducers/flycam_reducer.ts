@@ -100,7 +100,6 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(voxelSize: ThreeVector3): Vector3;
 export function getMatrixScale(voxelSize: Vector3): Vector3 {
   const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);

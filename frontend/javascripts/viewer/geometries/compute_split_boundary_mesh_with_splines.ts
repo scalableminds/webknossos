@@ -10,6 +10,7 @@ import {
   MathUtils,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   Vector3 as ThreeVector3,
 } from "three";
 import type { Vector3 } from "viewer/constants";

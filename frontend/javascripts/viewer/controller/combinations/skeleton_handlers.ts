@@ -133,7 +133,7 @@ export function handleOpenContextMenu(
   isTouch: boolean,
   event: MouseEvent,
   meshId?: number | null | undefined,
-  meshIntersectionPosition?: ThreeVector3 | null | undefined,
+  meshIntersectionPosition?: Vector3 | null | undefined,
   unmappedSegmentId?: number | null | undefined,
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;

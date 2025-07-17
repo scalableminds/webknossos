@@ -1,4 +1,13 @@
-import { DoubleSide, Group, Matrix4, Mesh, MeshBasicMaterial, RingGeometry, Vector3 } from "three";
+import {
+  DoubleSide,
+  Group,
+  Matrix4,
+  Mesh,
+  MeshBasicMaterial,
+  RingGeometry,
+  type Scene,
+  Vector3,
+} from "three";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import Store from "viewer/store";
 

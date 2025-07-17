@@ -1041,11 +1041,6 @@ class DataCube {
   }
 
   positionToZoomedAddress(
-    position: ThreeVector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    zoomStep: number,
-  ): BucketAddress;
-  positionToZoomedAddress(
     position: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,

@@ -52,7 +52,7 @@ export default function actionLoggerMiddleware<A extends Action>(): (
 
         if (WkDevFlags.logActions) {
           console.group(action.type);
-          console.info("dispatching", action);
+          console.info("dispatching", action.type);
           let result = next(action);
           // console.log('next state', store.getState())
           console.groupEnd();

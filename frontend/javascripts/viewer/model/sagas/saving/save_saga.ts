@@ -1,7 +1,7 @@
 import { getUpdateActionLog } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers } from "redux-saga";
 import { actionChannel, call, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -320,6 +320,7 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
+          ColoredLogger.logBlue("Incorporating mergeAgglomerate");
           const activeMapping = yield* select(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],

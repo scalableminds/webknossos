@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, isBigInt, isNumberMap } from "libs/utils";
+import { ColoredLogger, SoftError, isBigInt, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
@@ -774,7 +774,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   );
 
   if (action.type === "PROOFREAD_MERGE") {
-    console.log("Calling updateMappingWithMerge again after saving was done.");
+    ColoredLogger.logBlue("Calling updateMappingWithMerge again after saving was done.");
     // During saving, newer versions might have been pulled from the server.
     yield* call(
       updateMappingWithMerge,

@@ -88,6 +88,17 @@ const expectedMappingAfterMerge = new Map([
   // [1337, 1337],
 ]);
 
+const expectedMappingAfterMergeRebase = new Map([
+  [1, 1],
+  [2, 1],
+  [3, 1],
+  [4, 1],
+  [5, 1],
+  [6, 1],
+  [7, 1],
+  // [1337, 1337],
+]);
+
 const expectedMappingAfterSplit = new Map([
   [1, 9],
   [2, 10],
@@ -107,13 +118,14 @@ class BackendMock {
   onSavedListeners: Array<() => void> = [];
   agglomerateMapping = new AgglomerateMapping(
     [
+      // each tuple is an edge between two super voxels
       [1, 2], // {1, 2, 3}
       [2, 3],
       [4, 5], // {4, 5}
       [6, 7], // {6, 7}
       // [1337, 1337],
     ],
-    1,
+    1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
   );
 
   // todop: this is a reference to the same variable that is
@@ -125,6 +137,9 @@ class BackendMock {
   constructor(public overrides: BucketOverride[]) {}
 
   addOnSavedListener = (fn: () => void) => {
+    // Attached listeners are called after the mock received a
+    // save-request. This can be used to inject other versions (simulating
+    // other users).
     this.onSavedListeners.push(fn);
   };
 
@@ -166,7 +181,10 @@ class BackendMock {
     // This function should always return the full current mapping.
     // The values will be filtered according to the requested keys
     // in `getAgglomeratesForSegmentsImpl`.
-    return this.agglomerateMapping.getMap(version).entries().toArray();
+    const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
+
+    console.log(`Replying with mapping for v=${version}: `, mapping);
+    return mapping;
   };
 
   acquireAnnotationMutex = async (_annotationId: string) => {
@@ -253,28 +271,18 @@ class BackendMock {
     _tracingStoreUrl: string,
     _annotationId: string,
     oldestVersion?: number,
-    newestVersion?: number,
+    _newestVersion?: number,
     sortAscending: boolean = false,
   ): Promise<Array<APIUpdateActionBatch>> => {
-    // console.log("[BackendMock] getUpdateActionLog");
-    // todop: only the requested stuff
-    console.log("[getUpdateActionLog] oldestVersion", oldestVersion);
-    console.log("[getUpdateActionLog] newestVersion", newestVersion);
-
     const firstUnseenVersionIndex = this.updateActionLog.findIndex(
       (item) => item.version === oldestVersion,
     );
     if (firstUnseenVersionIndex === -1) {
-      console.log("[getUpdateActionLog] returning empty");
       return [];
     }
     if (!sortAscending) {
       throw new Error("Unexpected request");
     }
-    console.log(
-      "[getUpdateActionLog] returning",
-      this.updateActionLog.slice(firstUnseenVersionIndex),
-    );
     return this.updateActionLog.slice(firstUnseenVersionIndex);
   };
 }
@@ -324,6 +332,8 @@ describe("Proofreading", () => {
 
     backendMock.addOnSavedListener(() => {
       if (backendMock.updateActionLog.at(-1)?.version === 6) {
+        // As soon as the backend receives version 6, we will immediately
+        // save version 7 here (simulating another user).
         backendMock.sendSaveRequestWithToken("unused", {
           data: [
             {
@@ -369,12 +379,6 @@ describe("Proofreading", () => {
 
       yield call(createEditableMapping);
 
-      // ColoredLogger.logGreen("first save");
-      // yield call(() => api.tracing.save());
-      // ColoredLogger.logGreen("done saving");
-
-      ColoredLogger.logGreen("About to merge stuff....");
-
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
@@ -382,19 +386,16 @@ describe("Proofreading", () => {
           1, // unmappedId=1 maps to 11
         ),
       );
-      // ColoredLogger.logRed("wait for FINISH_MAPPING_INITIALIZATION");
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mapping = yield select(
+      const mappingAfterOptimisticUpdate = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(mapping).toEqual(expectedMappingAfterMerge);
+      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
 
-      ColoredLogger.logGreen("second save");
       yield call(() => api.tracing.save());
-      ColoredLogger.logGreen("done saving");
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -408,20 +409,13 @@ describe("Proofreading", () => {
           },
         },
       ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
 
-      ////////////////////
-
-      // yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      // yield put(setActiveCellAction(1));
-
-      // // Execute the actual merge and wait for the finished mapping.
-      // yield put(
-      //   proofreadMergeAction(
-      //     [4, 4, 4], // unmappedId=4 / mappedId=11 at this position
-      //     1, // unmappedId=1 maps to 11
-      //   ),
-      // );
-      // yield take("FINISH_MAPPING_INITIALIZATION");
+      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
     });
 
     await task.toPromise();

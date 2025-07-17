@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerParameters}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.PathStorageReport
+import com.scalableminds.webknossos.datastore.services.{PathStorageReport, PathStorageUsageRequest, PathStorageUsageResponse}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
@@ -66,11 +66,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReport(organizationId: String, paths: List[String]): Fox[List[PathStorageReport]] =
+  def fetchStorageReports(organizationId: String, paths: List[String]): Fox[PathStorageUsageResponse] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .silent
-      .postJsonWithJsonResponse[List[String], List[PathStorageReport]](paths)
+      .postJsonWithJsonResponse[PathStorageUsageRequest, PathStorageUsageResponse](PathStorageUsageRequest(paths))
 
   def hasSegmentIndexFile(datasetId: String, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
     val cacheKey = (datasetId, layerName)

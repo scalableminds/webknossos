@@ -774,9 +774,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       storageRelevantMags <- run(q"""SELECT *
             FROM (
-              SELECT mag._id, ds._id AS dataset_id, ds.directoryName AS dataset_directory, mag.dataLayerName,
-                     mag.mag, mag.path, mag.realPath, mag.hasLocalData, ds._organization, ds.directoryName,
-                     ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
+              SELECT mag._id, ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
               FROM webknossos.dataset_mags AS mag
               JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
               WHERE ds._organization = $organizationId
@@ -1154,13 +1153,17 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   def findAllStorageRelevantAttachments(organizationId: String,
                                         dataStoreId: String): Fox[List[DatasetLayerAttachmentsRow]] =
     for {
-      storageRelevantAttachments <- run(q"""SELECT att.*
-            FROM webknossos.dataset_layer_attachments AS att
-            JOIN webknossos.datasets AS ds ON att._dataset = ds._id
-            WHERE ds._organization = $organizationId
-              AND ds._dataStore = $dataStoreId
-            QUALIFY ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) = 1;
-         """.as[DatasetLayerAttachmentsRow])
+      storageRelevantAttachments <- run(q"""SELECT *
+                                            FROM (
+                                              SELECT
+                                                att.*,
+                                                ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn
+                                              FROM webknossos.dataset_layer_attachments AS att
+                                              JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+                                              WHERE ds._organization = $organizationId
+                                                AND ds._dataStore = $dataStoreId
+                                            ) AS ranked
+                                            WHERE rn = 1;""".as[DatasetLayerAttachmentsRow])
     } yield storageRelevantAttachments.toList
 }
 

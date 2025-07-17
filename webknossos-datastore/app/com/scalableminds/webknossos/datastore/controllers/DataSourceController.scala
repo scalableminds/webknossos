@@ -379,18 +379,19 @@ class DataSourceController @Inject()(
     }
   }
 
-  def measureUsedStorage(organizationId: String): Action[List[String]] =
-    Action.async(validateJson[List[String]]) { implicit request =>
+  def measureUsedStorage(organizationId: String): Action[PathStorageUsageRequest] =
+    Action.async(validateJson[PathStorageUsageRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
           for {
             before <- Instant.nowFox
-            usedStorageInBytes <- storageUsageService.measureStorageForPaths(
-              request.body, organizationId)
+            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)
             _ = if (Instant.since(before) > (10 seconds)) {
-              Instant.logSince(before, s"Measuring storage for orga $organizationId for ${request.body.length} paths.", logger)
+              Instant.logSince(before,
+                               s"Measuring storage for orga $organizationId for ${request.body.paths.length} paths.",
+                               logger)
             }
-          } yield Ok(Json.toJson(usedStorageInBytes))
+          } yield Ok(Json.toJson(PathStorageUsageResponse(reports = pathStorageReports)))
         }
       }
     }

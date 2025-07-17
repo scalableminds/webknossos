@@ -157,8 +157,8 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
     for {
       storageReportAnswers <- Fox.serialCombined(relevantPaths.grouped(MAX_STORAGE_PATH_REQUESTS_PER_REQUEST).toList)(
         pathsBatch =>
-          dataStoreClient.fetchStorageReport(organizationId, pathsBatch) ?~> "Could not fetch storage report")
-      storageReports = storageReportAnswers.flatten
+          dataStoreClient.fetchStorageReports(organizationId, pathsBatch) ?~> "Could not fetch storage report")
+      storageReports = storageReportAnswers.flatMap(_.reports)
     } yield storageReports
   }
 

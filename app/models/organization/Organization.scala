@@ -190,22 +190,22 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
           q"(${organizationId}, ${entry._datasetId}, NULL, ${attachmentId}, ${entry.path}, ${entry.usedStorageBytes}, NOW())"
       }
     })
-    val combinedQuery = usedStorageEntryQueries.mkString(", ")
+    // TOODM: Violates Non null constraint.
 
-    val upsertQuery = q"""
+    val upsertQueries = usedStorageEntryQueries.map(valuesSqlToken => q"""
     INSERT INTO webknossos.organization_usedStorage (
       _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
     )
-    VALUES ${combinedQuery}
+    VALUES ${valuesSqlToken}
     ON CONFLICT (_dataset_mag, _layer_attachment)
     DO UPDATE SET
       path = EXCLUDED.path,
       usedStorageBytes = EXCLUDED.usedStorageBytes,
       lastUpdated = EXCLUDED.lastUpdated;
-  """.asUpdate
+  """.asUpdate)
 
     for {
-      _ <- run(upsertQuery)
+      _ <- Fox.serialCombined(upsertQueries)(q => run(q))
     } yield ()
   }
 

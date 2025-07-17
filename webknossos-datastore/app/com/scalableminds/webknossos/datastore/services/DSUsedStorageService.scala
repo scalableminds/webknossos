@@ -3,10 +3,9 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full, Empty, Failure}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import org.apache.commons.io.FileUtils
@@ -29,12 +28,22 @@ object DirectoryStorageReport {
   implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
 }
 
+case class PathStorageUsageRequest(paths: List[String])
+object PathStorageUsageRequest {
+  implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
+}
+
 case class PathStorageReport(
     path: String,
     usedStorageBytes: Long
 )
 object PathStorageReport {
   implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
+}
+
+case class PathStorageUsageResponse(reports: List[PathStorageReport])
+object PathStorageUsageResponse {
+  implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
 }
 
 class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
@@ -59,9 +68,17 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
     for {
       vaultPaths <- Fox.serialCombined(pathsWithAbsoluteURIs)(uri =>
         dataVaultService.getVaultPath(RemoteSourceDescriptor(uri, None)))
-      usedBytes <- Fox.serialCombined(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes)
-      pathStorageReports = paths.zip(usedBytes).map(p => PathStorageReport(p._1, p._2))
-    } yield pathStorageReports
+      usedBytes <- Fox.fromFuture(Fox.serialSequence(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes))
+      pathsWithStorageUsedBox = paths.zip(usedBytes)
+      successfulStorageUsedBoxes = pathsWithStorageUsedBox.collect {
+        case (path, Full(usedStorageBytes)) =>
+          PathStorageReport(path, usedStorageBytes)
+      }
+      failedPaths = pathsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
+      _ = Fox.runIfNonEmpty(failedPaths)(
+        logger.error(
+          s"Failed to measure storage for paths ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}."))
+    } yield successfulStorageUsedBoxes
   }
 
   /*def measureStorage(organizationId: String, datasetName: Option[String])(

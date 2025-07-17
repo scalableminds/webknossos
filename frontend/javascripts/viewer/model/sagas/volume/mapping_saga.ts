@@ -430,6 +430,13 @@ function* handleSetMapping(
       const classes = convertMappingObjectToEquivalenceClasses(existingMapping);
       yield* call(setCustomColors, action, classes, layerName);
     }
+
+    if (process.env.IS_TESTING) {
+      // in test context, the mapping.ts code is not executed (which is usually responsible
+      // for finishing the initialization).
+      // todop: this is quite messy. refactor?
+      yield put(finishMappingInitializationAction(layerName));
+    }
     return;
   }
 

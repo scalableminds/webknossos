@@ -27,11 +27,13 @@ import { Store } from "viewer/singletons";
 import { type SaveQueueEntry, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tryToIncorporateActions } from "viewer/model/sagas/saving/save_saga";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import Constants, { type Vector2 } from "viewer/constants";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { RequestOptionsWithData } from "libs/request";
 import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
+import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 
 function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
   const { api } = context;
@@ -64,11 +66,55 @@ function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: st
   yield take("FINISH_MAPPING_INITIALIZATION");
 }
 
+const initialMapping = new Map([
+  [1, 1],
+  [2, 1],
+  [3, 1],
+  [4, 4],
+  [5, 4],
+  [6, 6],
+  [7, 6],
+  // [1337, 1337],
+]);
+
+const expectedMappingAfterMerge = new Map([
+  [1, 1],
+  [2, 1],
+  [3, 1],
+  [4, 1],
+  [5, 1],
+  [6, 6],
+  [7, 6],
+  // [1337, 1337],
+]);
+
+const expectedMappingAfterSplit = new Map([
+  [1, 9],
+  [2, 10],
+  [3, 10],
+  [4, 11],
+  [5, 11],
+  [6, 12],
+  [7, 12],
+  // [1337, 1337],
+]);
+
 class BackendMock {
   typedArrayClass = Uint16Array;
   fillValue = 1;
   requestDelay = 5;
   updateActionLog: APIUpdateActionBatch[] = [];
+  onSavedListeners: Array<() => void> = [];
+  agglomerateMapping = new AgglomerateMapping(
+    [
+      [1, 2], // {1, 2, 3}
+      [2, 3],
+      [4, 5], // {4, 5}
+      [6, 7], // {6, 7}
+      // [1337, 1337],
+    ],
+    1,
+  );
 
   // todop: this is a reference to the same variable that is
   // set up in apiHelpers. when BackendMock is used in other tests,
@@ -77,6 +123,10 @@ class BackendMock {
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
 
   constructor(public overrides: BucketOverride[]) {}
+
+  addOnSavedListener = (fn: () => void) => {
+    this.onSavedListeners.push(fn);
+  };
 
   // todop: DRY with createBucketResponseFunction?
   sendJSONReceiveArraybufferWithHeaders = async (
@@ -109,21 +159,14 @@ class BackendMock {
     };
   };
 
-  getCurrentMappingEntriesFromServer = (): Vector2[] => {
-    // console.log("[BackendMock] getCurrentMappingEntriesFromServer");
+  getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {
+    if (version == null) {
+      throw new Error("Version is null?");
+    }
     // This function should always return the full current mapping.
     // The values will be filtered according to the requested keys
     // in `getAgglomeratesForSegmentsImpl`.
-    return [
-      [1, 10],
-      [2, 10],
-      [3, 10],
-      [4, 11],
-      [5, 11],
-      [6, 12],
-      [7, 12],
-      [1337, 1337],
-    ];
+    return this.agglomerateMapping.getMap(version).entries().toArray();
   };
 
   acquireAnnotationMutex = async (_annotationId: string) => {
@@ -131,12 +174,8 @@ class BackendMock {
     return { canEdit: true, blockedByUser: null };
   };
 
-  sendSaveRequestWithToken = async (
-    _urlWithoutToken: string,
-    payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
-  ): Promise<void> => {
-    this.receivedDataPerSaveRequest.push(payload.data);
-    const newItems = payload.data.map((entry) => ({
+  saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
+    return data.map((entry) => ({
       version: entry.version,
       value: entry.actions.map(
         (action) =>
@@ -149,11 +188,65 @@ class BackendMock {
           }) as ServerUpdateAction,
       ),
     }));
+  };
+
+  sendSaveRequestWithToken = async (
+    _urlWithoutToken: string,
+    payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
+  ): Promise<void> => {
+    // Store the received request.
+    this.receivedDataPerSaveRequest.push(payload.data);
+
+    // Convert the request to APIUpdateActionBatch
+    // so that it can be stored within updateActionLog.
     // Theoretically, multiple requests could form a transaction which
     // would require merging the update actions. However, this does not happen
     // in the tests yet.
+    const newItems = this.saveQueueEntriesToUpdateActionBatch(payload.data);
     this.updateActionLog.push(...newItems);
-    console.log("new this.updateActionLog", this.updateActionLog);
+
+    // Process received update actions and update agglomerateMapping.
+    for (const item of newItems) {
+      console.log("pushing to server: v=", item.version, "with", item.value);
+      let agglomerateActionCounter = 0;
+      for (const updateAction of item.value) {
+        if (updateAction.name === "mergeAgglomerate") {
+          if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
+            throw new Error("Segment Id is null");
+          }
+          if (agglomerateActionCounter > 0) {
+            throw new Error(
+              "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
+            );
+          }
+          this.agglomerateMapping.addEdge(
+            updateAction.value.segmentId1,
+            updateAction.value.segmentId2,
+          );
+          agglomerateActionCounter++;
+        } else if (updateAction.name === "splitAgglomerate") {
+          if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
+            throw new Error("Segment Id is null");
+          }
+          if (agglomerateActionCounter > 0) {
+            throw new Error(
+              "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
+            );
+          }
+          this.agglomerateMapping.removeEdge(
+            updateAction.value.segmentId1,
+            updateAction.value.segmentId2,
+          );
+          agglomerateActionCounter++;
+        } else {
+          // We need the agglomerate mapping to be in sync
+          this.agglomerateMapping.bumpVersion();
+        }
+      }
+    }
+    for (const fn of this.onSavedListeners) {
+      fn();
+    }
   };
 
   getUpdateActionLog = async (
@@ -190,7 +283,7 @@ function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
   const { mocks } = context;
 
   const backendMock = new BackendMock([
-    { position: [0, 0, 0], value: 1337 },
+    // { position: [0, 0, 0], value: 1337 },
     { position: [1, 1, 1], value: 1 },
     { position: [2, 2, 2], value: 2 },
     { position: [3, 3, 3], value: 3 },
@@ -210,51 +303,9 @@ function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
   backendMock.receivedDataPerSaveRequest = context.receivedDataPerSaveRequest;
   mocks.sendSaveRequestWithToken.mockImplementation(backendMock.sendSaveRequestWithToken);
   mocks.getUpdateActionLog.mockImplementation(backendMock.getUpdateActionLog);
+
+  return backendMock;
 }
-
-const initialMapping = new Map([
-  [1, 10],
-  [2, 10],
-  [3, 10],
-  [4, 11],
-  [5, 11],
-  [6, 12],
-  [7, 12],
-  [1337, 1337],
-]);
-
-const expectedMappingAfterMerge = new Map([
-  [1, 10],
-  [2, 10],
-  [3, 10],
-  [4, 10],
-  [5, 10],
-  [6, 12],
-  [7, 12],
-  [1337, 1337],
-]);
-
-const expectedMappingAfterSplit = new Map([
-  [1, 9],
-  [2, 10],
-  [3, 10],
-  [4, 11],
-  [5, 11],
-  [6, 12],
-  [7, 12],
-  [1337, 1337],
-]);
-
-/*
- We need to mock
-  - get unmapped data
-  - map segment id request
-  - push update actions
-  +- mutex
-  - poll for newer versions
-  +- get edges for min cut
-  -
- */
 
 describe("Proofreading", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -269,7 +320,36 @@ describe("Proofreading", () => {
 
   it("[new] should merge two agglomerates optimistically and incorporate a newer version from backend", async (context: WebknossosTestContext) => {
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.addOnSavedListener(() => {
+      if (backendMock.updateActionLog.at(-1)?.version === 6) {
+        backendMock.sendSaveRequestWithToken("unused", {
+          data: [
+            {
+              version: 7,
+              timestamp: 0,
+              authorId: "authorId",
+              transactionId: "transactionId",
+              transactionGroupIndex: 0,
+              transactionGroupCount: 1,
+              stats: undefined,
+              info: "",
+              actions: [
+                {
+                  name: "mergeAgglomerate",
+                  value: {
+                    actionTracingId: "volumeTracingId",
+                    segmentId1: 5,
+                    segmentId2: 6,
+                  },
+                },
+              ],
+            },
+          ],
+        });
+      }
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -287,8 +367,22 @@ describe("Proofreading", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
+      yield call(createEditableMapping);
+
+      // ColoredLogger.logGreen("first save");
+      // yield call(() => api.tracing.save());
+      // ColoredLogger.logGreen("done saving");
+
+      ColoredLogger.logGreen("About to merge stuff....");
+
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([4, 4, 4], 1, 4));
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=11 at this position
+          1, // unmappedId=1 maps to 11
+        ),
+      );
+      // ColoredLogger.logRed("wait for FINISH_MAPPING_INITIALIZATION");
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield select(
@@ -298,8 +392,9 @@ describe("Proofreading", () => {
 
       expect(mapping).toEqual(expectedMappingAfterMerge);
 
-      console.log("#################### before save");
+      ColoredLogger.logGreen("second save");
       yield call(() => api.tracing.save());
+      ColoredLogger.logGreen("done saving");
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -308,14 +403,25 @@ describe("Proofreading", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            // agglomerateId1: 10,
-            // agglomerateId2: 11,
             segmentId1: 1,
             segmentId2: 4,
-            // mag: [1, 1, 1],
           },
         },
       ]);
+
+      ////////////////////
+
+      // yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      // yield put(setActiveCellAction(1));
+
+      // // Execute the actual merge and wait for the finished mapping.
+      // yield put(
+      //   proofreadMergeAction(
+      //     [4, 4, 4], // unmappedId=4 / mappedId=11 at this position
+      //     1, // unmappedId=1 maps to 11
+      //   ),
+      // );
+      // yield take("FINISH_MAPPING_INITIALIZATION");
     });
 
     await task.toPromise();
@@ -343,7 +449,7 @@ describe("Proofreading", () => {
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([4, 4, 4], 1, 4));
+      yield put(proofreadMergeAction([4, 4, 4], 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield select(
@@ -363,7 +469,7 @@ describe("Proofreading", () => {
           value: {
             actionTracingId: "volumeTracingId",
             // agglomerateId1: 10,
-            agglomerateId2: 11,
+            // agglomerateId2: 11,
             segmentId1: 1,
             segmentId2: 4,
             // mag: [1, 1, 1],

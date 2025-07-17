@@ -3,9 +3,10 @@
  * is explicitly tested here, too.
  */
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
+import type { Vector2 } from "viewer/constants";
 import { describe, expect, it } from "vitest";
 
-const initialEdges = [
+const initialEdges: Vector2[] = [
   [1, 2], // {1, 2, 3}
   [2, 3],
   [4, 5], // {4, 5}

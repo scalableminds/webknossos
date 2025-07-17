@@ -17,12 +17,15 @@ export class AgglomerateMapping {
   private readonly adjacencyList = new Map<number, Set<number>>();
 
   // snapshot of the component‑ID map after every operation, versions[0] = initial state
-  private versions: Map<number, number>[] = [];
+  private versions: Array<Map<number, number>> = [];
 
-  private currentVersion = 0; // newest version index
+  private currentVersion = -1; // newest version index
   private largestMappedId: number; // monotone counter for fresh IDs
 
-  constructor(public readonly edges: Array<[number, number]>) {
+  constructor(
+    public readonly edges: Array<[number, number]>,
+    initialVersion: number = 0,
+  ) {
     this.segmentIds = _.uniq(edges.flat());
 
     this.largestMappedId = Math.max(...this.segmentIds);
@@ -31,13 +34,13 @@ export class AgglomerateMapping {
       this.adjacencyList.set(segmentId, new Set());
       initialVersionMap.set(segmentId, segmentId); // each segment is its own component at v0
     }
-    this.versions.push(initialVersionMap);
+    this.commit(initialVersionMap);
 
     for (const edge of edges) {
       this.addEdge(edge[0], edge[1]);
     }
 
-    this.resetVersionCounter();
+    this.resetVersionCounter(initialVersion);
   }
 
   addEdge(segmentIdA: number, segmentIdB: number): void {
@@ -144,20 +147,22 @@ export class AgglomerateMapping {
      * Get the entire mapping for a specific version.
      */
     if (version == null || version < 0 || version > this.currentVersion)
-      throw new RangeError("Invalid version");
+      throw new RangeError(`Invalid version: ${version}`);
     return this.versions[version];
   }
 
-  private resetVersionCounter() {
+  private resetVersionCounter(initialVersion: number) {
     /*
-     * Reset the most recent version to be stored as version 0.
+     * Reset the most recent version to be stored as version `initialVersion`.
+     * If `initialVersion` is greater than 0, all previous versions are set to the
+     * newest version.
      */
     const newestMap = this.versions.at(-1);
     if (newestMap == null) {
       throw new Error("No initial version of map found.");
     }
-    this.versions = [newestMap];
-    this.currentVersion = 0;
+    this.versions = Array.from({ length: initialVersion + 1 }, () => newestMap);
+    this.currentVersion = initialVersion;
   }
 
   bumpVersion() {

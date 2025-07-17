@@ -37,9 +37,9 @@ export const clearProofreadingByProducts = () =>
   }) as const;
 
 export const proofreadMergeAction = (
-  position: Vector3 | null,
-  segmentId?: number | null,
-  agglomerateId?: number | null,
+  position: Vector3 | null, // the clicked target position (if data viewports were used)
+  segmentId?: number | null, // the target segment id
+  agglomerateId?: number | null, // the target agglomerate id
 ) =>
   ({
     type: "PROOFREAD_MERGE",

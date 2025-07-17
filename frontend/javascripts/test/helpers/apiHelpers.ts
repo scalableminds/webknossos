@@ -89,9 +89,11 @@ vi.mock("libs/request", () => ({
   },
 }));
 
-const getCurrentMappingEntriesFromServer = vi.fn((): Array<[number, number]> => {
-  return [];
-});
+const getCurrentMappingEntriesFromServer = vi.fn(
+  (_version?: number | null | undefined): Array<[number, number]> => {
+    return [];
+  },
+);
 
 vi.mock("admin/rest_api.ts", async () => {
   const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
@@ -103,12 +105,17 @@ vi.mock("admin/rest_api.ts", async () => {
   });
   (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
 
-  const getAgglomeratesForSegmentsImpl = async (segmentIds: Array<NumberLike>) => {
+  const getAgglomeratesForSegmentsImpl = async (
+    segmentIds: Array<NumberLike>,
+    version?: number | null | undefined,
+  ) => {
     const segmentIdSet = new Set(segmentIds);
-    const entries = getCurrentMappingEntriesFromServer().filter(([id]) =>
+    const entries = getCurrentMappingEntriesFromServer(version).filter(([id]) =>
       segmentIdSet.has(id),
     ) as Vector2[];
     if (entries.length < segmentIdSet.size) {
+      console.log("entries", entries);
+      console.log("segmentIdSet", segmentIdSet);
       throw new Error(
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
       );
@@ -123,7 +130,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
   );
 
@@ -133,9 +140,9 @@ vi.mock("admin/rest_api.ts", async () => {
       _tracingId: string,
       segmentIds: Array<NumberLike>,
       _annotationId: string,
-      _version?: number | null | undefined,
+      version?: number | null | undefined,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, version);
     },
   );
 

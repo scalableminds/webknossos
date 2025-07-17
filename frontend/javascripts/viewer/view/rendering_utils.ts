@@ -1,6 +1,12 @@
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
-import * as THREE from "three";
+import {
+  type WebGLRenderer,
+  type Scene,
+  type OrthographicCamera,
+  type PerspectiveCamera,
+  WebGLRenderTarget,
+} from "three";
 import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "viewer/constants";
 import constants, {
   ArbitraryViewport,
@@ -17,7 +23,7 @@ const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
 
 export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
+  renderer: WebGLRenderer,
   x: number,
   y: number,
   viewportWidth: number,
@@ -32,14 +38,14 @@ export const setupRenderArea = (
   renderer.setScissorTest(true);
   renderer.setClearColor(color === 0xffffff ? getBackgroundColor() : color, 1);
 };
-export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
+export const clearCanvas = (renderer: WebGLRenderer) => {
   setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   renderer.clear();
 };
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
-  scene?: THREE.Scene,
-  camera?: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  scene?: Scene,
+  camera?: OrthographicCamera | PerspectiveCamera,
   // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
@@ -52,16 +58,14 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as
-    | THREE.OrthographicCamera
-    | THREE.PerspectiveCamera;
+  camera = (camera || scene.getObjectByName(plane)) as OrthographicCamera | PerspectiveCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
   if (withFarClipping && plane !== OrthoViews.TDView) {
-    function adaptCameraToCurrentClippingDistance<
-      T extends THREE.OrthographicCamera | THREE.PerspectiveCamera,
-    >(camera: T): T {
+    function adaptCameraToCurrentClippingDistance<T extends OrthographicCamera | PerspectiveCamera>(
+      camera: T,
+    ): T {
       const isArbitraryMode = constants.MODES_ARBITRARY.includes(
         state.temporaryConfiguration.viewMode,
       );
@@ -91,7 +95,7 @@ export function renderToTexture(
   renderer.setViewport(0, 0 + height, width, height);
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
-  const renderTarget = new THREE.WebGLRenderTarget(width, height);
+  const renderTarget = new WebGLRenderTarget(width, height);
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {

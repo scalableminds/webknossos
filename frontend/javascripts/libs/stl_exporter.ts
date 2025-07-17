@@ -1,5 +1,5 @@
 /* eslint-disable */
-import * as THREE from "three";
+import { Scene, BufferGeometry, Vector3 } from "three";
 
 // Original Source: https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/STLExporter.js
 // Manual changes:
@@ -34,7 +34,7 @@ class ChunkedDataView {
 }
 
 class STLExporter {
-  parse(scene: THREE.Scene, options: any = {}) {
+  parse(scene: Scene, options: any = {}) {
     const binary = options.binary !== undefined ? options.binary : false; //
 
     const objects: any[] = [];
@@ -82,12 +82,12 @@ class STLExporter {
       outputString += "solid exported\n";
     }
 
-    const vA = new THREE.Vector3();
-    const vB = new THREE.Vector3();
-    const vC = new THREE.Vector3();
-    const cb = new THREE.Vector3();
-    const ab = new THREE.Vector3();
-    const normal = new THREE.Vector3();
+    const vA = new Vector3();
+    const vB = new Vector3();
+    const vC = new Vector3();
+    const cb = new Vector3();
+    const ab = new Vector3();
+    const normal = new Vector3();
 
     for (let i = 0, il = objects.length; i < il; i++) {
       const object = objects[i].object3d;

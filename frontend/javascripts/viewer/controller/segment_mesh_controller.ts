@@ -1,7 +1,17 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  Mesh,
+  Color,
+  MeshLambertMaterial,
+  FrontSide,
+  BufferGeometry,
+  BufferAttribute,
+  Group,
+  AmbientLight,
+  DirectionalLight,
+} from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -16,32 +26,31 @@ import {
 import Store from "viewer/store";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
-import type { BufferAttribute } from "three";
 import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
+Mesh.prototype.raycast = acceleratedRaycast;
 
-const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGBToLinear();
+const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLinear();
 
-const WHITE = new THREE.Color(1, 1, 1);
+const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
 
-type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
+type MeshMaterial = MeshLambertMaterial & { originalColor: Vector3 };
 type HighlightState = Vector2 | "full" | null;
-export type MeshSceneNode = THREE.Mesh<BufferGeometryWithInfo, MeshMaterial> & {
+export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
   hoveredState?: HighlightState;
   activeState?: HighlightState;
   parent: SceneGroupForMeshes;
   isMerged: boolean;
 };
-export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
+export type SceneGroupForMeshes = Group & { segmentId: number; children: MeshSceneNode[] };
 
 const setRangeToColor = (
   geometry: BufferGeometryWithInfo,
@@ -56,13 +65,13 @@ const setRangeToColor = (
   }
 };
 
-type GroupForLOD = THREE.Group & {
+type GroupForLOD = Group & {
   children: SceneGroupForMeshes[];
   forEach: (callback: (el: SceneGroupForMeshes) => void) => void;
 };
 
 export default class SegmentMeshController {
-  lightsGroup: THREE.Group;
+  lightsGroup: Group;
   // meshesLayerLODRootGroup holds a CustomLOD for each segmentation layer with meshes.
   // Each CustomLOD group can hold multiple meshes.
   // meshesLayerLODRootGroup
@@ -74,7 +83,7 @@ export default class SegmentMeshController {
   //  - CustomLOD
   //    - LOD X
   //      - meshes
-  meshesLayerLODRootGroup: THREE.Group;
+  meshesLayerLODRootGroup: Group;
 
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
@@ -91,8 +100,8 @@ export default class SegmentMeshController {
   > = {};
 
   constructor() {
-    this.lightsGroup = new THREE.Group();
-    this.meshesLayerLODRootGroup = new THREE.Group();
+    this.lightsGroup = new Group();
+    this.meshesLayerLODRootGroup = new Group();
     this.addLights();
   }
 
@@ -116,8 +125,8 @@ export default class SegmentMeshController {
   ): Promise<void> {
     // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
-    let bufferGeometry = new THREE.BufferGeometry();
-    bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    let bufferGeometry = new BufferGeometry();
+    bufferGeometry.setAttribute("position", new BufferAttribute(vertices, 3));
 
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
@@ -144,10 +153,10 @@ export default class SegmentMeshController {
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
-    const meshMaterial = new THREE.MeshLambertMaterial({
+    const meshMaterial = new MeshLambertMaterial({
       vertexColors: true,
     }) as MeshMaterial;
-    meshMaterial.side = THREE.FrontSide;
+    meshMaterial.side = FrontSide;
     meshMaterial.transparent = true;
     const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
     meshMaterial.originalColor = colorArray;
@@ -159,12 +168,12 @@ export default class SegmentMeshController {
     for (let i = 0; i < geometry.attributes.position.count; i++) {
       colorBuffer.set(colorArray, i * 3);
     }
-    geometry.setAttribute("color", new THREE.BufferAttribute(colorBuffer, 3));
+    geometry.setAttribute("color", new BufferAttribute(colorBuffer, 3));
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore
     // this detail for now via the casting.
-    const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
+    const mesh = new Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
 
     const tweenAnimation = new TWEEN.Tween({
@@ -202,7 +211,7 @@ export default class SegmentMeshController {
     const targetGroup: SceneGroupForMeshes = _.get(
       this.meshesGroupsPerSegmentId,
       keys,
-      new THREE.Group(),
+      new Group(),
     );
     _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
     let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
@@ -235,11 +244,11 @@ export default class SegmentMeshController {
         scale[1] / dsScaleFactor[1],
         scale[2] / dsScaleFactor[2],
       ];
-      targetGroup.scale.copy(new THREE.Vector3(...adaptedScale));
+      targetGroup.scale.copy(new Vector3(...adaptedScale));
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, opacity, isMerged);
 
-    const group = new THREE.Group() as SceneGroupForMeshes;
+    const group = new Group() as SceneGroupForMeshes;
     group.add(meshChunk);
 
     group.segmentId = segmentId;
@@ -293,7 +302,7 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | null,
-  ): THREE.Group | null {
+  ): Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
 
@@ -372,7 +381,7 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: number, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    const color = new THREE.Color().setHSL(hue, saturation, light);
+    const color = new Color().setHSL(hue, saturation, light);
     color.convertSRGBToLinear();
 
     return color;
@@ -393,7 +402,7 @@ export default class SegmentMeshController {
 
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    const ambientLight = new THREE.AmbientLight("white", settings.ambientIntensity);
+    const ambientLight = new AmbientLight("white", settings.ambientIntensity);
     this.lightsGroup.add(ambientLight);
 
     const lightPositions: Vector3[] = [
@@ -407,10 +416,10 @@ export default class SegmentMeshController {
       [-1, -1, -1],
     ];
 
-    const directionalLights: THREE.DirectionalLight[] = [];
+    const directionalLights: DirectionalLight[] = [];
 
     lightPositions.forEach((pos, index) => {
-      const light = new THREE.DirectionalLight(
+      const light = new DirectionalLight(
         WHITE,
         // @ts-ignore
         settings[`dirLight${index + 1}Intensity`] || 1,
@@ -426,7 +435,7 @@ export default class SegmentMeshController {
     layerName: string,
     segmentId: number,
     lod: number,
-  ): THREE.Group | null {
+  ): Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordKey, layerName, segmentId, lod];
 
@@ -437,7 +446,7 @@ export default class SegmentMeshController {
     additionalCoordKey: string,
     layerName: string,
     segmentId: number,
-  ): Record<number, THREE.Group> | null {
+  ): Record<number, Group> | null {
     const keys = [additionalCoordKey, layerName, segmentId];
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
@@ -534,7 +543,7 @@ export default class SegmentMeshController {
       }
     }
 
-    const setMaterialToUniformColor = (material: MeshMaterial, color: THREE.Color) => {
+    const setMaterialToUniformColor = (material: MeshMaterial, color: Color) => {
       material.vertexColors = false;
       material.color = color;
       material.needsUpdate = true;
@@ -550,16 +559,14 @@ export default class SegmentMeshController {
     const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
 
     if (isUniformColor) {
-      let newColor = mesh.hoveredState
-        ? HOVERED_COLOR
-        : new THREE.Color(...mesh.material.originalColor);
+      let newColor = mesh.hoveredState ? HOVERED_COLOR : new Color(...mesh.material.originalColor);
 
       // Update the material for all meshes that belong to the current
       // segment ID. Only for adhoc meshes, these will contain multiple
       // children. For precomputed meshes, this will only affect one
       // mesh in the scene graph.
       parent.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
+        if (child instanceof Mesh) {
           setMaterialToUniformColor(child.material, newColor);
         }
       });

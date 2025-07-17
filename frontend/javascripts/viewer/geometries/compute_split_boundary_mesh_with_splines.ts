@@ -1,11 +1,22 @@
 import { orderPointsWithMST } from "libs/order_points_with_mst";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  Vector3 as ThreeVector3,
+  CatmullRomCurve3,
+  MathUtils,
+  BufferGeometry,
+  LineBasicMaterial,
+  Line,
+  Float32BufferAttribute,
+  MeshStandardMaterial,
+  DoubleSide,
+  Mesh,
+} from "three";
 import type { Vector3 } from "viewer/constants";
 
 export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): {
-  splines: THREE.Object3D[];
-  splitBoundaryMesh: THREE.Mesh;
+  splines: Object3D[];
+  splitBoundaryMesh: Mesh;
 } {
   /**
    * Generates a smooth, interpolated 3D boundary mesh and corresponding spline visualizations
@@ -34,7 +45,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
    * to ensure a valid 3D surface can still be formed.
    *
    */
-  const splines: THREE.Object3D[] = [];
+  const splines: Object3D[] = [];
 
   const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
   const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);
@@ -56,7 +67,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
     ]);
   }
 
-  const curvesByZ: Record<number, THREE.CatmullRomCurve3> = {};
+  const curvesByZ: Record<number, CatmullRomCurve3> = {};
 
   // Create curves for existing z-values
   const curves = _.compact(
@@ -71,7 +82,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
         adaptedZ += 0.1;
       }
       const points2D = orderPointsWithMST(
-        pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
+        pointsByZ[zValue].map((p) => new ThreeVector3(p[0], p[1], adaptedZ)),
       );
 
       if (curveIdx > 0) {
@@ -82,7 +93,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
         const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;
 
         const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
-        const distFlipped = (currentCurvePoints.at(-1) as THREE.Vector3).distanceTo(
+        const distFlipped = (currentCurvePoints.at(-1) as ThreeVector3).distanceTo(
           prevCurvePoints[0],
         );
 
@@ -92,7 +103,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
         }
       }
 
-      const curve = new THREE.CatmullRomCurve3(points2D);
+      const curve = new CatmullRomCurve3(points2D);
       curvesByZ[zValue] = curve;
       return curve;
     }),
@@ -126,24 +137,24 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
       const upperPoint = upperCurvePoints[i];
       const alpha = (z - lowerZ) / (upperZ - lowerZ); // Interpolation factor
 
-      return new THREE.Vector3(
-        THREE.MathUtils.lerp(lowerPoint.x, upperPoint.x, alpha),
-        THREE.MathUtils.lerp(lowerPoint.y, upperPoint.y, alpha),
+      return new ThreeVector3(
+        MathUtils.lerp(lowerPoint.x, upperPoint.x, alpha),
+        MathUtils.lerp(lowerPoint.y, upperPoint.y, alpha),
         z,
       );
     });
 
     // Create the interpolated curve
-    const interpolatedCurve = new THREE.CatmullRomCurve3(interpolatedPoints);
+    const interpolatedCurve = new CatmullRomCurve3(interpolatedPoints);
     curvesByZ[z] = interpolatedCurve;
   }
 
   // Generate and display all curves
   Object.values(curvesByZ).forEach((curve) => {
     const curvePoints = curve.getPoints(numDivisions);
-    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-    const splineObject = new THREE.Line(geometry, material);
+    const geometry = new BufferGeometry().setFromPoints(curvePoints);
+    const material = new LineBasicMaterial({ color: 0xff0000 });
+    const splineObject = new Line(geometry, material);
     splines.push(splineObject);
   });
 
@@ -172,25 +183,25 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
     }
   }
 
-  // Convert to Three.js BufferGeometry
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  // Convert to js BufferGeometry
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals(); // Smooth shading
   geometry.computeBoundsTree();
 
   // Material and Mesh
-  const material = new THREE.MeshStandardMaterial({
+  const material = new MeshStandardMaterial({
     color: 0x0077ff, // A soft blue color
     metalness: 0.5, // Slight metallic effect
     roughness: 1, // Some surface roughness for a natural look
-    side: THREE.DoubleSide, // Render both sides
+    side: DoubleSide, // Render both sides
     flatShading: false, // Ensures smooth shading with computed normals
     opacity: 0.8,
     transparent: true,
     wireframe: false,
   });
-  const splitBoundaryMesh = new THREE.Mesh(geometry, material);
+  const splitBoundaryMesh = new Mesh(geometry, material);
   return {
     splines,
     splitBoundaryMesh,

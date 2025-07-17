@@ -1,5 +1,5 @@
 import window, { document } from "libs/window";
-import * as THREE from "three";
+import {OrthographicCamera, Vector2, Vector3, Quaternion, EventDispatcher} from "three";
 
 /**
  * The MIT License
@@ -30,9 +30,9 @@ import * as THREE from "three";
 
 interface ITrackballControls {
   new (
-    object: THREE.OrthographicCamera,
+    object: OrthographicCamera,
     domElement: HTMLElement,
-    target: THREE.Vector3,
+    target: Vector3,
     updateCallback: (args: any) => void,
   ): ITrackballControls;
 
@@ -50,7 +50,7 @@ interface ITrackballControls {
   minDistance: number;
   maxDistance: number;
   keys: number[];
-  target: THREE.Vector3;
+  target: Vector3;
 
   rotateCamera: () => void;
   destroy: () => void;
@@ -59,9 +59,9 @@ interface ITrackballControls {
 
 const TrackballControls = function (
   this: any,
-  object: THREE.OrthographicCamera,
+  object: OrthographicCamera,
   domElement: HTMLElement,
-  target: THREE.Vector3,
+  target: Vector3,
   updateCallback: (args: any) => void,
 ) {
   const _this = this;
@@ -95,28 +95,28 @@ const TrackballControls = function (
   // [A, S, D]
   this.keys = [65, 83, 68];
   // internals
-  this.target = target || new THREE.Vector3();
+  this.target = target || new Vector3();
   this.lastTarget = this.target.clone();
-  const lastPosition = new THREE.Vector3();
+  const lastPosition = new Vector3();
   let _state = STATE.NONE;
   let _prevState = STATE.NONE;
 
-  const _eye = new THREE.Vector3();
+  const _eye = new Vector3();
 
-  const _rotateStart = new THREE.Vector3();
+  const _rotateStart = new Vector3();
 
-  const _rotateEnd = new THREE.Vector3();
+  const _rotateEnd = new Vector3();
 
-  const _zoomStart = new THREE.Vector2();
+  const _zoomStart = new Vector2();
 
-  const _zoomEnd = new THREE.Vector2();
+  const _zoomEnd = new Vector2();
 
   let _touchZoomDistanceStart = 0;
   let _touchZoomDistanceEnd = 0;
 
-  const _panStart = new THREE.Vector2();
+  const _panStart = new Vector2();
 
-  const _panEnd = new THREE.Vector2();
+  const _panEnd = new Vector2();
 
   // for reset
   this.target0 = this.target.clone();
@@ -154,7 +154,7 @@ const TrackballControls = function (
   this.getMouseOnScreen = function getMouseOnScreen(
     pageX: number,
     pageY: number,
-    vector: THREE.Vector2,
+    vector: Vector2,
   ) {
     const screenBounds = _this.getScreenBounds();
 
@@ -165,9 +165,9 @@ const TrackballControls = function (
   };
 
   this.getMouseProjectionOnBall = (() => {
-    const objectUp = new THREE.Vector3();
-    const mouseOnBall = new THREE.Vector3();
-    return (pageX: number, pageY: number, projection: THREE.Vector3) => {
+    const objectUp = new Vector3();
+    const mouseOnBall = new Vector3();
+    return (pageX: number, pageY: number, projection: Vector3) => {
       const screenBounds = _this.getScreenBounds();
 
       mouseOnBall.set(
@@ -199,8 +199,8 @@ const TrackballControls = function (
   })();
 
   this.rotateCamera = (() => {
-    const axis = new THREE.Vector3();
-    const quaternion = new THREE.Quaternion();
+    const axis = new Vector3();
+    const quaternion = new Quaternion();
     return () => {
       let angle = Math.acos(
         _rotateStart.dot(_rotateEnd) / _rotateStart.length() / _rotateEnd.length(),
@@ -250,9 +250,9 @@ const TrackballControls = function (
   };
 
   this.panCamera = (() => {
-    const mouseChange = new THREE.Vector2();
-    const objectUp = new THREE.Vector3();
-    const pan = new THREE.Vector3();
+    const mouseChange = new Vector2();
+    const objectUp = new Vector3();
+    const pan = new Vector3();
     return () => {
       mouseChange.copy(_panEnd).sub(_panStart);
 
@@ -579,5 +579,5 @@ const TrackballControls = function (
   this.update();
 } as any as ITrackballControls;
 
-TrackballControls.prototype = Object.create(THREE.EventDispatcher.prototype);
+TrackballControls.prototype = Object.create(EventDispatcher.prototype);
 export default TrackballControls;

@@ -3,7 +3,7 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
-import * as THREE from "three";
+import { Vector3 as ThreeVector3, Color } from "three";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -758,7 +758,7 @@ export class QuickSelectToolController {
         }
 
         const [h, s, l] = getSegmentColorAsHSLA(state, volumeTracing.activeCellId);
-        const activeCellColor = new THREE.Color().setHSL(h, s, l);
+        const activeCellColor = new Color().setHSL(h, s, l);
         quickSelectGeometry.setColor(activeCellColor);
         startPos = calculateGlobalPos(state, pos).rounded;
         currentPos = startPos;

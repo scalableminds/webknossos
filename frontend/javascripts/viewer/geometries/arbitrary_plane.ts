@@ -1,5 +1,5 @@
 import _ from "lodash";
-import * as THREE from "three";
+import { Mesh, Matrix4, DoubleSide, PlaneGeometry, ShaderMaterial } from "three";
 import constants, { OrthoViews } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";
@@ -20,8 +20,8 @@ import Store from "viewer/store";
 // The result is then projected on a flat surface.
 const renderDebuggerPlane = false;
 type ArbitraryMeshes = {
-  mainPlane: THREE.Mesh;
-  debuggerPlane: THREE.Mesh | null | undefined;
+  mainPlane: Mesh;
+  debuggerPlane: Mesh | null | undefined;
 };
 
 class ArbitraryPlane {
@@ -44,7 +44,7 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  addToScene(scene: THREE.Scene) {
+  addToScene(scene: Scene) {
     _.values(this.meshes).forEach((mesh) => {
       if (mesh) {
         scene.add(mesh);
@@ -56,12 +56,12 @@ class ArbitraryPlane {
     if (this.isDirty) {
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      const updateMesh = (mesh: THREE.Mesh | null | undefined) => {
+      const updateMesh = (mesh: Mesh | null | undefined) => {
         if (!mesh) {
           return;
         }
 
-        const meshMatrix = new THREE.Matrix4();
+        const meshMatrix = new Matrix4();
         meshMatrix.set(
           matrix[0],
           matrix[4],
@@ -82,7 +82,7 @@ class ArbitraryPlane {
         );
         mesh.matrix.identity();
         mesh.matrix.multiply(meshMatrix);
-        mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+        mesh.matrix.multiply(new Matrix4().makeRotationY(Math.PI));
         mesh.matrixWorldNeedsUpdate = true;
       };
 
@@ -94,18 +94,18 @@ class ArbitraryPlane {
   }
 
   createMeshes(): ArbitraryMeshes {
-    const adaptPlane = (_plane: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>) => {
+    const adaptPlane = (_plane: Mesh<PlaneGeometry, ShaderMaterial>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
-      _plane.material.side = THREE.DoubleSide;
+      _plane.material.side = DoubleSide;
       return _plane;
     };
 
     this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
     const mainPlane = adaptPlane(
-      new THREE.Mesh(
-        new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+      new Mesh(
+        new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
         textureMaterial,
       ),
     );
@@ -117,7 +117,7 @@ class ArbitraryPlane {
   }
 
   createDebuggerPlane() {
-    const debuggerMaterial = new THREE.ShaderMaterial({
+    const debuggerMaterial = new ShaderMaterial({
       uniforms: this.materialFactory.uniforms,
       vertexShader: `
         uniform float sphericalCapRadius;
@@ -158,8 +158,8 @@ class ArbitraryPlane {
     });
     debuggerMaterial.transparent = true;
     shaderEditor.addMaterial(99, debuggerMaterial);
-    const debuggerPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
+    const debuggerPlane = new Mesh(
+      new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
       debuggerMaterial,
     );
     return debuggerPlane;

@@ -4,6 +4,7 @@
 import _ from "lodash";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
+import type { Vector3 as ThreeVector3 } from "three";
 
 import mjs from "mjs";
 
@@ -274,6 +275,7 @@ function round(v: Vector3Like, r?: Float32Array | null | undefined) {
 }
 
 // @ts-ignore TS claims that the implementation doesn't match the overloading
+function divide3(a: ThreeVector3, k: ThreeVector3, r?: ThreeVector3): Vector3;
 function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
 function divide3(a: Float32Array, k: Float32Array, r?: Float32Array) {
   if (r == null) r = new Float32Array(3);

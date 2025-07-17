@@ -5,7 +5,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import * as THREE from "three";
+import { OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
@@ -41,7 +41,7 @@ import type { CameraData, StoreAnnotation, WebknossosState } from "viewer/store"
 import Store from "viewer/store";
 import type PlaneView from "viewer/view/plane_view";
 
-export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+export function threeCameraToCameraData(camera: OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
 
   const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
@@ -84,7 +84,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera>;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -163,7 +163,7 @@ class TDController extends React.PureComponent<Props> {
     this.controls = new TrackballControls(
       tdCamera,
       view,
-      new THREE.Vector3(...pos),
+      new ThreeVector3(...pos),
       this.onTDCameraChanged,
     );
     this.controls.noZoom = true;
@@ -315,10 +315,10 @@ class TDController extends React.PureComponent<Props> {
 
     if (invertedDiff.every((el) => el === 0)) return;
     this.oldUnitPos = nmPosition;
-    const nmVector = new THREE.Vector3(...invertedDiff);
+    const nmVector = new ThreeVector3(...invertedDiff);
     // moves camera by the nm vector
     const camera = this.props.cameras[OrthoViews.TDView];
-    const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
+    const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
     rotation.order = rotation.order.split("").reverse().join("");

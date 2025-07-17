@@ -1,12 +1,12 @@
 import { V3 } from "libs/mjs";
 import { mod } from "libs/utils";
-import * as THREE from "three";
+import { Matrix4, Euler } from "three";
 import type { Vector3 } from "viewer/constants";
 
 // Pre definitions to avoid redundant object creation.
-const matrix = new THREE.Matrix4();
-const euler = new THREE.Euler();
-const invertedEulerMatrix = new THREE.Matrix4();
+const matrix = new Matrix4();
+const euler = new Euler();
+const invertedEulerMatrix = new Matrix4();
 
 // This function performs the same operations as done in the flycam reducer for the setRotation action.
 // When rotation calculation are needed in the flycam matrix space, this function can be used to
@@ -28,7 +28,7 @@ export function eulerAngleToReducerInternalMatrix(angleInRadian: Vector3): THREE
 }
 
 // Pre definitions to avoid redundant object creation.
-const rotationFromMatrix = new THREE.Euler();
+const rotationFromMatrix = new Euler();
 
 // The companion function of eulerAngleToReducerInternalMatrix converting a rotation back from the flycam reducer space.
 // The output is in radian and should be interpreted as if in ZYX order.

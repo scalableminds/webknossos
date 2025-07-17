@@ -1,6 +1,17 @@
 import { V3 } from "libs/mjs";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  Vector3 as ThreeVector3,
+  Euler,
+  PlaneGeometry,
+  Mesh,
+  LineSegments,
+  BufferGeometry,
+  BufferAttribute,
+  LineBasicMaterial,
+  Line,
+  Matrix4,
+} from "three";
 import type { OrthoView, Vector3 } from "viewer/constants";
 import constants, {
   OrthoViewColors,
@@ -32,24 +43,24 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: THREE.Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
+  plane: Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Array<THREE.LineSegments>;
+  crosshair: Array<LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
-  TDViewBorders: THREE.Line;
+  TDViewBorders: Line;
   lastScaleFactors: [number, number];
   // baseRotation is the base rotation the plane has in an unrotated scene. It will be applied additional to the flycams rotation.
   // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
-  baseRotation: THREE.Euler;
+  baseRotation: Euler;
   storePropertyUnsubscribers: Array<() => void> = [];
   datasetScaleFactor: Vector3 = [1, 1, 1];
 
   // Properties are only created here to avoid new creating objects for each setRotation call.
-  baseRotationMatrix = new THREE.Matrix4();
-  flycamRotationMatrix = new THREE.Matrix4();
+  baseRotationMatrix = new Matrix4();
+  flycamRotationMatrix = new Matrix4();
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -59,7 +70,7 @@ class Plane {
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    this.baseRotation = new THREE.Euler(0, 0, 0);
+    this.baseRotation = new Euler(0, 0, 0);
     this.bindToEvents();
     this.createMeshes();
   }
@@ -67,7 +78,7 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    const planeGeo = new PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
 
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
@@ -75,12 +86,12 @@ class Plane {
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
-    this.plane = new THREE.Mesh(planeGeo, textureMaterial);
+    this.plane = new Mesh(planeGeo, textureMaterial);
 
     // Create crosshairs
     this.crosshair = new Array(2);
     for (let i = 0; i <= 1; i++) {
-      const crosshairGeometry = new THREE.BufferGeometry();
+      const crosshairGeometry = new BufferGeometry();
       // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
@@ -88,9 +99,9 @@ class Plane {
         25 * i, 25 * (1 - i), 0,
         (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
       ]);
-      crosshairGeometry.setAttribute("position", new THREE.BufferAttribute(crosshairVertices, 3));
+      crosshairGeometry.setAttribute("position", new BufferAttribute(crosshairVertices, 3));
 
-      this.crosshair[i] = new THREE.LineSegments(
+      this.crosshair[i] = new LineSegments(
         crosshairGeometry,
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
@@ -102,15 +113,15 @@ class Plane {
 
     // Create borders
     const vertices = [
-      new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0),
-      new THREE.Vector3(-pWidth / 2, pWidth / 2, 0),
-      new THREE.Vector3(pWidth / 2, pWidth / 2, 0),
-      new THREE.Vector3(pWidth / 2, -pWidth / 2, 0),
-      new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0),
+      new ThreeVector3(-pWidth / 2, -pWidth / 2, 0),
+      new ThreeVector3(-pWidth / 2, pWidth / 2, 0),
+      new ThreeVector3(pWidth / 2, pWidth / 2, 0),
+      new ThreeVector3(pWidth / 2, -pWidth / 2, 0),
+      new ThreeVector3(-pWidth / 2, -pWidth / 2, 0),
     ];
-    const tdBorderGeometry = new THREE.BufferGeometry().setFromPoints(vertices);
+    const tdBorderGeometry = new BufferGeometry().setFromPoints(vertices);
 
-    this.TDViewBorders = new THREE.Line(
+    this.TDViewBorders = new Line(
       tdBorderGeometry,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
@@ -122,7 +133,7 @@ class Plane {
 
   getLineBasicMaterial = _.memoize(
     (color: number, linewidth: number) =>
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         color,
         linewidth,
       }),
@@ -155,12 +166,12 @@ class Plane {
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
-  setBaseRotation = (rotVec: THREE.Euler): void => {
+  setBaseRotation = (rotVec: Euler): void => {
     this.baseRotation.copy(rotVec);
     this.baseRotationMatrix.makeRotationFromEuler(this.baseRotation);
   };
 
-  updateToFlycamRotation = (flycamRotationVec: THREE.Euler): void => {
+  updateToFlycamRotation = (flycamRotationVec: Euler): void => {
     // rotVec must be in "ZYX" order as this is how the flycam operates (see flycam_reducer setRotationReducer)
     this.flycamRotationMatrix.makeRotationFromEuler(flycamRotationVec);
     const combinedMatrix = this.flycamRotationMatrix.multiply(this.baseRotationMatrix);

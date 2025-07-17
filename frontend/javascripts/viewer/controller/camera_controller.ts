@@ -2,7 +2,7 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as React from "react";
-import * as THREE from "three";
+import { OrthographicCamera, Euler, Matrix4, Vector3 as ThreeVector3, Quaternion } from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import {
@@ -24,7 +24,7 @@ import type { CameraData } from "viewer/store";
 import Store from "viewer/store";
 
 type Props = {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera>;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
@@ -40,15 +40,15 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   const correctedUp = V3.normalize(V3.cross(forward, right));
 
   // Create a basis matrix
-  const rotationMatrix = new THREE.Matrix4();
+  const rotationMatrix = new Matrix4();
   rotationMatrix.makeBasis(
-    new THREE.Vector3(...right),
-    new THREE.Vector3(...correctedUp),
-    new THREE.Vector3(...forward),
+    new ThreeVector3(...right),
+    new ThreeVector3(...correctedUp),
+    new ThreeVector3(...forward),
   );
 
   // Convert to quaternion
-  const quat = new THREE.Quaternion();
+  const quat = new Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
   return quat;
 }
@@ -82,10 +82,10 @@ class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   // Properties are only created here to avoid creating new objects for each update call.
-  flycamRotationEuler = new THREE.Euler();
-  flycamRotationMatrix = new THREE.Matrix4();
-  baseRotationMatrix = new THREE.Matrix4();
-  totalRotationMatrix = new THREE.Matrix4();
+  flycamRotationEuler = new Euler();
+  flycamRotationMatrix = new Matrix4();
+  baseRotationMatrix = new Matrix4();
+  totalRotationMatrix = new Matrix4();
 
   componentDidMount() {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
@@ -233,7 +233,7 @@ class CameraController extends React.PureComponent<Props> {
     tdCamera.right = cameraData.right;
     tdCamera.top = cameraData.top;
     tdCamera.bottom = cameraData.bottom;
-    tdCamera.up = new THREE.Vector3(...cameraData.up);
+    tdCamera.up = new ThreeVector3(...cameraData.up);
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -302,11 +302,11 @@ export function rotate3DViewTo(
     [OrthoViews.TDView]: [0, 0, -1],
   };
 
-  const positionOffsetVector = new THREE.Vector3(...positionOffsetMap[id]);
-  const upVector = new THREE.Vector3(...upVectorMap[id]);
+  const positionOffsetVector = new ThreeVector3(...positionOffsetMap[id]);
+  const upVector = new ThreeVector3(...upVectorMap[id]);
   // Rotate the positionOffsetVector and upVector by the flycam rotation.
-  const rotatedOffset = positionOffsetVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
-  const rotatedUp = upVector.applyEuler(new THREE.Euler(...flycamRotation, "ZYX"));
+  const rotatedOffset = positionOffsetVector.applyEuler(new Euler(...flycamRotation, "ZYX"));
+  const rotatedUp = upVector.applyEuler(new Euler(...flycamRotation, "ZYX"));
   const position = [
     flycamPos[0] + rotatedOffset.x,
     flycamPos[1] + rotatedOffset.y,
@@ -330,7 +330,7 @@ export function rotate3DViewTo(
 
   const updateCameraTDView = (tweenState: TweenState, t: number) => {
     const { left, right, top, bottom } = tweenState;
-    const tweenedQuat = new THREE.Quaternion();
+    const tweenedQuat = new Quaternion();
     tweenedQuat.slerpQuaternions(startQuaternion, targetQuaternion, t);
     const tweened = getCameraFromQuaternion(tweenedQuat);
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current

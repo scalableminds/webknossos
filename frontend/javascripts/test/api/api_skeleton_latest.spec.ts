@@ -14,7 +14,7 @@ import {
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import * as THREE from "three";
+import { MathUtils, Matrix4, Euler, Quaternion } from "three";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
@@ -23,20 +23,20 @@ import testRotations from "test/fixtures/test_rotations";
 import { map3 } from "libs/utils";
 
 const toRadian = (arr: Vector3): Vector3 => [
-  THREE.MathUtils.degToRad(arr[0]),
-  THREE.MathUtils.degToRad(arr[1]),
-  THREE.MathUtils.degToRad(arr[2]),
+  MathUtils.degToRad(arr[0]),
+  MathUtils.degToRad(arr[1]),
+  MathUtils.degToRad(arr[2]),
 ];
 
 function applyRotationInFlycamReducerSpace(
   flycamRotationInRadian: Vector3,
-  rotationToApply: THREE.Euler,
+  rotationToApply: Euler,
 ): Vector3 {
   // eulerAngleToReducerInternalMatrix and reducerInternalMatrixToEulerAngle are tested in rotation_helpers.spec.ts.
   // Calculate expected rotation and make it a quaternion for equal comparison.
   const rotationMatrix = eulerAngleToReducerInternalMatrix(flycamRotationInRadian);
   const rotationMatrixWithViewport = rotationMatrix.multiply(
-    new THREE.Matrix4().makeRotationFromEuler(rotationToApply),
+    new Matrix4().makeRotationFromEuler(rotationToApply),
   );
   const resultingAngle = reducerInternalMatrixToEulerAngle(rotationMatrixWithViewport);
   return resultingAngle;
@@ -340,9 +340,7 @@ describe("API Skeleton", () => {
         flycamRotation,
         OrthoBaseRotations[planeId],
       );
-      const rotationQuaternion = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(...rotationForComparison),
-      );
+      const rotationQuaternion = new Quaternion().setFromEuler(new Euler(...rotationForComparison));
       Store.dispatch(setRotationAction(flycamRotation));
       Store.dispatch(setViewportAction(planeId));
       api.tracing.createNode([10, 10, 10], { activate: true });
@@ -363,12 +361,12 @@ describe("API Skeleton", () => {
         viewport: OrthoViewToNumber[planeId],
         mag: 0,
       });
-      const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(...toRadian(newNode.rotation)),
+      const newNodeQuaternion = new Quaternion().setFromEuler(
+        new Euler(...toRadian(newNode.rotation)),
       );
       expect(
         rotationQuaternion.angleTo(newNodeQuaternion),
-        `Node rotation ${newNode.rotation} is not nearly equal to ${map3(THREE.MathUtils.radToDeg, rotationForComparison)} in viewport ${planeId}.`,
+        `Node rotation ${newNode.rotation} is not nearly equal to ${map3(MathUtils.radToDeg, rotationForComparison)} in viewport ${planeId}.`,
       ).toBeLessThan(0.000001);
     }
   });
@@ -382,9 +380,7 @@ describe("API Skeleton", () => {
           rotationInRadian,
           OrthoBaseRotations[planeId],
         );
-        const rotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(...resultingAngle),
-        );
+        const rotationQuaternion = new Quaternion().setFromEuler(new Euler(...resultingAngle));
         // Test node creation.
         Store.dispatch(setRotationAction(testRotation));
         Store.dispatch(setViewportAction(planeId));
@@ -394,8 +390,8 @@ describe("API Skeleton", () => {
         const newNode = skeletonTracing.trees
           .getOrThrow(skeletonTracing.activeTreeId || -1)
           .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
-        const newNodeQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(...toRadian(newNode.rotation)),
+        const newNodeQuaternion = new Quaternion().setFromEuler(
+          new Euler(...toRadian(newNode.rotation)),
         );
         expect(
           rotationQuaternion.angleTo(newNodeQuaternion),

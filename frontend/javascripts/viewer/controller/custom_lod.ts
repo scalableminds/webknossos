@@ -1,15 +1,15 @@
-import * as THREE from "three";
+import { LOD, Group } from "three";
 import { getTDViewZoom } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
 
-export default class CustomLOD extends THREE.LOD {
-  noLODGroup: THREE.Group;
+export default class CustomLOD extends LOD {
+  noLODGroup: Group;
   lodLevelCount: number;
 
   constructor() {
     super();
     this.lodLevelCount = 0;
-    this.noLODGroup = new THREE.Group();
+    this.noLODGroup = new Group();
     this.add(this.noLODGroup);
   }
 
@@ -43,23 +43,23 @@ export default class CustomLOD extends THREE.LOD {
     }
   }
 
-  addNoLODSupportedMesh(meshGroup: THREE.Group) {
+  addNoLODSupportedMesh(meshGroup: Group) {
     this.noLODGroup.add(meshGroup);
   }
 
-  addLODMesh(meshGroup: THREE.Group, level: number) {
+  addLODMesh(meshGroup: Group, level: number) {
     while (this.lodLevelCount <= level) {
-      this.addLevel(new THREE.Group(), this.lodLevelCount);
+      this.addLevel(new Group(), this.lodLevelCount);
       this.lodLevelCount++;
     }
     this.levels[level].object.add(meshGroup);
   }
 
-  removeNoLODSupportedMesh(meshGroup: THREE.Group) {
+  removeNoLODSupportedMesh(meshGroup: Group) {
     this.noLODGroup.remove(meshGroup);
   }
 
-  removeLODMesh(meshGroup: THREE.Group, level: number) {
+  removeLODMesh(meshGroup: Group, level: number) {
     this.levels[level].object.remove(meshGroup);
   }
 }

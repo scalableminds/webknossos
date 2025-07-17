@@ -17,7 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import * as THREE from "three";
+import { Vector3 as ThreeVector3, Matrix4, Euler, Quaternion, MathUtils } from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -1417,9 +1417,7 @@ class TracingApi {
     // As the node rotation was calculated in the way the flycam reducer does its matrix rotation
     // by using the rotation_helpers.ts there is no need to invert z and we must use XYZ ordered euler angles.
     const curRotation = getRotationInRadian(flycam, false);
-    const startQuaternion = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...curRotation, "XYZ"),
-    );
+    const startQuaternion = new Quaternion().setFromEuler(new Euler(...curRotation, "XYZ"));
     const isNotRotated = V3.equals(curRotation, [0, 0, 0]);
     const dimensionToSkip =
       skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
@@ -1428,9 +1426,9 @@ class TracingApi {
     if (rotation == null) {
       rotation = curRotation;
     } else {
-      rotation = Utils.map3(THREE.MathUtils.degToRad, rotation);
+      rotation = Utils.map3(MathUtils.degToRad, rotation);
     }
-    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation, "XYZ"));
+    const endQuaternion = new Quaternion().setFromEuler(new Euler(...rotation, "XYZ"));
 
     type Tweener = {
       positionX: number;
@@ -1457,16 +1455,13 @@ class TracingApi {
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
         // Interpolating rotation via quaternions to get shortest rotation.
-        const interpolatedQuaternion = new THREE.Quaternion().slerpQuaternions(
+        const interpolatedQuaternion = new Quaternion().slerpQuaternions(
           startQuaternion,
           endQuaternion,
           t,
         );
-        const interpolatedEuler = new THREE.Euler().setFromQuaternion(
-          interpolatedQuaternion,
-          "XYZ",
-        );
-        const interpolatedEulerInDegree = Utils.map3(THREE.MathUtils.radToDeg, [
+        const interpolatedEuler = new Euler().setFromQuaternion(interpolatedQuaternion, "XYZ");
+        const interpolatedEulerInDegree = Utils.map3(MathUtils.radToDeg, [
           interpolatedEuler.x,
           interpolatedEuler.y,
           interpolatedEuler.z,

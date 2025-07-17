@@ -11,6 +11,7 @@ import {
   Group,
   Mesh,
   MeshLambertMaterial,
+  Vector3 as ThreeVector3,
 } from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
@@ -244,7 +245,7 @@ export default class SegmentMeshController {
         scale[1] / dsScaleFactor[1],
         scale[2] / dsScaleFactor[2],
       ];
-      targetGroup.scale.copy(new Vector3(...adaptedScale));
+      targetGroup.scale.copy(new ThreeVector3(...adaptedScale));
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, opacity, isMerged);
 

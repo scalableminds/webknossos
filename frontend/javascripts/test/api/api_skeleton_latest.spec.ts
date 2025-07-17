@@ -395,7 +395,7 @@ describe("API Skeleton", () => {
         );
         expect(
           rotationQuaternion.angleTo(newNodeQuaternion),
-          `Node rotation ${newNode.rotation} is not nearly equal to ${map3(THREE.MathUtils.radToDeg, resultingAngle)} in viewport ${planeId}.`,
+          `Node rotation ${newNode.rotation} is not nearly equal to ${map3(MathUtils.radToDeg, resultingAngle)} in viewport ${planeId}.`,
         ).toBeLessThan(0.000001);
       }
     }

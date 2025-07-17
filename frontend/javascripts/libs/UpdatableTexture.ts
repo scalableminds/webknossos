@@ -1,9 +1,15 @@
 import {
   LinearFilter,
   LinearMipMapLinearFilter,
+  type MagnificationTextureFilter,
+  type Mapping,
+  type MinificationTextureFilter,
+  type PixelFormat,
   Texture,
+  type TextureDataType,
   type WebGLRenderer,
   WebGLUtils,
+  type Wrapping,
 } from "three";
 import type { TypedArray } from "viewer/constants";
 

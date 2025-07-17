@@ -96,7 +96,7 @@ class EdgeShader {
     ];
   }
 
-  getMaterial(): THREE.RawShaderMaterial {
+  getMaterial(): RawShaderMaterial {
     return this.material;
   }
 

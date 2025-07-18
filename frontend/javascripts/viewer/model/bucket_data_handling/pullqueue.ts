@@ -84,6 +84,7 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     let hasErrored = false;
+    let failedBucketAddresses = [];
     try {
       const bucketBuffers = await asAbortable(
         requestWithFallback(layerInfo, batch),
@@ -92,24 +93,33 @@ class PullQueue {
       );
 
       for (const [index, bucketAddress] of batch.entries()) {
-        const bucketBuffer = bucketBuffers[index];
-        const bucket = this.cube.getOrCreateBucket(bucketAddress);
+        try {
+          const bucketBuffer = bucketBuffers[index];
+          const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
-        if (bucket.type !== "data") {
-          continue;
-        }
+          if (bucket.type !== "data") {
+            continue;
+          }
 
-        if (bucketBuffer == null && !renderMissingDataBlack) {
-          bucket.markAsFailed(true);
-        } else {
-          this.handleBucket(bucket, bucketBuffer);
+          if (bucketBuffer == null && !renderMissingDataBlack) {
+            bucket.markAsFailed(true);
+          } else {
+            this.handleBucket(bucket, bucketBuffer);
+          }
+        } catch {
+          failedBucketAddresses.push(bucketAddress);
         }
+      }
+
+      if (failedBucketAddresses.length > 0) {
+        throw new Error("Some buckets could not be handled.");
       }
     } catch (error) {
       if (this.isDestroyed) {
         return;
       }
-      for (const bucketAddress of batch) {
+      failedBucketAddresses = failedBucketAddresses.length === 0 ? batch : failedBucketAddresses;
+      for (const bucketAddress of failedBucketAddresses) {
         const bucket = this.cube.getBucket(bucketAddress);
 
         if (bucket.type === "data") {

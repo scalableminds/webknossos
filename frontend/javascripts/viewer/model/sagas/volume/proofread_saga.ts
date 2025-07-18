@@ -543,6 +543,7 @@ function* performMinCut(
       volumeTracingId,
       segmentsInfo,
     );
+    ColoredLogger.logBlue("About to delete the following edgesToRemove: ", edgesToRemove);
   } catch (exception) {
     console.error(exception);
     Toast.error("Could not determine which edges to delete for cut. Please try again.");
@@ -1331,6 +1332,7 @@ function mergeAgglomeratesInMapping(
     targetAgglomerateId,
     ")",
   );
+  console.log("oldMapping", activeMapping.mapping);
 
   if (
     sourceAgglomerateId === targetAgglomerateId ||
@@ -1339,12 +1341,13 @@ function mergeAgglomeratesInMapping(
   ) {
     return activeMapping.mapping as Mapping;
   }
-
-  return new Map(
+  const retVal = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
       value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
     ),
   ) as Mapping;
+  console.log("retVal", retVal);
+  return retVal;
 }
 
 export function* updateMappingWithMerge(
@@ -1531,6 +1534,8 @@ function* gatherInfoForOperation(
     { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId, position: sourcePosition },
     { agglomerateId: action.agglomerateId, unmappedId: action.segmentId, position: targetPosition },
   ];
+
+  console.log("idInfos", idInfos);
 
   return idInfos;
 }

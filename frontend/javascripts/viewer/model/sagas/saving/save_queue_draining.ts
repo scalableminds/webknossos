@@ -98,6 +98,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
     const itemCountToSave = forcePush
       ? Number.POSITIVE_INFINITY
       : yield* select((state) => state.save.queue.length);
+    console.log("itemCountToSave", itemCountToSave);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
       saveQueue = yield* select((state) => state.save.queue);

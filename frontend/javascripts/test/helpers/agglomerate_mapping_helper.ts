@@ -80,6 +80,8 @@ export class AgglomerateMapping {
     this.adjacencyList.get(segmentIdA)!.delete(segmentIdB);
     this.adjacencyList.get(segmentIdB)!.delete(segmentIdA);
 
+    console.log("removing edge", segmentIdA, segmentIdB);
+
     const previousVersionMap = this.versions[this.currentVersion];
     const keepComponentId = previousVersionMap.get(segmentIdA)!;
     const nextVersionMap = new Map<number, number>();

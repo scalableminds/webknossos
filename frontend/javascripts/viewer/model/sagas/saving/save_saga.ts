@@ -446,6 +446,7 @@ export function* tryToIncorporateActions(
         }
       }
     }
+    ColoredLogger.logGreen("Setting local version to", actionBatch.version);
     yield* put(setVersionNumberAction(actionBatch.version));
   }
   yield* call(finalize);

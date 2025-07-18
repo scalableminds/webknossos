@@ -145,10 +145,14 @@ class PullQueue {
         // "claimed" the `isRetryScheduled` boolean.
         if (!this.isRetryScheduled) {
           this.isRetryScheduled = true;
+          console.log("scheduling retry in ", this.getRetryDelay(), "ms");
           sleep(this.getRetryDelay()).then(() => {
             this.isRetryScheduled = false;
+            console.log("executing retry");
             this.pull();
           });
+        } else {
+          console.log("dont schedulign retry because it was already scheduled");
         }
       }
     }

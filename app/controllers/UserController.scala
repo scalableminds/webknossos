@@ -1,7 +1,7 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
@@ -236,6 +236,17 @@ class UserController @Inject()(userService: UserService,
       Fox.failure("notAllowed")
     }
 
+  private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    if (oldEmail == email) {
+      Fox.successful(())
+    } else {
+      multiUserDAO.emailNotPresentYet(email).flatMap {
+        case true  => Fox.successful(())
+        case false => Fox.failure("user.email.alreadyInUse")
+      }
+    }
+
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
       issuingUser: User): Boolean =
     if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
@@ -315,6 +326,7 @@ class UserController @Inject()(userService: UserService,
           _ <- Fox
             .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- checkPasswordIfEmailChanged(user, passwordOpt, oldEmail, email)(issuingUser)
+          _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)

@@ -24,6 +24,32 @@ CREATE TABLE webknossos.releaseInformation (
 INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
 COMMIT TRANSACTION;
 
+-- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
+CREATE SEQUENCE webknossos.objectid_sequence;
+
+CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
+DECLARE
+  time_component TEXT;
+  machine_id TEXT;
+  process_id TEXT;
+  counter TEXT;
+  result TEXT;
+BEGIN
+  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
+  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
+  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
+  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
+  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
+  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
+  -- Concatenate all parts to form a 24-character ObjectId
+  result := time_component || machine_id || process_id || counter;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
@@ -355,21 +381,36 @@ CREATE TABLE webknossos.organizations(
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
+
 CREATE TABLE webknossos.organization_usedStorage (
+  -- Mostly ignored. Just needed because either of (_dataset_mag, _layer_attachment) must be null and part of a primary key can be null.
+  id TEXT PRIMARY KEY
+    DEFAULT webknossos.generate_object_id()
+    CONSTRAINT id_objectId CHECK (id ~ '^[0-9a-f]{24}$'),
   _organization TEXT NOT NULL,
-  _dataset TEXT NOT NULL,
+  _dataset      TEXT NOT NULL,
   _dataset_mag TEXT CONSTRAINT _dataset_mag_objectId CHECK (_dataset_mag IS NULL OR _dataset_mag ~ '^[0-9a-f]{24}$'),
   _layer_attachment TEXT CONSTRAINT _layer_attachment_objectId CHECK (_layer_attachment IS NULL OR _layer_attachment ~ '^[0-9a-f]{24}$'),
-  path TEXT NOT NULL,
-  usedStorageBytes BIGINT NOT NULL,
-  lastUpdated TIMESTAMPTZ,
-  PRIMARY KEY(_dataset_mag, _layer_attachment),
+  path             TEXT    NOT NULL,
+  usedStorageBytes BIGINT  NOT NULL,
+  lastUpdated      TIMESTAMPTZ NOT NULL DEFAULT NOW()
   CHECK (
-    (_dataset_mag IS NOT NULL AND _layer_attachment IS NULL)
-    OR
-    (_dataset_mag IS NULL AND _layer_attachment IS NOT NULL)
-  )
+      (_dataset_mag IS NOT NULL AND _layer_attachment IS NULL)
+      OR
+      (_dataset_mag IS NULL AND _layer_attachment IS NOT NULL)
+    ),
+    -- 🧩 THESE ARE THE CRITICAL CHANGES:
+  CONSTRAINT unique_dataset_mag UNIQUE (_dataset_mag),
+  CONSTRAINT unique_layer_attachment UNIQUE (_layer_attachment)
 );
+-- Create unique indexes for _dataset_mag and _layer_attachment to enforce their uniqueness -> at most one entry per dataset_mag or layer_attachment
+CREATE UNIQUE INDEX _dataset_mag_unique_idx
+  ON webknossos.organization_usedStorage(_dataset_mag)
+  WHERE _dataset_mag IS NOT NULL;
+
+CREATE UNIQUE INDEX _layer_attachment_unique_idx
+  ON webknossos.organization_usedStorage(_layer_attachment)
+  WHERE _layer_attachment IS NOT NULL;
 
 -- Create the enum types for transaction states and credit states
 -- Pending -> The transaction is a payment for a unfinished & not crashed job
@@ -1032,32 +1073,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER enforce_non_negative_balance_trigger
 BEFORE INSERT OR UPDATE ON webknossos.credit_transactions
 FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
-
--- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
-CREATE SEQUENCE webknossos.objectid_sequence;
-
-CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
-DECLARE
-  time_component TEXT;
-  machine_id TEXT;
-  process_id TEXT;
-  counter TEXT;
-  result TEXT;
-BEGIN
-  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
-  SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
-  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
-  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
-  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
-  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
-  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
-  SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
-  -- Concatenate all parts to form a 24-character ObjectId
-  result := time_component || machine_id || process_id || counter;
-
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql;
 
 
 CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$

@@ -799,14 +799,14 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
           layer.wkwResolutionsOpt match {
             case Some(resolutions) =>
               resolutions.map(wkwResolution => {
-                q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, cubeLength)
-                 VALUES ($datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
+                q"""INSERT INTO webknossos.dataset_mags(_id, _dataset, dataLayerName, mag, cubeLength)
+                 VALUES (${ObjectId.generate}, $datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
               })
             case None =>
               layer.resolutions.distinct.map { mag: Vec3Int =>
                 {
-                  q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
-                    VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
+                  q"""INSERT INTO webknossos.dataset_mags(_id, _dataset, dataLayerName, mag)
+                    VALUES(${ObjectId.generate}, $datasetId, ${layer.name}, $mag)""".asUpdate
                 }
               }
           }
@@ -1124,8 +1124,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)
-          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_id, _dataset, layerName, name, path, type, dataFormat)
+          VALUES(${ObjectId.generate}, $datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
           ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT)""".asUpdate
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate

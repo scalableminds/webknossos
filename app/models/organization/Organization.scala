@@ -182,30 +182,37 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       organizationId: String,
       usedStorageEntries: List[ArtifactStorageReport]
   ): Fox[Unit] = {
-    val usedStorageEntryQueries = usedStorageEntries.map(entry => {
-      entry._artifactId match {
+    val reportUpsetQueries = usedStorageEntries.map { r =>
+      r._artifactId match {
         case Left(magId) =>
-          q"(${organizationId}, ${entry._datasetId}, ${magId}, NULL, ${entry.path}, ${entry.usedStorageBytes}, NOW())"
+          q"""
+          INSERT INTO webknossos.organization_usedStorage (
+            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+          )
+          VALUES (${organizationId}, ${r._datasetId}, ${magId}, NULL, ${r.path}, ${r.usedStorageBytes}, NOW())
+          ON CONFLICT ON CONSTRAINT unique_dataset_mag
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate
         case Right(attachmentId) =>
-          q"(${organizationId}, ${entry._datasetId}, NULL, ${attachmentId}, ${entry.path}, ${entry.usedStorageBytes}, NOW())"
+          q"""
+          INSERT INTO webknossos.organization_usedStorage (
+            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+          ) -- TODO: test why no s3 test dataset is included
+          VALUES (${organizationId}, ${r._datasetId}, NULL, ${attachmentId}, ${r.path}, ${r.usedStorageBytes}, NOW())
+          ON CONFLICT ON CONSTRAINT unique_layer_attachment
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate
       }
-    })
-    // TOODM: Violates Non null constraint.
-
-    val upsertQueries = usedStorageEntryQueries.map(valuesSqlToken => q"""
-    INSERT INTO webknossos.organization_usedStorage (
-      _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
-    )
-    VALUES ${valuesSqlToken}
-    ON CONFLICT (_dataset_mag, _layer_attachment)
-    DO UPDATE SET
-      path = EXCLUDED.path,
-      usedStorageBytes = EXCLUDED.usedStorageBytes,
-      lastUpdated = EXCLUDED.lastUpdated;
-  """.asUpdate)
+    }
 
     for {
-      _ <- Fox.serialCombined(upsertQueries)(q => run(q))
+      _ <- Fox.serialCombined(reportUpsetQueries)(q => run(q))
     } yield ()
   }
 

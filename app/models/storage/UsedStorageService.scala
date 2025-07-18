@@ -113,25 +113,28 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
     } yield storageReports
 
   private def resolvePath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
-    mag match {
-      case mag.realPath if mag.realPath.isDefined => Left(mag, List(mag.realPath.get))
-      case mag.path if mag.path.isDefined         => Left(mag, List(mag.path.get))
-      case _ =>
-        val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
-        val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
-        parsedMagOpt match {
-          case Some(parsedMag) =>
-            Left(
-              // TODOM: Discuss whether this should be done here or maybe on the datastore side
-              // - pro datastore side: separation of concerns
-              // - pro wk core: easier to implement, no need to send whole mag object to datastore
-              mag,
-              List(layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
-                   layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString)
+    if (mag.realPath.isDefined) {
+      Left(mag, List(mag.realPath.get))
+    } else if (mag.path.isDefined) {
+      Left(mag, List(mag.path.get))
+    } else {
+      val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
+      val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
+
+      parsedMagOpt match {
+        case Some(parsedMag) =>
+          Left(
+            mag,
+            List(
+              layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
+              layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString
             )
-          case None => Right(mag)
-        }
+          )
+        case None =>
+          Right(mag)
+      }
     }
+
 
   private def buildPathToStorageArtifactMap(
       magsWithValidPaths: List[(DataSourceMagRow, List[String])],

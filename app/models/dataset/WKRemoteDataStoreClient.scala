@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerParameters}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{PathStorageReport, PathStorageUsageRequest, PathStorageUsageResponse}
+import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject

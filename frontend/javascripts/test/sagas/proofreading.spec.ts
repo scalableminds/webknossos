@@ -38,6 +38,7 @@ import type {
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 
 function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
   const { api } = context;
@@ -104,13 +105,13 @@ const expectedMappingAfterMergeRebase = new Map([
 ]);
 
 const expectedMappingAfterSplit = new Map([
-  [1, 9],
-  [2, 10],
-  [3, 10],
-  [4, 11],
-  [5, 11],
-  [6, 12],
-  [7, 12],
+  [1, 1],
+  [2, 8],
+  [3, 8],
+  [4, 4],
+  [5, 4],
+  [6, 6],
+  [7, 6],
   // [1337, 1337],
 ]);
 
@@ -180,7 +181,8 @@ class BackendMock {
 
   getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {
     if (version == null) {
-      throw new Error("Version is null?");
+      version = this.agglomerateMapping.currentVersion;
+      console.log("defaulting to version", version);
     }
     // This function should always return the full current mapping.
     // The values will be filtered according to the requested keys
@@ -265,6 +267,12 @@ class BackendMock {
           this.agglomerateMapping.bumpVersion();
         }
       }
+
+      if (item.version !== this.agglomerateMapping.currentVersion) {
+        throw new Error(
+          `Mismatch in received version and agglomerateMapping.currentVersion (${item.version} vs ${this.agglomerateMapping.currentVersion}). This is likely a bug in the mocking code.`,
+        );
+      }
     }
     for (const fn of this.onSavedListeners) {
       fn();
@@ -298,14 +306,23 @@ class BackendMock {
      * As soon as the backend (mock) receives the version that precedes
      * the targetVersion, we will immediately save a new version here
      * with the provided updateActions.
-     * This method can be used to simulate another user which saves in between.
+     * This method can be used to simulate another user which saves in between,
+     * forcing the client that is tested to pull in the newer version before
+     * saving can finish.
      */
     this.addOnSavedListener(() => {
       if (this.updateActionLog.at(-1)?.version === targetVersion - 1) {
-        this.sendSaveRequestWithToken("unused", {
-          data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
-        });
+        this.injectVersion(updateActions, targetVersion);
       }
+    });
+  }
+
+  injectVersion(updateActions: UpdateActionWithoutIsolationRequirement[], targetVersion: number) {
+    // Theoretically, we could derive targetVersion from the currently stored version,
+    // but making the version number explicit strengthens the assumptions that the
+    // tests expect.
+    this.sendSaveRequestWithToken("unused", {
+      data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
     });
   }
 }
@@ -509,8 +526,7 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  // todop
-  it.skip("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api } = context;
     mockInitialBucketAndAgglomerateData(context);
 
@@ -550,11 +566,8 @@ describe("Proofreading", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            // agglomerateId1: 10,
-            // agglomerateId2: 11,
             segmentId1: 1,
             segmentId2: 4,
-            // mag: [1, 1, 1],
           },
         },
       ]);
@@ -563,8 +576,7 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  // todop
-  it.skip("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
+  it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
     mockInitialBucketAndAgglomerateData(context);
 
@@ -580,7 +592,7 @@ describe("Proofreading", () => {
       );
       expect(mapping0).toEqual(initialMapping);
 
-      // Set up the merge-related segment partners. Normally, this would happen
+      // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
@@ -596,13 +608,6 @@ describe("Proofreading", () => {
           },
         ]),
       );
-      // Already prepare the server's reply for mapping requests that will be sent
-      // after the split.
-      mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
-        [1, 9],
-        [2, 10],
-        [3, 10],
-      ]);
 
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 10));
@@ -624,10 +629,8 @@ describe("Proofreading", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            agglomerateId: 10,
             segmentId1: 1,
             segmentId2: 2,
-            // mag: [1, 1, 1],
           },
         },
       ]);
@@ -636,10 +639,9 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  // todop
-  it.skip("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
+  it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -655,27 +657,22 @@ describe("Proofreading", () => {
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 
-      yield call(tryToIncorporateActions, [
-        {
-          version: 1,
-          value: [
-            {
-              name: "mergeAgglomerate",
-              value: {
-                actionTracingId: "volumeTracingId",
-                actionTimestamp: 0,
-                // agglomerateId1: 10,
-                // agglomerateId2: 11,
-                segmentId1: 1,
-                segmentId2: 4,
-                // mag: [1, 1, 1],
-              },
+      ColoredLogger.logGreen("storing merge on server");
+      backendMock.injectVersion(
+        [
+          {
+            name: "mergeAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 1,
+              segmentId2: 4,
             },
-          ],
-        },
-      ]);
+          },
+        ],
+        4,
+      );
 
-      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
       const mapping1 = yield select(
         (state) =>
@@ -728,10 +725,8 @@ describe("Proofreading", () => {
               value: {
                 actionTracingId: "volumeTracingId",
                 actionTimestamp: 0,
-                // agglomerateId: 10,
                 segmentId1: 1,
                 segmentId2: 2,
-                // mag: [1, 1, 1],
               },
             },
           ],

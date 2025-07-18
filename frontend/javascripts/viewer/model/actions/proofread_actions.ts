@@ -56,7 +56,11 @@ export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: numb
   }) as const;
 
 export const minCutAgglomerateWithPositionAction = (
+  // This action encodes which target super-voxel should be cut off from the
+  // "active supervoxel" (that is marked by the proofreading marker).
+  // Either, provide the target via the clicked position...
   position: Vector3 | null,
+  // ...or specify the unmapped and mapped id of the clicked supervoxel
   segmentId?: number | null,
   agglomerateId?: number | null,
 ) =>

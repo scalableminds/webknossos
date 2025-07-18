@@ -130,7 +130,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
+      return getAgglomeratesForSegmentsImpl(segmentIds);
     },
   );
 

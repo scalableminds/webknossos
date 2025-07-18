@@ -19,7 +19,7 @@ export class AgglomerateMapping {
   // snapshot of the component‑ID map after every operation, versions[0] = initial state
   private versions: Array<Map<number, number>> = [];
 
-  private currentVersion = -1; // newest version index
+  public currentVersion = -1; // newest version index
   private largestMappedId: number; // monotone counter for fresh IDs
 
   constructor(

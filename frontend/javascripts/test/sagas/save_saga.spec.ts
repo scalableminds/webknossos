@@ -19,6 +19,7 @@ import {
 } from "viewer/model/sagas/saving/save_queue_draining";
 import { TIMESTAMP } from "test/global_mocks";
 import { sendSaveRequestWithToken } from "admin/rest_api";
+import "test/helpers/apiHelpers"; // ensures Store is available
 
 vi.mock("viewer/model/sagas/root_saga", () => {
   return {
@@ -286,6 +287,10 @@ describe("Save Saga", () => {
     saga.next({
       timeout: "a placeholder",
     }); // put setSaveBusyAction
+
+    saga.next(); // EnsureMaySaveNowAsync
+    saga.next(); // EnsureHasNewestVersionAsync
+    saga.next(1); // select itemCountToSave
 
     saga.next(saveQueue); // call sendSaveRequestToServer
 

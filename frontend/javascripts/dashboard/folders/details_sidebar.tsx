@@ -93,13 +93,11 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const { data: owningOrganization } = useQuery(
-    ["organizations", selectedDataset.owningOrganization],
-    () => getOrganization(selectedDataset.owningOrganization),
-    {
-      refetchOnWindowFocus: false,
-    },
-  );
+  const { data: owningOrganization } = useQuery({
+    queryKey: ["organizations", selectedDataset.owningOrganization],
+    queryFn: () => getOrganization(selectedDataset.owningOrganization),
+    refetchOnWindowFocus: false,
+  });
   const owningOrganizationName = owningOrganization?.name;
 
   const renderOrganization = () => {
@@ -203,7 +201,6 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
         )}
       </Spin>
-
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>

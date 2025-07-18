@@ -29,39 +29,35 @@ const FOLDER_TREE_REFETCH_INTERVAL = 30000;
 
 export function useFolderQuery(folderId: string | null) {
   const queryKey = ["folders", folderId];
-  return useQuery(
+  return useQuery({
     queryKey,
-    () => {
+    queryFn: () => {
       if (folderId == null) {
         throw new Error("No folder id provided");
       }
       return getFolder(folderId);
     },
-    {
-      refetchOnWindowFocus: false,
-      enabled: folderId != null,
-      // Avoid default retry delay with exponential back-off
-      // to shorten the delay after which webKnossos will switch
-      // to the root folder.
-      // This is relevant for the case where the current folder
-      // does not exist, anymore (e.g., was deleted by somebody
-      // else).
-      retryDelay: 500,
-    },
-  );
+    refetchOnWindowFocus: false,
+    enabled: folderId != null,
+    // Avoid default retry delay with exponential back-off
+    // to shorten the delay after which webKnossos will switch
+    // to the root folder.
+    // This is relevant for the case where the current folder
+    // does not exist, anymore (e.g., was deleted by somebody
+    // else).
+    retryDelay: 500,
+  });
 }
 
 export function useDatasetQuery(datasetId: string) {
   const queryKey = ["datasetById", datasetId];
-  return useQuery(
+  return useQuery({
     queryKey,
-    () => {
+    queryFn: () => {
       return getDataset(datasetId);
     },
-    {
-      refetchOnWindowFocus: false,
-    },
-  );
+    refetchOnWindowFocus: false,
+  });
 }
 
 export function useDatasetSearchQuery(
@@ -70,19 +66,17 @@ export function useDatasetSearchQuery(
   searchRecursively: boolean,
 ) {
   const queryKey = ["dataset", "search", query, "in", folderId, "recursive?", searchRecursively];
-  return useQuery(
+  return useQuery({
     queryKey,
-    async () => {
+    queryFn: async () => {
       if (query == null || query.length < MINIMUM_SEARCH_QUERY_LENGTH) {
         return [];
       }
       return await getDatasets(null, folderId, query, searchRecursively, SEARCH_RESULTS_LIMIT);
     },
-    {
-      refetchOnWindowFocus: false,
-      enabled: query != null,
-    },
-  );
+    refetchOnWindowFocus: false,
+    enabled: query != null,
+  });
 }
 
 async function fetchTreeHierarchy() {
@@ -91,7 +85,9 @@ async function fetchTreeHierarchy() {
 }
 
 export function useFolderHierarchyQuery() {
-  return useQuery(["folders"], fetchTreeHierarchy, {
+  return useQuery({
+    queryKey: ["folders"],
+    queryFn: fetchTreeHierarchy,
     refetchOnWindowFocus: false,
     refetchInterval: FOLDER_TREE_REFETCH_INTERVAL,
   });
@@ -128,9 +124,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
   const queryKey = ["datasetsByFolder", folderId];
   const fetchedDatasetsRef = useRef<APIDatasetCompact[] | null>(null);
 
-  const queryData = useQuery(
+  const queryData = useQuery({
     queryKey,
-    () => {
+    queryFn: () => {
       if (folderId == null) {
         // There should always be a folderId, but since hooks cannot
         // be used within conditionals, we allow folderId to be null.
@@ -147,11 +143,9 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
 
       return getDatasets(null, folderId);
     },
-    {
-      refetchOnWindowFocus: false,
-      enabled: false,
-    },
-  );
+    refetchOnWindowFocus: false,
+    enabled: false,
+  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
@@ -267,7 +261,8 @@ export function useCreateFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
-  return useMutation(([parentId, name]: [string, string]) => createFolder(parentId, name), {
+  return useMutation({
+    mutationFn: ([parentId, name]: [string, string]) => createFolder(parentId, name),
     mutationKey,
     onSuccess: (newFolder: Folder, [parentId]) => {
       queryClient.setQueryData(
@@ -287,7 +282,8 @@ export function useDeleteFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
-  return useMutation((id: string) => deleteFolder(id), {
+  return useMutation({
+    mutationFn: (id: string) => deleteFolder(id),
     mutationKey,
     onSuccess: (deletedId) => {
       queryClient.setQueryData(
@@ -307,7 +303,8 @@ export function useUpdateFolderMutation() {
   const queryClient = useQueryClient();
   const mutationKey = ["folders"];
 
-  return useMutation((folder: FolderUpdater) => updateFolder(folder), {
+  return useMutation({
+    mutationFn: (folder: FolderUpdater) => updateFolder(folder),
     mutationKey,
     onSuccess: (updatedFolder) => {
       queryClient.setQueryData(
@@ -347,36 +344,34 @@ export function useMoveFolderMutation() {
       ),
     );
 
-  return useMutation(
-    ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
-    {
-      mutationKey,
-      onMutate: ([folderId, newParentId]) => {
-        // Optimistically update the folder with the new parent.
-        const previousFolders = queryClient.getQueryData(mutationKey);
-        queryClient.setQueryData(mutationKey, updater(folderId, newParentId));
-        return {
-          previousFolders,
-        };
-      },
-      onSuccess: (updatedFolder, [folderId, newParentId]) => {
-        // Use the returned updatedFolder to update the query data
-        queryClient.setQueryData(mutationKey, updater(updatedFolder.id, newParentId));
-        queryClient.setQueryData(["folders", folderId], () => updatedFolder);
-      },
-      onError: (err: any, _params, context) => {
-        // Restore the old folder tree. Note that without the optimistic update
-        // and the data reversion here, the sidebar would still show the (incorrectly)
-        // moved folder, because the <SortableTree /> component does its own kind of
-        // optimistic mutation by updating its state immediately when dragging a folder.
-        handleGenericError(err, "Could not update folder. Check the console for details");
-
-        if (context) {
-          queryClient.setQueryData(mutationKey, context.previousFolders);
-        }
-      },
+  return useMutation({
+    mutationFn: ([folderId, newParentId]: [string, string]) => moveFolder(folderId, newParentId),
+    mutationKey,
+    onMutate: ([folderId, newParentId]) => {
+      // Optimistically update the folder with the new parent.
+      const previousFolders = queryClient.getQueryData(mutationKey);
+      queryClient.setQueryData(mutationKey, updater(folderId, newParentId));
+      return {
+        previousFolders,
+      };
     },
-  );
+    onSuccess: (updatedFolder, [folderId, newParentId]) => {
+      // Use the returned updatedFolder to update the query data
+      queryClient.setQueryData(mutationKey, updater(updatedFolder.id, newParentId));
+      queryClient.setQueryData(["folders", folderId], () => updatedFolder);
+    },
+    onError: (err: any, _params, context) => {
+      // Restore the old folder tree. Note that without the optimistic update
+      // and the data reversion here, the sidebar would still show the (incorrectly)
+      // moved folder, because the <SortableTree /> component does its own kind of
+      // optimistic mutation by updating its state immediately when dragging a folder.
+      handleGenericError(err, "Could not update folder. Check the console for details");
+
+      if (context) {
+        queryClient.setQueryData(mutationKey, context.previousFolders);
+      }
+    },
+  });
 }
 
 export function useUpdateDatasetMutation(folderId: string | null) {
@@ -388,8 +383,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const queryClient = useQueryClient();
   const mutationKey = ["datasetsByFolder", folderId];
 
-  return useMutation(
-    (params: [string, DatasetUpdater] | string) => {
+  return useMutation({
+    mutationFn: (params: [string, DatasetUpdater] | string) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
       if (Array.isArray(params)) {
@@ -399,64 +394,62 @@ export function useUpdateDatasetMutation(folderId: string | null) {
       const datasetId = params;
       return getDataset(datasetId);
     },
-    {
-      mutationKey,
-      onSuccess: (updatedDataset: APIDataset) => {
-        queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
-          (oldItems || [])
-            .map((oldDataset: APIDatasetCompact) => {
-              return oldDataset.id === updatedDataset.id
-                ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
-                  convertDatasetToCompact({
-                    ...updatedDataset,
-                    lastUsedByUser: oldDataset.lastUsedByUser,
-                  })
-                : oldDataset;
-            })
-            .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
+    mutationKey,
+    onSuccess: (updatedDataset: APIDataset) => {
+      queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
+        (oldItems || [])
+          .map((oldDataset: APIDatasetCompact) => {
+            return oldDataset.id === updatedDataset.id
+              ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
+                convertDatasetToCompact({
+                  ...updatedDataset,
+                  lastUsedByUser: oldDataset.lastUsedByUser,
+                })
+              : oldDataset;
+          })
+          .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
+      );
+      // Also update the cached dataset under the key "datasetById".
+      queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
+      const targetFolderId = updatedDataset.folderId;
+      if (targetFolderId !== folderId) {
+        // The dataset was moved to another folder. Add the dataset to that target folder
+        queryClient.setQueryData(
+          ["datasetsByFolder", targetFolderId],
+          (oldItems: APIDatasetCompact[] | undefined) => {
+            if (oldItems == null) {
+              // Don't update the query data, if it doesn't exist, yet.
+              // Otherwise, this would lead to weird intermediate states
+              // (i.e., moving a dataset to folder X and switching to X
+              // will only show the moved dataset and a spinner; when loading
+              // has finished, the page will be complete).
+              return undefined;
+            }
+            return (
+              oldItems
+                // The dataset shouldn't be in oldItems, but if it should be
+                // for some reason (e.g., a bug), we filter it away to avoid
+                // duplicates.
+                .filter((el) => el.id !== updatedDataset.id)
+                .concat([convertDatasetToCompact(updatedDataset)])
+            );
+          },
         );
-        // Also update the cached dataset under the key "datasetById".
-        queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
-        const targetFolderId = updatedDataset.folderId;
-        if (targetFolderId !== folderId) {
-          // The dataset was moved to another folder. Add the dataset to that target folder
-          queryClient.setQueryData(
-            ["datasetsByFolder", targetFolderId],
-            (oldItems: APIDatasetCompact[] | undefined) => {
-              if (oldItems == null) {
-                // Don't update the query data, if it doesn't exist, yet.
-                // Otherwise, this would lead to weird intermediate states
-                // (i.e., moving a dataset to folder X and switching to X
-                // will only show the moved dataset and a spinner; when loading
-                // has finished, the page will be complete).
-                return undefined;
-              }
-              return (
-                oldItems
-                  // The dataset shouldn't be in oldItems, but if it should be
-                  // for some reason (e.g., a bug), we filter it away to avoid
-                  // duplicates.
-                  .filter((el) => el.id !== updatedDataset.id)
-                  .concat([convertDatasetToCompact(updatedDataset)])
-              );
-            },
-          );
-        }
-        // Invalidate all search results so that outdated data won't be shown.
-        // We could also update the dataset instances in the cache, but this can
-        // get complex quite fast. Mainly because the mutation of a dataset can affect
-        // whether it will be found by a search (e.g., when a dataset is moved to another
-        // folder).
-        // Simply invalidating the search should be a clean solution for now.
-        queryClient.invalidateQueries({
-          queryKey: ["dataset", "search"],
-        });
-      },
-      onError: (err: any) => {
-        handleGenericError(err, "Could not update dataset.");
-      },
+      }
+      // Invalidate all search results so that outdated data won't be shown.
+      // We could also update the dataset instances in the cache, but this can
+      // get complex quite fast. Mainly because the mutation of a dataset can affect
+      // whether it will be found by a search (e.g., when a dataset is moved to another
+      // folder).
+      // Simply invalidating the search should be a clean solution for now.
+      queryClient.invalidateQueries({
+        queryKey: ["dataset", "search"],
+      });
     },
-  );
+    onError: (err: any) => {
+      handleGenericError(err, "Could not update dataset.");
+    },
+  });
 }
 
 function diffDatasets(

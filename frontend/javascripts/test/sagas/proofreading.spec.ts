@@ -31,9 +31,13 @@ import { ColoredLogger, sleep } from "libs/utils";
 import Constants, { type Vector2 } from "viewer/constants";
 import type { APIUpdateActionBatch } from "types/api_types";
 import type { RequestOptionsWithData } from "libs/request";
-import type { ServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type {
+  ServerUpdateAction,
+  UpdateActionWithoutIsolationRequirement,
+} from "viewer/model/sagas/volume/update_actions";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
+import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 
 function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: string): Saga<void> {
   const { api } = context;
@@ -285,6 +289,25 @@ class BackendMock {
     }
     return this.updateActionLog.slice(firstUnseenVersionIndex);
   };
+
+  planVersionInjection(
+    targetVersion: number,
+    updateActions: UpdateActionWithoutIsolationRequirement[],
+  ) {
+    /*
+     * As soon as the backend (mock) receives the version that precedes
+     * the targetVersion, we will immediately save a new version here
+     * with the provided updateActions.
+     * This method can be used to simulate another user which saves in between.
+     */
+    this.addOnSavedListener(() => {
+      if (this.updateActionLog.at(-1)?.version === targetVersion - 1) {
+        this.sendSaveRequestWithToken("unused", {
+          data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
+        });
+      }
+    });
+  }
 }
 
 function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
@@ -326,40 +349,20 @@ describe("Proofreading", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  it.skip("[new] should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("[new] should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
-    backendMock.addOnSavedListener(() => {
-      if (backendMock.updateActionLog.at(-1)?.version === 6) {
-        // As soon as the backend receives version 6, we will immediately
-        // save version 7 here (simulating another user).
-        backendMock.sendSaveRequestWithToken("unused", {
-          data: [
-            {
-              version: 7,
-              timestamp: 0,
-              authorId: "authorId",
-              transactionId: "transactionId",
-              transactionGroupIndex: 0,
-              transactionGroupCount: 1,
-              stats: undefined,
-              info: "",
-              actions: [
-                {
-                  name: "mergeAgglomerate",
-                  value: {
-                    actionTracingId: "volumeTracingId",
-                    segmentId1: 5,
-                    segmentId2: 6,
-                  },
-                },
-              ],
-            },
-          ],
-        });
-      }
-    });
+    backendMock.planVersionInjection(7, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 5,
+          segmentId2: 6,
+        },
+      },
+    ]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -425,36 +428,16 @@ describe("Proofreading", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
-    backendMock.addOnSavedListener(() => {
-      if (backendMock.updateActionLog.at(-1)?.version === 6) {
-        // As soon as the backend receives version 6, we will immediately
-        // save version 7 here (simulating another user).
-        backendMock.sendSaveRequestWithToken("unused", {
-          data: [
-            {
-              version: 7,
-              timestamp: 0,
-              authorId: "authorId",
-              transactionId: "transactionId",
-              transactionGroupIndex: 0,
-              transactionGroupCount: 1,
-              stats: undefined,
-              info: "",
-              actions: [
-                {
-                  name: "splitAgglomerate",
-                  value: {
-                    actionTracingId: "volumeTracingId",
-                    segmentId1: 3,
-                    segmentId2: 2,
-                  },
-                },
-              ],
-            },
-          ],
-        });
-      }
-    });
+    backendMock.planVersionInjection(7, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 3,
+          segmentId2: 2,
+        },
+      },
+    ]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

@@ -1,5 +1,5 @@
 import type UpdatableTexture from "libs/UpdatableTexture";
-import * as THREE from "three";
+import { type PixelFormat, type PixelFormatGPU, RGBAIntegerFormat, UnsignedIntType } from "three";
 import { getRenderer } from "viewer/controller/renderer";
 import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 
@@ -30,14 +30,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   static getTextureType() {
-    return THREE.UnsignedIntType;
+    return UnsignedIntType;
   }
 
-  static getTextureFormat(): THREE.PixelFormat {
-    return THREE.RGBAIntegerFormat;
+  static getTextureFormat(): PixelFormat {
+    return RGBAIntegerFormat;
   }
 
-  static getInternalFormat(): THREE.PixelFormatGPU {
+  static getInternalFormat(): PixelFormatGPU {
     return "RGBA32UI";
   }
 

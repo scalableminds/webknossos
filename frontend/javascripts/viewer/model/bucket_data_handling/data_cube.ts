@@ -11,7 +11,7 @@ import {
 } from "libs/utils";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import * as THREE from "three";
+import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -569,7 +569,7 @@ class DataCube {
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
-    splitBoundaryMesh: THREE.Mesh | null,
+    splitBoundaryMesh: Mesh | null,
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
     wasBoundingBoxExceeded: boolean;
@@ -1074,7 +1074,7 @@ class DataCube {
 
 export default DataCube;
 
-function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
+function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
   /* Returns true if an intersection is found */
 
   const geometry = bentMesh.geometry;
@@ -1084,16 +1084,16 @@ function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointB
     geometry.computeBoundsTree();
   }
   const scale = Store.getState().dataset.dataSource.scale.factor;
-  const pointA = new THREE.Vector3(...V3.scale3(pointAVec3, scale));
-  const pointB = new THREE.Vector3(...V3.scale3(pointBVec3, scale));
+  const pointA = new ThreeVector3(...V3.scale3(pointAVec3, scale));
+  const pointB = new ThreeVector3(...V3.scale3(pointBVec3, scale));
 
   // Create a ray from A to B
-  const ray = new THREE.Ray();
+  const ray = new Ray();
   ray.origin.copy(pointA);
   ray.direction.subVectors(pointB, pointA).normalize();
 
   // Perform raycast
-  const raycaster = new THREE.Raycaster();
+  const raycaster = new Raycaster();
   raycaster.ray = ray;
   raycaster.far = pointA.distanceTo(pointB);
   raycaster.firstHitOnly = true;

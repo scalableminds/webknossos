@@ -192,5 +192,9 @@ export class AgglomerateMapping {
      */
     this.versions.push(newVersionMap);
     this.currentVersion++;
+    console.log(
+      `Committed v=${this.currentVersion} with mapping: `,
+      newVersionMap.entries().toArray(),
+    );
   }
 }

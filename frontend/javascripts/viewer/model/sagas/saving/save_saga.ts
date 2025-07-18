@@ -356,6 +356,9 @@ export function* tryToIncorporateActions(
           break;
         }
         case "splitAgglomerate": {
+          // todop: doublecheck that this is respected properly:
+          // Note that a "normal" split typically contains multiple splitAgglomerate
+          // actions (each action merely removes an edge in the graph).
           const activeMapping = yield* select(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],

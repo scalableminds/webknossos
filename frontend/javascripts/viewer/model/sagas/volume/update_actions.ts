@@ -899,6 +899,12 @@ export function splitAgglomerate(
   segmentId2: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Removes the edges between segmentId1 and segmentId2 that exist in the agglomerate graph.
+   * If the edge removal leads to an actual split of the two agglomerates,
+   * the agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   * The other agglomerate will be assigned a new id (largestAgglomerateId + 1).
+   */
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
@@ -928,6 +934,10 @@ export function mergeAgglomerate(
   segmentId2: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Merges the agglomerates that belong to segmentId1 and segmentId2.
+   * The agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   */
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;

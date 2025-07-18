@@ -26,7 +26,6 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { type SaveQueueEntry, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { tryToIncorporateActions } from "viewer/model/sagas/saving/save_saga";
 import { ColoredLogger, sleep } from "libs/utils";
 import Constants, { type Vector2 } from "viewer/constants";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -79,8 +78,14 @@ const initialMapping = new Map([
   [5, 4],
   [6, 6],
   [7, 6],
-  // [1337, 1337],
 ]);
+
+const edgesForInitialMapping: Vector2[] = [
+  [1, 2],
+  [2, 3],
+  [4, 5],
+  [6, 7],
+];
 
 const expectedMappingAfterMerge = new Map([
   [1, 1],
@@ -122,14 +127,7 @@ class BackendMock {
   updateActionLog: APIUpdateActionBatch[] = [];
   onSavedListeners: Array<() => void> = [];
   agglomerateMapping = new AgglomerateMapping(
-    [
-      // each tuple is an edge between two super voxels
-      [1, 2], // {1, 2, 3}
-      [2, 3],
-      [4, 5], // {4, 5}
-      [6, 7], // {6, 7}
-      // [1337, 1337],
-    ],
+    edgesForInitialMapping,
     1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
   );
 
@@ -141,7 +139,7 @@ class BackendMock {
 
   constructor(public overrides: BucketOverride[]) {}
 
-  addOnSavedListener = (fn: () => void) => {
+  private addOnSavedListener = (fn: () => void) => {
     // Attached listeners are called after the mock received a
     // save-request. This can be used to inject other versions (simulating
     // other users).
@@ -198,7 +196,7 @@ class BackendMock {
     return { canEdit: true, blockedByUser: null };
   };
 
-  saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
+  private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({
       version: entry.version,
       value: entry.actions.map(
@@ -366,166 +364,6 @@ describe("Proofreading", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  it("[new] should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
-    const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-        },
-      },
-    ]);
-
-    const { annotation } = Store.getState();
-    const { tracingId } = annotation.volumes[0];
-
-    const task = startSaga(function* task() {
-      yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      yield put(setActiveCellAction(1));
-
-      yield call(createEditableMapping);
-
-      // Execute the actual merge and wait for the finished mapping.
-      yield put(
-        proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
-        ),
-      );
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
-
-      yield call(() => api.tracing.save());
-
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
-        {
-          name: "mergeAgglomerate",
-          value: {
-            actionTracingId: "volumeTracingId",
-            segmentId1: 1,
-            segmentId2: 4,
-          },
-        },
-      ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
-    });
-
-    await task.toPromise();
-  }, 8000);
-
-  it("[new] should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
-    const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(7, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 2,
-        },
-      },
-    ]);
-
-    const { annotation } = Store.getState();
-    const { tracingId } = annotation.volumes[0];
-
-    const task = startSaga(function* task() {
-      yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      yield put(setActiveCellAction(1));
-
-      yield call(createEditableMapping);
-
-      // Execute the actual merge and wait for the finished mapping.
-      yield put(
-        proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
-        ),
-      );
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
-
-      yield call(() => api.tracing.save());
-
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
-        {
-          name: "mergeAgglomerate",
-          value: {
-            actionTracingId: "volumeTracingId",
-            segmentId1: 1,
-            segmentId2: 4,
-          },
-        },
-      ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
-        new Map([
-          [1, 8],
-          [2, 8],
-          [3, 1],
-          [4, 8],
-          [5, 8],
-          [6, 6],
-          [7, 6],
-        ]),
-      );
-    });
-
-    await task.toPromise();
-  }, 8000);
-
   it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api } = context;
     mockInitialBucketAndAgglomerateData(context);
@@ -689,10 +527,9 @@ describe("Proofreading", () => {
     await task.toPromise();
   }, 8000);
 
-  // todop
-  it.skip("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
-    const { api, mocks } = context;
-    mockInitialBucketAndAgglomerateData(context);
+  it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -708,30 +545,21 @@ describe("Proofreading", () => {
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 
-      // Already prepare the server's reply for mapping requests that will be sent
-      // after the split.
-      mocks.getCurrentMappingEntriesFromServer.mockReturnValue([
-        [1, 9],
-        [2, 10],
-        [3, 10],
-      ]);
-
-      yield call(tryToIncorporateActions, [
-        {
-          version: 1,
-          value: [
-            {
-              name: "splitAgglomerate",
-              value: {
-                actionTracingId: "volumeTracingId",
-                actionTimestamp: 0,
-                segmentId1: 1,
-                segmentId2: 2,
-              },
+      backendMock.injectVersion(
+        [
+          {
+            name: "splitAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 1,
+              segmentId2: 2,
             },
-          ],
-        },
-      ]);
+          },
+        ],
+        4,
+      );
+
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
       const mapping1 = yield select(
         (state) =>
@@ -743,6 +571,166 @@ describe("Proofreading", () => {
       yield call(() => api.tracing.save());
 
       expect(context.receivedDataPerSaveRequest).toEqual([]);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(7, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 5,
+          segmentId2: 6,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      yield call(createEditableMapping);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          1, // unmappedId=1 maps to 1
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mappingAfterOptimisticUpdate = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+
+      yield call(() => api.tracing.save());
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 1,
+            segmentId2: 4,
+          },
+        },
+      ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(7, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 3,
+          segmentId2: 2,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      yield call(createEditableMapping);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          1, // unmappedId=1 maps to 1
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mappingAfterOptimisticUpdate = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+
+      yield call(() => api.tracing.save());
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 1,
+            segmentId2: 4,
+          },
+        },
+      ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 8],
+          [2, 8],
+          [3, 1],
+          [4, 8],
+          [5, 8],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
     });
 
     await task.toPromise();

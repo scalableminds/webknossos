@@ -39,7 +39,7 @@ export const moveV = (deltaV: number): void => {
 export const moveW = (
   deltaW: number,
   oneSlide: boolean,
-  useDynamicSpaceDirection: boolean,
+  useDynamicSpaceDirection: boolean = false,
 ): void => {
   const state = Store.getState();
   if (is2dDataset(state.dataset)) {

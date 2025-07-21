@@ -47,6 +47,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
 
@@ -98,6 +99,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -142,6 +144,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
 
@@ -178,6 +181,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -222,6 +226,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -257,6 +262,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);

@@ -220,11 +220,18 @@ class BoundingBoxKeybindings {
   }
 }
 
-function createDelayAwareMoveHandler(multiplier: number) {
+function createDelayAwareMoveHandler(
+  multiplier: number,
+  useDynamicSpaceDirection: boolean = false,
+) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
   const fn = (timeFactor: number, first: boolean) =>
-    MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor) * multiplier, first);
+    MoveHandlers.moveW(
+      getMoveOffset(Store.getState(), timeFactor) * multiplier,
+      first,
+      useDynamicSpaceDirection,
+    );
 
   fn.customAdditionalDelayFn = () => {
     // Depending on the float fraction of the current position, we want to
@@ -251,7 +258,7 @@ function createDelayAwareMoveHandler(multiplier: number) {
     const voxelPerSecond =
       state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
 
-    if (state.userConfiguration.dynamicSpaceDirection) {
+    if (state.userConfiguration.dynamicSpaceDirection && useDynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
       direction *= state.flycam.spaceDirectionOrtho[thirdDim];
     }
@@ -441,15 +448,15 @@ class PlaneController extends React.PureComponent<Props> {
         // KeyboardJS is sensitive to ordering (complex combos first)
         "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
         "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
-        "shift + f": createDelayAwareMoveHandler(5),
-        "shift + d": createDelayAwareMoveHandler(-5),
+        "shift + f": createDelayAwareMoveHandler(5, true),
+        "shift + d": createDelayAwareMoveHandler(-5, true),
         "shift + space": createDelayAwareMoveHandler(-1),
         "ctrl + space": createDelayAwareMoveHandler(-1),
         enter: () => Store.dispatch(enterAction()),
         esc: () => Store.dispatch(escapeAction()),
         space: createDelayAwareMoveHandler(1),
-        f: createDelayAwareMoveHandler(1),
-        d: createDelayAwareMoveHandler(-1),
+        f: createDelayAwareMoveHandler(1, true),
+        d: createDelayAwareMoveHandler(-1, true),
         // Zoom in/out
         i: () => MoveHandlers.zoom(1, false),
         o: () => MoveHandlers.zoom(-1, false),

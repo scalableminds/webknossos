@@ -59,7 +59,7 @@ export default function AuthenticationModal({
       {step === "Register" ? (
         <React.Fragment>
           {registrationForm}
-          <LinkButton onClick={showLogin}>Already have an account? Login instead.</LinkButton>
+          <LinkButton onClick={showLogin}>Already have an account? Log in instead.</LinkButton>
         </React.Fragment>
       ) : (
         <React.Fragment>

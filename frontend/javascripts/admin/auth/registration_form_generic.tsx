@@ -52,7 +52,7 @@ function RegistrationFormGeneric(props: Props) {
     if (tryAutoLogin) {
       const [user, organization] = await loginUser({
         email: formValues.email,
-        password: formValues.password.password1,
+        password: formValues.password,
       });
       Store.dispatch(setActiveUserAction(user));
       Store.dispatch(setActiveOrganizationAction(organization));
@@ -60,22 +60,6 @@ function RegistrationFormGeneric(props: Props) {
 
     props.onRegistered(tryAutoLogin);
   };
-
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
-    const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
-
-    if (value && otherFieldValue) {
-      if (value !== otherFieldValue) {
-        return Promise.reject(new Error(messages["auth.registration_password_mismatch"]));
-      } else if (form.getFieldError(otherPasswordFieldKey).length > 0) {
-        // If the other password field still has errors, revalidate it.
-        form.validateFields([otherPasswordFieldKey]);
-      }
-    }
-
-    return Promise.resolve();
-  }
 
   const getHiddenFields = () => {
     const { inviteToken } = props;
@@ -118,9 +102,7 @@ function RegistrationFormGeneric(props: Props) {
     );
   };
 
-  // targetOrganizationId is not empty if the user is
-  // either creating a complete new organization OR
-  // the user is about to join an existing organization
+  // targetOrganizationId is non-empty if the user is about to join an existing organization
   const { inviteToken, targetOrganization, organizationIdToCreate, hidePrivacyStatement } = props;
   const targetOrganizationId =
     organizationIdToCreate || (targetOrganization != null ? targetOrganization.id : null) || "";
@@ -215,70 +197,31 @@ function RegistrationFormGeneric(props: Props) {
           placeholder="Email"
         />
       </FormItem>
-      <Row gutter={8}>
-        <Col span={12}>
-          <FormItem
-            hasFeedback
-            name={["password", "password1"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.registration_password_input"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value) =>
-                  checkPasswordsAreMatching(value, ["password", "password2"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Password"
+      <FormItem
+        hasFeedback
+        name="password"
+        rules={[
+          {
+            required: true,
+            message: messages["auth.registration_password_input"],
+          },
+          {
+            min: 8,
+            message: messages["auth.registration_password_length"],
+          },
+        ]}
+      >
+        <Password
+          prefix={
+            <LockOutlined
+              style={{
+                fontSize: 13,
+              }}
             />
-          </FormItem>
-        </Col>
-        <Col span={12}>
-          <FormItem
-            hasFeedback
-            name={["password", "password2"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.registration_password_confirm"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value) =>
-                  checkPasswordsAreMatching(value, ["password", "password1"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Confirm Password"
-            />
-          </FormItem>
-        </Col>
-      </Row>
+          }
+          placeholder="Password"
+        />
+      </FormItem>
       <div className="registration-form-checkboxes">
         {props.hidePrivacyStatement ? null : (
           <FormItem

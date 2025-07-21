@@ -5,7 +5,7 @@ import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";
 import messages from "messages";
-import { memo, useRef } from "react";
+import { memo } from "react";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/throttled_store";
@@ -18,21 +18,8 @@ type Props = {
   onRegistered: (isUserLoggedIn: true) => void;
 };
 
-function generateOrganizationId() {
-  let output = "";
-
-  for (let i = 0; i < 8; i++) {
-    output += Math.floor(Math.random() * 255)
-      .toString(16)
-      .padStart(2, "0");
-  }
-
-  return output;
-}
-
 function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
-  const organizationId = useRef(generateOrganizationId());
   const terms = useFetch(getTermsOfService, null, []);
 
   async function onFinish(formValues: Record<string, any>) {
@@ -41,18 +28,13 @@ function RegistrationFormWKOrg(props: Props) {
         ...formValues,
         firstName: formValues.firstName.trim(),
         lastName: formValues.lastName.trim(),
-        password: {
-          password1: formValues.password.password1,
-          password2: formValues.password.password1,
-        },
-        organization: organizationId.current,
         organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
         acceptedTermsOfService: terms?.version,
       },
     });
     const [user, organization] = await loginUser({
       email: formValues.email,
-      password: formValues.password.password1,
+      password: formValues.password,
     });
     Store.dispatch(setActiveUserAction(user));
     Store.dispatch(setActiveOrganizationAction(organization));
@@ -137,7 +119,7 @@ function RegistrationFormWKOrg(props: Props) {
       </FormItem>
       <FormItem
         hasFeedback
-        name={["password", "password1"]}
+        name="password"
         rules={[
           {
             required: true,

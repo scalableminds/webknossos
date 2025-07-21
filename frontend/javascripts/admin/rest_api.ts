@@ -1318,7 +1318,10 @@ export function updateDatasetTeams(
   });
 }
 
-export async function triggerDatasetCheck(datastoreHost: string, organizationId?: string): Promise<void> {
+export async function triggerDatasetCheck(
+  datastoreHost: string,
+  organizationId?: string,
+): Promise<void> {
   await doWithToken((token) => {
     const params = new URLSearchParams();
     params.set("token", token);

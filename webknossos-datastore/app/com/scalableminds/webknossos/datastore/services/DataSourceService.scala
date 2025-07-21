@@ -55,7 +55,7 @@ class DataSourceService @Inject()(
 
   def tick(): Fox[Unit] =
     for {
-      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
+      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0, organizationId = None)
       _ = inboxCheckVerboseCounter += 1
       _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
@@ -72,21 +72,24 @@ class DataSourceService @Inject()(
 
   }
 
-  def checkInbox(verbose: Boolean): Fox[Unit] = {
-    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
+  def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
+    val selectedOrgaLabel = organizationId.map(id => s"/$id").getOrElse("")
+    def orgaFilterFn(organizationId: String): Path => Boolean =
+      (path: Path) => path.getFileName.toString == organizationId
+    val selectedOrgaFilter: Path => Boolean = organizationId.map(id => orgaFilterFn(id)).getOrElse((_: Path) => true)
+    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir$selectedOrgaLabel)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir, silent = false) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, silent = false, filters = selectedOrgaFilter) match {
         case Full(organizationDirs) =>
+          if (verbose && organizationId.isEmpty) logEmptyDirs(organizationDirs)
+          val foundInboxSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
+          logFoundDatasources(foundInboxSources, verbose, selectedOrgaLabel)
           for {
-            _ <- Fox.successful(())
-            _ = if (verbose) logEmptyDirs(organizationDirs)
-            foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
-            _ = logFoundDatasources(foundInboxSources, verbose)
-            _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+            _ <- dataSourceRepository.updateDataSources(foundInboxSources, organizationId)
             _ <- reportRealPaths(foundInboxSources)
           } yield ()
         case e =>
-          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
           logger.error(errorMsg)
           Fox.failure(errorMsg)
       }
@@ -169,9 +172,11 @@ class DataSourceService @Inject()(
       basePath.resolve(relativePath).normalize().toAbsolutePath
     }
 
-  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
+  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource],
+                                  verbose: Boolean,
+                                  selectedOrgaLabel: String): Unit = {
     val shortForm =
-      s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
+      s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
         .count(!_.isUsable)} inactive"
     val msg = if (verbose) {
       val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.organizationId)
@@ -307,7 +312,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
+  private def scanOrganizationDirForDataSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path, silent = true) match {

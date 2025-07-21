@@ -652,11 +652,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
+                           organizationId: Option[String],
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
+    val inSelectedOrga = organizationId.map(id => q"_organization = $id").getOrElse(q"TRUE")
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"TRUE"
-      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
+      if (existingDatasetIds.isEmpty) inSelectedOrga
+      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND $inSelectedOrga"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags

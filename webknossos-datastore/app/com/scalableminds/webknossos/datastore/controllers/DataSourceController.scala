@@ -83,10 +83,13 @@ class DataSourceController @Inject()(
       }
     }
 
-  def triggerInboxCheckBlocking(): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
+  def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(
+      organizationId
+        .map(id => UserAccessRequest.administrateDataSources(id))
+        .getOrElse(UserAccessRequest.administrateDataSources)) {
       for {
-        _ <- dataSourceService.checkInbox(verbose = true)
+        _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
       } yield Ok
     }
   }

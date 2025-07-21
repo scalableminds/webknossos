@@ -770,7 +770,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield mags
 
   // TODO: Mention in docs & migration guide that postgres now needs to be at least 16+.
-  def findAllStorageRelevantMags(organizationId: String, dataStoreId: String): Fox[List[DataSourceMagRow]] =
+  def findAllStorageRelevantMags(organizationId: String,
+                                 dataStoreId: String,
+                                 datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
     for {
       storageRelevantMags <- run(q"""SELECT *
             FROM (
@@ -780,6 +782,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
               JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
               WHERE ds._organization = $organizationId
                 AND ds._dataStore = $dataStoreId
+                ${datasetIdOpt.map(datasetId => q"AND ds._id = $datasetId").getOrElse(q"")}
             ) AS ranked
             WHERE rn = 1;""".as[DataSourceMagRow])
     } yield storageRelevantMags.toList
@@ -1151,7 +1154,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   }
 
   def findAllStorageRelevantAttachments(organizationId: String,
-                                        dataStoreId: String): Fox[List[DatasetLayerAttachmentsRow]] =
+                                        dataStoreId: String,
+                                        datasetIdOpt: Option[ObjectId]): Fox[List[DatasetLayerAttachmentsRow]] =
     for {
       storageRelevantAttachments <- run(q"""SELECT *
                                             FROM (
@@ -1162,6 +1166,9 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                                               JOIN webknossos.datasets AS ds ON att._dataset = ds._id
                                               WHERE ds._organization = $organizationId
                                                 AND ds._dataStore = $dataStoreId
+                                                ${datasetIdOpt
+        .map(datasetId => q"AND ds._id = $datasetId")
+        .getOrElse(q"")}
                                             ) AS ranked
                                             WHERE rn = 1;""".as[DatasetLayerAttachmentsRow])
     } yield storageRelevantAttachments.toList

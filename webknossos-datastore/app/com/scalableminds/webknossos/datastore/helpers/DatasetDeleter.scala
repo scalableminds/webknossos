@@ -113,7 +113,6 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
     relativeTargetPath
   }
 
-  // TODOM:
   private def getPossibleMagPaths(basePath: Path, magInfo: DataSourceMagInfo): List[Path] = {
     val layerPath = basePath
       .resolve(magInfo.dataSourceId.organizationId)

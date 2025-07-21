@@ -136,15 +136,31 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     } yield s3SubPrefixes.map(_.prefix())
   }
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
+    def fetchBatch(prefixKey: String,
+                   client: S3AsyncClient,
+                   continuationToken: Option[String],
+                   alreadyMeasuredSize: Long): Fox[Long] = {
+      val builder = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefixKey).maxKeys(1000)
+      continuationToken.foreach(builder.continuationToken)
+      val request = builder.build()
+
+      for {
+        objectListing <- notFoundToFailure(client.listObjectsV2(request).asScala)
+        totalCurrentSize = objectListing.contents().asScala.map(_.size()).foldLeft(alreadyMeasuredSize)(_ + _)
+        result <- if (objectListing.isTruncated)
+          fetchBatch(Option(objectListing.nextContinuationToken()), totalCurrentSize)
+        else
+          Fox.successful(totalCurrentSize)
+      } yield result
+    }
+
     for {
       prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
-      listObjectsRequest = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefixKey).maxKeys(1000).build()
       client <- clientFox
-      objectListing: ListObjectsV2Response <- notFoundToFailure(client.listObjectsV2(listObjectsRequest).asScala)
-      // TODOM: Ensure working correctly with continuation tokens!
-      size = objectListing.contents().asScala.map(_.size()).foldLeft(0L)(_ + _)
-    } yield size
+      totalSize <- fetchBatch(prefixKey, client, None, 0)
+    } yield totalSize
+  }
 
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential

@@ -83,7 +83,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private def refreshStorageReports(organization: Organization, dataStores: List[DataStore]): Fox[Unit] =
     for {
       storageReportsByDataStore <- Fox.serialCombined(dataStores)(dataStore =>
-        refreshStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
+        getNewestStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
       _ <- organizationDAO.deleteUsedStorage(organization._id) ?~> "Failed to delete outdated used storage entries"
       allStorageReports = storageReportsByDataStore.flatten
       _ <- Fox.runIfNonEmpty(allStorageReports)(organizationDAO.upsertUsedStorage(organization._id, allStorageReports)) ?~> "Failed to upsert used storage reports into db"
@@ -91,10 +91,13 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
-  private def refreshStorageReports(dataStore: DataStore,
-                                    organization: Organization): Fox[List[ArtifactStorageReport]] =
+  private def getNewestStorageReports(dataStore: DataStore,
+                                      organization: Organization,
+                                      datasetIdOpt: Option[ObjectId] = None): Fox[List[ArtifactStorageReport]] =
     for {
-      relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id, dataStore.name)
+      relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id,
+                                                                                  dataStore.name,
+                                                                                  datasetIdOpt)
       relevantPathsAndUnparsableMags = relevantMagsForStorageReporting.map(resolvePath)
       unparsableMags = relevantPathsAndUnparsableMags.collect { case Right(mag) => mag }.distinctBy(_._dataset)
       relevantMagsWithValidPaths = relevantPathsAndUnparsableMags.collect { case Left(magWithPaths) => magWithPaths }
@@ -103,7 +106,8 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
         s"Found dataset mags with unparsable mag literals in datastore ${dataStore.name} of organization ${organization._id} with dataset ids : ${unparsableMags
           .map(_._dataset)}"))
       relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,
-                                                                                          dataStore.name)
+                                                                                          dataStore.name,
+                                                                                          datasetIdOpt)
       pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths, relevantAttachments)
       relevantAttachmentPaths = relevantAttachments.map(_.path)
       relevantPaths = relevantMagPaths ++ relevantAttachmentPaths
@@ -191,20 +195,18 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       }
     })
 
-  // TODOM!
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      /* dataStore <- datasetService.dataStoreFor(dataset)
+      dataStore <- datasetService.dataStoreFor(dataset)
       _ <- if (dataStore.reportUsedStorageEnabled) {
-        val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
         for {
           organization <- organizationDAO.findOne(dataset._organization)
-          report <- dataStoreClient.fetchStorageReport(organization._id, Some(dataset.name))
+          reports <- getNewestStorageReports(dataStore, organization, Some(dataset._id))
           _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
-          _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
+          _ <- Fox.runIfNonEmpty(reports)(organizationDAO.upsertUsedStorage(organization._id, reports)) ?~> "Failed to upsert used storage reports into db"
         } yield ()
-      } else Fox.successful(())*/
+      } else Fox.successful(())
     } yield ()
 
 }

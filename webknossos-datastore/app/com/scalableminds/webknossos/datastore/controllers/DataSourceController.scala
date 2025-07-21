@@ -352,14 +352,19 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-          // TODO: This route does not make sense right now.
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
+          updatedDataSource = request.body.copy(id = dataSource.id)
+          // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
+          // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
+          _ <- if (dataSourceService.existsOnDisk(dataSource.id.organizationId, dataSource.id.directoryName)) {
+            dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true)
+          } else
+            dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
         } yield Ok
       }
     }
 
   // Called by the frontend after the user has set datasetName / FolderId of an explored dataSource
-  // Add this data source to the WK database
+  // This route adds this data source to the WK database
   def add(organizationId: String, datasetName: String, folderId: Option[String]): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {

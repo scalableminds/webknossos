@@ -112,6 +112,7 @@ PUT           /datastores/:name/datasources/paths                               
 GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
 POST          /datastores/:name/datasources/:organizationId/:directoryName                      controllers.WKRemoteDataStoreController.registerDataSource(name: String, key: String, organizationId: String, directoryName: String, token: String)
+PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)

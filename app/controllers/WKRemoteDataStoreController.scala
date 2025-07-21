@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
@@ -305,6 +305,21 @@ class WKRemoteDataStoreController @Inject()(
             user
           )
         } yield Ok(dataset._id.toString)
+      }
+    }
+
+  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          abstractDataSource = request.body.copy(dataLayers = request.body.dataLayers.map(AbstractDataLayer.from))
+          _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
+                                                      name,
+                                                      abstractDataSource.hashCode(),
+                                                      abstractDataSource,
+                                                      isUsable = true)(GlobalAccessContext)
+        } yield Ok
       }
     }
 

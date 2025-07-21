@@ -16,14 +16,12 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.uploading.{
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
-}
+import com.scalableminds.webknossos.datastore.services.uploading.{ReserveAdditionalInformation, ReserveUploadInformation}
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -153,6 +151,12 @@ class DSRemoteWebknossosClient @Inject()(
         .postJson[DataSourceRegistrationInfo](info)
       datasetId = response.body
     } yield datasetId
+
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
+      .addQueryString("key" -> dataStoreKey)
+      .withTokenFromContext
+      .putJson(dataSource)
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")

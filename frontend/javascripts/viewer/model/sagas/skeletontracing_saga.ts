@@ -2,12 +2,15 @@ import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/re
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
+import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import * as THREE from "three";
 import {
   actionChannel,
   all,
@@ -20,7 +23,12 @@ import {
   throttle,
 } from "typed-redux-saga";
 import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
-import { TreeTypeEnum } from "viewer/constants";
+import {
+  NumberToOrthoView,
+  OrthoBaseRotations,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
@@ -55,7 +63,7 @@ import {
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
   createEdge,
   createNode,
@@ -70,14 +78,36 @@ import {
   updateTreeGroups,
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
-import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
+import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+
+function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
+  // In orthogonal view mode, this active planes default rotation is added to the flycam rotation upon node creation.
+  // To get the same flycam rotation as was active during node creation, the default rotation is calculated out from the nodes rotation.
+  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
+  const nodeRotationInReducerFormatMatrix = eulerAngleToReducerInternalMatrix(nodeRotationRadian);
+  const viewportRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+    OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
+  );
+  // Invert the rotation of the viewport to get the rotation configured during node creation.
+  const viewportRotationMatrixInverted = viewportRotationMatrix.invert();
+  const rotationWithoutViewportRotation = nodeRotationInReducerFormatMatrix.multiply(
+    viewportRotationMatrixInverted,
+  );
+  const rotationInRadian = reducerInternalMatrixToEulerAngle(rotationWithoutViewportRotation);
+  const flycamOnlyRotationInDegree = V3.round(map3(THREE.MathUtils.radToDeg, rotationInRadian));
+  return flycamOnlyRotationInDegree;
+}
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -97,16 +127,34 @@ function* centerActiveNode(action: Action): Saga<void> {
   const activeNode = getActiveNode(
     yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
+  const viewMode = yield* select((state: WebknossosState) => state.temporaryConfiguration.viewMode);
+  const userApplyRotation = yield* select(
+    (state: WebknossosState) => state.userConfiguration.applyNodeRotationOnActivation,
+  );
+  const applyRotation =
+    "suppressRotation" in action && action.suppressRotation != null
+      ? !action.suppressRotation
+      : userApplyRotation;
 
   if (activeNode != null) {
+    let nodeRotation = activeNode.rotation;
+    if (applyRotation && viewMode === "orthogonal") {
+      nodeRotation = yield* call(getNodeRotationWithoutPlaneRotation, activeNode);
+    }
     const activeNodePosition = yield* select((state: WebknossosState) =>
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
       Store.dispatch(setPositionAction(activeNodePosition));
-      Store.dispatch(setRotationAction(activeNode.rotation));
+      if (applyRotation) {
+        Store.dispatch(setRotationAction(nodeRotation));
+      }
     } else {
-      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+      api.tracing.centerPositionAnimated(
+        activeNodePosition,
+        false,
+        applyRotation ? nodeRotation : undefined,
+      );
     }
     if (activeNode.additionalCoordinates) {
       Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));

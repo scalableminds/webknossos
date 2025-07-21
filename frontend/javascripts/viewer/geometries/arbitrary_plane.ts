@@ -44,11 +44,6 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  setPosition = (x: number, y: number, z: number) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-    this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
-  };
-
   addToScene(scene: THREE.Scene) {
     _.values(this.meshes).forEach((mesh) => {
       if (mesh) {

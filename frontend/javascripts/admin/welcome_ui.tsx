@@ -7,6 +7,7 @@ import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/util
 import * as React from "react";
 import { Link } from "react-router-dom";
 import type { APIUser } from "types/api_types";
+
 type WhatsNextActionProps = {
   title: string;
   description: string;
@@ -119,4 +120,3 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
     </div>
   </div>
 );
-export default {};

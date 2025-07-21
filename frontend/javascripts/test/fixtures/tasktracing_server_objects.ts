@@ -4,6 +4,7 @@ import {
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
 } from "types/api_types";
+import { ViewModeValues } from "viewer/constants";
 
 const TRACING_ID = "skeletonTracingId-e90133de-b2db-4912-8261-8b6f84f7edab";
 export const tracing: ServerSkeletonTracing = {
@@ -88,7 +89,7 @@ export const annotation: APIAnnotation = {
       teamId: "teamId-5b1e45f9a00000a000abc2c3",
       teamName: "Connectomics department",
       settings: {
-        allowedModes: ["orthogonal", "oblique", "flight"],
+        allowedModes: ViewModeValues,
         branchPointsAllowed: true,
         somaClickingAllowed: true,
         volumeInterpolationAllowed: false,
@@ -146,7 +147,7 @@ export const annotation: APIAnnotation = {
   },
   visibility: "Internal",
   settings: {
-    allowedModes: ["orthogonal", "oblique", "flight"],
+    allowedModes: ViewModeValues,
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,

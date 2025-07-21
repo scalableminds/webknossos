@@ -111,7 +111,10 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { addLayerToAnnotation, deleteAnnotationLayer } from "viewer/model/sagas/update_actions";
+import {
+  addLayerToAnnotation,
+  deleteAnnotationLayer,
+} from "viewer/model/sagas/volume/update_actions";
 import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,
@@ -1298,6 +1301,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={userConfiguration.centerNewNode}
               onChange={this.onChangeUser.centerNewNode}
               tooltipText="When disabled, the active node will not be centered after node creation/deletion."
+            />
+            <SwitchSetting
+              label={settings.applyNodeRotationOnActivation}
+              value={userConfiguration.applyNodeRotationOnActivation}
+              onChange={this.onChangeUser.applyNodeRotationOnActivation}
+              tooltipText="If enabled, the rotation that was active when a node was created will be set when activating the node."
             />
             <SwitchSetting
               label={settings.highlightCommentedNodes}

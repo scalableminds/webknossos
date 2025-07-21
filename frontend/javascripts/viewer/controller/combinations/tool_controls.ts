@@ -43,7 +43,7 @@ import { finishedResizingUserBoundingBoxAction } from "viewer/model/actions/anno
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
-  proofreadMerge,
+  proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   hideMeasurementTooltipAction,
@@ -293,7 +293,7 @@ export class SkeletonToolController {
 
           if (plane) {
             const globalPosition = calculateGlobalPos(Store.getState(), pos);
-            api.tracing.createNode(globalPosition, { center: false });
+            api.tracing.createNode(globalPosition.rounded, { center: false });
           }
         } else {
           if (
@@ -760,7 +760,7 @@ export class QuickSelectToolController {
         const [h, s, l] = getSegmentColorAsHSLA(state, volumeTracing.activeCellId);
         const activeCellColor = new THREE.Color().setHSL(h, s, l);
         quickSelectGeometry.setColor(activeCellColor);
-        startPos = V3.floor(calculateGlobalPos(state, pos));
+        startPos = calculateGlobalPos(state, pos).rounded;
         currentPos = startPos;
         isDragging = true;
       },
@@ -794,7 +794,7 @@ export class QuickSelectToolController {
         ) {
           return;
         }
-        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+        const newCurrentPos = calculateGlobalPos(Store.getState(), pos).rounded;
         if (event.shiftKey) {
           // If shift is held, the rectangle is resized on topLeft and bottomRight
           // so that the center is constant.
@@ -813,7 +813,7 @@ export class QuickSelectToolController {
       },
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         const state = Store.getState();
-        const clickedPos = V3.floor(calculateGlobalPos(state, pos));
+        const clickedPos = calculateGlobalPos(state, pos).rounded;
         isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
@@ -894,7 +894,7 @@ export class LineMeasurementToolController {
         return;
       }
       const state = Store.getState();
-      const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+      const newPos = calculateGlobalPos(state, pos, this.initialPlane).floating;
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
       Store.dispatch(setLastMeasuredPositionAction(newPos));
     };
@@ -936,7 +936,7 @@ export class LineMeasurementToolController {
       }
       // Set a new measurement point.
       const state = Store.getState();
-      const position = V3.floor(calculateGlobalPos(state, pos, plane));
+      const position = calculateGlobalPos(state, pos, plane).floating;
       if (!this.isMeasuring) {
         this.initialPlane = plane;
         lineMeasurementGeometry.setStartPoint(position, plane);
@@ -1014,7 +1014,7 @@ export class AreaMeasurementToolController {
           return;
         }
         const state = Store.getState();
-        const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+        const position = calculateGlobalPos(state, pos, this.initialPlane).floating;
         areaMeasurementGeometry.addEdgePoint(position);
         Store.dispatch(setLastMeasuredPositionAction(position));
       },
@@ -1079,10 +1079,10 @@ export class ProofreadToolController {
     }
 
     const state = Store.getState();
-    const globalPosition = calculateGlobalPos(state, pos);
+    const globalPosition = calculateGlobalPos(state, pos).rounded;
 
     if (event.shiftKey) {
-      Store.dispatch(proofreadMerge(globalPosition));
+      Store.dispatch(proofreadMergeAction(globalPosition));
     } else if (event.ctrlKey || event.metaKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {

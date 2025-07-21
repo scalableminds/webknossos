@@ -6,7 +6,7 @@ import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = {

@@ -19,7 +19,6 @@ const { Password } = Input;
 type Props = {
   onRegistered: (arg0: boolean) => void;
   confirmLabel?: string;
-  organizationIdToCreate?: string;
   targetOrganization?: APIOrganization;
   inviteToken?: string | null | undefined;
   hidePrivacyStatement?: boolean;
@@ -33,7 +32,7 @@ function RegistrationFormGeneric(props: Props) {
 
   const onFinish = async (formValues: Record<string, any>) => {
     await Request.sendJSONReceiveJSON(
-      props.organizationIdToCreate != null
+      props.targetOrganization == null
         ? "/api/auth/createOrganizationWithAdmin"
         : "/api/auth/register",
       {
@@ -84,14 +83,6 @@ function RegistrationFormGeneric(props: Props) {
         >
           <Input type="text" />
         </FormItem>
-        <FormItem
-          style={{
-            display: "none",
-          }}
-          name="organizationName"
-        >
-          <Input type="text" />
-        </FormItem>
       </React.Fragment>
     );
     return (
@@ -103,12 +94,10 @@ function RegistrationFormGeneric(props: Props) {
   };
 
   // targetOrganizationId is non-empty if the user is about to join an existing organization
-  const { inviteToken, targetOrganization, organizationIdToCreate, hidePrivacyStatement } = props;
-  const targetOrganizationId =
-    organizationIdToCreate || (targetOrganization != null ? targetOrganization.id : null) || "";
+  const { inviteToken, targetOrganization, hidePrivacyStatement } = props;
+  const targetOrganizationId = (targetOrganization != null ? targetOrganization.id : null) || "";
   const defaultValues: Record<string, any> = {
     organization: targetOrganizationId,
-    organizationName: targetOrganizationId,
   };
 
   if (inviteToken) {

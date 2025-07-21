@@ -185,7 +185,7 @@ function AccountPasswordView() {
         </Col>
       </Row>
 
-      <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
+      <SettingsTitle title="Passkeys" description="Log in passwordless with passkeys" />
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {passKeyList.map((item) => (
           <Col span={12} key={item.title}>

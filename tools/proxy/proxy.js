@@ -35,11 +35,11 @@ const processes = {
       shell: true,
     },
   ),
-  // esbuild_dev: spawnIfNotSpecified("noWebpackDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
-  //   cwd: ROOT,
-  //   env: makeEnv(PORT + 2, HOST),
-  //   shell: true,
-  // }),
+  esbuild_dev: spawnIfNotSpecified("noWebpackDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
+    cwd: ROOT,
+    env: makeEnv(PORT + 2, HOST),
+    shell: true,
+  }),
   fossildDB: spawnIfNotSpecified(
     "noFossilDB",
     `${ROOT}/fossildb/run.sh > ${ROOT}/fossildb/logs`,

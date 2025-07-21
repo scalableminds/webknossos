@@ -31,7 +31,7 @@ trait WKWLayer extends DataLayerWithMagLocators {
 
   def wkwResolutions: List[WKWResolution]
 
-  def defaultCubeSize = 32
+  def defaultCubeSize = 1024
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 
@@ -52,7 +52,8 @@ case class WKWDataLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
 ) extends WKWLayer {
-  override def wkwResolutions: List[WKWResolution] = mags.map(mag => WKWResolution(mag.mag, defaultCubeSize))
+  override def wkwResolutions: List[WKWResolution] =
+    mags.map(mag => WKWResolution(mag.mag, defaultCubeSize, mag.path, mag.credentialId))
 }
 
 object WKWDataLayer {
@@ -110,7 +111,8 @@ case class WKWSegmentationLayer(
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
     with WKWLayer {
-  override def wkwResolutions: List[WKWResolution] = mags.map(mag => WKWResolution(mag.mag, defaultCubeSize))
+  override def wkwResolutions: List[WKWResolution] =
+    mags.map(mag => WKWResolution(mag.mag, defaultCubeSize, mag.path, mag.credentialId))
 }
 
 object WKWSegmentationLayer {

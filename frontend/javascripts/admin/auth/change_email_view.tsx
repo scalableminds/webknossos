@@ -60,6 +60,14 @@ function ChangeEmailView() {
     return Promise.resolve();
   }
 
+  function checkEmailIsDifferent(value: string) {
+    const currentEmail = activeUser?.email;
+    if (value != null && value === currentEmail) {
+      return Promise.reject(new Error("New email address must be different from the current one"));
+    }
+    return Promise.resolve();
+  }
+
   return (
     <Row
       justify="center"
@@ -114,6 +122,9 @@ function ChangeEmailView() {
               {
                 validator: (_, value: string) =>
                   checkEmailsAreMatching(value, [CONFIRM_NEW_EMAIL_FIELD_KEY]),
+              },
+              {
+                validator: (_, value: string) => checkEmailIsDifferent(value),
               },
             ]}
           >

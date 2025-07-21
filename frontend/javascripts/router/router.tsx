@@ -365,7 +365,6 @@ const routes = createRoutesFromElements(
     <Route path="/auth/token" element={<Navigate to="/account/token" />} />
     {/* Backwards compatibility for old password change URLs */}
     <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
-    <Route path="/auth/changeEmail" element={<ChangeEmailView />} />
     <Route path="/login" element={<Navigate to="/auth/login" />} />
 
     <Route path="/invite/:token" element={<AcceptInviteView />} />
@@ -382,6 +381,14 @@ const routes = createRoutesFromElements(
 
     <Route path="/auth/resetPassword" element={<StartResetPasswordView />} />
     <Route path="/auth/finishResetPassword" element={<FinishResetPasswordView />} />
+    <Route
+      path="/auth/changeEmail"
+      element={
+        <SecuredRoute>
+          <ChangeEmailView />
+        </SecuredRoute>
+      }
+    />
     {/* legacy view mode route */}
     <Route
       path="/datasets/:organizationId/:datasetName/view"

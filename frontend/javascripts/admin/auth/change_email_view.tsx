@@ -5,6 +5,8 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
+
+import { useNavigate } from "react-router-dom";
 import { handleResendVerificationEmail } from "./verify_email_view";
 
 const FormItem = Form.Item;
@@ -16,6 +18,7 @@ const PASSWORD_FIELD_KEY = "password";
 function ChangeEmailView() {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
+  useNavigate();
 
   async function changeEmail(newEmail: string, password: string) {
     const newUser = Object.assign({}, activeUser, {

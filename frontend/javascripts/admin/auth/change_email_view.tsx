@@ -3,7 +3,6 @@ import { logoutUser, updateUser } from "admin/rest_api";
 import { Alert, Button, Col, Form, Input, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { handleResendVerificationEmail } from "./verify_email_view";
@@ -172,4 +171,4 @@ function ChangeEmailView() {
   );
 }
 
-export default withRouter<RouteComponentProps, any>(ChangeEmailView);
+export default ChangeEmailView;

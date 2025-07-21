@@ -79,7 +79,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     // Using virtual datasets, we should also be able to compose datasets using non-file paths from different data
     // stores, however, the data store is only stored for each data set and not per mag.
     for {
-      _ <- Fox.successful(())
+      _ <- Fox.fromBool(composeRequest.layers.nonEmpty) ?~> "Cannot compose dataset with no layers"
       datasetIds = composeRequest.layers.map(_.datasetId).distinct
       datasetIdsValidated <- Fox.serialCombined(datasetIds.toList)(ObjectId.fromString(_)) ?~> "Invalid dataset ID"
       datasets <- Fox.serialCombined(datasetIdsValidated)(datasetDAO.findOne(_))

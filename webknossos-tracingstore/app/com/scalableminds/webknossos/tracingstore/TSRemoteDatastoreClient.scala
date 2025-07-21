@@ -158,6 +158,6 @@ class TSRemoteDatastoreClient @Inject()(
     } yield s"$datastoreUri/data/datasets/${remoteLayer.datasetId}/layers/${remoteLayer.layerName}"
 
   private def dataStoreUriWithCache(datasetId: String): Fox[String] =
-    dataStoreUriCache.getOrLoad(datasetId, keyTuple => remoteWebknossosClient.getDataStoreUriForDataSource(datasetId))
+    dataStoreUriCache.getOrLoad(datasetId, keyTuple => remoteWebknossosClient.getDataStoreUriForDataset(datasetId))
 
 }

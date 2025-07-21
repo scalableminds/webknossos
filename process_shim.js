@@ -2,6 +2,10 @@
 // This file provides the process global that some modules expect
 import process from 'process/browser';
 
+if (typeof global === 'undefined') {
+  window.global = window;
+}
+
 // Make it available globally
 if (typeof globalThis !== 'undefined') {
   globalThis.process = process;
@@ -10,6 +14,7 @@ if (typeof globalThis !== 'undefined') {
 } else if (typeof global !== 'undefined') {
   global.process = process;
 }
+
 
 // Also provide a fallback for when process is accessed directly
 export { process };

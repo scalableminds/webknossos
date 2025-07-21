@@ -48,14 +48,14 @@ const workerPlugin = {
     // Handle the virtual worker URL modules
     build.onLoad({ filter: /.*/, namespace: 'worker-url' }, (args) => {
       const workerName = path.basename(args.path, '.worker.ts');
-      const workerUrl = `/assets/bundle/${workerName}.worker.js`;
+      const workerUrl = `/assets/bundle/${workerName}.js`;
       
       return {
         contents: `export default "${workerUrl}";`,
         loader: 'js',
       };
     });
-    
+
     // Build all worker bundles at the end
     build.onEnd(async (result) => {
       if (result.errors.length > 0) return;

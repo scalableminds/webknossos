@@ -47,7 +47,7 @@ type UseCreateWorkerToUseMe<T> = {
   readonly _wrapped: T;
 };
 export function createWorker<T extends (...args: any) => any>(
-  WorkerClass: UseCreateWorkerToUseMe<T>,
+  workerUrl: string,
 ): (...params: Parameters<T>) => Promise<ReturnType<T>> {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
@@ -58,7 +58,7 @@ export function createWorker<T extends (...args: any) => any>(
 
   return wrap(
     // @ts-ignore
-    new WorkerClass(),
+    new Worker(workerUrl),
   );
 }
 export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {

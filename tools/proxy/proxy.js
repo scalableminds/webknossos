@@ -35,11 +35,11 @@ const processes = {
       shell: true,
     },
   ),
-  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
-    cwd: ROOT,
-    env: makeEnv(PORT + 2, HOST),
-    shell: true,
-  }),
+  // esbuild_dev: spawnIfNotSpecified("noWebpackDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
+  //   cwd: ROOT,
+  //   env: makeEnv(PORT + 2, HOST),
+  //   shell: true,
+  // }),
   fossildDB: spawnIfNotSpecified(
     "noFossilDB",
     `${ROOT}/fossildb/run.sh > ${ROOT}/fossildb/logs`,
@@ -125,6 +125,12 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
+  const originalUrl = req.url;
+  const strippedUrl = originalUrl.replace(/^\/assets\/bundle/, '') || '/';
+
+  console.log(`[Proxy] → esbuild: ${originalUrl} → ${strippedUrl}`);
+
+  req.url = strippedUrl;
   proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 

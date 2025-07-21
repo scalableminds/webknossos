@@ -339,10 +339,6 @@ function SimpleDatasetForm({
 }
 
 function getMags(layer: DataLayer) {
-  if ("wkwResolutions" in layer) {
-    return layer.wkwResolutions.map((res) => res.resolution);
-  }
-
   return layer.mags.map((res) => res.mag);
 }
 

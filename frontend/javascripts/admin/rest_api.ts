@@ -1328,7 +1328,7 @@ export async function triggerDatasetCheck(
     if (organizationId) {
       params.set("organizationId", organizationId);
     }
-    Request.triggerRequest(`/data/triggers/checkInboxBlocking?${params}`, {
+    return Request.triggerRequest(`/data/triggers/checkInboxBlocking?${params}`, {
       host: datastoreHost,
       method: "POST",
     });

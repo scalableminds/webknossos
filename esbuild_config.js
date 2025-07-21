@@ -3,18 +3,113 @@ const path = require('node:path');
 const fs = require('node:fs');
 const protobuf = require('protobufjs');
 
+const srcPath = path.resolve(__dirname, 'frontend/javascripts/');
+const outputPath  = path.resolve(__dirname, 'public/bundle/');
+const protoPath = path.join(__dirname, 'webknossos-datastore/proto');
+
+const target = [
+  'chrome90',
+  'firefox88',
+  'edge90',
+  'safari14',
+  'ios14',
+]
 
 // Community plugins
 const { lessLoader } = require('esbuild-plugin-less');
 const copyPlugin = require('esbuild-plugin-copy').default;
-const workerPlugin = require('@chialab/esbuild-plugin-worker').default;
+// const workerPlugin = require('@chialab/esbuild-plugin-worker').default;
+const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
+// const metaUrlPlugin = require("@chialab/esbuild-plugin-meta-url").default
+
+
+// Custom worker plugin that creates separate bundles for .worker.ts files
+const workerPlugin = {
+  name: 'worker',
+  setup(build) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const workerEntries = new Map();
+    
+    // Collect all worker files during the resolve phase
+    build.onResolve({ filter: /\.worker$/ }, (args) => {
+      const workerPath = path.resolve(srcPath, args.path + ".ts");
+      const workerName = path.basename(args.path, '.worker.ts');
+      const workerOutputPath = `${workerName}.js`;
+      
+      workerEntries.set(workerPath, workerOutputPath);
+      
+      // Return a virtual module that exports the worker URL
+      return {
+        path: args.path,
+        namespace: 'worker-url',
+      };
+    });
+    
+    // Handle the virtual worker URL modules
+    build.onLoad({ filter: /.*/, namespace: 'worker-url' }, (args) => {
+      const workerName = path.basename(args.path, '.worker.ts');
+      const workerUrl = `/assets/bundle/${workerName}.worker.js`;
+      
+      return {
+        contents: `export default "${workerUrl}";`,
+        loader: 'js',
+      };
+    });
+    
+    // Build all worker bundles at the end
+    build.onEnd(async (result) => {
+      if (result.errors.length > 0) return;
+      
+      for (const [workerPath, workerOutputPath] of workerEntries) {
+        try {
+          await esbuild.build({
+            entryPoints: [workerPath],
+            bundle: true,
+            format: 'iife',
+            target: target,
+            outfile: path.join(outputPath, workerOutputPath),
+            minify: isProduction,
+            sourcemap: isProduction ? 'external' : 'inline',
+            define: {
+              'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+              'global': 'globalThis',
+            },
+            alias: {
+              react: path.resolve('./node_modules/react'),
+              three: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
+              url: require.resolve("url/"),
+            },
+            external: [], // Bundle everything for workers
+            // Don't inject process-shim in workers
+            inject: [],
+            resolveExtensions: ['.ts', '.tsx', '.js', '.json'],
+            plugins: [
+              polyfillNode(),
+              lessLoader({
+                javascriptEnabled: true,
+              }),
+            ],
+            loader: {'.wasm': 'file'}
+          });
+          
+          console.log(`✓ Built worker: ${workerOutputPath}`);
+        } catch (error) {
+          console.error(`✗ Failed to build worker ${workerOutputPath}:`, error.message);
+          result.errors.push({
+            text: `Worker build failed: ${error.message}`,
+            location: { file: workerPath },
+          });
+        }
+      }
+    });
+  },
+};
 
 // Custom plugin for .proto files (keeping this since it's very specific to your setup)
-const protoPath = path.join(__dirname, 'webknossos-datastore/proto');
 const protoPlugin = {
   name: 'proto',
   setup(build) {
-    const protoRoot = path.resolve(__dirname, 'webknossos-datastore/proto');
+    const protoRoot = protoPath
 
     // Handle .proto import resolution
     build.onResolve({ filter: /\.proto$/ }, args => {
@@ -64,16 +159,7 @@ const protoPlugin = {
 // Define build function
 async function build(env = {}) {
   const isProduction = env.production || process.env.NODE_ENV === 'production';
-  const srcPath = path.resolve(__dirname, 'frontend/javascripts/');
   
-  
-  const target = [
-    'chrome90',
-    'firefox88',
-    'edge90',
-    'safari14',
-    'ios14',
-  ]
 
   const buildOptions = {
     entryPoints: {
@@ -81,7 +167,7 @@ async function build(env = {}) {
       // proto: protoPath
     },
     bundle: true,
-    outdir: 'public/bundle',
+    outdir: outputPath,
     format: 'esm',
     target: target,
     platform: 'browser',
@@ -94,6 +180,7 @@ async function build(env = {}) {
       'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
       'process.env.BABEL_ENV': JSON.stringify(process.env.BABEL_ENV || 'development'),
       'process.browser': 'true',
+      "global": "global"
     },
     inject: [path.resolve(__dirname, 'process_shim.js')], // We'll create this file
     loader: {
@@ -104,14 +191,16 @@ async function build(env = {}) {
       '.svg': 'file',
       '.png': 'file',
       '.jpg': 'file',
+      '.wasm': 'file',
     },
-    resolveExtensions: ['.ts', '.tsx', '.js', '.json', ".proto"],
+    resolveExtensions: ['.ts', '.tsx', '.js', '.json', ".proto", ".wasm"],
     alias: {
       react: path.resolve('./node_modules/react'),
       three: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
       url: require.resolve("url/"),
     },
     plugins: [
+      polyfillNode(),
       protoPlugin,
       lessLoader({
         javascriptEnabled: true,
@@ -125,30 +214,9 @@ async function build(env = {}) {
           },
         ],
       }),
-      workerPlugin({
-        // This creates separate worker bundles with their own names
-        // Workers will be output as separate .js files
-        // The main bundle will get URLs to these worker files
-        target: target,
-        format: 'iife', // Workers need to be IIFE format
-        minify: isProduction,
-        // Configure worker build options
-        buildOptions: {
-          // Don't inject process-shim in workers, provide fallbacks instead
-          inject: [],
-          define: {
-            'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-            'process.browser': 'true',
-            'global': 'globalThis',
-          },
-          // Provide proper fallbacks for Node.js modules in workers
-          alias: {
-            process: 'process/browser',
-            
-          },
-        }}),
+      workerPlugin,
     ],
-    external: ["/assets/images/*", 'fs', 'path', 'util', 'module', "*.wasm" 
+    external: ["/assets/images/*", 'fs', 'path', 'util', 'module', 
   ], // Add any external dependencies here if needed
     publicPath: '/assets/bundle/',
     metafile: true, // Generate metadata for analysis

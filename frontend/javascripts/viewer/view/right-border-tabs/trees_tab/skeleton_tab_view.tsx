@@ -799,6 +799,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         this.setState({
           selectedTreeIds: [this.props.skeletonTracing.activeTreeId],
         });
+      } else {
+        this.setState({
+          selectedTreeIds: [],
+        });
       }
     }
   }

@@ -98,12 +98,14 @@ function TreeHierarchyView(props: Props) {
 
   useEffect(() => {
     // scroll to active tree if it changes
-    if (treeRef.current && activeTreeId) {
+    if (activeTreeId) {
       const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, activeTreeId);
 
       // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
       setTimeout(() => {
-        if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
+        if (treeRef.current) {
+          treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
+        }
       }, 50);
 
       // Make sure to select the active tree (for highlighting etc)

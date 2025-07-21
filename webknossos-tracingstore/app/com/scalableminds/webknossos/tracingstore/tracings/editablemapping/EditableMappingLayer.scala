@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   DataFormat,
   DataLayer,
-  DataLayerLike,
   DataSourceId,
   DatasetLayerAttachments,
   ElementClass,
@@ -112,6 +111,4 @@ case class EditableMappingLayer(name: String, // set to tracing id
   def version: Long = tracing.version
 
   def tracingId: String = name
-
-  override def asAbstractLayer: DataLayerLike = ???
 }

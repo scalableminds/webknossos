@@ -128,7 +128,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
         for {
           annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
           dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFound"
-        } yield Ok(dataset._id.toString)
+        } yield Ok(Json.toJson(dataset._id.toString))
       }
     }
 

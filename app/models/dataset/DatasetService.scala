@@ -115,7 +115,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(_.asAbstractLayer))
+      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from))
       dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)

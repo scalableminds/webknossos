@@ -134,6 +134,4 @@ case class VolumeTracingLayer(
 
   lazy val expectedUncompressedBucketSize: Int =
     ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
-
-  override def asAbstractLayer: DataLayerLike = ???
 }

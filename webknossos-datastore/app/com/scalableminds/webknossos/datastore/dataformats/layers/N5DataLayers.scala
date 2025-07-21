@@ -37,24 +37,7 @@ case class N5DataLayer(
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
-) extends N5Layer {
-  override def asAbstractLayer: DataLayerLike =
-    AbstractDataLayer(
-      name,
-      category,
-      boundingBox,
-      resolutions,
-      elementClass,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      Some(mags),
-      numChannels,
-      Some(dataFormat)
-    )
-}
+) extends N5Layer
 
 object N5DataLayer {
   implicit val jsonFormat: OFormat[N5DataLayer] = Json.format[N5DataLayer]
@@ -74,26 +57,7 @@ case class N5SegmentationLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
 ) extends SegmentationLayer
-    with N5Layer {
-  override def asAbstractLayer: DataLayerLike =
-    AbstractSegmentationLayer(
-      name,
-      category,
-      boundingBox,
-      resolutions,
-      elementClass,
-      largestSegmentId,
-      mappings,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      Some(mags),
-      numChannels,
-      Some(dataFormat)
-    )
-}
+    with N5Layer
 
 object N5SegmentationLayer {
   implicit val jsonFormat: OFormat[N5SegmentationLayer] = Json.format[N5SegmentationLayer]

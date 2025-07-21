@@ -52,23 +52,6 @@ case class WKWDataLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
 ) extends WKWLayer {
-  override def asAbstractLayer: DataLayerLike =
-    AbstractDataLayer(
-      name,
-      category,
-      boundingBox,
-      resolutions,
-      elementClass,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      if (mags.isEmpty) None else Some(mags),
-      None,
-      Some(dataFormat)
-    )
-
   override def wkwResolutions: List[WKWResolution] = mags.map(mag => WKWResolution(mag.mag, defaultCubeSize))
 }
 
@@ -127,25 +110,6 @@ case class WKWSegmentationLayer(
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
     with WKWLayer {
-  def asAbstractLayer: AbstractSegmentationLayer =
-    AbstractSegmentationLayer(
-      name,
-      Category.segmentation,
-      boundingBox,
-      resolutions,
-      elementClass,
-      largestSegmentId,
-      mappings,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      if (mags.isEmpty) None else Some(mags),
-      None,
-      Some(dataFormat)
-    )
-
   override def wkwResolutions: List[WKWResolution] = mags.map(mag => WKWResolution(mag.mag, defaultCubeSize))
 }
 

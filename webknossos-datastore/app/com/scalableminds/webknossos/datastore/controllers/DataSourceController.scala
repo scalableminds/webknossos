@@ -245,9 +245,14 @@ class DataSourceController @Inject()(
       datasetId: ObjectId,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContextForSyncBlock(UserAccessRequest.readDataset(datasetId)) {
-      addNoCacheHeaderFallback( // TODO
-        Ok(Json.toJson(dataSourceService.exploreMappings(???, ???, dataLayerName))))
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      for {
+        dataSource <- datasetCache.getById(datasetId)
+        dataSourceId = dataSource.id // We would ideally want to use datasetId here as well, but mappings are not accessed by datasetId yet.
+        exploredMappings = dataSourceService.exploreMappings(dataSourceId.organizationId,
+                                                             dataSourceId.directoryName,
+                                                             dataLayerName)
+      } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
     }
   }
 

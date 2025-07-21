@@ -38,24 +38,7 @@ case class Zarr3DataLayer(
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None
-) extends Zarr3Layer {
-  override def asAbstractLayer: DataLayerLike =
-    AbstractDataLayer(
-      name,
-      category,
-      boundingBox,
-      resolutions,
-      elementClass,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      Some(mags),
-      numChannels,
-      Some(dataFormat)
-    )
-}
+) extends Zarr3Layer
 
 object Zarr3DataLayer {
   implicit val jsonFormat: OFormat[Zarr3DataLayer] = Json.format[Zarr3DataLayer]
@@ -75,26 +58,7 @@ case class Zarr3SegmentationLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
-    with Zarr3Layer {
-  override def asAbstractLayer: DataLayerLike =
-    AbstractSegmentationLayer(
-      name,
-      category,
-      boundingBox,
-      resolutions,
-      elementClass,
-      largestSegmentId,
-      mappings,
-      defaultViewConfiguration,
-      adminViewConfiguration,
-      coordinateTransformations,
-      additionalAxes,
-      attachments,
-      Some(mags),
-      numChannels,
-      Some(dataFormat)
-    )
-}
+    with Zarr3Layer
 
 object Zarr3SegmentationLayer {
   implicit val jsonFormat: OFormat[Zarr3SegmentationLayer] = Json.format[Zarr3SegmentationLayer]

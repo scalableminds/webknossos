@@ -1,7 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { getExistingExperienceDomains } from "admin/rest_api";
 import { Select, Tooltip } from "antd";
-import * as React from "react";
+import type React from "react";
+import { useState } from "react";
 import type { ExperienceDomainList } from "types/api_types";
+
 type Props = {
   value?: string | Array<string>;
   width: number;
@@ -10,93 +13,70 @@ type Props = {
   disabled: boolean;
   onSelect?: (arg0: string) => void;
   onChange?: () => void;
-  allowCreation: boolean;
-  alreadyUsedDomains: ExperienceDomainList;
-};
-type State = {
-  domains: ExperienceDomainList;
-  currentlyEnteredDomain: string;
+  allowCreation?: boolean;
+  alreadyUsedDomains?: ExperienceDomainList;
 };
 
-class SelectExperienceDomain extends React.PureComponent<Props, State> {
-  static defaultProps = {
-    alreadyUsedDomains: [],
-    allowCreation: false,
+const SelectExperienceDomain: React.FC<Props> = ({
+  value,
+  notFoundContent,
+  width,
+  disabled,
+  placeholder,
+  onSelect,
+  onChange,
+  allowCreation = false,
+  alreadyUsedDomains = [],
+}) => {
+  const { data: domains = [] } = useQuery({
+    queryKey: ["experienceDomains"],
+    queryFn: getExistingExperienceDomains,
+  });
+  const [currentlyEnteredDomain, setCurrentlyEnteredDomain] = useState("");
+
+  const getUnusedDomains = (): ExperienceDomainList => {
+    return domains.filter((domain) => !alreadyUsedDomains.includes(domain));
   };
 
-  state = {
-    domains: [],
-    currentlyEnteredDomain: "",
+  const onSearch = (domain: string) => {
+    setCurrentlyEnteredDomain(domain);
   };
 
-  componentDidMount() {
-    this.fetchData();
+  let options = getUnusedDomains();
+
+  if (
+    allowCreation &&
+    !options.includes(currentlyEnteredDomain) &&
+    currentlyEnteredDomain.trim() !== ""
+  ) {
+    options = [...options, currentlyEnteredDomain];
   }
 
-  async fetchData() {
-    this.setState({
-      domains: await getExistingExperienceDomains(),
-    });
-  }
-
-  getUnusedDomains(): ExperienceDomainList {
-    return this.state.domains.filter((domain) => !this.props.alreadyUsedDomains.includes(domain));
-  }
-
-  onSearch = (domain: string) => {
-    this.setState({
-      currentlyEnteredDomain: domain,
-    });
-  };
-
-  render() {
-    const {
-      value,
-      notFoundContent,
-      width,
-      disabled,
-      placeholder,
-      onSelect,
-      onChange,
-      allowCreation,
-    } = this.props;
-    const { currentlyEnteredDomain } = this.state;
-    let options = this.getUnusedDomains();
-
-    if (
-      allowCreation &&
-      !options.includes(currentlyEnteredDomain) &&
-      currentlyEnteredDomain.trim() !== ""
-    ) {
-      options = [...options, currentlyEnteredDomain];
-    }
-
-    return (
-      <Tooltip
-        placement="top"
-        title="Select an existing experience domain or create a new one by typing its name in this input field."
+  return (
+    <Tooltip
+      placement="top"
+      title="Select an existing experience domain or create a new one by typing its name in this input field."
+    >
+      <Select
+        showSearch
+        value={value}
+        optionFilterProp="children"
+        notFoundContent={notFoundContent}
+        style={{
+          width: `${width}%`,
+        }}
+        disabled={disabled}
+        placeholder={placeholder}
+        onSelect={onSelect}
+        onChange={onChange}
+        onSearch={onSearch}
       >
-        <Select
-          showSearch
-          value={value}
-          optionFilterProp="children"
-          notFoundContent={notFoundContent}
-          style={{
-            width: `${width}%`,
-          }}
-          disabled={disabled}
-          placeholder={placeholder}
-          onSelect={onSelect}
-          onChange={onChange}
-          onSearch={this.onSearch}
-        >
-          {options.map((domain) => (
-            <Select.Option key={domain}>{domain}</Select.Option>
-          ))}
-        </Select>
-      </Tooltip>
-    );
-  }
-}
+        {options.map((domain) => (
+          <Select.Option key={domain}>{domain}</Select.Option>
+        ))}
+      </Select>
+    </Tooltip>
+  );
+};
 
 export default SelectExperienceDomain;

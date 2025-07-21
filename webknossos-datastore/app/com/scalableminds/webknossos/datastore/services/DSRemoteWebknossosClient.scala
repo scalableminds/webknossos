@@ -24,7 +24,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json, OFormat}
-import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

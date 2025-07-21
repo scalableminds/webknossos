@@ -289,10 +289,16 @@ function TreeHierarchyView(props: Props) {
     }, 300);
   }, [activeTreeId]);
 
-  useEffect(
-    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
-    [selectedKeys[0]],
-  );
+  // Scroll to the active key after the component has been rendered.
+  // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
+  setTimeout(() => {
+    if (activeTreeId && treeRef.current) {
+      treeRef.current.scrollTo({
+        key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
+        align: "auto",
+      });
+    }
+  }, 900);
 
   return (
     <>

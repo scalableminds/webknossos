@@ -58,6 +58,7 @@ export type Params = {
   >;
   magnificationsCount: number;
   voxelSizeFactor: Vector3;
+  voxelSizeFactorInverted: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
@@ -69,6 +70,8 @@ uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
+uniform bool isFlycamRotated;
+uniform mat4 inverseFlycamRotationMatrix;
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -131,7 +134,7 @@ uniform float alpha;
 uniform bool renderBucketIndices;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
-uniform vec3 globalPosition;
+uniform vec3 positionOffset;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform bool useBilinearFiltering;
@@ -150,6 +153,7 @@ uniform uint hoveredUnmappedSegmentIdHigh;
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
 const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
+const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInverted) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
@@ -478,21 +482,26 @@ void main() {
   worldCoord = modelMatrix * vec4(position, 1.0);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  // Early return shader as optimized vertex positioning at bucket borders currently does not work while rotations are active.
+  // This shouldn't really impact the performance as isFlycamRotated is a uniform.
+  if(isFlycamRotated || !<%= isOrthogonal %>) {
+    return;
+  }
   // Remember the original z position, since it can subtly diverge in the
   // following calculations due to floating point inaccuracies. This can
   // result in artifacts, such as the crosshair disappearing.
   float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
-  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
-  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2., -PLANE_WIDTH/2., 0., 1.)).xyz);
+  vec3 worldCoordBottomRight = transDim((modelMatrix * vec4( PLANE_WIDTH/2., PLANE_WIDTH/2., 0., 1.)).xyz);
 
   // The following code ensures that the vertices are aligned with the bucket borders
   // of the currently rendered magnification.
   // In general, an index i is computed for each vertex so that each vertex can be moved
   // to the right/bottom border of the i-th bucket.
-  // Exceptions are the first and the last vertex which aren't moved so that the plane
-  // keeps its original extent.
+  // To ensure that the outer vertices are not moved to the next lower / higher bucket border
+  // the vertices are clamped to stay in range of worldCoordTopLeft and worldCoordBottomRight.
 
   // Calculate the index of the vertex (e.g., index.x=0 is the first horizontal vertex).
   // Let's only consider x:
@@ -512,30 +521,27 @@ void main() {
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+  vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
-  if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 1.) {
-    transWorldCoord.x =
-      (
-        // Left border of left-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.x / voxelSizeFactorUVW.x / d.x) * d.x
-        // Move by index.x buckets to the right.
-        + index.x * d.x
-      ) * voxelSizeFactorUVW.x;
+  transWorldCoord.x =
+    (
+      // Left border of left-most bucket (probably outside of visible plane)
+      floor(worldCoordTopLeft.x * voxelSizeFactorInvertedUVW.x / d.x) * d.x
+      // Move by index.x buckets to the right.
+      + index.x * d.x
+    ) * voxelSizeFactorUVW.x;
 
-    transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
-  }
+  transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
 
-  if (index.y >= 1. && index.y <= PLANE_SUBDIVISION - 1.) {
-    transWorldCoord.y =
-      (
-        // Top border of top-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.y / voxelSizeFactorUVW.y / d.y) * d.y
-        // Move by index.y buckets to the bottom.
-        + index.y * d.y
-      ) * voxelSizeFactorUVW.y;
-    transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
-  }
+  transWorldCoord.y =
+    (
+      // Top border of top-most bucket (probably outside of visible plane)
+      floor(worldCoordTopLeft.y * voxelSizeFactorInvertedUVW.y / d.y) * d.y
+      // Move by index.y buckets to the bottom.
+      + index.y * d.y
+    ) * voxelSizeFactorUVW.y;
+  transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
 
   worldCoord = vec4(transDim(transWorldCoord), 1.);
 

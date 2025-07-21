@@ -107,7 +107,6 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths, relevantAttachments)
       relevantAttachmentPaths = relevantAttachments.map(_.path)
       relevantPaths = relevantMagPaths ++ relevantAttachmentPaths
-      // TODO: Paginate! Max 200 per request or so.
       reports <- fetchAllStorageReportsForPaths(organization._id, relevantPaths, dataStore)
       storageReports = buildStorageReportsForPathReports(organization._id, reports, pathToArtifactLookupMap)
     } yield storageReports
@@ -134,7 +133,6 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
           Right(mag)
       }
     }
-
 
   private def buildPathToStorageArtifactMap(
       magsWithValidPaths: List[(DataSourceMagRow, List[String])],

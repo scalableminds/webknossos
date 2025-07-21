@@ -1,14 +1,11 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full, Empty, Failure}
+import com.scalableminds.util.io.URIUtils
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
-import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -48,11 +45,10 @@ object PathStorageUsageResponse {
 
 class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
     extends FoxImplicits
-    with LazyLogging {
+    with LazyLogging
+    with URIUtils {
 
   private val baseDir: Path = Paths.get(config.Datastore.baseDirectory)
-
-  private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 
   def measureStorageForPaths(paths: List[String], organizationId: String)(
       implicit ec: ExecutionContext,
@@ -65,8 +61,13 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
       } else
         uri
     })
+
+    // Check to only measure remote paths that are part of a vault that is configured
+    val absolutePathsToMeasure = pathsWithAbsoluteURIs.filter(uri =>
+      uri.getScheme == DataVaultService.schemeFile || config.Datastore.DataVaults.credentials.exists(vault =>
+        isSubpath(new URI(vault.getString("name")), uri)))
     for {
-      vaultPaths <- Fox.serialCombined(pathsWithAbsoluteURIs)(uri =>
+      vaultPaths <- Fox.serialCombined(absolutePathsToMeasure)(uri =>
         dataVaultService.getVaultPath(RemoteSourceDescriptor(uri, None)))
       usedBytes <- Fox.fromFuture(Fox.serialSequence(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes))
       pathsWithStorageUsedBox = paths.zip(usedBytes)

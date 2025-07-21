@@ -125,10 +125,10 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
+  // Remove the assets/bundle prefix from the URL
+  // EsBuild dev server expects all files from it's root directory, i.e. public/bundle
   const originalUrl = req.url;
   const strippedUrl = originalUrl.replace(/^\/assets\/bundle/, '') || '/';
-
-  console.log(`[Proxy] → esbuild: ${originalUrl} → ${strippedUrl}`);
 
   req.url = strippedUrl;
   proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });

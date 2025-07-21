@@ -35,7 +35,7 @@ const processes = {
       shell: true,
     },
   ),
-  esbuild_dev: spawnIfNotSpecified("noWebpackDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
+  esbuild_dev: spawnIfNotSpecified("noEsbuildDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
     shell: true,

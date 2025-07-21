@@ -3,7 +3,6 @@ package models.dataset
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import models.user.User
@@ -66,16 +65,12 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      editedLayer: DataLayer = layer match {
+      editedLayer: DataLayer <- layer match {
         case l: DataLayerWithMagLocators =>
-          l.mapped(name = composeLayer.newName,
-                   coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: WKWDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: WKWSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+          Fox.successful(
+            l.mapped(name = composeLayer.newName,
+                     coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)))
+        case _ => Fox.failure("Unsupported layer type for composition: " + layer.getClass.getSimpleName)
       }
     } yield editedLayer
 

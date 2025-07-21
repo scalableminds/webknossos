@@ -235,8 +235,6 @@ trait DataLayerLike {
     case layer: AbstractDataLayer         => layer.mags
     case layer: AbstractSegmentationLayer => layer.mags
     case layer: DataLayerWithMagLocators  => Some(layer.getMags)
-    case layer: WKWDataLayer              => if (layer.mags.isEmpty) None else Some(layer.mags)
-    case layer: WKWSegmentationLayer      => if (layer.mags.isEmpty) None else Some(layer.mags)
     case _                                => None
   }
 
@@ -492,6 +490,22 @@ trait DataLayerWithMagLocators extends DataLayer {
           name = name,
           coordinateTransformations = coordinateTransformations
         )
+      case l: WKWDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: WKWSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
       case _ => throw new Exception("Encountered unsupported layer format")
     }
 
@@ -505,6 +519,8 @@ trait DataLayerWithMagLocators extends DataLayer {
       case layer: ZarrSegmentationLayer        => layer.mags
       case layer: Zarr3DataLayer               => layer.mags
       case layer: Zarr3SegmentationLayer       => layer.mags
+      case layer: WKWDataLayer                 => layer.mags
+      case layer: WKWSegmentationLayer         => layer.mags
       case _                                   => throw new Exception("Encountered unsupported layer format")
     }
 

@@ -20,7 +20,7 @@ object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
 }
 
-trait WKWLayer extends DataLayer {
+trait WKWLayer extends DataLayerWithMagLocators {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 

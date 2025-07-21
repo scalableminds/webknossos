@@ -163,9 +163,18 @@ describe("Flycam", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,
-      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
+      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY, true),
     );
     equalWithEpsilon(getPosition(newState.flycam), [2, 0, -2]);
+  });
+
+  it("should move not in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    newState = FlycamReducer(
+      newState,
+      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
+    );
+    equalWithEpsilon(getPosition(newState.flycam), [2, 0, 2]);
   });
 
   it("should move by plane in ortho mode (1/3)", () => {
@@ -202,9 +211,18 @@ describe("Flycam", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,
-      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
+      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true, true),
     );
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, -2]);
+  });
+
+  it("should not move by plane in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    newState = FlycamReducer(
+      newState,
+      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
+    );
+    equalWithEpsilon(getPosition(newState.flycam), [0, 0, 2]);
   });
 
   it("should not change additional coordinates value when layers don't have any", () => {

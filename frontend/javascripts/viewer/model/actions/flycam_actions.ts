@@ -101,23 +101,30 @@ export const setDirectionAction = (direction: Vector3) =>
     direction,
   }) as const;
 
-export const moveFlycamOrthoAction = (vector: Vector3, planeId: OrthoView | null | undefined) =>
+export const moveFlycamOrthoAction = (
+  vector: Vector3,
+  planeId: OrthoView | null | undefined,
+  useDynamicSpaceDirection: boolean = false,
+) =>
   ({
     type: "MOVE_FLYCAM_ORTHO",
     vector,
     planeId,
+    useDynamicSpaceDirection,
   }) as const;
 
 export const movePlaneFlycamOrthoAction = (
   vector: Vector3,
   planeId: OrthoView,
   increaseSpeedWithZoom: boolean = true,
+  useDynamicSpaceDirection: boolean = false,
 ) =>
   ({
     type: "MOVE_PLANE_FLYCAM_ORTHO",
     vector,
     planeId,
     increaseSpeedWithZoom,
+    useDynamicSpaceDirection,
   }) as const;
 
 export const moveFlycamAction = (vector: Vector3) =>

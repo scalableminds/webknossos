@@ -98,8 +98,7 @@ export class DataBucket {
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
-  visualizationColor: Color;
+  visualizationColor: Color | null | undefined;
   // If dirty, the bucket's data was potentially edited and needs to be
   // saved to the server.
   dirty: boolean;

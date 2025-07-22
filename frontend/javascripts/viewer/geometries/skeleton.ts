@@ -38,7 +38,7 @@ type Buffer = {
   capacity: number;
   nextIndex: number;
   geometry: BufferGeometryWithBufferAttributes;
-  mesh: Object3D;
+  mesh: Points | LineSegments;
 };
 type BufferPosition = {
   buffer: Buffer;
@@ -71,7 +71,7 @@ const NodeBufferHelperType = {
     geometry.setAttribute("treeId", new BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): Object3D {
+  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): Points {
     return new Points(geometry, material);
   },
 
@@ -93,7 +93,7 @@ const EdgeBufferHelperType = {
     geometry.setAttribute("treeId", new BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
-  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): Object3D {
+  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): LineSegments {
     return new LineSegments(geometry, material);
   },
 

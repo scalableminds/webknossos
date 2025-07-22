@@ -1,9 +1,15 @@
 import app from "app";
 import window from "libs/window";
 import _ from "lodash";
-import { Matrix4, Object3D, OrthographicCamera, PerspectiveCamera, Vector3 } from "three";
+import {
+  Matrix4,
+  Object3D,
+  OrthographicCamera,
+  PerspectiveCamera,
+  Vector3 as ThreeVector3,
+} from "three";
 import TWEEN from "tween.js";
-import type { OrthoViewMap, Viewport } from "viewer/constants";
+import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
 import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
@@ -23,6 +29,8 @@ type GeometryLike = {
   addToScene: (obj: Object3D) => void;
 };
 
+const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
+
 class ArbitraryView {
   cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
@@ -40,7 +48,7 @@ class ArbitraryView {
   geometries: Array<GeometryLike> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: Object3D;
-  cameraPosition: Array<number>;
+  cameraPosition: Vector3;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
@@ -55,8 +63,8 @@ class ArbitraryView {
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
     const tdCamera = new OrthographicCamera(0, 0, 0, 0);
-    tdCamera.position.copy(new Vector3(10, 10, -10));
-    tdCamera.up = new Vector3(0, 0, -1);
+    tdCamera.position.copy(new ThreeVector3(10, 10, -10));
+    tdCamera.up = new ThreeVector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
     this.tdCamera = tdCamera;
     const dummyCamera = new OrthographicCamera(0, 0, 0, 0);
@@ -165,8 +173,7 @@ class ArbitraryView {
         m[2], m[6], m[10], m[14],
         m[3], m[7], m[11], m[15],
       );
-      camera.matrix.multiply(new Matrix4().makeRotationY(Math.PI));
-      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
+      camera.matrix.multiply(flipYRotationMatrix);
       camera.matrix.multiply(new Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);

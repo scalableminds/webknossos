@@ -164,7 +164,7 @@ class SceneController {
       position: Vector3,
       zoomStep: number,
       mag: Vector3,
-      optColor?: string,
+      optColor?: string | null | undefined,
     ) => {
       const bucketSize = [
         constants.BUCKET_WIDTH * mag[0],

@@ -11,6 +11,8 @@ import {
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import Store from "viewer/store";
 
+const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
+
 class Crosshair {
   mesh: Group;
   WIDTH: number;
@@ -56,7 +58,7 @@ class Crosshair {
       m[11],
       m[15],
     );
-    mesh.matrix.multiply(new Matrix4().makeRotationY(Math.PI));
+    mesh.matrix.multiply(flipYRotationMatrix);
     mesh.matrix.multiply(new Matrix4().makeTranslation(0, 0, 0.5));
     mesh.matrix.scale(new Vector3(this.scale, this.scale, this.scale));
     mesh.matrixWorldNeedsUpdate = true;

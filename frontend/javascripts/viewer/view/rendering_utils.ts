@@ -69,19 +69,19 @@ export function renderToTexture(
       const isArbitraryMode = constants.MODES_ARBITRARY.includes(
         state.temporaryConfiguration.viewMode,
       );
-      camera = camera.clone() as T;
+      const adaptedCamera = camera.clone() as T;
       // The near value is already set in the camera (done in the CameraController/ArbitraryView).
       if (isArbitraryMode) {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by the data plane which is not rendered during node picking
-        camera.far = ARBITRARY_CAM_DISTANCE;
+        adaptedCamera.far = ARBITRARY_CAM_DISTANCE;
       } else {
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by offsetting the plane instead of setting the far property.
-        camera.far = state.userConfiguration.clippingDistance;
+        adaptedCamera.far = state.userConfiguration.clippingDistance;
       }
-      camera.updateProjectionMatrix();
-      return camera;
+      adaptedCamera.updateProjectionMatrix();
+      return adaptedCamera;
     }
 
     camera = adaptCameraToCurrentClippingDistance(camera);

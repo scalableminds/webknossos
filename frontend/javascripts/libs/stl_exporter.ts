@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { BufferGeometry, Scene, Vector3 } from "three";
+import { Scene, Vector3 } from "three";
 
 // Original Source: https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/STLExporter.js
 // Manual changes:
@@ -44,7 +44,7 @@ class STLExporter {
         const geometry = object.geometry;
 
         if (geometry.isBufferGeometry !== true) {
-          throw new Error("STLExporter: Geometry is not of type THREE.BufferGeometry.");
+          throw new Error("STLExporter: Geometry is not of type BufferGeometry.");
         }
 
         const index = geometry.index;

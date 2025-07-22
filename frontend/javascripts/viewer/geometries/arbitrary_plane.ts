@@ -24,6 +24,8 @@ type ArbitraryMeshes = {
   debuggerPlane: Mesh | null | undefined;
 };
 
+const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
+
 class ArbitraryPlane {
   meshes: ArbitraryMeshes;
   isDirty: boolean;
@@ -82,7 +84,7 @@ class ArbitraryPlane {
         );
         mesh.matrix.identity();
         mesh.matrix.multiply(meshMatrix);
-        mesh.matrix.multiply(new Matrix4().makeRotationY(Math.PI));
+        mesh.matrix.multiply(flipYRotationMatrix);
         mesh.matrixWorldNeedsUpdate = true;
       };
 

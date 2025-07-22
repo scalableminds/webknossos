@@ -25,71 +25,20 @@ import {
 } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import {
-  type APIDataLayer,
-  type APIDataset,
-  APIJobType,
-  type MutableAPIDataSource,
-} from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
-import { type DataSourceEditMode, useDatasetSettingsContext } from "./dataset_settings_context";
-import { getRotationFromCoordinateTransformations } from "./dataset_settings_provider";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { syncDataSourceFields } from "./dataset_settings_provider";
 
 const FormItem = Form.Item;
-
-export const syncDataSourceFields = (
-  form: FormInstance, // Keep form as a prop for this utility function
-  syncTargetTabKey: DataSourceEditMode,
-  // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
-  // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
-  syncDatasetName = false,
-): void => {
-  if (!form) {
-    return;
-  }
-
-  if (syncTargetTabKey === "advanced") {
-    // Copy from simple to advanced: update json
-    const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
-    if (syncDatasetName && dataSourceFromSimpleTab) {
-      dataSourceFromSimpleTab.id ??= {};
-      dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
-    }
-    form.setFieldsValue({
-      dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
-    });
-  } else {
-    const dataSourceFromAdvancedTab = parseMaybe(
-      form.getFieldValue("dataSourceJson"),
-    ) as ArbitraryObject | null;
-    // Copy from advanced to simple: update form values
-    if (syncDatasetName && dataSourceFromAdvancedTab?.id?.name) {
-      form.setFieldsValue({
-        dataset: {
-          name: dataSourceFromAdvancedTab.id.name,
-        },
-      });
-    }
-    form.setFieldsValue({
-      dataSource: dataSourceFromAdvancedTab,
-    });
-    form.setFieldsValue({
-      datasetRotation: getRotationFromCoordinateTransformations(
-        dataSourceFromAdvancedTab as MutableAPIDataSource,
-      ),
-    });
-  }
-};
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form, activeDataSourceEditMode, handleDataSourceEditModeChange } =

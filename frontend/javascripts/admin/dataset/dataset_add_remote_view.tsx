@@ -2,11 +2,11 @@ import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_componen
 import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import { Button, Col, Divider, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
-import DatasetSettingsDataTab, {
-  // Sync simple with advanced and get newest datasourceJson
+import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
+import {
+  DatasetSettingsProvider, // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
-} from "dashboard/dataset/dataset_settings_data_tab";
-import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
+} from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";

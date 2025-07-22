@@ -377,6 +377,8 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setTimeout(() => form.validateFields().then(submitForm).catch(handleValidationFailed), 0);
     };
 
+    // Force update pattern: Setting state to its current value triggers a re-render
+    // This ensures all form fields are mounted before validation
     setActiveDataSourceEditMode((prev) => prev);
     setTimeout(afterForceUpdateCallback, 0);
   }, [form, activeDataSourceEditMode, submitForm, handleValidationFailed]);

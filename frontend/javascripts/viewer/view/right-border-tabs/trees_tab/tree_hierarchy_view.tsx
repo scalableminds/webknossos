@@ -15,6 +15,7 @@ import {
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import { Store } from "viewer/singletons";
@@ -280,25 +281,26 @@ function TreeHierarchyView(props: Props) {
     );
     if (expandedGroups == null) return;
     setExpandedGroups(expandedGroups);
-    setTimeout(() => {
-      if (treeRef.current && activeTreeId)
-        treeRef.current.scrollTo({
-          key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
-          align: "auto",
-        });
-    }, 300);
+    setTimeout(scrollToActiveTree, 300);
   }, [activeTreeId]);
 
-  // Scroll to the active key after the component has been rendered.
-  // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
-  setTimeout(() => {
+  const scrollToActiveTree = () => {
     if (activeTreeId && treeRef.current) {
       treeRef.current.scrollTo({
         key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
         align: "auto",
       });
     }
-  }, 900);
+  };
+
+  // Scroll to the active key after the component has been rendered.
+  // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
+  setTimeout(scrollToActiveTree, 900);
+
+  useReduxActionListener("EXPAND_PARENT_GROUPS_OF_TREE", () => {
+    console.log("EXPAND_PARENT_GROUPS_OF_TREE action received, scrolling to active tree");
+    scrollToActiveTree();
+  });
 
   return (
     <>

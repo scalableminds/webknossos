@@ -558,6 +558,7 @@ function SkeletonTracingReducer(
     }
 
     case "EXPAND_PARENT_GROUPS_OF_TREE": {
+      console.log("Expanding parent groups of tree in reducer");
       const { tree } = action;
       if (tree.groupId == null || skeletonTracing == null) {
         return state;

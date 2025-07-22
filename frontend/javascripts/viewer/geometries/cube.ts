@@ -69,15 +69,17 @@ class Cube {
   }
 
   getLineMaterial() {
-    return this.isHighlighted
-      ? new LineBasicMaterial({
-          color: Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff,
-          linewidth: this.lineWidth,
-        })
-      : new LineBasicMaterial({
-          color: this.color,
-          linewidth: this.lineWidth,
-        });
+    return new LineBasicMaterial({
+      color: this.getLineColor(),
+      linewidth: this.lineWidth,
+    });
+  }
+
+  getLineColor(): number {
+    if (this.isHighlighted) {
+      return Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff;
+    }
+    return this.color;
   }
 
   setCorners(min: Vector3, max: Vector3) {
@@ -179,7 +181,10 @@ class Cube {
 
     this.isHighlighted = highlighted;
     this.getMeshes().forEach((mesh) => {
-      mesh.material = this.getLineMaterial();
+      // @ts-ignore We don't use material arrays
+      const meshMaterial: LineBasicMaterial = mesh.material;
+      meshMaterial.color.setHex(this.getLineColor());
+      meshMaterial.linewidth = this.lineWidth;
     });
     app.vent.emit("rerender");
   }

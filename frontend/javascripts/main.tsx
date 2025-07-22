@@ -18,7 +18,6 @@ import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import Router from "router";
 import { setupApi } from "viewer/api/internal_api";
 import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -28,7 +27,13 @@ import { setModel, setStore } from "viewer/singletons";
 import Store from "viewer/throttled_store";
 
 import "../stylesheets/main.less";
+import { CheckCertificateModal } from "components/check_certificate_modal";
+import DisableGenericDnd from "components/disable_generic_dnd";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
+import { RouterProvider } from "react-router-dom";
+import router from "router/router";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import HelpButton from "viewer/view/help_modal";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
@@ -132,7 +137,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
                 <RootForFastTooltips />
-                <Router />
+                <DisableGenericDnd />
+                <CheckCertificateModal />
+                <CheckTermsOfServices />
+                <HelpButton />
+                <RouterProvider router={router} />
               </GlobalThemeProvider>
             </DndProvider>
           </QueryClientProvider>

@@ -23,7 +23,6 @@ import {
   Tooltip,
 } from "antd";
 import dayjs from "dayjs";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import React from "react";
 import { connect } from "react-redux";
 
@@ -56,12 +55,13 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
+import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
-import { Link, type RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
   APIJobType,
@@ -95,10 +95,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   organization: APIOrganization;
 };
-type Props = OwnProps & StateProps;
-type PropsWithFormAndRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps & WithBlockerProps;
 type State = {
   isUploading: boolean;
   isFinishing: boolean;
@@ -218,7 +215,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     unfinishedUploadToContinue: null,
   };
 
-  unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
   formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
 
@@ -268,14 +264,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblockHistory() {
     window.onbeforeunload = null;
+    this.props.blocker.reset ? this.props.blocker.reset() : void 0;
 
     if (this.blockTimeoutId != null) {
       clearTimeout(this.blockTimeoutId);
       this.blockTimeoutId = null;
-    }
-
-    if (this.unblock != null) {
-      this.unblock();
     }
   }
 
@@ -298,35 +291,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        const { isUploading } = this.state;
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
+      // Navigation blocking can be triggered by two sources:
+      // 1. The browser's native beforeunload event
+      // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-        if (isUploading) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+      if (this.state.isUploading) {
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
-          this.blockTimeoutId = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["dataset.leave_during_upload"];
-        }
+        this.blockTimeoutId = window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
+        // The native event requires a truthy return value to show a generic message
+        // The React Router blocker accepts a boolean
+        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
 
+      // The native event requires an empty return value to not show a message
       return;
     };
+
     const { unfinishedUploadToContinue } = this.state;
 
-    this.unblock = this.props.history.block(beforeUnload);
-    // @ts-ignore
     window.onbeforeunload = beforeUnload;
+    this.props.setBlocking({
+      // @ts-ignore beforeUnload signature is overloaded
+      shouldBlock: beforeUnload,
+    });
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
@@ -1376,4 +1368,4 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetUploadView));
+export default connector(withBlocker(withRouter<PropsWithFormAndRouter>(DatasetUploadView)));

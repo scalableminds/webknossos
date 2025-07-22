@@ -6,6 +6,7 @@ import Onboarding from "admin/onboarding";
 import { createExplorational, getShortLink } from "admin/rest_api";
 import AsyncRedirect from "components/redirect";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -99,12 +100,9 @@ export function DatasetSettingsRouteWrapper() {
     );
   }
   return (
-    <DatasetSettingsView
-      isEditingMode
-      datasetId={datasetId || ""}
-      onComplete={() => window.history.back()}
-      onCancel={() => window.history.back()}
-    />
+    <DatasetSettingsProvider isEditingMode datasetId={datasetId || ""}>
+      <DatasetSettingsView />
+    </DatasetSettingsProvider>
   );
 }
 

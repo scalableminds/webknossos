@@ -59,7 +59,7 @@ class ArbitraryView {
     tdCamera.up = new Vector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
     this.tdCamera = tdCamera;
-    const dummyCamera = new OrthographicCamera(45, 1, 50, 1000);
+    const dummyCamera = new OrthographicCamera(0, 0, 0, 0);
     this.cameras = {
       TDView: tdCamera,
       PLANE_XY: dummyCamera,

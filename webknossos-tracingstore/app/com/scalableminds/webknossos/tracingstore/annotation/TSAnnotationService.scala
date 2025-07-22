@@ -60,8 +60,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   private lazy val materializedAnnotationWithTracingCache =
     AlfuCache[ObjectId, AlfuCache[Long, AnnotationWithTracings]](maxCapacity = 1000)
 
-  private val MAX_UPDATE_ACTION_ENTRIES_PER_VERSION = 1000
-
   private def newInnerCache(implicit ec: ExecutionContext): Fox[AlfuCache[Long, AnnotationWithTracings]] =
     Fox.successful(AlfuCache[Long, AnnotationWithTracings](maxCapacity = 2))
 
@@ -244,6 +242,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long, truncate: Boolean)(
       implicit ec: ExecutionContext): Fox[JsValue] = {
+    val MaxUpdateActionEntriesPerVersion = 1000
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -262,9 +261,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
       truncatedUpdateActionBatches = if (truncate)
         updateActionBatches.map(batch =>
-          batch.map({
-            case (version, updateActions) => (version, updateActions.take(MAX_UPDATE_ACTION_ENTRIES_PER_VERSION))
-          }))
+          batch.map {
+            case (version, updateActions) => (version, updateActions.take(MaxUpdateActionEntriesPerVersion))
+        })
       else updateActionBatches
     } yield Json.toJson(truncatedUpdateActionBatches.flatten.map(versionedTupleToJson))
   }

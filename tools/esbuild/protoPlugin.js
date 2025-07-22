@@ -1,3 +1,7 @@
+// esbuild plugin for bundling .proto files.
+// This plugin resolves and loads .proto files using protobuf.js,
+// converting them into a JSON representation that can be imported as a module.
+
 const path = require('node:path');
 const fs = require('node:fs');
 const protobuf = require('protobufjs');

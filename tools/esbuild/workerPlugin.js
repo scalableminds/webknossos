@@ -1,3 +1,7 @@
+// esbuild plugin for handling web workers.
+// This plugin identifies .worker.ts files, creates separate esbuild bundles for each,
+// and provides a virtual module that exports the URL to the bundled worker file.
+
 const esbuild = require("esbuild");
 const path = require("node:path");
 

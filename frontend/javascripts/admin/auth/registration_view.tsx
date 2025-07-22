@@ -3,14 +3,15 @@ import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import { getDefaultOrganization } from "admin/rest_api";
 import { Card, Col, Row, Spin } from "antd";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import type { APIOrganization } from "types/api_types";
 
 function RegistrationViewGeneric() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [organization, setOrganization] = useState<APIOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,10 +56,10 @@ function RegistrationViewGeneric() {
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
-              history.goBack();
+              navigate(-1);
             } else {
               Toast.success(messages["auth.account_created"]);
-              history.push("/auth/login");
+              navigate("/auth/login");
             }
           }}
         />
@@ -95,7 +96,7 @@ function RegistrationViewGeneric() {
 }
 
 function RegistrationViewWkOrg() {
-  const history = useHistory();
+  const navigate = useNavigate();
   return (
     <Row justify="center" align="middle" className="login-view">
       <Col>
@@ -103,7 +104,7 @@ function RegistrationViewWkOrg() {
           <h3>Sign Up</h3>
           <RegistrationFormWKOrg
             onRegistered={() => {
-              history.push("/dashboard");
+              navigate("/dashboard");
             }}
           />
           <p
@@ -120,6 +121,12 @@ function RegistrationViewWkOrg() {
 }
 
 function RegistrationView() {
+  // If you're already logged in, redirect to the dashboard
+  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
+
+  if (isAuthenticated) {
+    return <Navigate to="/" />;
+  }
   return features().isWkorgInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
 }
 

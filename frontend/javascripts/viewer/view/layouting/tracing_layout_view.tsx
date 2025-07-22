@@ -4,11 +4,11 @@ import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { document, location } from "libs/window";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
@@ -65,11 +65,7 @@ type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
 };
-type PropsWithRouter = OwnProps &
-  StateProps &
-  DispatchProps & {
-    history: RouteComponentProps["history"];
-  };
+type PropsWithRouter = OwnProps & StateProps & DispatchProps & RouteComponentProps;
 type State = {
   activeLayoutName: string;
   hasError: boolean;
@@ -330,7 +326,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           datasetId: this.props.datasetId,
         },
       });
-      this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+      this.props.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
     };
 
     return (
@@ -451,4 +447,4 @@ function mapStateToProps(state: WebknossosState) {
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(TracingLayoutView));
+export default connector(withRouter(TracingLayoutView));

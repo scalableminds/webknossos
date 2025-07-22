@@ -17,35 +17,23 @@ import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Alert, App, Button, Col, Input, Row, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import Persistence from "libs/persistence";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
-import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
 import { Link } from "react-router-dom";
-import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
+import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
-import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { logoutUserAction } from "../../viewer/model/actions/user_actions";
-import Store from "../../viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;
-
-type StateProps = {
-  activeUser: APIUser;
-  activeOrganization: APIOrganization;
-};
-type Props = RouteComponentProps & StateProps;
 
 type ActivationFilterType = Array<"activated" | "deactivated" | "verified" | "unverified">;
 
@@ -60,8 +48,13 @@ const persistence = new Persistence<{
   "userList",
 );
 
-function UserListView({ activeUser, activeOrganization }: Props) {
+function UserListView() {
   const { modal } = App.useApp();
+
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
+  const activeOrganization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<APIUser[]>([]);
@@ -120,28 +113,6 @@ function UserListView({ activeUser, activeOrganization }: Props) {
 
   function deactivateUser(user: APIUser): void {
     activateUser(user, false);
-  }
-
-  async function changeEmail(selectedUser: APIUser, newEmail: string) {
-    const newUserPromises = users.map((user) => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, {
-          email: newEmail,
-        });
-        return updateUser(newUser);
-      }
-
-      return Promise.resolve(user);
-    });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
-        setUsers(newUsers);
-        setSelectedUserIds([selectedUser.id]);
-        Toast.success(messages["users.change_email_confirmation"]);
-        if (activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
-      },
-      () => {}, // Do nothing, change did not succeed
-    );
   }
 
   function handleUsersChange(updatedUsers: Array<APIUser>): void {
@@ -423,33 +394,6 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             key="email"
             width={320}
             sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
-            render={(__, user: APIUser) =>
-              activeUser.isAdmin ? (
-                <EditableTextLabel
-                  value={user.email}
-                  label="Email"
-                  rules={[
-                    {
-                      message: messages["auth.registration_email_invalid"],
-                      type: "email",
-                    },
-                  ]}
-                  onChange={(newEmail) => {
-                    if (newEmail !== user.email) {
-                      Modal.confirm({
-                        title: messages["users.change_email_title"],
-                        content: messages["users.change_email"]({
-                          newEmail,
-                        }),
-                        onOk: () => changeEmail(user, newEmail),
-                      });
-                    }
-                  }}
-                />
-              ) : (
-                user.email
-              )
-            }
           />
           <Column
             title="Experiences"
@@ -650,10 +594,4 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-  activeOrganization: enforceActiveOrganization(state.activeOrganization),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(UserListView);
+export default UserListView;

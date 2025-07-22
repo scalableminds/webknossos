@@ -22,6 +22,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
+  applyNodeRotationOnActivation: "Auto-rotate to Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
@@ -50,6 +51,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  segmentationPatternOpacity:
+    "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
       (will take longer until you see data) or alternatively,
       improving the quality progressively (data will be loaded faster,
@@ -82,6 +85,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
+
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
   alpha: "Layer opacity",
@@ -159,7 +163,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard",
-  "tracing.copy_rotation": "Copy rotation to clipboard",
   "tracing.copy_sharing_link": "Copy sharing link to clipboard",
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
@@ -333,7 +336,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.leave_with_unsaved_changes":
-    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
+    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Ok”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.add_zarr_different_scale_warning":

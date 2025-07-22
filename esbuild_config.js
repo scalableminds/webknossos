@@ -2,7 +2,6 @@ const esbuild = require('esbuild');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const protobuf = require('protobufjs');
 
 const srcPath = path.resolve(__dirname, 'frontend/javascripts/');
 const outputPath  = path.resolve(__dirname, 'public/bundle/');
@@ -19,143 +18,10 @@ const target = [
 // Community plugins
 const { lessLoader } = require('esbuild-plugin-less');
 const copyPlugin = require('esbuild-plugin-copy').default;
-// const workerPlugin = require('@chialab/esbuild-plugin-worker').default;
 const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
-// const metaUrlPlugin = require("@chialab/esbuild-plugin-meta-url").default
 
-
-// Custom worker plugin that creates separate bundles for .worker.ts files
-const createWorkerPlugin = (buildOutDir) => ({
-  name: 'worker',
-  setup(build) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const workerEntries = new Map();
-    
-    // Collect all worker files during the resolve phase
-    build.onResolve({ filter: /\.worker$/ }, (args) => {
-      const workerPath = path.resolve(srcPath, args.path + ".ts");
-      const workerName = path.basename(args.path, '.worker.ts');
-      const workerOutputPath = `${workerName}.js`;
-      
-      workerEntries.set(workerPath, workerOutputPath);
-      
-      // Return a virtual module that exports the worker URL
-      return {
-        path: args.path,
-        namespace: 'worker-url',
-      };
-    });
-    
-    // Handle the virtual worker URL modules
-    build.onLoad({ filter: /.*/, namespace: 'worker-url' }, (args) => {
-      const workerName = path.basename(args.path, '.worker.ts');
-      const workerUrl = `/assets/bundle/${workerName}.js`;
-      
-      return {
-        contents: `export default "${workerUrl}";`,
-        loader: 'js',
-      };
-    });
-
-    // Build all worker bundles at the end
-    build.onEnd(async (result) => {
-      if (result.errors.length > 0) return;
-      
-      for (const [workerPath, workerOutputPath] of workerEntries) {
-        try {
-          await esbuild.build({
-            entryPoints: [workerPath],
-            bundle: true,
-            format: 'iife',
-            target: target,
-            outfile: path.join(buildOutDir, workerOutputPath),
-            minify: isProduction,
-            sourcemap: isProduction ? 'external' : 'inline',
-            define: {
-              'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-              'global': 'globalThis',
-            },
-            alias: {
-              react: path.resolve('./node_modules/react'),
-              three: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
-              url: require.resolve("url/"),
-            },
-            external: [], // Bundle everything for workers
-            // Don't inject process-shim in workers
-            inject: [],
-            resolveExtensions: ['.ts', '.tsx', '.js', '.json'],
-            plugins: [
-              polyfillNode(),
-              lessLoader({
-                javascriptEnabled: true,
-              }),
-            ],
-            loader: {'.wasm': 'file'}
-          });
-          
-          console.log(`✓ Built worker: ${workerOutputPath}`);
-        } catch (error) {
-          console.error(`✗ Failed to build worker ${workerOutputPath}:`, error.message);
-          result.errors.push({
-            text: `Worker build failed: ${error.message}`,
-            location: { file: workerPath },
-          });
-        }
-      }
-    });
-  },
-});
-
-// Custom plugin for .proto files (keeping this since it's very specific to your setup)
-const protoPlugin = {
-  name: 'proto',
-  setup(build) {
-    const protoRoot = protoPath
-
-    // Handle .proto import resolution
-    build.onResolve({ filter: /\.proto$/ }, args => {
-      // Try to resolve relative to protoRoot
-      const fullPath = path.resolve(protoRoot, args.path);
-
-      if (fs.existsSync(fullPath)) {
-        return { path: fullPath };
-      }
-
-      // Optionally: also check relative to importer
-      const relativePath = path.resolve(path.dirname(args.importer), args.path);
-      if (fs.existsSync(relativePath)) {
-        return { path: relativePath };
-      }
-
-      return {
-        errors: [{ text: `Could not resolve .proto file: ${args.path}` }],
-      };
-    });
-
-    // Handle .proto file loading
-    build.onLoad({ filter: /\.proto$/ }, async (args) => {
-
-      try {
-        const root = new protobuf.Root();
-
-        // Resolve imports from protoRoot
-        root.resolvePath = (origin, target) => path.resolve(protoRoot, target);
-
-        const loaded = await root.load(args.path);
-        const json = loaded.toJSON();
-
-        return {
-          contents: `module.exports = ${JSON.stringify(json)};`,
-          loader: 'js',
-        };
-      } catch (error) {
-        return {
-          errors: [{ text: error.message, location: { file: args.path } }],
-        };
-      }
-    });
-  },
-};
+const { createWorkerPlugin } = require('./tools/esbuild/workerPlugin.js');
+const { createProtoPlugin } = require('./tools/esbuild/protoPlugin.js');
 
 // Define build function
 async function build(env = {}) {
@@ -171,7 +37,7 @@ async function build(env = {}) {
   // Base plugins, configured to use the dynamic output directory
   const plugins = [
     polyfillNode(),
-    protoPlugin,
+    createProtoPlugin(protoPath),
     lessLoader({
       javascriptEnabled: true,
     }),
@@ -183,7 +49,7 @@ async function build(env = {}) {
         },
       ],
     }),
-    createWorkerPlugin(buildOutDir),
+    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname),
   ];
 
 

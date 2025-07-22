@@ -777,10 +777,11 @@ export function getUpdateActionLog(
   annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
+  truncateActionLog: boolean = false,
   sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(async (token) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
     params.set("token", token);
     if (oldestVersion != null) {
       params.set("oldestVersion", oldestVersion.toString());

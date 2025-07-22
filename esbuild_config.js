@@ -1,6 +1,7 @@
 const esbuild = require('esbuild');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const protobuf = require('protobufjs');
 
 const srcPath = path.resolve(__dirname, 'frontend/javascripts/');
@@ -24,7 +25,7 @@ const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
 
 
 // Custom worker plugin that creates separate bundles for .worker.ts files
-const workerPlugin = {
+const createWorkerPlugin = (buildOutDir) => ({
   name: 'worker',
   setup(build) {
     const isProduction = process.env.NODE_ENV === 'production';
@@ -67,7 +68,7 @@ const workerPlugin = {
             bundle: true,
             format: 'iife',
             target: target,
-            outfile: path.join(outputPath, workerOutputPath),
+            outfile: path.join(buildOutDir, workerOutputPath),
             minify: isProduction,
             sourcemap: isProduction ? 'external' : 'inline',
             define: {
@@ -103,7 +104,7 @@ const workerPlugin = {
       }
     });
   },
-};
+});
 
 // Custom plugin for .proto files (keeping this since it's very specific to your setup)
 const protoPlugin = {
@@ -159,15 +160,39 @@ const protoPlugin = {
 // Define build function
 async function build(env = {}) {
   const isProduction = env.production || process.env.NODE_ENV === 'production';
-  
+  const isWatch = env.watch;
+
+  // Determine output directory for bundles.
+  // In watch mode, it's a temp dir. In production, it's the public bundle dir.
+  const buildOutDir = isWatch
+    ? fs.mkdtempSync(path.join(os.tmpdir(), "esbuild-dev"))
+    : outputPath;
+
+  // Base plugins, configured to use the dynamic output directory
+  const plugins = [
+    polyfillNode(),
+    protoPlugin,
+    lessLoader({
+      javascriptEnabled: true,
+    }),
+    copyPlugin({
+      patterns: [
+        {
+          from: 'node_modules/@zip.js/zip.js/dist/z-worker.js',
+          to: path.join(buildOutDir, 'z-worker.js'),
+        },
+      ],
+    }),
+    createWorkerPlugin(buildOutDir),
+  ];
+
 
   const buildOptions = {
     entryPoints: {
       main: path.resolve(srcPath, 'main.tsx'),
-      // proto: protoPath
     },
     bundle: true,
-    outdir: outputPath,
+    outdir: buildOutDir,
     format: 'esm',
     target: target,
     platform: 'browser',
@@ -182,7 +207,7 @@ async function build(env = {}) {
       'process.browser': 'true',
       "global": "global"
     },
-    inject: [path.resolve(__dirname, 'process_shim.js')], // We'll create this file
+    inject: [path.resolve(__dirname, 'process_shim.js')],
     loader: {
       '.woff': 'file',
       '.woff2': 'file',
@@ -199,27 +224,10 @@ async function build(env = {}) {
       three: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
       url: require.resolve("url/"),
     },
-    plugins: [
-      polyfillNode(),
-      protoPlugin,
-      lessLoader({
-        javascriptEnabled: true,
-        // Add any other Less options you need
-      }),
-      copyPlugin({
-        patterns: [
-          {
-            from: 'node_modules/@zip.js/zip.js/dist/z-worker.js',
-            to: 'public/bundle/z-worker.js',
-          },
-        ],
-      }),
-      workerPlugin,
-    ],
-    external: ["/assets/images/*", 'fs', 'path', 'util', 'module', 
-  ], // Add any external dependencies here if needed
+    plugins: plugins,
+    external: ["/assets/images/*", 'fs', 'path', 'util', 'module'],
     publicPath: '/assets/bundle/',
-    metafile: true, // Generate metadata for analysis
+    metafile: !isWatch, // Don't generate metafile for dev server
     logOverride: {
       'direct-eval': 'silent',
     },
@@ -230,19 +238,18 @@ async function build(env = {}) {
     const ctx = await esbuild.context(buildOptions);
     
     const { host, port } = await ctx.serve({
-      servedir: 'public/bundle',
+      servedir: buildOutDir,
       port: env.PORT || 9002,
       onRequest: (args) => {
-        console.log(`[${args.method}] ${args.path} - status ${args.status}`);
+          console.log(`[${args.method}] ${args.path} - status ${args.status}`);
       },
     });
     
     console.log(`Development server running at http://${host}:${port}`);
+    console.log(`Serving files from temporary directory: ${buildOutDir}`);
     
-    // Watch for changes
     await ctx.watch();
     
-    // Handle graceful shutdown
     process.on('SIGINT', async () => {
       await ctx.dispose();
       process.exit(0);
@@ -252,9 +259,8 @@ async function build(env = {}) {
     const result = await esbuild.build(buildOptions);
     
     if (result.metafile) {
-      // Write metafile for bundle analysis
       await fs.promises.writeFile(
-        'public/bundle/metafile.json',
+        path.join(buildOutDir, 'metafile.json'),
         JSON.stringify(result.metafile, null, 2)
       );
     }

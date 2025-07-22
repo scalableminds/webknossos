@@ -1,47 +1,44 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { SettingsCard, type SettingsCardProps } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/rest_api";
-import {
-  Alert,
-  Checkbox,
-  Col,
-  Divider,
-  Form,
-  Input,
-  InputNumber,
-  Row,
-  Select,
-  Table,
-  Tooltip,
-} from "antd";
+import { Col, Form, Input, InputNumber, Row, Select, Switch, Table, Tooltip } from "antd";
 import { Slider } from "components/slider";
 import { Vector3Input } from "libs/vector_input";
 import _ from "lodash";
-import messages, {
-  type RecommendedConfiguration,
-  layerViewConfigurations,
-  settings,
-  settingsTooltips,
-} from "messages";
+import messages, { layerViewConfigurations, settings, settingsTooltips } from "messages";
 import { useMemo, useState } from "react";
-import type { APIDataSourceId } from "types/api_types";
+import type { APIDataSourceId, APIDataset } from "types/api_types";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import { BLEND_MODES } from "viewer/constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
-import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 
-export default function DatasetSettingsViewConfigTab(props: {
-  dataSourceId: APIDataSourceId;
-  dataStoreURL: string | undefined;
-}) {
-  const { dataSourceId, dataStoreURL } = props;
+export default function DatasetSettingsViewConfigTab() {
+  const { dataset } = useDatasetSettingsContext();
+  if (dataset == null) {
+    return null;
+  }
+  return <DatasetSettingsViewConfigTabWithDataset dataset={dataset} />;
+}
+
+const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIDataset }) => {
   const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
     Record<string, [string[], string[]]>
   >({});
 
+  const dataStoreURL = dataset.dataStore.url;
+  const dataSourceId: APIDataSourceId = {
+    owningOrganization: dataset.owningOrganization,
+    directoryName: dataset.directoryName,
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: validate on dataset change
   const validateDefaultMappings = useMemo(
     () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
       let config = {} as DatasetConfiguration["layers"];
@@ -92,7 +89,7 @@ export default function DatasetSettingsViewConfigTab(props: {
         throw new Error("The following mappings are invalid: " + errors.join("\n"));
       }
     },
-    [availableMappingsPerLayerCache],
+    [availableMappingsPerLayerCache, dataset], // Add dataset to dependencies for dataSourceId
   );
 
   const columns = [
@@ -158,178 +155,197 @@ export default function DatasetSettingsViewConfigTab(props: {
       };
     },
   );
-  const checkboxSettings = (
-    [
-      ["interpolation", 6],
-      ["fourBit", 6],
-      ["renderMissingDataBlack", 6],
-    ] as Array<[keyof RecommendedConfiguration, number]>
-  ).map(([settingsName, spanWidth]) => (
-    <Col span={spanWidth} key={settingsName}>
-      <FormItem name={["defaultConfiguration", settingsName]} valuePropName="checked" colon={false}>
-        <Checkbox>
-          {settings[settingsName]}{" "}
-          <Tooltip title={settingsTooltips[settingsName]}>
-            <InfoCircleOutlined
-              style={{
-                color: "gray",
-              }}
-            />
-          </Tooltip>
-        </Checkbox>
-      </FormItem>
-    </Col>
-  ));
+
+  const viewConfigItems: SettingsCardProps[] = [
+    {
+      title: "Position",
+      tooltip: "The default position is defined in voxel-coordinates (x, y, z).",
+      content: (
+        <Form.Item name={["defaultConfiguration", "position"]}>
+          <Vector3Input placeholder="0, 0, 0" />
+        </Form.Item>
+      ),
+    },
+    {
+      title: "Zoom Level",
+      tooltip:
+        "A zoom level of &ldquo;1&rdquo; will display the data in its original magnification.",
+      content: (
+        <Form.Item
+          name={["defaultConfiguration", "zoom"]}
+          rules={[
+            {
+              validator: syncValidator(
+                (value) => value == null || value > 0,
+                "The zoom value must be greater than 0.",
+              ),
+            },
+          ]}
+        >
+          <InputNumber
+            style={{
+              width: "100%",
+            }}
+            placeholder="1"
+          />
+        </Form.Item>
+      ),
+    },
+    {
+      title: "Rotation",
+      tooltip:
+        "The default rotation that will be applied when viewing the dataset for the first time.",
+      content: (
+        <Form.Item name={["defaultConfiguration", "rotation"]}>
+          <Vector3Input placeholder="0, 0, 0" />
+        </Form.Item>
+      ),
+    },
+    {
+      title: settings.interpolation as string,
+      tooltip: settingsTooltips.interpolation,
+      content: (
+        <Form.Item name={["defaultConfiguration", "interpolation"]} valuePropName="checked">
+          <Switch />
+        </Form.Item>
+      ),
+    },
+    {
+      title: settings.fourBit as string,
+      tooltip: settingsTooltips.fourBit,
+      content: (
+        <Form.Item name={["defaultConfiguration", "fourBit"]} valuePropName="checked">
+          <Switch />
+        </Form.Item>
+      ),
+    },
+    {
+      title: settings.renderMissingDataBlack as string,
+      tooltip: settingsTooltips.renderMissingDataBlack,
+      content: (
+        <Form.Item
+          name={["defaultConfiguration", "renderMissingDataBlack"]}
+          valuePropName="checked"
+        >
+          <Switch />
+        </Form.Item>
+      ),
+    },
+    {
+      title: settings.segmentationPatternOpacity as string,
+      tooltip: settingsTooltips.segmentationPatternOpacity,
+      content: (
+        <Row>
+          <Col span={16}>
+            <Form.Item name={["defaultConfiguration", "segmentationPatternOpacity"]}>
+              <Slider min={0} max={100} step={1} />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            <FormItem name={["defaultConfiguration", "segmentationPatternOpacity"]}>
+              <InputNumber min={0} max={100} step={1} precision={0} />
+            </FormItem>
+          </Col>
+        </Row>
+      ),
+    },
+    {
+      title: settings.blendMode as string,
+      tooltip: settingsTooltips.blendMode,
+      content: (
+        <Form.Item name={["defaultConfiguration", "blendMode"]}>
+          <Select allowClear>
+            <Select.Option value={BLEND_MODES.Additive}>Additive</Select.Option>
+            <Select.Option value={BLEND_MODES.Cover}>Cover</Select.Option>
+          </Select>
+        </Form.Item>
+      ),
+    },
+    {
+      title: settings.loadingStrategy as string,
+      tooltip: settingsTooltips.loadingStrategy,
+      content: (
+        <Form.Item name={["defaultConfiguration", "loadingStrategy"]}>
+          <Select allowClear>
+            <Select.Option value={"BEST_QUALITY_FIRST"}>Best quality first</Select.Option>
+            <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
+          </Select>
+        </Form.Item>
+      ),
+    },
+    {
+      title: "Color Layer Order",
+      tooltip:
+        "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+      content: (
+        <Form.Item
+          name={["defaultConfiguration", "colorLayerOrder"]}
+          valuePropName="colorLayerNames"
+        >
+          <ColorLayerOrderingTable />
+        </Form.Item>
+      ),
+    },
+  ];
 
   return (
     <div>
-      <Alert
-        message="The following settings define the default configuration when viewing or creating an explorational annotation for this dataset. Use them to optimize the first appearance of your dataset."
-        type="info"
-        style={{ marginBottom: 8 }}
-        showIcon
+      <SettingsTitle
+        title="View Configuration"
+        description="Define the default view configuration values and optimize the initial appearance of this dataset."
       />
-      <Row gutter={24}>
-        <Col span={6}>
-          <FormItemWithInfo
-            name={["defaultConfiguration", "position"]}
-            label="Position"
-            info="The default position is defined in voxel-coordinates (x, y, z)."
-          >
-            <Vector3Input />
-          </FormItemWithInfo>
-        </Col>
-        <Col span={6}>
-          <FormItemWithInfo
-            name={["defaultConfiguration", "zoom"]}
-            label="Zoom"
-            info="A zoom of &ldquo;1&rdquo; will display the data in its original magnification."
-            rules={[
-              {
-                validator: syncValidator(
-                  (value) => value == null || value > 0,
-                  "The zoom value must be greater than 0.",
-                ),
-              },
-            ]}
-          >
-            <InputNumber
-              style={{
-                width: "100%",
-              }}
-            />
-          </FormItemWithInfo>
-        </Col>
-        <Col span={6}>
-          <FormItemWithInfo
-            name={["defaultConfiguration", "rotation"]}
-            label="Rotation - Arbitrary View Modes"
-            info="The default rotation that will be used in oblique and flight view mode."
-          >
-            <Vector3Input />
-          </FormItemWithInfo>
-        </Col>
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        {viewConfigItems.map((item) => (
+          <Col span={8} key={item.title}>
+            <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
+          </Col>
+        ))}
       </Row>
-      <Row gutter={24}>{checkboxSettings}</Row>
-      <Row gutter={24}>
-        <Col span={6}>
-          <Row gutter={24}>
-            <Col span={16}>
-              <FormItemWithInfo
-                name={["defaultConfiguration", "segmentationPatternOpacity"]}
-                label={settings.segmentationPatternOpacity}
-                info={settingsTooltips.segmentationPatternOpacity}
-                colon={false}
-              >
-                <Slider min={0} max={100} step={1} />
-              </FormItemWithInfo>
-            </Col>
-            <Col span={8} style={{ marginRight: -12 }}>
-              <FormItem
-                name={["defaultConfiguration", "segmentationPatternOpacity"]}
-                colon={false}
-                label=" "
-              >
-                <InputNumber min={0} max={100} step={1} precision={0} />
-              </FormItem>
-            </Col>
-          </Row>
-        </Col>
-        <Col span={6}>
-          <FormItemWithInfo
-            colon={false}
-            name={["defaultConfiguration", "blendMode"]}
-            label={settings.blendMode}
-            info={settingsTooltips.blendMode}
-          >
-            <Select allowClear>
-              <Select.Option value={BLEND_MODES.Additive}>Additive</Select.Option>
-              <Select.Option value={BLEND_MODES.Cover}>Cover</Select.Option>
-            </Select>
-          </FormItemWithInfo>
-        </Col>
-        <Col span={6}>
-          <FormItemWithInfo
-            colon={false}
-            name={["defaultConfiguration", "loadingStrategy"]}
-            label={settings.loadingStrategy}
-            info={settingsTooltips.loadingStrategy}
-          >
-            <Select allowClear>
-              <Select.Option value={"BEST_QUALITY_FIRST"}>Best quality first</Select.Option>
-              <Select.Option value={"PROGRESSIVE_QUALITY"}>Progressive quality</Select.Option>
-            </Select>
-          </FormItemWithInfo>
-        </Col>
-      </Row>
-      <Row gutter={24}>
-        <Col span={6}>
-          <FormItem
-            name={["defaultConfiguration", "colorLayerOrder"]}
-            valuePropName="colorLayerNames"
-          >
-            <ColorLayerOrderingTable />
-          </FormItem>
-        </Col>
-      </Row>
-      <Divider />
-      <Row gutter={32}>
+
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col span={12}>
-          <FormItemWithInfo
-            name="defaultConfigurationLayersJson"
-            label="Layer Configuration"
-            info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
-            rules={[
-              {
-                validator: (_rule, config: string) =>
-                  Promise.all([
-                    validateLayerViewConfigurationObjectJSON(_rule, config),
-                    dataStoreURL
-                      ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
-                      : Promise.resolve(),
-                  ]),
-              },
-            ]}
-          >
-            <Input.TextArea rows={18} style={jsonEditStyle} />
-          </FormItemWithInfo>
+          <SettingsCard
+            title="Layer Configuration"
+            tooltip="Define layer-specific properties, such as color, alpha and intensityRange in JSON format"
+            content={
+              <Form.Item
+                name="defaultConfigurationLayersJson"
+                rules={[
+                  {
+                    validator: (_rule, config: string) =>
+                      Promise.all([
+                        validateLayerViewConfigurationObjectJSON(_rule, config),
+                        dataStoreURL
+                          ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
+                          : Promise.resolve(),
+                      ]),
+                  },
+                ]}
+              >
+                <Input.TextArea rows={18} style={jsonEditStyle} />
+              </Form.Item>
+            }
+          />
         </Col>
         <Col span={12}>
-          Valid layer view configurations and their default values:
-          <br />
-          <br />
-          <Table
-            columns={columns}
-            dataSource={layerViewConfigurationEntries}
-            size="small"
-            pagination={false}
-            className="large-table"
-            scroll={{
-              x: "max-content",
-            }}
+          <SettingsCard
+            title="Valid layer view configurations and their default values"
+            tooltip="The default values are defined in the dataset's properties."
+            content={
+              <Table
+                columns={columns}
+                dataSource={layerViewConfigurationEntries}
+                size="small"
+                pagination={false}
+                className="large-table"
+                scroll={{
+                  x: "max-content",
+                }}
+              />
+            }
           />
         </Col>
       </Row>
     </div>
   );
-}
+};

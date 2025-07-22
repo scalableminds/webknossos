@@ -42,7 +42,10 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
   axis,
 }: AxisRotationFormItemProps) => {
-  const dataLayers: APIDataLayer[] = Form.useWatch(["dataSource", "dataLayers"], form);
+  const dataLayers: APIDataLayer[] = Form.useWatch(["dataSource", "dataLayers"], {
+    form,
+    preserve: true,
+  });
   const datasetBoundingBox = useMemo(
     () => getDatasetBoundingBoxFromLayers(dataLayers),
     [dataLayers],

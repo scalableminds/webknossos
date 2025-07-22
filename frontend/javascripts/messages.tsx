@@ -51,6 +51,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  segmentationPatternOpacity:
+    "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
       (will take longer until you see data) or alternatively,
       improving the quality progressively (data will be loaded faster,
@@ -83,6 +85,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
+
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
   alpha: "Layer opacity",
@@ -333,7 +336,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.leave_with_unsaved_changes":
-    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
+    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Ok”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.add_zarr_different_scale_warning":

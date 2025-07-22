@@ -31,6 +31,7 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
   getUsersOrganizations,
+  logoutUser,
   sendAnalyticsEvent,
   switchToOrganization,
   updateNovelUserExperienceInfos,
@@ -41,7 +42,6 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
@@ -774,7 +774,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    await Request.receiveJSON("/api/auth/logout");
+    await logoutUser();
     Store.dispatch(logoutUserAction());
     // Hard navigation
     location.href = "/";

@@ -1,9 +1,9 @@
 import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
 import { document } from "libs/window";
-import * as THREE from "three";
+import { WebGLRenderer } from "three";
 import { Store } from "viewer/singletons";
 
-let renderer: THREE.WebGLRenderer | null = null;
+let renderer: WebGLRenderer | null = null;
 
 export function destroyRenderer(): void {
   if (renderer == null) {
@@ -14,7 +14,7 @@ export function destroyRenderer(): void {
   notifyAboutDisposedRenderer();
 }
 
-function getRenderer(): THREE.WebGLRenderer {
+function getRenderer(): WebGLRenderer {
   if (renderer != null) {
     return renderer;
   }
@@ -23,7 +23,7 @@ function getRenderer(): THREE.WebGLRenderer {
   renderer = (
     renderCanvasElement != null
       ? // Create a WebGL2 renderer
-        new THREE.WebGLRenderer({
+        new WebGLRenderer({
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
@@ -38,7 +38,7 @@ function getRenderer(): THREE.WebGLRenderer {
           antialias: Store.getState().userConfiguration.antialiasRendering,
         })
       : {}
-  ) as THREE.WebGLRenderer;
+  ) as WebGLRenderer;
 
   return renderer;
 }

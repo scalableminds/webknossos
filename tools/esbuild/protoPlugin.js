@@ -24,7 +24,7 @@ const createProtoPlugin = (protoPath) => ({
       }
 
       return {
-        errors: [{ text: `Could not resolve .proto file: ${args.path}` }],
+        errors: [{ text: "Could not resolve .proto file: ${args.path}" }],
       };
     });
 
@@ -34,13 +34,13 @@ const createProtoPlugin = (protoPath) => ({
         const root = new protobuf.Root();
 
         // Resolve imports from protoRoot
-        root.resolvePath = (origin, target) => path.resolve(protoRoot, target);
+        root.resolvePath = (_origin, target) => path.resolve(protoRoot, target);
 
         const loaded = await root.load(args.path);
         const json = loaded.toJSON();
 
         return {
-          contents: `module.exports = ${JSON.stringify(json)};`,
+          contents: `module.exports = ${JSON.stringify(json)};`, 
           loader: 'js',
         };
       } catch (error) {

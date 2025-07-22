@@ -1,21 +1,17 @@
-const esbuild = require('esbuild');
-const path = require('node:path');
-
-const { lessLoader } = require('esbuild-plugin-less');
-const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
-
+const esbuild = require("esbuild");
+const path = require("node:path");
 
 // Custom worker plugin that creates separate bundles for .worker.ts files
-const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot) => ({
-  name: 'worker',
+const createWorkerPlugin = (buildOutDir, srcPath, target, polyfillNode, lessLoader, projectRoot, logLevel) => ({
+  name: "worker",
   setup(build) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === "production";
     const workerEntries = new Map();
     
     // Collect all worker files during the resolve phase
     build.onResolve({ filter: /\.worker$/ }, (args) => {
       const workerPath = path.resolve(srcPath, args.path + ".ts");
-      const workerName = path.basename(args.path, '.worker.ts');
+      const workerName = path.basename(args.path, ".worker.ts");
       const workerOutputPath = `${workerName}.js`;
       
       workerEntries.set(workerPath, workerOutputPath);
@@ -23,18 +19,18 @@ const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot) => ({
       // Return a virtual module that exports the worker URL
       return {
         path: args.path,
-        namespace: 'worker-url',
+        namespace: "worker-url",
       };
     });
     
     // Handle the virtual worker URL modules
-    build.onLoad({ filter: /.*/, namespace: 'worker-url' }, (args) => {
-      const workerName = path.basename(args.path, '.worker.ts');
+    build.onLoad({ filter: /.*/, namespace: "worker-url" }, (args) => {
+      const workerName = path.basename(args.path, ".worker.ts");
       const workerUrl = `/assets/bundle/${workerName}.js`;
       
       return {
         contents: `export default "${workerUrl}";`,
-        loader: 'js',
+        loader: "js",
       };
     });
 
@@ -47,29 +43,35 @@ const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot) => ({
           await esbuild.build({
             entryPoints: [workerPath],
             bundle: true,
-            format: 'iife',
+            format: "iife",
             target: target,
             outfile: path.join(buildOutDir, workerOutputPath),
             minify: isProduction,
-            sourcemap: isProduction ? 'external' : 'inline',
+            sourcemap: isProduction ? "external" : "inline",
             define: {
-              'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-              'global': 'globalThis',
+              "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
+            },
+            alias: {
+              react: path.resolve(projectRoot, "node_modules/react"),
+              three: path.resolve(projectRoot, "node_modules/three/src/Three.js"),
+              url: require.resolve("url/"),
             },
             external: [], // Bundle everything for workers
-            // Don't inject process-shim in workers
+            // Don"t inject process-shim in workers
             inject: [],
-            resolveExtensions: ['.ts', '.tsx', '.js', '.json'],
+            resolveExtensions: [".ts", ".tsx", ".js", ".json"],
             plugins: [
               polyfillNode(),
               lessLoader({
                 javascriptEnabled: true,
               }),
             ],
-            loader: {'.wasm': 'file'}
+            loader: {".wasm": "file"}
           });
           
-          console.log(`✓ Built worker: ${workerOutputPath}`);
+          if (logLevel !== "silent") {
+            console.log(`✓ Built worker: ${workerOutputPath}`);
+          }
         } catch (error) {
           console.error(`✗ Failed to build worker ${workerOutputPath}:`, error.message);
           result.errors.push({

@@ -1,31 +1,32 @@
-const esbuild = require('esbuild');
-const path = require('node:path');
-const fs = require('node:fs');
-const os = require('node:os');
+const esbuild = require("esbuild");
+const path = require("node:path");
+const fs = require("node:fs");
+const os = require("node:os");
 
-const srcPath = path.resolve(__dirname, 'frontend/javascripts/');
-const outputPath  = path.resolve(__dirname, 'public/bundle/');
-const protoPath = path.join(__dirname, 'webknossos-datastore/proto');
-
-const target = [
-  'chrome90',
-  'firefox88',
-  'edge90',
-  'safari14',
-  'ios14',
-]
+const srcPath = path.resolve(__dirname, "frontend/javascripts/");
+const outputPath  = path.resolve(__dirname, "public/bundle/");
+const protoPath = path.join(__dirname, "webknossos-datastore/proto");
 
 // Community plugins
-const { lessLoader } = require('esbuild-plugin-less');
-const copyPlugin = require('esbuild-plugin-copy').default;
+const browserslistToEsbuild = require("browserslist-to-esbuild");
+const { lessLoader } = require("esbuild-plugin-less");
+const copyPlugin = require("esbuild-plugin-copy").default;
 const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
 
-const { createWorkerPlugin } = require('./tools/esbuild/workerPlugin.js');
-const { createProtoPlugin } = require('./tools/esbuild/protoPlugin.js');
+// Custom Plugins for Webknossos
+const { createWorkerPlugin } = require("./tools/esbuild/workerPlugin.js");
+const { createProtoPlugin } = require("./tools/esbuild/protoPlugin.js");
 
-// Define build function
+const target = browserslistToEsbuild([
+  "last 3 Chrome versions",
+  "last 3 Firefox versions",
+  "last 2 Edge versions",
+  "last 1 Safari versions",
+  "last 1 iOS versions",
+]);
+
 async function build(env = {}) {
-  const isProduction = env.production || process.env.NODE_ENV === 'production';
+  const isProduction = env.production || process.env.NODE_ENV === "production";
   const isWatch = env.watch;
 
   // Determine output directory for bundles.
@@ -34,7 +35,7 @@ async function build(env = {}) {
     ? fs.mkdtempSync(path.join(os.tmpdir(), "esbuild-dev"))
     : outputPath;
 
-  // Base plugins, configured to use the dynamic output directory
+  // Base plugins
   const plugins = [
     polyfillNode(),
     createProtoPlugin(protoPath),
@@ -44,58 +45,58 @@ async function build(env = {}) {
     copyPlugin({
       patterns: [
         {
-          from: 'node_modules/@zip.js/zip.js/dist/z-worker.js',
-          to: path.join(buildOutDir, 'z-worker.js'),
+          from: "node_modules/@zip.js/zip.js/dist/z-worker.js",
+          to: path.join(buildOutDir, "z-worker.js"),
         },
       ],
     }),
-    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname),
+    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname, env.logLevel),
   ];
 
 
   const buildOptions = {
     entryPoints: {
-      main: path.resolve(srcPath, 'main.tsx'),
+      main: path.resolve(srcPath, "main.tsx"),
     },
     bundle: true,
     outdir: buildOutDir,
-    format: 'esm',
+    format: "esm",
     target: target,
-    platform: 'browser',
+    platform: "browser",
     splitting: true,
-    chunkNames: '[name].[hash]',
-    assetNames: '[name].[hash]',
-    sourcemap: isProduction ? 'external' : 'inline',
+    chunkNames: "[name].[hash]",
+    assetNames: "[name].[hash]",
+    sourcemap: isProduction ? "external" : "inline",
     minify: isProduction,
     define: {
-      'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
-      'process.env.BABEL_ENV': JSON.stringify(process.env.BABEL_ENV || 'development'),
-      'process.browser': 'true',
+      "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
+      "process.env.BABEL_ENV": JSON.stringify(process.env.BABEL_ENV || "development"),
+      "process.browser": "true",
       "global": "global"
     },
-    inject: [path.resolve(__dirname, 'process_shim.js')],
+    inject: [path.resolve(__dirname, "process_shim.js")],
     loader: {
-      '.woff': 'file',
-      '.woff2': 'file',
-      '.ttf': 'file',
-      '.eot': 'file',
-      '.svg': 'file',
-      '.png': 'file',
-      '.jpg': 'file',
-      '.wasm': 'file',
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+      ".eot": "file",
+      ".svg": "file",
+      ".png": "file",
+      ".jpg": "file",
+      ".wasm": "file",
     },
-    resolveExtensions: ['.ts', '.tsx', '.js', '.json', ".proto", ".wasm"],
+    resolveExtensions: [".ts", ".tsx", ".js", ".json", ".proto", ".wasm"],
     alias: {
-      react: path.resolve('./node_modules/react'),
-      three: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
+      react: path.resolve(__dirname, "node_modules/react"),
+      three: path.resolve(__dirname, "node_modules/three/src/Three.js"),
       url: require.resolve("url/"),
     },
     plugins: plugins,
-    external: ["/assets/images/*", 'fs', 'path', 'util', 'module'],
-    publicPath: '/assets/bundle/',
-    metafile: !isWatch, // Don't generate metafile for dev server
+    external: ["/assets/images/*", "fs", "path", "util", "module"],
+    publicPath: "/assets/bundle/",
+    metafile: !isWatch, // Don"t generate metafile for dev server
     logOverride: {
-      'direct-eval': 'silent',
+      "direct-eval": "silent",
     },
   };
   
@@ -107,7 +108,9 @@ async function build(env = {}) {
       servedir: buildOutDir,
       port: env.PORT || 9002,
       onRequest: (args) => {
+        if (env.logLevel === "verbose") {
           console.log(`[${args.method}] ${args.path} - status ${args.status}`);
+        }
       },
     });
     
@@ -116,7 +119,7 @@ async function build(env = {}) {
     
     await ctx.watch();
     
-    process.on('SIGINT', async () => {
+    process.on("SIGINT", async () => {
       await ctx.dispose();
       process.exit(0);
     });
@@ -126,12 +129,12 @@ async function build(env = {}) {
     
     if (result.metafile) {
       await fs.promises.writeFile(
-        path.join(buildOutDir, 'metafile.json'),
+        path.join(buildOutDir, "metafile.json"),
         JSON.stringify(result.metafile, null, 2)
       );
     }
     
-    console.log('Build completed successfully!');
+    console.log("Build completed successfully!");
   }
 }
 
@@ -140,12 +143,16 @@ module.exports = { build };
 // If called directly
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const env = {};
+  const env = {
+    logLevel: "info", // Default log level
+  };
   
   args.forEach(arg => {
-    if (arg === '--production') env.production = true;
-    if (arg === '--watch') env.watch = true;
-    if (arg.startsWith('--port=')) env.PORT = Number.parseInt(arg.split('=')[1]);
+    if (arg === "--production") env.production = true;
+    if (arg === "--watch") env.watch = true;
+    if (arg.startsWith("--port=")) env.PORT = Number.parseInt(arg.split("=")[1]);
+    if (arg === "--verbose") env.logLevel = "verbose";
+    if (arg === "--silent") env.logLevel = "silent";
   });
   
   build(env).catch(console.error);

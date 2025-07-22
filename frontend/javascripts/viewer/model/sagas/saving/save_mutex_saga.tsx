@@ -24,9 +24,18 @@ import {
   setIsMutexAcquiredAction,
 } from "viewer/model/actions/annotation_actions";
 import type { EnsureMaySaveNowAction } from "viewer/model/actions/save_actions";
+import {
+  type UpdateLayerSettingAction,
+  updateLayerSettingAction,
+} from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
+import {
+  getActiveSegmentationTracing,
+  hasEditableMapping,
+  isMappingLocked,
+} from "viewer/model/accessors/volumetracing_accessor";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
@@ -41,6 +50,7 @@ const DISABLE_EAGER_MUTEX_ACQUISITION = true;
 
 type MutexLogicState = {
   isInitialRequest: boolean;
+  onlyRequiredOnSave: boolean;
 };
 
 function* getDoesHaveMutex(): Saga<boolean> {
@@ -53,33 +63,45 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
    *
    */
   yield* call(ensureWkReady);
-  const initialAllowUpdate = yield* select(
-    (state) => state.annotation.restrictions.initialAllowUpdate,
-  );
-  if (!initialAllowUpdate) {
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  if (!allowUpdate) {
     // We are in an read-only annotation. There's no point in acquiring mutexes.
     console.log("exit mutex saga");
     return;
   }
+
+  let onlyRequiredOnSave = false;
+  const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
+  if (
+    DISABLE_EAGER_MUTEX_ACQUISITION &&
+    activeVolumeTracing?.hasEditableMapping &&
+    activeVolumeTracing?.mappingIsLocked
+  ) {
+    // The active annotation is currently in proofreading state. Thus, having the mutex only on save demand works in regards to the current milestone.
+    onlyRequiredOnSave = true;
+  }
+
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
+    onlyRequiredOnSave,
   };
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
 
-  let runningTryAcquireMutexContinuouslySaga: FixedTask<void> | null;
+  let runningMutexAcquiringSaga: FixedTask<void> | null;
+
+  function* restartMutexAcquiringSaga(): Saga<void> {
+    if (runningMutexAcquiringSaga != null) {
+      yield* cancel(runningMutexAcquiringSaga);
+    }
+    runningMutexAcquiringSaga = yield* fork(tryAcquireMutexOnceNeeded, mutexLogicState);
+  }
 
   function* reactToOthersMayEditChanges({
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {
     if (othersMayEdit) {
-      if (runningTryAcquireMutexContinuouslySaga != null) {
-        yield* cancel(runningTryAcquireMutexContinuouslySaga);
-      }
-      runningTryAcquireMutexContinuouslySaga = yield* fork(
-        tryAcquireMutexContinuously,
-        mutexLogicState,
-      );
+      yield call(restartMutexAcquiringSaga);
     } else {
       // othersMayEdit was turned off by the activeUser. Since this is only
       // allowed by the owner, they should be able to edit the annotation, too.
@@ -93,27 +115,35 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 
-  if (DISABLE_EAGER_MUTEX_ACQUISITION) {
-    // console.log("listening to all ENSURE_MAY_SAVE_NOW");
-    yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
-    while (true) {
-      // console.log("taking ENSURE_MAY_SAVE_NOW");
-      yield* take("ENSURE_MAY_SAVE_NOW");
-      // console.log("took ENSURE_MAY_SAVE_NOW");
-      const { doneSaving } = yield race({
-        tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
-        doneSaving: take("DONE_SAVING"),
-      });
-      if (doneSaving) {
-        yield call(releaseMutex);
-      }
+  function* reactToActiveVolumeAnnotationChange({
+    layerName,
+    propertyName,
+    value,
+  }: UpdateLayerSettingAction): Saga<void> {
+    if (propertyName !== "isDisabled") {
+      return;
     }
-  } else {
-    runningTryAcquireMutexContinuouslySaga = yield* fork(
-      tryAcquireMutexContinuously,
-      mutexLogicState,
-    );
+    const previousOnlyRequiredOnSaveState = mutexLogicState.onlyRequiredOnSave;
+    if (value === false) {
+      // New volume annotation layer was activated. Check if this is a proofreading only annotation to determine whether the mutex should be fetched only on save.
+      const isMappingEditable = yield* select((state) => hasEditableMapping(state, layerName));
+      const isLockedMapping = yield* select((state) => isMappingLocked(state, layerName));
+      if (DISABLE_EAGER_MUTEX_ACQUISITION && isMappingEditable && isLockedMapping) {
+        // We are in a proofreading annotation -> Turn on on save mutex acquiring.
+        mutexLogicState.onlyRequiredOnSave = true;
+      } else {
+        mutexLogicState.onlyRequiredOnSave = false;
+      }
+    } else {
+      mutexLogicState.onlyRequiredOnSave = false;
+    }
+    if (previousOnlyRequiredOnSaveState !== mutexLogicState.onlyRequiredOnSave) {
+      yield* call(restartMutexAcquiringSaga);
+    }
   }
+  yield takeEvery("UPDATE_LAYER_SETTING", reactToActiveVolumeAnnotationChange);
+
+  runningMutexAcquiringSaga = yield* fork(tryAcquireMutexOnceNeeded, mutexLogicState);
 }
 
 function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
@@ -128,6 +158,14 @@ function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
       return;
     }
     yield* take("SET_BLOCKED_BY_USER");
+  }
+}
+
+function* tryAcquireMutexOnceNeeded(mutexLogicState: MutexLogicState): Saga<void> {
+  if (mutexLogicState.onlyRequiredOnSave) {
+    yield* call(tryAcquireMutexOnSaveNeeded, mutexLogicState);
+  } else {
+    yield* call(tryAcquireMutexContinuously, mutexLogicState);
   }
 }
 
@@ -188,6 +226,22 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
     }
     mutexLogicState.isInitialRequest = false;
     yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+  }
+}
+
+function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<never> {
+  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
+  while (true) {
+    // console.log("taking ENSURE_MAY_SAVE_NOW");
+    yield* take("ENSURE_MAY_SAVE_NOW");
+    // console.log("took ENSURE_MAY_SAVE_NOW");
+    const { doneSaving } = yield race({
+      tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
+      doneSaving: take("DONE_SAVING"),
+    });
+    if (doneSaving) {
+      yield call(releaseMutex);
+    }
   }
 }
 

@@ -193,6 +193,7 @@ const defaultState: WebknossosState = {
       processedActionCount: 0,
       totalActionCount: 0,
     },
+    hasAnnotationMutex: false,
   },
   flycam: {
     zoomStep: 1.3,

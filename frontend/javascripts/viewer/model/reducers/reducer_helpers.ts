@@ -135,7 +135,6 @@ export function convertServerAnnotationToFrontendAnnotation(
   const restrictions = {
     ...annotation.restrictions,
     ...annotation.settings,
-    initialAllowUpdate: annotation.restrictions.allowUpdate,
   };
   return {
     annotationId,

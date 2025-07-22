@@ -115,7 +115,7 @@ export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
+export type Restrictions = APIRestrictions;
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
@@ -422,6 +422,7 @@ export type SaveState = {
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
+  readonly hasAnnotationMutex: boolean;
 };
 export type Flycam = {
   readonly zoomStep: number;

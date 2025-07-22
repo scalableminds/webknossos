@@ -297,10 +297,7 @@ function TreeHierarchyView(props: Props) {
   // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
   setTimeout(scrollToActiveTree, 900);
 
-  useReduxActionListener("EXPAND_PARENT_GROUPS_OF_TREE", () => {
-    console.log("EXPAND_PARENT_GROUPS_OF_TREE action received, scrolling to active tree");
-    scrollToActiveTree();
-  });
+  useReduxActionListener("FOCUS_TREE", scrollToActiveTree);
 
   return (
     <>

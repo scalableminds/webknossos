@@ -27,6 +27,7 @@ type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
 type SetExpandedTreeGroupsByKeysAction = ReturnType<typeof setExpandedTreeGroupsByKeysAction>;
 type SetExpandedTreeGroupsByIdsAction = ReturnType<typeof setExpandedTreeGroupsByIdsAction>;
 type ExpandParentGroupsOfTreeAction = ReturnType<typeof expandParentGroupsOfTreeAction>;
+type FocusTreeAction = ReturnType<typeof focusTreeAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -119,6 +120,7 @@ export type SkeletonTracingAction =
   | SetExpandedTreeGroupsByKeysAction
   | SetExpandedTreeGroupsByIdsAction
   | ExpandParentGroupsOfTreeAction
+  | FocusTreeAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -400,6 +402,13 @@ export const expandParentGroupsOfTreeAction = (tree: Tree) =>
     type: "EXPAND_PARENT_GROUPS_OF_TREE",
     tree,
   }) as const;
+
+export const focusTreeAction = (tree: Tree) => {
+  return {
+    type: "FOCUS_TREE",
+    tree,
+  } as const;
+};
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>
   ({

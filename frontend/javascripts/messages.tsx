@@ -40,7 +40,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
-  segmentationPatternOpacity: "Segmentation Pattern Opacity",
+  segmentationPatternOpacity: "Pattern Opacity",
   loadingStrategy: "Loading Strategy",
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",

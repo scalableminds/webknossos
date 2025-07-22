@@ -47,7 +47,11 @@ const DatasetSettingsView: React.FC = () => {
   const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
   const location = useLocation();
   const navigate = useNavigate();
-  const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "data";
+  const selectedKey =
+    location.pathname
+      .split("/")
+      .filter((p) => p.length > 0)
+      .pop() || "data";
 
   const getMessageComponents = useCallback(() => {
     if (dataset == null) {

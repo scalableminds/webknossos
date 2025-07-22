@@ -169,6 +169,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     "data" | "general" | "defaultConfig",
     boolean
   > => {
+    // Antd's form.getFieldsError only returns errors for mounted form fields, i.e. from the current tab :anger:
     const err = form.getFieldsError();
     const formErrors: Record<string, any> = {};
 
@@ -295,13 +296,13 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     const validationSummary = getFormValidationSummary();
 
     // Switch to the earliest, problematic tab
-    switch (Object.keys(validationSummary)) {
-      case ["data"]:
+    switch (Object.keys(validationSummary).pop()) {
+      case "data":
         return navigate("data");
-      case ["general"]:
+      case "general":
         // "general" is very broad and there is no specific tab for it.
         return;
-      case ["defaultConfig"]:
+      case "defaultConfig":
         return navigate("defaultConfig");
       default:
         return;

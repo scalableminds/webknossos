@@ -192,7 +192,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
       ),
     },
     {
-      title: "Rotation - Arbitrary Modes only",
+      title: "Rotation",
       tooltip: "The default rotation that will be used in oblique and flight view mode.",
       content: (
         <Form.Item name={["defaultConfiguration", "rotation"]}>

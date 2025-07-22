@@ -1,7 +1,6 @@
 import { UnlockOutlined } from "@ant-design/icons";
 import type { FileList } from "admin/dataset/composition_wizard/common.ts";
 import { Form, Upload } from "antd";
-import { Fragment } from "react";
 import { Unicode } from "viewer/constants";
 
 import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
@@ -21,7 +20,7 @@ export function GoogleAuthFormItem({
     <FormItem
       name="authFile"
       label={
-        <Fragment>
+        <>
           Google{Unicode.NonBreakingSpace}
           <a
             href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
@@ -31,7 +30,7 @@ export function GoogleAuthFormItem({
             Service Account
           </a>
           {Unicode.NonBreakingSpace}Key {showOptionalHint && "(Optional)"}
-        </Fragment>
+        </>
       }
       hasFeedback
     >

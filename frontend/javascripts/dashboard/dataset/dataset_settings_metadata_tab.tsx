@@ -5,16 +5,6 @@ import { Col, DatePicker, Form, Input, Row } from "antd";
 export default function DatasetSettingsMetadataTab() {
   const metadataItems: SettingsCardProps[] = [
     {
-      title: "Display Name",
-      tooltip: "Add a descriptive name for your dataset instead of the technical name.",
-      content: (
-        <Form.Item name={["dataset", "displayName"]}>
-          <Input />
-        </Form.Item>
-      ),
-    },
-
-    {
       title: "Publication Date",
       tooltip:
         "Datasets are sorted by date. Specify the date (e.g. publication date) in order to influence the sorting order of the listed datasets in your dashboard.",

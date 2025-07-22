@@ -1104,19 +1104,9 @@ type DatasetCompositionArgs = {
 export function createDatasetComposition(
   payload: DatasetCompositionArgs,
 ): Promise<NewDatasetReply> {
-  // Formatting the dataSourceId to the old format so that the backend can parse it.
-  // And removing the datasetId as the datastore cannot use it.
-  const updatedLayers = payload.layers.map(({ dataSourceId, datasetId, ...rest }) => ({
-    ...rest,
-    datasetId,
-  }));
-  const payloadWithUpdatedLayers = {
-    ...payload,
-    layers: updatedLayers,
-  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/api/datasets/compose?token=${token}`, {
-      data: payloadWithUpdatedLayers,
+      data: payload,
     }),
   );
 }
@@ -1344,12 +1334,9 @@ export async function triggerDatasetClearCache(
   });
 }
 
-export async function deleteDatasetOnDisk(
-  datastoreHost: string,
-  dataset: APIDataset,
-): Promise<void> {
+export async function deleteDatasetOnDisk(datastoreHost: string, datasetId: string): Promise<void> {
   await doWithToken((token) =>
-    Request.triggerRequest(`/data/datasets/${dataset.id}/deleteOnDisk?token=${token}`, {
+    Request.triggerRequest(`/data/datasets/${datasetId}/deleteOnDisk?token=${token}`, {
       host: datastoreHost,
       method: "DELETE",
     }),

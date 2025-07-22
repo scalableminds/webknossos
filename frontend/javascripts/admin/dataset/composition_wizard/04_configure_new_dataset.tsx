@@ -72,10 +72,6 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     ).map(
       ([dataset, dataLayer]): LayerLink => ({
         datasetId: dataset.id,
-        dataSourceId: {
-          directoryName: dataset.directoryName,
-          owningOrganization: dataset.owningOrganization,
-        },
         datasetName: dataset.name,
         sourceName: dataLayer.name,
         newName: dataLayer.name,

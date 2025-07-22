@@ -27,7 +27,7 @@ export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
   isLoading: boolean;
   isChecking: boolean;
-  checkDatasets: () => Promise<void>;
+  checkDatasets: (organizationId: string | undefined) => Promise<void>;
   fetchDatasets: () => void;
   reloadDataset: (datasetId: string, datasetsToUpdate?: Array<APIDatasetCompact>) => Promise<void>;
   updateCachedDataset: (datasetId: string, updater: DatasetUpdater) => Promise<APIDataset>;
@@ -216,7 +216,7 @@ export default function DatasetCollectionContextProvider({
       isChecking,
       getBreadcrumbs,
       getActiveSubfolders,
-      checkDatasets: async () => {
+      checkDatasets: async (organizationId: string | undefined) => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");
           return;
@@ -230,7 +230,7 @@ export default function DatasetCollectionContextProvider({
             ) =>
               // block the subsequent fetch of datasets. Otherwise, one offline
               // datastore will stop the refresh for all datastores.
-              triggerDatasetCheck(datastore.url).catch(() => {}),
+              triggerDatasetCheck(datastore.url, organizationId).catch(() => {}),
           ),
         );
         setIsChecking(false);

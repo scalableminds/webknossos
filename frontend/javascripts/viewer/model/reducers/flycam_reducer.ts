@@ -336,7 +336,11 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         .toArray();
 
       // if planeID is given, use it to manipulate z
-      if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
+      if (
+        planeId != null &&
+        state.userConfiguration.dynamicSpaceDirection &&
+        action.useDynamicSpaceDirection
+      ) {
         // change direction of the value connected to space, based on the last direction
         deltaInWorldV3 = V3.multiply(deltaInWorldV3, state.flycam.spaceDirectionOrtho);
       }
@@ -363,8 +367,12 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           scaleFactor,
         );
 
-        if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
-          // change direction of the value connected to space, based on the last direction
+        if (
+          planeId != null &&
+          state.userConfiguration.dynamicSpaceDirection &&
+          action.useDynamicSpaceDirection
+        ) {
+          // Change direction of the value connected to space, based on the last direction
           deltaInWorldZoomed = V3.multiply(deltaInWorldZoomed, state.flycam.spaceDirectionOrtho);
         }
 

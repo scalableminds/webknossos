@@ -36,7 +36,11 @@ export const moveU = (deltaU: number): void => {
 export const moveV = (deltaV: number): void => {
   movePlane([0, deltaV, 0]);
 };
-export const moveW = (deltaW: number, oneSlide: boolean): void => {
+export const moveW = (
+  deltaW: number,
+  oneSlide: boolean,
+  useDynamicSpaceDirection: boolean = false,
+): void => {
   const state = Store.getState();
   if (is2dDataset(state.dataset)) {
     return;
@@ -58,10 +62,13 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
       moveFlycamOrthoAction(
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
+        useDynamicSpaceDirection,
       ),
     );
   } else {
-    Store.dispatch(movePlaneFlycamOrthoAction([0, 0, deltaW], activeViewport, false));
+    Store.dispatch(
+      movePlaneFlycamOrthoAction([0, 0, deltaW], activeViewport, false, useDynamicSpaceDirection),
+    );
   }
 };
 export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {

@@ -3,7 +3,6 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
@@ -16,6 +15,10 @@ import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import models.user.Theme.Theme
+import com.scalableminds.util.tools.{Failure, Full}
+import play.silhouette.api.exceptions.ProviderException
+import play.silhouette.api.util.Credentials
+import play.silhouette.impl.providers.CredentialsProvider
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
@@ -23,6 +26,7 @@ import scala.concurrent.ExecutionContext
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
+                               credentialsProvider: CredentialsProvider,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
                                teamMembershipService: TeamMembershipService,
@@ -175,6 +179,7 @@ class UserController @Inject()(userService: UserService,
     ((__ \ "firstName").readNullable[String] and
       (__ \ "lastName").readNullable[String] and
       (__ \ "email").readNullable[String] and
+      (__ \ "password").readNullable[String] and
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
@@ -195,13 +200,56 @@ class UserController @Inject()(userService: UserService,
         Fox.successful(())
     })
 
-  private def checkAdminOnlyUpdates(user: User,
-                                    isActive: Boolean,
-                                    isAdmin: Boolean,
-                                    isDatasetManager: Boolean,
-                                    oldEmail: String,
-                                    email: String)(issuingUser: User): Boolean =
-    if (isActive && user.isAdmin == isAdmin && oldEmail == email && isDatasetManager == user.isDatasetManager)
+  private def checkTeamManagerOnlyUpdates(user: User,
+                                          experiences: Map[String, Int],
+                                          oldExperiences: Map[String, Int],
+                                          teams: List[TeamMembership],
+                                          oldTeams: List[TeamMembership])(issuingUser: User): Fox[Boolean] =
+    if (experiences == oldExperiences && teams == oldTeams)
+      Fox.successful(true)
+    else userService.isEditableBy(user, issuingUser)
+
+  private def checkPasswordIfEmailChanged(user: User, passwordOpt: Option[String], oldEmail: String, email: String)(
+      issuingUser: User): Fox[Unit] =
+    if (oldEmail == email) {
+      Fox.successful(())
+    } else if (user._id == issuingUser._id) {
+      passwordOpt match {
+        case Some(password) =>
+          val credentials = Credentials(user._id.id, password)
+          Fox.fromFutureBox(
+            credentialsProvider
+              .authenticate(credentials)
+              .flatMap { loginInfo =>
+                userService.retrieve(loginInfo).map {
+                  case Some(_) => Full(())
+                  case None    => Failure("error.noUser")
+                }
+              }
+              .recover {
+                case _: ProviderException =>
+                  Failure("user.email.change.passwordWrong")
+              })
+        case None => Fox.failure("user.email.change.passwordWrong")
+      }
+    } else {
+      Fox.failure("notAllowed")
+    }
+
+  private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    if (oldEmail == email) {
+      Fox.successful(())
+    } else {
+      multiUserDAO.emailNotPresentYet(email).flatMap {
+        case true  => Fox.successful(())
+        case false => Fox.failure("user.email.alreadyInUse")
+      }
+    }
+
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, isDatasetManager: Boolean)(
+      issuingUser: User): Boolean =
+    if (isActive && user.isAdmin == isAdmin && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
 
@@ -223,16 +271,6 @@ class UserController @Inject()(userService: UserService,
           .mkString(";")}"
       } yield ()
     } else Fox.successful(())
-
-  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    if (oldEmail == email) Fox.successful(())
-    else
-      for {
-        count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
-        issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
-        _ <- Fox.fromBool(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
-      } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
     if (user.isAdmin && !isAdmin) {
@@ -256,6 +294,7 @@ class UserController @Inject()(userService: UserService,
       case (firstNameOpt,
             lastNameOpt,
             emailOpt,
+            passwordOpt,
             isActiveOpt,
             isAdminOpt,
             isDatasetManagerOpt,
@@ -264,6 +303,7 @@ class UserController @Inject()(userService: UserService,
             lastTaskTypeIdOpt) =>
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
+          // properties that can be changed by team managers and admins only: experiences, team memberships
           oldExperience <- userService.experiencesFor(user._id)
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
           firstName = firstNameOpt.getOrElse(user.firstName)
@@ -276,13 +316,20 @@ class UserController @Inject()(userService: UserService,
           assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
-          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(
-            issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox
+            .runIf(user._id != issuingUser._id)(Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- checkTeamManagerOnlyUpdates(user,
+                                           experiences,
+                                           oldExperience,
+                                           assignedMemberships,
+                                           oldAssignedMemberships)(issuingUser) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox
+            .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- checkPasswordIfEmailChanged(user, passwordOpt, oldEmail, email)(issuingUser)
+          _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)
-          _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           _ <- preventZeroOwners(user, isActive)
           teams <- Fox.combined(assignedMemberships.map(t =>

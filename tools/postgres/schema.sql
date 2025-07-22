@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(136);
 COMMIT TRANSACTION;
 
 
@@ -459,6 +459,7 @@ CREATE TABLE webknossos.multiUsers(
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity TEXT CONSTRAINT _lastLoggedInIdentity_objectId CHECK (_lastLoggedInIdentity ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
+  emailChangeDate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );

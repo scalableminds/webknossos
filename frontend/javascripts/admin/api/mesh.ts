@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import type { APIDataSourceId, APIMeshFileInfo } from "types/api_types";
+import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
 
@@ -28,7 +28,7 @@ type ListMeshChunksRequest = {
 
 export function getMeshfileChunksForSegment(
   dataStoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
   meshFile: APIMeshFileInfo,
   segmentId: number,
@@ -56,7 +56,7 @@ export function getMeshfileChunksForSegment(
       segmentId,
     };
     return Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes/chunks?${params}`,
+      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
       {
         data: payload,
         showErrorToast: false,
@@ -78,13 +78,13 @@ type MeshChunkDataRequestList = {
 
 export function getMeshfileChunkData(
   dataStoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
   batchDescription: MeshChunkDataRequestList,
 ): Promise<ArrayBuffer[]> {
   return doWithToken(async (token) => {
     const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
       {
         data: batchDescription,
         useWebworkerForArrayBuffer: true,

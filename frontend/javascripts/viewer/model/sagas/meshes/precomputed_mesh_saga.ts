@@ -284,7 +284,7 @@ function* _getChunkLoadingDescriptors(
   const segmentInfo = yield* call(
     meshApi.getMeshfileChunksForSegment,
     dataset.dataStore.url,
-    dataset,
+    dataset.id,
     getBaseSegmentationName(segmentationLayer),
     meshFile,
     segmentId,
@@ -364,7 +364,7 @@ function* loadPrecomputedMeshesInChunksForLod(
         const dataForChunks = yield* call(
           meshApi.getMeshfileChunkData,
           dataset.dataStore.url,
-          dataset,
+          dataset.id,
           getBaseSegmentationName(segmentationLayer),
           {
             meshFileName: meshFile.name,

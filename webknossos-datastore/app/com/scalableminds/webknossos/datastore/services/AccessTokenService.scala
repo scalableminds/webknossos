@@ -43,11 +43,14 @@ object UserAccessRequest {
   def readDataset(datasetId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.read)
 
+  def readDataset(datasetId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.read)
+
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
-  def writeDataset(datasetId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.write)
+  def writeDataset(datasetId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.write)
 
   def readTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)

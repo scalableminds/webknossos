@@ -10,4 +10,6 @@ trait DataVault {
                                                                    tc: TokenContext): Fox[(Array[Byte], Encoding.Value)]
 
   def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]]
+
+  def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long]
 }

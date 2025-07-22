@@ -8,23 +8,19 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 
-case class RemoteFallbackLayer(organizationId: String,
-                               datasetDirectoryName: String,
-                               layerName: String,
-                               elementClass: ElementClassProto)
+case class RemoteFallbackLayer(datasetId: String, layerName: String, elementClass: ElementClassProto)
 
 object RemoteFallbackLayer extends ProtoGeometryImplicits {
-  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): Box[RemoteFallbackLayer] = {
+  def fromDataLayerAndDatasetId(dataLayer: DataLayerLike, datasetId: String): Box[RemoteFallbackLayer] = {
     val elementClassProtoBox = ElementClass.toProto(dataLayer.elementClass)
-    elementClassProtoBox.map(elementClassProto =>
-      RemoteFallbackLayer(dataSource.organizationId, dataSource.directoryName, dataLayer.name, elementClassProto))
+    elementClassProtoBox.map(elementClassProto => RemoteFallbackLayer(datasetId, dataLayer.name, elementClassProto))
   }
 }
 trait FallbackDataHelper extends FoxImplicits {
@@ -38,8 +34,8 @@ trait FallbackDataHelper extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
-      datasetId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
-    } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.directoryName, layerName, tracing.elementClass)
+      datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
+    } yield RemoteFallbackLayer(datasetId, layerName, tracing.elementClass)
 
   def getFallbackBucketFromDataStore(remoteFallbackLayer: RemoteFallbackLayer, dataRequest: WebknossosDataRequest)(
       implicit ec: ExecutionContext,

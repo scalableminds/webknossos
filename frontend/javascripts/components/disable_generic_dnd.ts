@@ -1,22 +1,20 @@
 import window from "libs/window";
 import React from "react";
-import type { EmptyObject } from "types/globals";
-export default class DisableGenericDnd extends React.Component<EmptyObject> {
-  componentDidMount() {
-    window.addEventListener("dragover", this.preventDefault, false);
-    window.addEventListener("drop", this.preventDefault, false);
-  }
 
-  componentWillUnmount() {
-    window.removeEventListener("dragover", this.preventDefault);
-    window.removeEventListener("drop", this.preventDefault);
-  }
+const preventDefault = (e: Event) => {
+  e.preventDefault();
+};
 
-  preventDefault = (e: Event) => {
-    e.preventDefault();
-  };
+export default function DisableGenericDnd() {
+  React.useEffect(() => {
+    window.addEventListener("dragover", preventDefault, false);
+    window.addEventListener("drop", preventDefault, false);
 
-  render() {
-    return null;
-  }
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
+  }, []);
+
+  return null;
 }

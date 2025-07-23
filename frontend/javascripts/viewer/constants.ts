@@ -1,3 +1,4 @@
+import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
@@ -96,6 +97,21 @@ export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_XZ,
 ];
 
+export const OrthoViewToNumber: OrthoViewMap<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
+
+export const NumberToOrthoView: Record<number, OrthoView> = {
+  0: OrthoViews.PLANE_XY,
+  1: OrthoViews.PLANE_YZ,
+  2: OrthoViews.PLANE_XZ,
+  3: OrthoViews.TDView,
+  4: OrthoViews.PLANE_XY, // Arbitrary view is equal to the XY plane.
+};
+
 const PINK = 0xeb4b98;
 const BLUE = 0x5660ff;
 const TURQUOISE = 0x59f8e8;
@@ -112,6 +128,38 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
+
+// See the following or an explanation about the relative orientation of the viewports toward the XY viewport.
+// https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800e8682e92a5c91a519
+export const OrthoBaseRotations = {
+  [OrthoViews.PLANE_XY]: new Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new Euler(0, (3 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new Euler(Math.PI / 2, 0, 0),
+  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
+function correctCameraViewingDirection(baseEuler: Euler): Euler {
+  const cameraCorrectionEuler = new Euler(Math.PI, 0, 0);
+  const correctedEuler = new Euler();
+  correctedEuler.setFromRotationMatrix(
+    new Matrix4()
+      .makeRotationFromEuler(baseEuler)
+      .multiply(new Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
+    "ZYX",
+  );
+
+  return correctedEuler;
+}
+
+// The orthographic cameras point towards negative z direction per default. To make it look into positive direction of the z axis,
+// an additional rotation around x axis by 180° is needed. This is appended via correctCameraViewingDirection.
+export const OrthoCamerasBaseRotations = {
+  [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
+  [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),
+  [OrthoViews.PLANE_XZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XZ]),
+  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
 export type BorderTabType = {
   id: string;
   name: string;

@@ -415,6 +415,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 function Infos() {
   const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
+
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useWkSelector((state) =>
     state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
@@ -429,7 +430,9 @@ function Infos() {
     [dispatch],
   );
   const onChangeActiveNodeId = useCallback(
-    (id: number) => dispatch(setActiveNodeAction(id)),
+    (id: number) => {
+      dispatch(setActiveNodeAction(id));
+    },
     [dispatch],
   );
   const onChangeActiveTreeId = useCallback(
@@ -569,7 +572,7 @@ function SegmentAndMousePosition() {
   const mousePosition = useWkSelector((state) => state.temporaryConfiguration.mousePosition);
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
-  const globalMousePosition = useWkSelector((state) => {
+  const globalMousePositionRounded = useWkSelector((state) => {
     const { activeViewport } = state.viewModeData.plane;
 
     if (mousePosition && activeViewport !== OrthoViews.TDView) {
@@ -577,7 +580,7 @@ function SegmentAndMousePosition() {
       return calculateGlobalPos(state, {
         x,
         y,
-      });
+      }).rounded;
     }
 
     return undefined;
@@ -589,7 +592,9 @@ function SegmentAndMousePosition() {
       {isPlaneMode ? (
         <span className="info-element">
           Pos [
-          {globalMousePosition ? getPosString(globalMousePosition, additionalCoordinates) : "-,-,-"}
+          {globalMousePositionRounded
+            ? getPosString(globalMousePositionRounded, additionalCoordinates)
+            : "-,-,-"}
           ]
         </span>
       ) : null}

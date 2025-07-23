@@ -1,6 +1,6 @@
-import type * as THREE from "three";
+import type { Vector3 } from "three";
 
-export function orderPointsWithMST(points: THREE.Vector3[]): THREE.Vector3[] {
+export function orderPointsWithMST(points: Vector3[]): Vector3[] {
   /*
    * Find the order of points with the shortest distance heuristically.
    * This is done by computing the MST of the points and then traversing
@@ -63,7 +63,7 @@ interface Edge {
   dist: number;
 }
 
-function computeMST(points: THREE.Vector3[]): number[][] {
+function computeMST(points: Vector3[]): number[][] {
   const edges: Edge[] = [];
   const numPoints = points.length;
 
@@ -110,7 +110,7 @@ function traverseMstDfs(mst: number[][], startIdx = 0): number[] {
   return orderedPoints;
 }
 
-function computePathLength(points: THREE.Vector3[], order: number[]): number {
+function computePathLength(points: Vector3[], order: number[]): number {
   let length = 0;
   for (let i = 0; i < order.length - 1; i++) {
     length += points[order[i]].distanceTo(points[order[i + 1]]);

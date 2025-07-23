@@ -1,7 +1,7 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
-import * as THREE from "three";
+import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
 import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -25,25 +25,25 @@ export const COLOR_TEXTURE_WIDTH = 1024.0;
 export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
 class NodeShader {
-  material: THREE.RawShaderMaterial;
+  material: RawShaderMaterial;
   uniforms: Uniforms = {};
   scaledTps: TPS3D | null = null;
   oldVertexShaderCode: string | null = null;
   storePropertyUnsubscribers: Array<() => void> = [];
 
-  constructor(treeColorTexture: THREE.DataTexture) {
+  constructor(treeColorTexture: DataTexture) {
     this.setupUniforms(treeColorTexture);
-    this.material = new THREE.RawShaderMaterial({
+    this.material = new RawShaderMaterial({
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
       transparent: true,
-      glslVersion: THREE.GLSL3,
+      glslVersion: GLSL3,
     });
     shaderEditor.addMaterial("node", this.material);
   }
 
-  setupUniforms(treeColorTexture: THREE.DataTexture): void {
+  setupUniforms(treeColorTexture: DataTexture): void {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
     this.uniforms = {
@@ -156,7 +156,7 @@ class NodeShader {
     );
   }
 
-  getMaterial(): THREE.RawShaderMaterial {
+  getMaterial(): RawShaderMaterial {
     return this.material;
   }
 

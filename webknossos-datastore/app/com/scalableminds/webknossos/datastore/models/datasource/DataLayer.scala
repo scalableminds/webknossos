@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
   WKWDataLayer,
-  WKWResolution,
   WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
@@ -266,15 +265,6 @@ trait DataLayerLike {
     case layer: Zarr3SegmentationLayer       => layer.numChannels
     case _                                   => None
   }
-
-  def wkwResolutionsOpt: Option[List[WKWResolution]] = this match {
-    case layer: AbstractDataLayer         => layer.wkwResolutions
-    case layer: AbstractSegmentationLayer => layer.wkwResolutions
-    case layer: WKWDataLayer              => Some(layer.wkwResolutions)
-    case layer: WKWSegmentationLayer      => Some(layer.wkwResolutions)
-    case _                                => None
-  }
-
 }
 
 object DataLayerLike {
@@ -545,7 +535,6 @@ case class AbstractDataLayer(
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
-    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -564,8 +553,7 @@ object AbstractDataLayer {
       layer.attachments,
       layer.magsOpt,
       layer.numChannelsOpt,
-      layer.dataFormatOpt,
-      layer.wkwResolutionsOpt
+      layer.dataFormatOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -587,7 +575,6 @@ case class AbstractSegmentationLayer(
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
-    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -609,7 +596,6 @@ object AbstractSegmentationLayer {
       layer.magsOpt,
       layer.numChannelsOpt,
       layer.dataFormatOpt,
-      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

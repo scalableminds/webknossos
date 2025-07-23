@@ -190,7 +190,6 @@ CREATE TABLE webknossos.dataset_mags(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   axisOrder JSONB CONSTRAINT axisOrder_requiredKeys CHECK (axisOrder ? 'x' AND axisOrder ? 'y'),
   channelIndex INT,
-  cubeLength INT,
   credentialId TEXT,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );

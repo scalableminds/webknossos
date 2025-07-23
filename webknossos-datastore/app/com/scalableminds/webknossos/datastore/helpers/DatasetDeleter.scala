@@ -30,11 +30,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
     Files.exists(dataSourcePath)
   }
 
-  def deleteOnDisk(organizationId: String,
-                   datasetName: String,
-                   datasetId: Option[ObjectId],
-                   isInConversion: Boolean = false,
-                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
+  def deleteOnDisk(
+      organizationId: String,
+      datasetName: String,
+      datasetId: Option[ObjectId], // Is only set for datasets that are already registered in WK. In this case, we query WK using this id for symlink paths and move them.
+      isInConversion: Boolean = false,
+      reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     @tailrec
     def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
       try {

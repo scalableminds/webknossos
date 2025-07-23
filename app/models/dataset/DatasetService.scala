@@ -351,8 +351,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                    attachmentsOpt,
                                    _,
                                    numChannels,
-                                   dataFormat,
-                                   _) =>
+                                   dataFormat) =>
               dataFormat match {
                 case Some(df) =>
                   df match {
@@ -443,8 +442,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            attachmentsOpt,
                                            _,
                                            numChannels,
-                                           dataFormat,
-                                           _) =>
+                                           dataFormat) =>
               dataFormat match {
                 case Some(df) =>
                   df match {

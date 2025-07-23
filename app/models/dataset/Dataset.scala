@@ -770,19 +770,11 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
            """.asUpdate
           })
         case None =>
-          layer.wkwResolutionsOpt match {
-            case Some(resolutions) =>
-              resolutions.map(wkwResolution => {
-                q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, cubeLength)
-                 VALUES ($datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
-              })
-            case None =>
-              layer.resolutions.distinct.map { mag: Vec3Int =>
-                {
-                  q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+          layer.resolutions.distinct.map { mag: Vec3Int =>
+            {
+              q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
                     VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
-                }
-              }
+            }
           }
       }
 

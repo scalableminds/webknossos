@@ -15,9 +15,12 @@ case class WKWResolution(resolution: Vec3Int,
                          credentialId: Option[String] = None) {
   def toMagLocator: MagLocator =
     MagLocator(mag = resolution, path = path, credentialId = credentialId)
+
 }
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
+
+  def defaultCubeSize = 1024
 }
 
 trait WKWLayer extends DataLayerWithMagLocators {
@@ -29,14 +32,7 @@ trait WKWLayer extends DataLayerWithMagLocators {
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
-  def wkwResolutions: List[WKWResolution]
-
-  def defaultCubeSize = 1024
-
-  def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
-
-  def lengthOfUnderlyingCubes(mag: Vec3Int): Int =
-    wkwResolutions.find(_.resolution == mag).map(_.cubeLength).getOrElse(0)
+  override def lengthOfUnderlyingCubes(mag: Vec3Int): Int = WKWResolution.defaultCubeSize
 
 }
 
@@ -52,8 +48,7 @@ case class WKWDataLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
 ) extends WKWLayer {
-  override def wkwResolutions: List[WKWResolution] =
-    mags.map(mag => WKWResolution(mag.mag, defaultCubeSize, mag.path, mag.credentialId))
+  override def resolutions: List[Vec3Int] = mags.map(_.mag)
 }
 
 object WKWDataLayer {
@@ -111,8 +106,7 @@ case class WKWSegmentationLayer(
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
     with WKWLayer {
-  override def wkwResolutions: List[WKWResolution] =
-    mags.map(mag => WKWResolution(mag.mag, defaultCubeSize, mag.path, mag.credentialId))
+  override def resolutions: List[Vec3Int] = mags.map(_.mag)
 }
 
 object WKWSegmentationLayer {

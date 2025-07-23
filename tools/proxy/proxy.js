@@ -88,7 +88,7 @@ for (const [key, proc] of Object.entries(processes).filter((x) => x[1] !== null)
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-proxy.on("error", (err, req, res) => {
+proxy.on("error", (err, _req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
   res.writeHead(503, { "Content-Type": "text/html" });
   res.end(`

@@ -12,6 +12,8 @@ const browserslistToEsbuild = require("browserslist-to-esbuild");
 const { lessLoader } = require("esbuild-plugin-less");
 const copyPlugin = require("esbuild-plugin-copy").default;
 const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
+const esbuildPluginWorker = require("@chialab/esbuild-plugin-worker").default;
+
 
 // Custom Plugins for Webknossos
 const { createWorkerPlugin } = require("./tools/esbuild/workerPlugin.js");
@@ -50,13 +52,16 @@ async function build(env = {}) {
         },
       ],
     }),
-    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname, env.logLevel),
+    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname, env.logLevel), // Resolves import Worker from myFunc.worker;
+    esbuildPluginWorker() // Resolves new Worker(myWorker.js)
   ];
 
 
   const buildOptions = {
     entryPoints: {
       main: path.resolve(srcPath, "main.tsx"),
+      // generateMeshBVHWorker: require.resolve("three-mesh-bvh/src/workers/generateMeshBVH.worker.js"),
+
     },
     bundle: true,
     outdir: buildOutDir,
@@ -72,9 +77,8 @@ async function build(env = {}) {
       "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
       "process.env.BABEL_ENV": JSON.stringify(process.env.BABEL_ENV || "development"),
       "process.browser": "true",
-      "global": "global"
+      "global": "window"
     },
-    inject: [path.resolve(__dirname, "process_shim.js")],
     loader: {
       ".woff": "file",
       ".woff2": "file",

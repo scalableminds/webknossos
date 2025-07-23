@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
@@ -132,19 +132,19 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
 // See the following or an explanation about the relative orientation of the viewports toward the XY viewport.
 // https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800e8682e92a5c91a519
 export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(0, (3 / 2) * Math.PI, 0),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler(Math.PI / 2, 0, 0),
-  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+  [OrthoViews.PLANE_XY]: new Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new Euler(0, (3 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new Euler(Math.PI / 2, 0, 0),
+  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
-function correctCameraViewingDirection(baseEuler: THREE.Euler): THREE.Euler {
-  const cameraCorrectionEuler = new THREE.Euler(Math.PI, 0, 0);
-  const correctedEuler = new THREE.Euler();
+function correctCameraViewingDirection(baseEuler: Euler): Euler {
+  const cameraCorrectionEuler = new Euler(Math.PI, 0, 0);
+  const correctedEuler = new Euler();
   correctedEuler.setFromRotationMatrix(
-    new THREE.Matrix4()
+    new Matrix4()
       .makeRotationFromEuler(baseEuler)
-      .multiply(new THREE.Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
+      .multiply(new Matrix4().makeRotationFromEuler(cameraCorrectionEuler)),
     "ZYX",
   );
 
@@ -157,7 +157,7 @@ export const OrthoCamerasBaseRotations = {
   [OrthoViews.PLANE_XY]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XY]),
   [OrthoViews.PLANE_YZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_YZ]),
   [OrthoViews.PLANE_XZ]: correctCameraViewingDirection(OrthoBaseRotations[OrthoViews.PLANE_XZ]),
-  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+  [OrthoViews.TDView]: new Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
 export type BorderTabType = {

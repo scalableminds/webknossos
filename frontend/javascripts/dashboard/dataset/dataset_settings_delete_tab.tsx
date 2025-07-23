@@ -1,33 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
-import { Button } from "antd";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
+import { deleteDatasetOnDisk } from "admin/rest_api";
+import { Button, Col, Row } from "antd";
 import Toast from "libs/toast";
-import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import messages from "messages";
-import { useEffect, useState } from "react";
-import type { APIDataset } from "types/api_types";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 import { confirmAsync } from "./helper_components";
 
-type Props = {
-  datasetId: string;
-} & RouteComponentProps;
-
-const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
+const DatasetSettingsDeleteTab = () => {
+  const { dataset } = useDatasetSettingsContext();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  async function fetch() {
-    const newDataset = await getDataset(datasetId);
-    setDataset(newDataset);
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
-  useEffect(() => {
-    fetch();
-  }, []);
-
-  async function handleDeleteButtonClicked(): Promise<void> {
+  const handleDeleteButtonClicked = useCallback(async () => {
     if (!dataset) {
       return;
     }
@@ -60,18 +49,33 @@ const DatasetSettingsDeleteTab = ({ datasetId, navigate }: Props) => {
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
 
     navigate("/dashboard");
-  }
+  }, [dataset, navigate, queryClient]);
 
   return (
     <div>
-      <p>Deleting a dataset on disk cannot be undone. Please be certain.</p>
-      <p>Note that annotations for the dataset stay downloadable and the name stays reserved.</p>
-      <p>Only admins are allowed to delete datasets.</p>
-      <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
-        Delete Dataset on Disk
-      </Button>
+      <SettingsTitle title="Delete Dataset" description="Delete this dataset on disk" />
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col span={24}>
+          <SettingsCard
+            title="Delete Dataset"
+            content={
+              <>
+                <p>Deleting a dataset on disk cannot be undone. Please be certain.</p>
+                <p>
+                  Note that annotations for the dataset stay downloadable and the name stays
+                  reserved.
+                </p>
+                <p>Only admins are allowed to delete datasets.</p>
+                <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
+                  Delete Dataset on Disk
+                </Button>
+              </>
+            }
+          />
+        </Col>
+      </Row>
     </div>
   );
 };
 
-export default withRouter(DatasetSettingsDeleteTab);
+export default DatasetSettingsDeleteTab;

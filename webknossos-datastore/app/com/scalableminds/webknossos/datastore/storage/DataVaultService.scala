@@ -35,9 +35,6 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
   private val vaultCache: AlfuCache[RemoteSourceDescriptor, DataVault] =
     AlfuCache(maxCapacity = 100)
 
-  def getVaultPath(layerAttachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[VaultPath] =
-    getVaultPath(RemoteSourceDescriptor(layerAttachment.path, None))
-
   def getVaultPath(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
       vault <- vaultCache.getOrLoad(remoteSourceDescriptor, createVault) ?~> "dataVault.setup.failed"

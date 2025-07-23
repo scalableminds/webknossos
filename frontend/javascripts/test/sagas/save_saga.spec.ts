@@ -66,6 +66,7 @@ const initialState = {
       allowAccess: true,
       allowDownload: true,
     },
+    isUpdatingCurrentlyAllowed: true,
   },
 };
 const LAST_VERSION = 2;

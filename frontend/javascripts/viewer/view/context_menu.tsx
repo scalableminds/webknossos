@@ -1466,7 +1466,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
       ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile

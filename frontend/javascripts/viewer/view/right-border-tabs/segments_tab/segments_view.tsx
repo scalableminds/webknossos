@@ -192,7 +192,7 @@ const mapStateToProps = (state: WebknossosState) => {
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
-      state.annotation.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
+      state.annotation.isUpdatingCurrentlyAllowed && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:

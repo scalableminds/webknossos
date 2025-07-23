@@ -136,6 +136,8 @@ export function convertServerAnnotationToFrontendAnnotation(
     ...annotation.restrictions,
     ...annotation.settings,
   };
+  const isUpdatingCurrentlyAllowed =
+    !annotation.othersMayEdit && annotation.restrictions.allowUpdate;
   return {
     annotationId,
     restrictions,
@@ -154,8 +156,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     contributors,
     othersMayEdit,
     annotationLayers,
-    blockedByUser: null,
-    isMutexAcquired: false,
+    isUpdatingCurrentlyAllowed,
   };
 }
 
@@ -177,7 +178,7 @@ export function isToolAvailable(
   if (isDisabled) {
     return false;
   }
-  if (!state.annotation.restrictions.allowUpdate) {
+  if (!state.annotation.isUpdatingCurrentlyAllowed) {
     return Toolkits.READ_ONLY_TOOLS.includes(tool);
   }
   return true;

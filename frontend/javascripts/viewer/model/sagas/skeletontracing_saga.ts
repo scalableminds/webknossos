@@ -331,7 +331,7 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 

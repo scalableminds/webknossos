@@ -177,13 +177,12 @@ const defaultState: WebknossosState = {
     isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
-    blockedByUser: null,
-    isMutexAcquired: false,
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
     organization: "",
+    isUpdatingCurrentlyAllowed: initialAnnotationInfo.restrictions.allowUpdate,
   },
   save: {
     queue: [],
@@ -193,7 +192,7 @@ const defaultState: WebknossosState = {
       processedActionCount: 0,
       totalActionCount: 0,
     },
-    hasAnnotationMutex: false,
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
   },
   flycam: {
     zoomStep: 1.3,

@@ -62,6 +62,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const task = useWkSelector((state) => state.task);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -71,6 +72,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const props: TracingViewMenuProps = {
     restrictions,
+    allowUpdate,
     task,
     annotationType,
     annotationId,
@@ -197,7 +199,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     if (!isInTracingView) return [];
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
-    if (isViewMode || !restrictions.allowUpdate) {
+    if (isViewMode || !allowUpdate) {
       availableTools = Toolkits.READ_ONLY_TOOLS;
     }
     availableTools.forEach((tool) => {

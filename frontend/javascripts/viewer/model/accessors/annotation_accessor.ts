@@ -10,10 +10,11 @@ import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
-  const { owner, restrictions } = state.annotation;
+  const { owner, restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
   const activeUser = state.activeUser;
 
   return !!(
+    isUpdatingCurrentlyAllowed &&
     restrictions.allowUpdate &&
     restrictions.allowSave &&
     activeUser &&

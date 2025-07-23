@@ -181,6 +181,7 @@ const initialState: WebknossosState = _.extend({}, defaultState, {
     skeleton: initialSkeletonTracing,
     annotationType: "Explorational",
     annotationId: "annotationId",
+    isUpdatingCurrentlyAllowed: true,
   },
   task: TASK_ANNOTATION.task,
 });

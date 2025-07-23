@@ -116,7 +116,7 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
 
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);

@@ -2,6 +2,7 @@ import Deferred from "libs/async/deferred";
 import Date from "libs/date";
 import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
+import type { APIUserCompact } from "types/api_types";
 import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
@@ -29,6 +30,8 @@ export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
 export type EnsureMaySaveNowAction = ReturnType<typeof ensureMaySaveNowAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
 export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
+export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
+export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -44,7 +47,9 @@ export type SaveAction =
   | EnsureTracingsWereDiffedToSaveQueueAction
   | EnsureMaySaveNowAction
   | EnsureHasNewestVersionAction
-  | DoneSavingAction;
+  | DoneSavingAction
+  | SetIsMutexAcquiredAction
+  | SetUserHoldingMutexAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -170,4 +175,16 @@ export const dispatchEnsureHasNewestVersionAsync = async (
 export const doneSavingAction = () =>
   ({
     type: "DONE_SAVING",
+  }) as const;
+
+export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
+  ({
+    type: "SET_IS_MUTEX_ACQUIRED",
+    isMutexAcquired,
+  }) as const;
+
+export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null | undefined) =>
+  ({
+    type: "SET_USER_HOLDING_MUTEX",
+    blockedByUser,
   }) as const;

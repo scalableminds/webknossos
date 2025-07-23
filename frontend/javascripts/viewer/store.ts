@@ -144,9 +144,8 @@ export type Annotation = {
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly blockedByUser: APIUserCompact | null | undefined;
   readonly isLockedByOwner: boolean;
-  readonly isMutexAcquired: boolean;
+  readonly isUpdatingCurrentlyAllowed: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -417,12 +416,17 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
+
+export type AnnotationMutexInformation = {
+  readonly hasAnnotationMutex: boolean;
+  readonly blockedByUser: APIUserCompact | null | undefined;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
-  readonly hasAnnotationMutex: boolean;
+  readonly mutexState: AnnotationMutexInformation;
 };
 export type Flycam = {
   readonly zoomStep: number;

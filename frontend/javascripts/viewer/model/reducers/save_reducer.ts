@@ -181,6 +181,20 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_IS_MUTEX_ACQUIRED": {
+      const { isMutexAcquired } = action;
+      return updateKey2(state, "save", "mutexState", {
+        hasAnnotationMutex: isMutexAcquired,
+      });
+    }
+
+    case "SET_USER_HOLDING_MUTEX": {
+      const { blockedByUser } = action;
+      return updateKey2(state, "save", "mutexState", {
+        blockedByUser,
+      });
+    }
+
     default:
       return state;
   }

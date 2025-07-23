@@ -16,7 +16,7 @@ import _ from "lodash";
 import { useEffect, useState } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
-import { setAnnotationAllowUpdateAction } from "viewer/model/actions/annotation_actions";
+import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
@@ -74,7 +74,7 @@ export async function previewVersion(version?: number) {
   }
 
   await api.tracing.restart(null, annotationId, controlMode, version, false, false);
-  Store.dispatch(setAnnotationAllowUpdateAction(false));
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   const segmentationLayersToReload = [];
 
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
@@ -96,7 +96,8 @@ async function handleRestoreVersion(
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(true));
+    const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
   } else {
     const { annotationType, annotationId, volumes } = Store.getState().annotation;
     const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
@@ -108,8 +109,8 @@ export const handleCloseRestoreView = async () => {
   // This will load the newest version of both skeleton and volume tracings
   await previewVersion();
   Store.dispatch(setVersionRestoreVisibilityAction(false));
-  const { initialAllowUpdate } = Store.getState().annotation.restrictions;
-  Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+  const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
 };
 
 const getGroupedAndChunkedVersions = _.memoize(
@@ -193,9 +194,7 @@ async function getUpdateActionLogPage(
 function VersionList() {
   const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const initialAllowUpdate = useWkSelector(
-    (state) => state.annotation.restrictions.initialAllowUpdate,
-  );
+  const initialAllowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
   const newestVersion = useFetch(
     async () => {
       if (annotationId === "") {
@@ -256,7 +255,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     // old pages are not valid anymore.
     queryClient.removeQueries(queryKey);
     // Will be set back by handleRestoreVersion or handleCloseRestoreView
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   const {

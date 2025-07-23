@@ -109,6 +109,7 @@ type StateProps = {
 } & TracingViewMenuProps;
 type Props = OwnProps & StateProps;
 export type TracingViewMenuProps = {
+  allowUpdate: boolean;
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
   annotationType: APIAnnotationType;
@@ -674,6 +675,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   render() {
     const {
+      allowUpdate,
       hasTracing,
       restrictions,
       task,
@@ -686,7 +688,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
-    const saveButton = restrictions.allowUpdate
+    const saveButton = allowUpdate
       ? [
           hasTracing
             ? [
@@ -811,6 +813,7 @@ function mapStateToProps(state: WebknossosState): StateProps {
     annotationType: state.annotation.annotationType,
     annotationId: state.annotation.annotationId,
     restrictions: state.annotation.restrictions,
+    allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
     annotationOwner: state.annotation.owner,
     task: state.task,
     activeUser: state.activeUser,

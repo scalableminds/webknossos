@@ -435,7 +435,7 @@ function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,

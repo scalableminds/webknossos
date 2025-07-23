@@ -158,7 +158,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
   // false and the saga would terminate.
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");

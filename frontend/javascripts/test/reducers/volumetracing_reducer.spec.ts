@@ -253,10 +253,8 @@ describe("VolumeTracing", () => {
     const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
     const alteredState = update(initialState, {
       annotation: {
-        restrictions: {
-          allowUpdate: {
-            $set: false,
-          },
+        isUpdatingCurrentlyAllowed: {
+          $set: false,
         },
       },
     });

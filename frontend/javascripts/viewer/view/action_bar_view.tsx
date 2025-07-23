@@ -239,7 +239,8 @@ function ModesView() {
   const is2d = useWkSelector((state) => is2dDataset(state.dataset));
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
-  const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
+  // TODO: Not sure whether this change is entirely correct, but this should be the same behaviour as before.
+  const isReadOnly = useWkSelector((state) => !state.annotation.isUpdatingCurrentlyAllowed);
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );

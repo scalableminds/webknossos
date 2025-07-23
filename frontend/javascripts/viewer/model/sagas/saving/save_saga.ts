@@ -21,10 +21,6 @@ import { Model } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
-import {
-  removeAgglomerateFromActiveMapping,
-  updateMappingWithMerge,
-} from "../volume/proofread_saga";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
 
@@ -53,7 +49,7 @@ function* watchForSaveConflicts(): Saga<void> {
      */
     const allowSave = yield* select(
       (state) =>
-        state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
+        state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
     );
 
     // todop

@@ -6,13 +6,13 @@ import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "viewer/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
-  setAnnotationAllowUpdateAction,
-  setBlockedByUserAction,
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
   setOthersMayEditForAnnotationAction,
 } from "viewer/model/actions/annotation_actions";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { wkReadyAction } from "viewer/model/actions/actions";
 import { acquireAnnotationMutexMaybe } from "viewer/model/sagas/saving/save_mutex_saga";
+import { setUserHoldingMutexAction } from "viewer/model/actions/save_actions";
 
 const createInitialState = (
   othersMayEdit: boolean,
@@ -26,6 +26,7 @@ const createInitialState = (
       ...defaultState.annotation.restrictions,
       allowUpdate,
     },
+    isUpdatingCurrentlyAllowed: allowUpdate,
     volumes: [],
     othersMayEdit,
     annotationId: "1234",
@@ -35,12 +36,12 @@ const createInitialState = (
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
 describe("Annotation Saga", () => {
-  it("An annotation with allowUpdate = false should not try to acquire the annotation mutex.", () => {
+  it("An annotation with isUpdatingCurrentlyAllowed = false should not try to acquire the annotation mutex.", () => {
     const storeState = createInitialState(false, false);
     const saga = acquireAnnotationMutexMaybe();
     saga.next();
     saga.next(wkReadyAction());
-    saga.next(storeState.annotation.restrictions.allowUpdate);
+    saga.next(storeState.annotation.isUpdatingCurrentlyAllowed);
     saga.next(storeState.annotation.annotationId);
     expect(saga.next().done, "The saga should terminate.").toBe(true);
   });
@@ -54,10 +55,10 @@ describe("Annotation Saga", () => {
     expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
     expect(
       saga.next(wkReadyAction()).value.type,
-      "The saga should select the allowUpdate next.",
+      "The saga should select the isUpdatingCurrentlyAllowed next.",
     ).toBe("SELECT");
     expect(
-      saga.next(storeState.annotation.restrictions.allowUpdate).value.type,
+      saga.next(storeState.annotation.isUpdatingCurrentlyAllowed).value.type,
       "The saga should select the annotationId next.",
     ).toBe("SELECT");
     expect(
@@ -85,7 +86,7 @@ describe("Annotation Saga", () => {
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
     expectValueDeepEqual(
@@ -94,12 +95,12 @@ describe("Annotation Saga", () => {
         canEdit: true,
         blockedByUser: null,
       }),
-      put(setAnnotationAllowUpdateAction(true)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(true)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(dummyUser)),
+      put(setUserHoldingMutexAction(dummyUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
@@ -109,7 +110,7 @@ describe("Annotation Saga", () => {
         canEdit: true,
         blockedByUser: null,
       }),
-      put(setBlockedByUserAction(dummyUser)),
+      put(setUserHoldingMutexAction(dummyUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
@@ -119,12 +120,12 @@ describe("Annotation Saga", () => {
         canEdit: false,
         blockedByUser: blockingUser,
       }),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(blockingUser)),
+      put(setUserHoldingMutexAction(blockingUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
   }
@@ -135,7 +136,7 @@ describe("Annotation Saga", () => {
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
     expectValueDeepEqual(
@@ -144,12 +145,12 @@ describe("Annotation Saga", () => {
         canEdit: false,
         blockedByUser: blockingUser,
       }),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(blockingUser)),
+      put(setUserHoldingMutexAction(blockingUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
@@ -159,12 +160,12 @@ describe("Annotation Saga", () => {
         canEdit: false,
         blockedByUser: blockingUser,
       }),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(blockingUser)),
+      put(setUserHoldingMutexAction(blockingUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
@@ -174,12 +175,12 @@ describe("Annotation Saga", () => {
         canEdit: true,
         blockedByUser: null,
       }),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(dummyUser)),
+      put(setUserHoldingMutexAction(dummyUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
@@ -189,12 +190,12 @@ describe("Annotation Saga", () => {
         canEdit: false,
         blockedByUser: blockingUser,
       }),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(blockingUser)),
+      put(setUserHoldingMutexAction(blockingUser)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL"); // delay is called
   }
@@ -225,7 +226,7 @@ describe("Annotation Saga", () => {
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setAnnotationAllowUpdateAction(false)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(false)),
     );
     expect(tryAcquireMutexContinuously.next().value.type).toBe("CALL");
     expectValueDeepEqual(
@@ -234,12 +235,12 @@ describe("Annotation Saga", () => {
         canEdit: true,
         blockedByUser: null,
       }),
-      put(setAnnotationAllowUpdateAction(true)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(true)),
     );
     expectValueDeepEqual(
       expect,
       tryAcquireMutexContinuously.next(),
-      put(setBlockedByUserAction(dummyUser)),
+      put(setUserHoldingMutexAction(dummyUser)),
     );
     tryAcquireMutexContinuously.next(); // delay is called
     const listenForOthersMayEditSaga = listenForOthersMayEdit(
@@ -248,7 +249,7 @@ describe("Annotation Saga", () => {
     expectValueDeepEqual(
       expect,
       listenForOthersMayEditSaga.next(),
-      put(setAnnotationAllowUpdateAction(true)),
+      put(setIsUpdatingAnnotationCurrentlyAllowedAction(true)),
     );
     expect(listenForOthersMayEditSaga.next().done).toBe(true);
     expect(tryAcquireMutexContinuously.next().done).toBe(true);

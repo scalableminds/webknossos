@@ -123,7 +123,7 @@ function* ensureValidToolkit(): Saga<void> {
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const isReadOnly = yield* select((state) => !state.annotation.restrictions.allowUpdate);
+  const isReadOnly = yield* select((state) => !state.annotation.isUpdatingCurrentlyAllowed);
 
   if (isViewMode || isReadOnly) {
     yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));

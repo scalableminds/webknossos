@@ -267,6 +267,7 @@ export function* createEditableMapping(): Saga<string> {
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction(volumeTracingId));
+  debugger;
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   yield* call([Model, Model.ensureSavedState]);
   const editableMapping: ServerEditableMapping = {
@@ -313,7 +314,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const { sourceNodeId, targetNodeId } = action;
@@ -688,7 +689,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -886,7 +887,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);

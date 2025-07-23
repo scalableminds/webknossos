@@ -51,7 +51,7 @@ export function* setupSavingForAnnotation(
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const flycam = yield* select((state) => state.flycam);
@@ -126,7 +126,7 @@ export function* setupSavingForTracingType(
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as

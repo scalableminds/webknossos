@@ -115,9 +115,12 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { allowUpdate } = state.annotation.restrictions;
+  const { isUpdatingCurrentlyAllowed } = state.annotation;
 
-  if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)) {
+  if (
+    !isUpdatingCurrentlyAllowed ||
+    isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)
+  ) {
     return state;
   }
 

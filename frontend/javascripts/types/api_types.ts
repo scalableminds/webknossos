@@ -365,10 +365,12 @@ export type APIActiveUser = {
 };
 export type APIRestrictions = {
   readonly allowAccess: boolean;
+  // To decided whether updating an annotation is allowed, the annotation.isUpdatingCurrentlyAllowed should be used.
+  // This value will never be changed and stay according to what the server returned.
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
   readonly allowDownload: boolean;
-  // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
+  // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight";

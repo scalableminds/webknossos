@@ -124,23 +124,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
-      const { allowUpdate } = action;
-      return updateKey2(state, "annotation", "restrictions", {
-        allowUpdate,
-      });
-    }
-
-    case "SET_BLOCKED_BY_USER": {
-      const { blockedByUser } = action;
+      const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {
-        blockedByUser,
-      });
-    }
-
-    case "SET_IS_MUTEX_ACQUIRED": {
-      const { isMutexAcquired } = action;
-      return updateKey(state, "save", {
-        hasAnnotationMutex: isMutexAcquired,
+        isUpdatingCurrentlyAllowed: currentlyAllowUpdate,
       });
     }
 

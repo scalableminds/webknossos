@@ -1514,7 +1514,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.annotation.restrictions.allowUpdate &&
+        {this.props.annotation.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -1527,7 +1527,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.annotation.restrictions.allowUpdate && canBeMadeHybrid ? (
+        {this.props.annotation.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}

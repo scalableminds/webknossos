@@ -31,7 +31,6 @@ const stateWithoutDatasetInitialization = update(defaultState, {
     restrictions: {
       $set: {
         branchPointsAllowed: true,
-        initialAllowUpdate: true,
         allowUpdate: true,
         allowFinish: true,
         allowAccess: true,

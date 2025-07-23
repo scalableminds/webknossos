@@ -275,6 +275,9 @@ trait DataLayerLike {
     case _                                => None
   }
 
+  def allExplicitPaths: Seq[String] =
+    magsOpt.map(_.flatMap(_.path)).orElse(wkwResolutionsOpt.map(_.flatMap(_.path))).getOrElse(Seq.empty) ++
+      attachments.map(_.allAttachments.map(_.path.toString)).getOrElse(Seq.empty)
 }
 
 object DataLayerLike {

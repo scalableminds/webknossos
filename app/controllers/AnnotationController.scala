@@ -457,7 +457,7 @@ class AnnotationController @Inject()(
   def releaseMutex(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
       for {
-        _ <- annotationMutexService.release(id, request.identity._id) ?~> "annotation.mutex.failed"
+        _ <- annotationMutexService.release(id, request.identity._id) ?~> "annotation.mutex.release.failed"
       } yield Ok
     }
   }

@@ -254,7 +254,9 @@ annotation.getNewestVersion.failed=Could not get the newest version information 
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
 annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
-annotation.duplicate.failed=Failed to duplicate annotation
+annotation.duplicate.failed=Failed to duplicate annotation.
+annotation.mutex.failed=Failed to aquire annotation editing mutex.
+annotation.mutex.release.failed=Failed to release annotation editing mutex.
 
 mesh.file.listChunks.failed=Failed to load chunk list for segment {0} from mesh file “{1}”
 mesh.file.loadChunk.failed=Failed to load mesh chunk for segment

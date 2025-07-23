@@ -87,7 +87,7 @@ class LegacyController @Inject()(
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  def requestViaWebknossos(
+  def requestViaWebknossosV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String
@@ -116,7 +116,7 @@ class LegacyController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
-  def requestRawCuboid(
+  def requestRawCuboidV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -153,7 +153,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestRawCuboidPost(
+  def requestRawCuboidPostV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String
@@ -172,14 +172,14 @@ class LegacyController @Inject()(
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
-  def requestViaKnossos(organizationId: String,
-                        datasetDirectoryName: String,
-                        dataLayerName: String,
-                        mag: Int,
-                        x: Int,
-                        y: Int,
-                        z: Int,
-                        cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
+  def requestViaKnossosV9(organizationId: String,
+                          datasetDirectoryName: String,
+                          dataLayerName: String,
+                          mag: Int,
+                          x: Int,
+                          y: Int,
+                          z: Int,
+                          cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -197,20 +197,20 @@ class LegacyController @Inject()(
     }
   }
 
-  def thumbnailJpeg(organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String,
-                    x: Int,
-                    y: Int,
-                    z: Int,
-                    width: Int,
-                    height: Int,
-                    mag: String,
-                    mappingName: Option[String],
-                    intensityMin: Option[Double],
-                    intensityMax: Option[Double],
-                    color: Option[String],
-                    invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+  def thumbnailJpegV9(organizationId: String,
+                      datasetDirectoryName: String,
+                      dataLayerName: String,
+                      x: Int,
+                      y: Int,
+                      z: Int,
+                      width: Int,
+                      height: Int,
+                      mag: String,
+                      mappingName: Option[String],
+                      intensityMin: Option[Double],
+                      intensityMax: Option[Double],
+                      color: Option[String],
+                      invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
@@ -252,7 +252,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def mappingJson(
+  def mappingJsonV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -274,7 +274,7 @@ class LegacyController @Inject()(
   /**
     * Handles ad-hoc mesh requests.
     */
-  def requestAdHocMesh(organizationId: String,
+  def requestAdHocMeshV9(organizationId: String,
                        datasetDirectoryName: String,
                        dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
@@ -316,7 +316,7 @@ class LegacyController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
+  def findDataV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
@@ -329,7 +329,7 @@ class LegacyController @Inject()(
       }
     }
 
-  def histogram(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
+  def histogramV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
@@ -360,7 +360,7 @@ class LegacyController @Inject()(
     * Serve .zattrs file for a dataset
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
-  def requestZAttrs(
+  def requestZAttrsV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String = "",
@@ -377,7 +377,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestZarrJson(
+  def requestZarrJsonV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String = "",
@@ -398,7 +398,7 @@ class LegacyController @Inject()(
     * Zarr-specific datasource-properties.json file for a datasource.
     * Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
-  def requestDataSource(
+  def requestDataSourceV9(
       organizationId: String,
       datasetDirectoryName: String,
       zarrVersion: Int,
@@ -414,7 +414,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestRawZarrCube(
+  def requestRawZarrCubeV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -432,7 +432,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestZArray(
+  def requestZArrayV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -449,7 +449,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestZarrJsonForMag(
+  def requestZarrJsonForMagV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -466,7 +466,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestDataLayerDirectoryContents(
+  def requestDataLayerDirectoryContentsV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -490,7 +490,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestDataLayerMagDirectoryContents(
+  def requestDataLayerMagDirectoryContentsV9(
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
@@ -514,7 +514,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestDataSourceDirectoryContents(
+  def requestDataSourceDirectoryContentsV9(
       organizationId: String,
       datasetDirectoryName: String,
       zarrVersion: Int
@@ -536,7 +536,7 @@ class LegacyController @Inject()(
     }
   }
 
-  def requestZGroup(organizationId: String,
+  def requestZGroupV9(organizationId: String,
                     datasetDirectoryName: String,
                     dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>

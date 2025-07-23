@@ -139,7 +139,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetId.toString, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetId, layer.name)
         case None => Fox.successful(false)
       }
       elementClassProto <- ElementClass

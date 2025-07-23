@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 
 case class ComposeRequest(
     newDatasetName: String,
-    targetFolderId: String,
+    targetFolderId: ObjectId,
     organizationId: String,
     voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
@@ -23,7 +23,7 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeRequestLayer(
-    datasetId: String,
+    datasetId: ObjectId,
     sourceName: String,
     newName: String,
     transformations: Seq[CoordinateTransformation]
@@ -47,7 +47,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                      composeRequest.organizationId,
                                                      dataStore,
                                                      dataSource,
-                                                     Some(composeRequest.targetFolderId),
+                                                     Some(composeRequest.targetFolderId.toString),
                                                      user)
 
     } yield (dataSource, dataset._id)
@@ -55,8 +55,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
       implicit ctx: DBAccessContext): Fox[DataLayer] =
     for {
-      datasetIdValidated <- ObjectId.fromString(composeLayer.datasetId) ?~> "Invalid dataset ID"
-      dataset <- datasetDAO.findOne(datasetIdValidated) ?~> "Dataset not found"
+      dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
       ds <- datasetService.fullDataSourceFor(dataset)
       ds <- ds.toUsable.toFox ?~> "Dataset not usable"
       layer <- ds.dataLayers.find(_.name == composeLayer.sourceName).toFox
@@ -81,8 +80,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     for {
       _ <- Fox.fromBool(composeRequest.layers.nonEmpty) ?~> "Cannot compose dataset with no layers"
       datasetIds = composeRequest.layers.map(_.datasetId).distinct
-      datasetIdsValidated <- Fox.serialCombined(datasetIds.toList)(ObjectId.fromString(_)) ?~> "Invalid dataset ID"
-      datasets <- Fox.serialCombined(datasetIdsValidated)(datasetDAO.findOne(_))
+      datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne(_))
       dataStores = datasets.map(_._dataStore)
     } yield {
       dataStores.distinct.size == 1

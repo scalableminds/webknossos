@@ -519,15 +519,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def getVirtualDatasetIds()(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(q"""SELECT _id
-                       FROM webknossos.datasets_
-                       WHERE isVirtual
-                       AND $accessQuery""".as[ObjectId])
-    } yield rList.toList
-
   def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -666,8 +657,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"TRUE"
-      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
+      if (existingDatasetIds.isEmpty) q"NOT isVirtual"
+      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
@@ -690,7 +681,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           SET isUsable = false, status = $unreportedStatus, voxelSizeFactor = NULL, voxelSizeUnit = NULL, inboxSourceHash = NULL
           WHERE _dataStore = $dataStoreName
           AND $inclusionPredicate
-          AND NOT isVirtual
           AND $statusNotAlreadyInactive""".asUpdate
     for {
       _ <- run(DBIO.sequence(List(deleteMagsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)

@@ -140,7 +140,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetName: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None,
-      status: Option[String] = None,
       isVirtual: Boolean = false
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -175,7 +174,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         name = datasetName,
         voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,
-        status = status.orElse(dataSource.statusOpt).getOrElse(""),
+        status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
         metadata = metadata
       )
@@ -288,11 +287,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
-    for {
-      virtualDatasetIds <- datasetDAO.getVirtualDatasetIds()(GlobalAccessContext)
-      validDatasetIds = reportedDatasetIds ++ virtualDatasetIds
-      _ <- datasetDAO.deactivateUnreported(validDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
-    } yield ()
+    datasetDAO.deactivateUnreported(reportedDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -325,7 +320,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
   def fullDataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
     (for {
-      dataLayers <- findLayersForDatasetWithMags(dataset._id)
+      dataLayers <- findLayersForDataset(dataset._id)
       dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     } yield {
       if (dataset.isUsable)
@@ -336,10 +331,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
     }).flatten
 
-  private def findLayersForDatasetWithMags(datasetId: ObjectId): Fox[List[DataLayer]] =
+  private def findLayersForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
       layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
-      _ <- Fox.fromBool(!layers.flatMap(_.dataFormatOpt).contains(DataFormat.wkw)) ?~> "WKW data format not supported in this context, only datasets with MagLocators are supported"
       layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
       layersWithMags <- Fox.serialCombined(layers) { layer =>
         tryo {

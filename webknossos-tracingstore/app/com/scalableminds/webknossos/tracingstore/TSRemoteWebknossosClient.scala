@@ -50,7 +50,7 @@ class TSRemoteWebknossosClient @Inject()(
 
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, String] = AlfuCache()
+  private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, ObjectId] = AlfuCache()
   private lazy val annotationIdByTracingIdCache: AlfuCache[String, ObjectId] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
 
@@ -68,13 +68,13 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .getWithJsonResponse[DataSourceLike]
 
-  def getDataStoreUriForDataset(datasetId: String): Fox[String] =
+  def getDataStoreUriForDataset(datasetId: ObjectId): Fox[String] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetId")
       .addQueryString("key" -> tracingStoreKey)
       .silent
       .getWithJsonResponse[String]
 
-  def getDatasetIdForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[String] =
+  def getDatasetIdForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[ObjectId] =
     datasetIdByAnnotationIdCache.getOrLoad(
       annotationId,
       aId =>
@@ -82,7 +82,7 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryString("annotationId" -> aId.toString)
           .addQueryString("key" -> tracingStoreKey)
           .silent
-          .getWithJsonResponse[String]
+          .getWithJsonResponse[ObjectId]
     )
 
   def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[ObjectId] =

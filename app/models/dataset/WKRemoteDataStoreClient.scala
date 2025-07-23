@@ -2,6 +2,7 @@ package models.dataset
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -21,7 +22,7 @@ import scala.concurrent.duration.DurationInt
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
-  private lazy val hasSegmentIndexFileCache: AlfuCache[(String, String), Boolean] =
+  private lazy val hasSegmentIndexFileCache: AlfuCache[(ObjectId, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
 
   def getDataLayerThumbnail(dataset: Dataset,
@@ -77,7 +78,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def hasSegmentIndexFile(datasetId: String, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
+  def hasSegmentIndexFile(datasetId: ObjectId, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
     val cacheKey = (datasetId, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,

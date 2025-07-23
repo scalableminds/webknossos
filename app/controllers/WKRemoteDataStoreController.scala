@@ -242,12 +242,11 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def deleteVirtualDataset(name: String, key: String): Action[String] =
-    Action.async(validateJson[String]) { implicit request =>
+  def deleteVirtualDataset(name: String, key: String): Action[ObjectId] =
+    Action.async(validateJson[ObjectId]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          datasetIdValidated <- ObjectId.fromString(request.body) ?~> "dataset.delete.invalidId" ~> BAD_REQUEST
-          dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(request.body)(GlobalAccessContext) ~> NOT_FOUND
           _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
           _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
         } yield Ok

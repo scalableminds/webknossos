@@ -36,7 +36,7 @@ class TSRemoteDatastoreClient @Inject()(
     with ProtoGeometryImplicits
     with MissingBucketHeaders {
 
-  private lazy val dataStoreUriCache: AlfuCache[String, String] = AlfuCache()
+  private lazy val dataStoreUriCache: AlfuCache[ObjectId, String] = AlfuCache()
   private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
@@ -157,7 +157,7 @@ class TSRemoteDatastoreClient @Inject()(
       datastoreUri <- dataStoreUriWithCache(remoteLayer.datasetId)
     } yield s"$datastoreUri/data/datasets/${remoteLayer.datasetId}/layers/${remoteLayer.layerName}"
 
-  private def dataStoreUriWithCache(datasetId: String): Fox[String] =
+  private def dataStoreUriWithCache(datasetId: ObjectId): Fox[String] =
     dataStoreUriCache.getOrLoad(datasetId, keyTuple => remoteWebknossosClient.getDataStoreUriForDataset(datasetId))
 
 }

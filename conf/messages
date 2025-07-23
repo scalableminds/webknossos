@@ -371,6 +371,7 @@ folder.delete.notEmpty.datasets=Cannot delete folders that still contain dataset
 folder.notFound=Could not find the requested folder
 folder.delete.root=Cannot delete the organization’s root folder
 folder.move.root=Cannot move the organization’s root folder
+folder.move.self=Cannot move a folder into itself
 folder.update.notAllowed=No write access on this folder
 folder.noWriteAccess=No write access in this folder
 folder.update.name.failed=Failed to update the folder’s name

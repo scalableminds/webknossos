@@ -68,6 +68,7 @@ class FolderController @Inject()(
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       _ <- Fox.fromBool(organization._rootFolder != id) ?~> "folder.move.root"
+      _ <- Fox.fromBool(newParentId != id) ?~> "folder.move.self"
       _ <- folderDAO.findOne(id) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentId) ?~> "folder.notFound"
       _ <- folderDAO.moveSubtree(id, newParentId)

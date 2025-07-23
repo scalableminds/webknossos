@@ -524,6 +524,54 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@chialab/esbuild-plugin-meta-url@npm:^0.18.2":
+  version: 0.18.2
+  resolution: "@chialab/esbuild-plugin-meta-url@npm:0.18.2"
+  dependencies:
+    "@chialab/esbuild-rna": "npm:^0.18.1"
+    "@chialab/estransform": "npm:^0.18.1"
+    mime-types: "npm:^2.1.35"
+  checksum: 10c0/4dec36074bb6d58e2b1ff52a8cfd5a098fd49296f73a23c80f427e97c64d81fca90d42cdd094ef2068b0c49529d0c4aecc34ef38cce5680f1454999252712655
+  languageName: node
+  linkType: hard
+
+"@chialab/esbuild-plugin-worker@npm:^0.18.1":
+  version: 0.18.1
+  resolution: "@chialab/esbuild-plugin-worker@npm:0.18.1"
+  dependencies:
+    "@chialab/esbuild-plugin-meta-url": "npm:^0.18.2"
+    "@chialab/esbuild-rna": "npm:^0.18.0"
+    "@chialab/estransform": "npm:^0.18.1"
+  checksum: 10c0/261f3854b70c3595c5e1f51ad465db72a2f5d64044c484e0504d09eb7eb9f695d3c91a34c4add5f721667abf493bf0ec9b34778e89cbadc86dfe11763945206d
+  languageName: node
+  linkType: hard
+
+"@chialab/esbuild-rna@npm:^0.18.0, @chialab/esbuild-rna@npm:^0.18.1":
+  version: 0.18.2
+  resolution: "@chialab/esbuild-rna@npm:0.18.2"
+  dependencies:
+    "@chialab/estransform": "npm:^0.18.0"
+    "@chialab/node-resolve": "npm:^0.18.0"
+  checksum: 10c0/ed1e542b85b121b02fa6fd9a554c7306d96ffd08e29905fa7959acd0011e9fba7c70702f4dee2e32d3a9b7b886767d319bb7cd6909ee765c364f828348329884
+  languageName: node
+  linkType: hard
+
+"@chialab/estransform@npm:^0.18.0, @chialab/estransform@npm:^0.18.1":
+  version: 0.18.1
+  resolution: "@chialab/estransform@npm:0.18.1"
+  dependencies:
+    "@parcel/source-map": "npm:^2.0.0"
+  checksum: 10c0/0e58a740a44de0918a413e6ef85061a8c2e87d26d5ba3e9e819bf08636fd9630da78caec318fa95e66b1ad1f8aa7ea4e1f00e1b2d8d0720f2837d8eff3e6f63c
+  languageName: node
+  linkType: hard
+
+"@chialab/node-resolve@npm:^0.18.0":
+  version: 0.18.0
+  resolution: "@chialab/node-resolve@npm:0.18.0"
+  checksum: 10c0/99ba3e219de064d0fb97079e3f715eae088f1b203825bf6a4ecb7c3bfc03db1dd6509a3e6d2c130d370200e29a5e2d43cde44ca3324377d4cad04d38582d1769
+  languageName: node
+  linkType: hard
+
 "@csstools/color-helpers@npm:^5.0.2":
   version: 5.0.2
   resolution: "@csstools/color-helpers@npm:5.0.2"
@@ -1661,6 +1709,15 @@ __metadata:
   dependencies:
     semver: "npm:^7.3.5"
   checksum: 10c0/c37a5b4842bfdece3d14dfdb054f73fe15ed2d3da61b34ff76629fb5b1731647c49166fd2a8bf8b56fcfa51200382385ea8909a3cbecdad612310c114d3f6c99
+  languageName: node
+  linkType: hard
+
+"@parcel/source-map@npm:^2.0.0":
+  version: 2.1.1
+  resolution: "@parcel/source-map@npm:2.1.1"
+  dependencies:
+    detect-libc: "npm:^1.0.3"
+  checksum: 10c0/cea8450e152666be413556f0d100f125e81646bffc497e7c792bd9fc5067d052f1a008c8404ce1cd3a587d58b9ef57207ada89149cf2c705e71b1978308045f6
   languageName: node
   linkType: hard
 
@@ -4633,6 +4690,15 @@ __metadata:
   version: 2.0.3
   resolution: "dequal@npm:2.0.3"
   checksum: 10c0/f98860cdf58b64991ae10205137c0e97d384c3a4edc7f807603887b7c4b850af1224a33d88012009f150861cbee4fa2d322c4cc04b9313bee312e47f6ecaa888
+  languageName: node
+  linkType: hard
+
+"detect-libc@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "detect-libc@npm:1.0.3"
+  bin:
+    detect-libc: ./bin/detect-libc.js
+  checksum: 10c0/4da0deae9f69e13bc37a0902d78bf7169480004b1fed3c19722d56cff578d16f0e11633b7fbf5fb6249181236c72e90024cbd68f0b9558ae06e281f47326d50d
   languageName: node
   linkType: hard
 
@@ -8044,7 +8110,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mime-types@npm:^2.1.12, mime-types@npm:~2.1.19":
+"mime-types@npm:^2.1.12, mime-types@npm:^2.1.35, mime-types@npm:~2.1.19":
   version: 2.1.35
   resolution: "mime-types@npm:2.1.35"
   dependencies:
@@ -12500,6 +12566,7 @@ __metadata:
     "@ant-design/colors": "npm:^7.0.0"
     "@ant-design/icons": "npm:^5.5.0"
     "@biomejs/biome": "npm:^1.9.4"
+    "@chialab/esbuild-plugin-worker": "npm:^0.18.1"
     "@dnd-kit/core": "npm:^6.1.0"
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@fortawesome/fontawesome-free": "npm:^5.15.4"

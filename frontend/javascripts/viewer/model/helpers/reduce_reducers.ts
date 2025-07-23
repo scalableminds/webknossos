@@ -2,7 +2,7 @@ import deepFreezeLib from "deep-freeze";
 import _ from "lodash";
 
 // Do not use the deep-freeze library in production
-// process.env.NODE_ENV is being substituted by webpack
+// process.env.NODE_ENV is being substituted by esbuild
 let deepFreeze = deepFreezeLib;
 if (process.env.NODE_ENV === "production") deepFreeze = _.identity;
 

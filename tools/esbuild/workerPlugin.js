@@ -1,3 +1,21 @@
+/**
+ * @summary Custom esbuild plugin for bundling web workers.
+ * @description
+ * This plugin finds files ending with the `.worker.ts` suffix, bundles each into a
+ * separate IIFE file, and provides the URL to the bundled worker script to the main
+ * application.
+ *
+ * It works in three stages:
+ * 1. `onResolve` intercepts imports for `.worker` files and registers them.
+ * 2. `onLoad` replaces the import with a URL string pointing to the future worker bundle.
+ * 3. `onEnd` runs a separate esbuild process for each registered worker to create the
+ *    final bundle.
+ *
+ * @example
+ * // This allows for a clean import of worker URLs:
+ * import workerUrl from './my.worker';
+ * const worker = new Worker(workerUrl);
+ */
 // esbuild plugin for handling web workers.
 // This plugin identifies .worker.ts files, creates separate esbuild bundles for each,
 // and provides a virtual module that exports the URL to the bundled worker file.

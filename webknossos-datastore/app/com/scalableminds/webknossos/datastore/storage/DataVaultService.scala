@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.datastore.datavault.{
   S3DataVault,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Full
 import play.api.libs.ws.WSClient

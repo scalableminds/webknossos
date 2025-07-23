@@ -40,7 +40,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
   def composeDataset(composeRequest: ComposeRequest, user: User)(
       implicit ctx: DBAccessContext): Fox[(DataSource, ObjectId)] =
     for {
-      _ <- isComposable(composeRequest) ?~> "Datasets are not composable, they are not on the same data store"
+      _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       dataset <- datasetService.createVirtualDataset(composeRequest.newDatasetName,
@@ -56,9 +56,9 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       implicit ctx: DBAccessContext): Fox[DataLayer] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
-      ds <- datasetService.fullDataSourceFor(dataset)
-      ds <- ds.toUsable.toFox ?~> "Dataset not usable"
-      layer <- ds.dataLayers.find(_.name == composeLayer.sourceName).toFox
+      dataSource <- datasetService.fullDataSourceFor(dataset)
+      usableDataSource <- dataSource.toUsable.toFox ?~> "Dataset not usable"
+      layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
         cOpt match {
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
@@ -76,7 +76,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
   private def isComposable(composeRequest: ComposeRequest)(implicit ctx: DBAccessContext): Fox[Boolean] =
     // Check that all datasets are on the same data store
     // Using virtual datasets, we should also be able to compose datasets using non-file paths from different data
-    // stores, however, the data store is only stored for each data set and not per mag.
+    // stores, however, the data store is only stored for each dataset and not per mag.
     for {
       _ <- Fox.fromBool(composeRequest.layers.nonEmpty) ?~> "Cannot compose dataset with no layers"
       datasetIds = composeRequest.layers.map(_.datasetId).distinct

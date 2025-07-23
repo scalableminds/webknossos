@@ -275,8 +275,8 @@ class LegacyController @Inject()(
     * Handles ad-hoc mesh requests.
     */
   def requestAdHocMeshV9(organizationId: String,
-                       datasetDirectoryName: String,
-                       dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
+                         datasetDirectoryName: String,
+                         dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
@@ -368,10 +368,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(datasetDirectoryName, organizationId))
-          .toFox ~> NOT_FOUND
-        dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName) ~> NOT_FOUND
         header = zarrStreamingService.getHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
     }
@@ -385,10 +384,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(datasetDirectoryName, organizationId))
-          .toFox ~> NOT_FOUND
-        dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                  datasetDirectoryName,
+                                                                                  dataLayerName) ~> NOT_FOUND
         header = zarrStreamingService.getGroupHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
     }
@@ -537,8 +535,8 @@ class LegacyController @Inject()(
   }
 
   def requestZGroupV9(organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String = ""): Action[AnyContent] =
+                      datasetDirectoryName: String,
+                      dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContextForSyncBlock(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {

@@ -46,8 +46,7 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-        dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         header = zarrStreamingService.getHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
     }
@@ -59,8 +58,7 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-        dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         header = zarrStreamingService.getGroupHeader(dataSource, dataLayer)
       } yield Ok(Json.toJson(header))
     }

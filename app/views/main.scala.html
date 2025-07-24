@@ -31,12 +31,6 @@ Option[String], openGraphImage: Option[String] )
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
-    />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      media="screen"
       href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <script
@@ -44,8 +38,7 @@ Option[String], openGraphImage: Option[String] )
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
       data-airbrake-environment-name="@(conf.Airbrake.environment)"
     ></script>
-    <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
-    <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)" type="module"></script>
     <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
   </head>
   <body>

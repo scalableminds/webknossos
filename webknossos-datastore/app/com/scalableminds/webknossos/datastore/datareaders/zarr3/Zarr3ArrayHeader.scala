@@ -258,7 +258,9 @@ object Zarr3ArrayHeader extends JsonImplicits {
       )
 
   }
-  def fromDataLayer(dataLayer: DataLayer, mag: Vec3Int, additionalCodecs: Seq[CodecConfiguration] = Seq.empty): Zarr3ArrayHeader = {
+  def fromDataLayer(dataLayer: DataLayer,
+                    mag: Vec3Int,
+                    additionalCodecs: Seq[CodecConfiguration] = Seq.empty): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
     val xyzBBounds = Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords

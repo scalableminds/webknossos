@@ -322,7 +322,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       q"""
          DELETE FROM webknossos.folder_paths fp1
          WHERE _descendant IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $idValidated)
-         AND NOT EXISTS(SELECT FROM webknossos.folder_paths fp2 WHERE fp2._ancestor = $idValidated AND fp2._descendant = fp1._descendant);
+         AND NOT EXISTS(SELECT FROM webknossos.folder_paths fp2 WHERE fp2._ancestor = $idValidated AND fp2._descendant = fp1._ancestor)
         """.asUpdate
     val insertNewPathsQuery =
       q"""

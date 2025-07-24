@@ -68,17 +68,16 @@ export function* pushSaveQueueAsync(): Saga<never> {
       forcePush: take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true));
-
-    // Wait until we may save (due to mutex aquisition).
-    debugger;
-    yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
-    // Wait until we have the newest version. This *must* happen after
-    // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
-    // race condition where the frontend thinks that it knows about the newest
-    // version when in fact somebody else saved a newer version in the meantime.
-    debugger;
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (othersMayEdit) {
+      // Wait until we may save (due to mutex acquisition).
+      yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
+      // Wait until we have the newest version. This *must* happen after
+      // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+      // race condition where the frontend thinks that it knows about the newest
+      // version when in fact somebody else saved a newer version in the meantime.
+      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    }
     // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true

@@ -64,8 +64,9 @@ function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
    * the callback.
    */
   while (true) {
-    const doesHaveMutex = yield* select(getDoesHaveMutex);
-    if (doesHaveMutex) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (doesHaveMutex || !othersMayEdit) {
       action.callback();
       return;
     }
@@ -130,6 +131,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
     // Only start initial acquiring of mutex if othersMayEdit is already turned on.
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
+  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
 }
 
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
@@ -220,7 +222,7 @@ function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<vo
     othersMayEdit,
   }: SetOthersMayEditForAnnotationAction): Saga<void> {
     if (othersMayEdit) {
-      yield call(restartMutexAcquiringSaga, mutexLogicState);
+      yield* call(restartMutexAcquiringSaga, mutexLogicState);
     } else {
       // othersMayEdit was turned off by the activeUser. Since this is only
       // allowed by the owner, they should be able to edit the annotation, too.
@@ -275,24 +277,26 @@ function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void>
       const newActiveTool = yield* select((state) => state.uiInformation.activeTool);
       newToolId = newActiveTool.id;
     }
-    mutexLogicState.onlyRequiredOnSave = TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT.includes(newToolId);
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
+    const newOnlyRequiredOnSave = TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT.includes(newToolId);
+    if (newOnlyRequiredOnSave !== mutexLogicState.onlyRequiredOnSave) {
+      mutexLogicState.onlyRequiredOnSave = newOnlyRequiredOnSave;
+      yield* call(restartMutexAcquiringSaga, mutexLogicState);
+    }
   }
   yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
 }
 
 function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<never> {
-  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
   while (true) {
     // console.log("taking ENSURE_MAY_SAVE_NOW");
     yield* take("ENSURE_MAY_SAVE_NOW");
     // console.log("took ENSURE_MAY_SAVE_NOW");
-    const { doneSaving } = yield race({
+    const { doneSaving } = yield* race({
       tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
       doneSaving: take("DONE_SAVING"),
     });
     if (doneSaving) {
-      yield call(releaseMutex);
+      yield* call(releaseMutex);
     }
   }
 }

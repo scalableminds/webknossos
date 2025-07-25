@@ -22,6 +22,10 @@ import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { initialMapping } from "./proofreading/proofreading_fixtures";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import { powerOrga } from "test/fixtures/dummy_organization";
+import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
+import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -182,7 +186,7 @@ describe("Annotation Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare  = true should not  try to instantly acquire the mutex only after an proofread annotation action.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = true should not  try to instantly acquire the mutex only after an proofread annotation action.", async (context: WebknossosTestContext) => {
     // setupWebknossosForTesting is needed to have a valid api for mockInitialBucketAndAgglomerateData.
     // And mockInitialBucketAndAgglomerateData is needed to have the backend mocked for properly from the beginning for the proofreading annotation.
     await setupWebknossosForTesting(context, "hybrid");
@@ -209,6 +213,10 @@ describe("Annotation Saga", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
+      yield put(setActiveOrganizationAction(powerOrga));
+      yield put(setZoomStepAction(0.3));
+      const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+      expect(currentMag).toEqual([1, 1, 1]);
       yield put(setToolAction(AnnotationTool.PROOFREAD));
 
       // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
@@ -220,11 +228,16 @@ describe("Annotation Saga", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
-
       // Execute the actual merge and wait for the finished mapping.
       // TODOM: check why this does not trigger a mutex fetch
+      // -> seems to be stuck in a ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action loop :/
       yield put(proofreadMergeAction([4, 4, 4], 1));
+      ColoredLogger.logBlue("Waiting for FINISH_MAPPING_INITIALIZATION");
       yield take("FINISH_MAPPING_INITIALIZATION");
+      ColoredLogger.logBlue("Waiting for SET_MAPPING");
+      yield take("SET_MAPPING");
+      ColoredLogger.logBlue("Waiting for SET_IS_MUTEX_ACQUIRED");
+      yield take("SET_IS_MUTEX_ACQUIRED");
       const mapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

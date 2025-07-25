@@ -185,7 +185,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         annotationId,
       );
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
-      yield* put(setUserHoldingMutexAction(canEdit ? activeUser : blockedByUser));
+      yield* put(setUserHoldingMutexAction(blockedByUser));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {
         // Only dispatch the action if it changes the store to avoid

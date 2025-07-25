@@ -69,6 +69,7 @@ export const annotation: APIAnnotation = {
     allowUpdate: true,
     allowFinish: true,
     allowDownload: true,
+    allowSave: true,
   },
   annotationLayers: [
     {

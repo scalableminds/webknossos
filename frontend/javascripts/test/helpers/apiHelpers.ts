@@ -52,7 +52,14 @@ import {
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
 } from "test/fixtures/hybridtracing_server_objects";
-import type { ServerTracing } from "types/api_types";
+import type {
+  APIAnnotation,
+  APIDataset,
+  APITracingStoreAnnotation,
+  ServerSkeletonTracing,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_types";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -151,6 +158,7 @@ vi.mock("admin/rest_api.ts", async () => {
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
+    getMappingsForDatasetLayer: vi.fn(() => []),
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -191,6 +199,14 @@ function receiveJSONMockImplementation(
     url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
   ) {
     return Promise.resolve(_.cloneDeep(annotationFixture));
+  }
+  if (url.startsWith("http://localhost:9000/tracings/mapping/volumeTracingId/info")) {
+    return Promise.resolve({
+      tracingId: "volumeTracingId",
+      baseMappingName: "mocked-mapping",
+      largestAgglomerateId: 42,
+      createdTimestamp: 1753360021075,
+    });
   }
 
   if (
@@ -303,10 +319,18 @@ setModel(Model);
 setStore(Store);
 setupApi();
 startSaga(rootSaga);
+type ModelDataForTests = {
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[];
+  annotationProto: APITracingStoreAnnotation;
+  dataset: APIDataset;
+  annotation: APIAnnotation;
+};
+type ModelModifyingFun = (data: ModelDataForTests) => ModelDataForTests;
 
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
+  applyChangesToModelData?: ModelModifyingFun,
   options?: { dontDispatchWkReady?: boolean },
 ): Promise<void> {
   /*
@@ -340,7 +364,11 @@ export async function setupWebknossosForTesting(
   ).receivedDataPerSaveRequest;
 
   const webknossos = new WebknossosApi(Model);
-  const { tracings, annotationProto, dataset, annotation } = modelData[mode];
+  let modelDataForTest: ModelDataForTests = modelData[mode];
+  if (applyChangesToModelData != null) {
+    modelDataForTest = applyChangesToModelData(modelDataForTest);
+  }
+  const { tracings, annotationProto, dataset, annotation } = modelDataForTest;
 
   vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
     receiveJSONMockImplementation(url, options, annotation),

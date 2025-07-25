@@ -136,8 +136,9 @@ export function convertServerAnnotationToFrontendAnnotation(
     ...annotation.restrictions,
     ...annotation.settings,
   };
-  const isUpdatingCurrentlyAllowed =
-    !annotation.othersMayEdit && annotation.restrictions.allowUpdate;
+  const isUpdatingCurrentlyAllowed = annotation.restrictions.allowUpdate;
+  // TODOM: consider setting to false if othersMayEdit is true -> must be reenabled by the mutex saga.
+  //!annotation.othersMayEdit && annotation.restrictions.allowUpdate;
   return {
     annotationId,
     restrictions,

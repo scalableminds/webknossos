@@ -100,14 +100,8 @@ function TreeHierarchyView(props: Props) {
   useEffect(() => {
     // scroll to active tree if it changes
     if (activeTreeId) {
-      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, activeTreeId);
-
       // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
-      setTimeout(() => {
-        if (treeRef.current) {
-          treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
-        }
-      }, 50);
+      setTimeout(() => scrollToActiveTree(), 50);
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
@@ -281,7 +275,6 @@ function TreeHierarchyView(props: Props) {
     );
     if (expandedGroups == null) return;
     setExpandedGroups(expandedGroups);
-    setTimeout(scrollToActiveTree, 300);
   }, [activeTreeId]);
 
   const scrollToActiveTree = () => {
@@ -295,8 +288,12 @@ function TreeHierarchyView(props: Props) {
 
   // Scroll to the active key after the component has been rendered.
   // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
-  setTimeout(scrollToActiveTree, 900);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This should be equivalent to componentDidMount
+  useEffect(() => {
+    setTimeout(scrollToActiveTree, 900);
+  }, []);
 
+  // Allow scrolling to the active tree even if it is not changed
   useReduxActionListener("FOCUS_TREE", scrollToActiveTree);
 
   return (

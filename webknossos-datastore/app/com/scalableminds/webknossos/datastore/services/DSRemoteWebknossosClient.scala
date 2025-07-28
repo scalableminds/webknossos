@@ -227,4 +227,11 @@ class DSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId")
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[GenericDataSource[DataLayer]] ?~> "Failed to get data source from remote webknossos"
+
+  def getDatasetId(organizationId: String, datasetDirectoryName: String): Fox[ObjectId] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetId")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("organizationId" -> organizationId)
+      .addQueryString("datasetDirectoryName" -> datasetDirectoryName)
+      .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
 }

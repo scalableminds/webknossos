@@ -253,6 +253,22 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  def findDatasetId(name: String,
+                    key: String,
+                    datasetDirectoryName: String,
+                    organizationId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
+            GlobalAccessContext)
+        } yield Ok(Json.toJson(dataset._id))
+      }
+    }
+
   def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>

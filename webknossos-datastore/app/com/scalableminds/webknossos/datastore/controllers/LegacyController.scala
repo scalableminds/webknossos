@@ -1,39 +1,19 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{Color, JPEGWriter}
-import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.{
-  DataRequest,
   RawCuboidRequest,
-  VoxelPosition,
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  DataLayer,
-  DataSourceId,
-  GenericDataSource,
-  SegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.mesh.{
-  AdHocMeshRequest,
   AdHocMeshService,
   AdHocMeshServiceHolder,
   DSFullMeshService,
@@ -42,37 +22,26 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
   BinaryDataServiceHolder,
-  DSRemoteTracingstoreClient,
   DSRemoteWebknossosClient,
   DataSourceRepository,
   DataStoreAccessTokenService,
-  FindDataService,
-  UserAccessRequest,
-  ZarrStreamingService
+  UserAccessRequest
 }
-import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import play.api.i18n.Messages
-import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
 
-import java.io.ByteArrayOutputStream
-import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 class LegacyController @Inject()(
     dataSourceRepository: DataSourceRepository,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    remoteTracingstoreClient: DSRemoteTracingstoreClient,
     mappingService: MappingService,
     config: DataStoreConfig,
-    slackNotificationService: DSSlackNotificationService,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    findDataService: FindDataService,
-    zarrStreamingService: ZarrStreamingService,
-    fullMeshService: DSFullMeshService
+    fullMeshService: DSFullMeshService,
+    binaryDataController: BinaryDataController,
+    zarrStreamingController: ZarrStreamingController,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
@@ -94,28 +63,13 @@ class LegacyController @Inject()(
   ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        val t = Instant.now
-        for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
-          duration = Instant.since(t)
-          _ = if (duration > (10 seconds))
-            logger.info(
-              s"Complete data request for $organizationId/$datasetDirectoryName/$dataLayerName took ${formatDuration(duration)}."
-                + request.body.headOption
-                  .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
-                  .getOrElse(""))
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
-      }
+      for {
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(binaryDataController.requestViaWebknossos(datasetId, dataLayerName)(request))
+      } yield result
     }
   }
 
-  /**
-    * Handles requests for raw binary data via HTTP GET.
-    */
   def requestRawCuboidV9(
       organizationId: String,
       datasetDirectoryName: String,
@@ -137,19 +91,22 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        dataRequest = DataRequest(
-          VoxelPosition(x, y, z, magParsed),
-          width,
-          height,
-          depth,
-          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
-        )
-        (data, indices) <- requestData(dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          binaryDataController.requestRawCuboid(
+            datasetId,
+            dataLayerName,
+            x,
+            y,
+            z,
+            width,
+            height,
+            depth,
+            mag,
+            halfByte,
+            mappingName
+          )(request))
+      } yield result
     }
   }
 
@@ -161,17 +118,16 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          binaryDataController.requestRawCuboidPost(
+            datasetId,
+            dataLayerName
+          )(request))
+      } yield result
     }
   }
 
-  /**
-    * Handles a request for raw binary data via a HTTP GET. Used by knossos.
-    */
   def requestViaKnossosV9(organizationId: String,
                           datasetDirectoryName: String,
                           dataLayerName: String,
@@ -183,17 +139,18 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        dataRequest = DataRequest(
-          VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
-          cubeSize,
-          cubeSize,
-          cubeSize
-        )
-        (data, indices) <- requestData(dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          binaryDataController.requestViaKnossos(
+            datasetId,
+            dataLayerName,
+            mag,
+            x,
+            y,
+            z,
+            cubeSize
+          )(request))
+      } yield result
     }
   }
 
@@ -214,41 +171,25 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
-        dataRequest = DataRequest(
-          VoxelPosition(x, y, z, magParsed),
-          width,
-          height,
-          depth = 1,
-          DataServiceRequestSettings(appliedAgglomerate = mappingName)
-        )
-        (data, _) <- requestData(dataSource.id, dataLayer, dataRequest)
-        intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
-        layerColor = color.flatMap(Color.fromHTML)
-        params = ImageCreatorParameters(
-          dataLayer.elementClass,
-          useHalfBytes = false,
-          slideWidth = width,
-          slideHeight = height,
-          imagesPerRow = 1,
-          blackAndWhite = false,
-          intensityRange = intensityRange,
-          isSegmentation = dataLayer.category == Category.segmentation,
-          color = layerColor,
-          invertColor = invertColor
-        )
-        dataWithFallback = if (data.length == 0)
-          new Array[Byte](width * height * dataLayer.bytesPerElement)
-        else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> "image.create.failed"
-        firstSheet <- spriteSheet.pages.headOption.toFox ?~> "image.page.failed"
-        outputStream = new ByteArrayOutputStream()
-        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture {
+          binaryDataController.thumbnailJpeg(
+            datasetId,
+            dataLayerName,
+            x,
+            y,
+            z,
+            width,
+            height,
+            mag,
+            mappingName,
+            intensityMin,
+            intensityMax,
+            color,
+            invertColor
+          )(request)
+        }
+      } yield result
     }
   }
 
@@ -261,13 +202,15 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
-        mappingRequest = DataServiceMappingRequest(Some(dataSource.id), segmentationLayer, mappingName)
-        result <- mappingService.handleMappingRequest(mappingRequest)
-      } yield Ok(result)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        mapping <- Fox.fromFuture(
+          binaryDataController.mappingJson(
+            datasetId,
+            dataLayerName,
+            mappingName
+          )(request)
+        )
+      } yield mapping
     }
   }
 
@@ -281,51 +224,29 @@ class LegacyController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
-          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
-          adHocMeshRequest = AdHocMeshRequest(
-            Some(dataSource.id),
-            segmentationLayer,
-            request.body.cuboid(dataLayer),
-            request.body.segmentId,
-            request.body.voxelSizeFactorInUnit,
-            tokenContextForRequest(request),
-            request.body.mapping,
-            request.body.mappingType,
-            request.body.additionalCoordinates,
-            request.body.findNeighbors,
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(
+            binaryDataController.requestAdHocMesh(
+              datasetId,
+              dataLayerName
+            )(request)
           )
-          // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
-          // consecutive 3D points (i.e., nine floats) form a triangle.
-          // There are no shared vertices between triangles.
-          (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-        } yield {
-          // We need four bytes for each float
-          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-          responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
-        }
+        } yield result
       }
     }
-
-  private def getNeighborIndices(neighbors: List[Int]) =
-    List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
-
-  private def formatNeighborList(neighbors: List[Int]): String =
-    "[" + neighbors.mkString(", ") + "]"
 
   def findDataV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
-          positionAndMagOpt <- findDataService.findPositionWithData(dataSource.id, dataLayer)
-        } yield Ok(Json.obj("position" -> positionAndMagOpt.map(_._1), "mag" -> positionAndMagOpt.map(_._2)))
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(
+            binaryDataController.findData(
+              datasetId,
+              dataLayerName
+            )(request))
+        } yield result
       }
     }
 
@@ -334,32 +255,18 @@ class LegacyController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          listOfHistograms <- findDataService.createHistogram(dataSource.id, dataLayer) ?~> Messages("histogram.failed",
-                                                                                                     dataLayerName)
-        } yield Ok(Json.toJson(listOfHistograms))
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(
+            binaryDataController.histogram(
+              datasetId,
+              dataLayerName
+            )(request))
+        } yield result
       }
     }
 
-  private def requestData(
-      dataSourceId: DataSourceId,
-      dataLayer: DataLayer,
-      dataRequests: DataRequestCollection
-  )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-    val requests =
-      dataRequests.map(r => DataServiceDataRequest(Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests)
-  }
-
   // ZARR ROUTES
 
-  /**
-    * Serve .zattrs file for a dataset
-    * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
-    */
   def requestZAttrsV9(
       organizationId: String,
       datasetDirectoryName: String,
@@ -368,11 +275,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        header = zarrStreamingService.getHeader(dataSource, dataLayer)
-      } yield Ok(Json.toJson(header))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(zarrStreamingController.requestZAttrs(datasetId, dataLayerName)(request))
+      } yield result
     }
   }
 
@@ -384,11 +289,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        header = zarrStreamingService.getGroupHeader(dataSource, dataLayer)
-      } yield Ok(Json.toJson(header))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(zarrStreamingController.requestZarrJson(datasetId, dataLayerName)(request))
+      } yield result
     }
   }
 
@@ -404,11 +307,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(datasetDirectoryName, organizationId))
-          .toFox ~> NOT_FOUND
-        zarrSource = zarrStreamingService.getZarrDataSource(dataSource, zarrVersion)
-      } yield Ok(Json.toJson(zarrSource))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(zarrStreamingController.requestDataSource(datasetId, zarrVersion)(request))
+      } yield result
     }
   }
 
@@ -422,11 +323,15 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        result <- zarrStreamingService.rawZarrCube(dataSource, dataLayer, mag, coordinates)
-      } yield Ok(result)
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          zarrStreamingController.requestRawZarrCube(
+            datasetId,
+            dataLayerName,
+            mag,
+            coordinates
+          )(request))
+      } yield result
     }
   }
 
@@ -439,11 +344,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        zarrHeader <- zarrStreamingService.getZArray(dataLayer, mag)
-      } yield Ok(Json.toJson(zarrHeader))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(zarrStreamingController.requestZArray(datasetId, dataLayerName, mag)(request))
+      } yield result
     }
   }
 
@@ -456,11 +359,9 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName)
-        zarrJson <- zarrStreamingService.requestZarrJsonForMag(dataSource, dataLayer, mag)
-      } yield Ok(Json.toJson(zarrJson))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(zarrStreamingController.requestZarrJsonForMag(datasetId, dataLayerName, mag)(request))
+      } yield result
     }
   }
 
@@ -473,18 +374,10 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        contents <- zarrStreamingService.dataLayerDirectoryContents(dataSource, dataLayer, zarrVersion)
-      } yield
-        Ok(
-          views.html.datastoreZarrDatasourceDir(
-            "Datastore",
-            "%s/%s/%s".format(organizationId, datasetDirectoryName, dataLayerName),
-            contents
-          )).withHeaders()
-
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          zarrStreamingController.requestDataLayerDirectoryContents(datasetId, dataLayerName, zarrVersion)(request))
+      } yield result
     }
   }
 
@@ -498,17 +391,11 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                  datasetDirectoryName,
-                                                                                  dataLayerName) ~> NOT_FOUND
-        contents <- zarrStreamingService.dataLayerMagDirectoryContents(dataSource, dataLayer, mag, zarrVersion)
-      } yield
-        Ok(
-          views.html.datastoreZarrDatasourceDir(
-            "Datastore",
-            "%s/%s/%s/%s".format(organizationId, datasetDirectoryName, dataLayerName, mag),
-            contents
-          )).withHeaders()
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          zarrStreamingController.requestDataLayerMagDirectoryContents(datasetId, dataLayerName, mag, zarrVersion)(
+            request))
+      } yield result
     }
   }
 
@@ -520,17 +407,10 @@ class LegacyController @Inject()(
     accessTokenService.validateAccessFromTokenContext(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
-        dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(datasetDirectoryName, organizationId))
-          .toFox ~> NOT_FOUND
-        files <- zarrStreamingService.dataSourceDirectoryContents(dataSource, zarrVersion)
-      } yield
-        Ok(
-          views.html.datastoreZarrDatasourceDir(
-            "Datastore",
-            s"$organizationId/$datasetDirectoryName",
-            List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ files
-          ))
+        datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+        result <- Fox.fromFuture(
+          zarrStreamingController.requestDataSourceDirectoryContents(datasetId, zarrVersion)(request))
+      } yield result
     }
   }
 
@@ -538,9 +418,12 @@ class LegacyController @Inject()(
                       datasetDirectoryName: String,
                       dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContextForSyncBlock(
+      accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
-        Ok(zarrStreamingService.zGroupJson)
+        for {
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(zarrStreamingController.requestZGroup(datasetId, dataLayerName)(request))
+        } yield result
       }
     }
 

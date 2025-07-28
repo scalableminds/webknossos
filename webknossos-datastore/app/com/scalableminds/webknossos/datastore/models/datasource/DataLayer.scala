@@ -300,11 +300,6 @@ trait DataLayer extends DataLayerLike {
 
   def dataFormat: DataFormat.Value
 
-  /**
-    * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
-    */
-  def lengthOfUnderlyingCubes(mag: Vec3Int): Int
-
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider

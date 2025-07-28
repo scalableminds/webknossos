@@ -31,9 +31,6 @@ trait WKWLayer extends DataLayerWithMagLocators {
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
-
-  override def lengthOfUnderlyingCubes(mag: Vec3Int): Int = WKWResolution.defaultCubeSize
-
 }
 
 case class WKWDataLayer(

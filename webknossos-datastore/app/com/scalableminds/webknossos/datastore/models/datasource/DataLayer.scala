@@ -265,6 +265,10 @@ trait DataLayerLike {
     case layer: Zarr3SegmentationLayer       => layer.numChannels
     case _                                   => None
   }
+
+  def allExplicitPaths: Seq[String] =
+    magsOpt.map(_.flatMap(_.path)).getOrElse(Seq.empty) ++
+      attachments.map(_.allAttachments.map(_.path.toString)).getOrElse(Seq.empty)
 }
 
 object DataLayerLike {

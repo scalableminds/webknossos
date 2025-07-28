@@ -4,7 +4,7 @@ import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
 import Zip from "libs/zipjs_wrapper";
 import messages from "messages";
-import type * as THREE from "three";
+import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
@@ -90,7 +90,7 @@ function* downloadMeshCellsAsZIP(
   }
 }
 
-const getSTLBlob = (geometry: THREE.Group, segmentId: number): Blob => {
+const getSTLBlob = (geometry: Group, segmentId: number): Blob => {
   const stlDataViews = exportToStl(geometry);
   // Encode mesh and cell id property
   const { meshMarker, segmentIdIndex } = stlMeshConstants;

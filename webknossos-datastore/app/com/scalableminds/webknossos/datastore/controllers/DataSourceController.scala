@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -54,6 +54,7 @@ class DataSourceController @Inject()(
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
@@ -357,7 +358,7 @@ class DataSourceController @Inject()(
           // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
           // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
           _ <- if (dataSourceService.existsOnDisk(dataSource.id.organizationId, dataSource.id.directoryName)) {
-            dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true)
+            dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true, preventNewPaths = true)
           } else
             dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
         } yield Ok

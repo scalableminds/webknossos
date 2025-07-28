@@ -332,7 +332,7 @@ class WKRemoteDataStoreController @Inject()(
           oldDataSource <- datasetService.fullDataSourceFor(dataset)
           oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
           newPaths = request.body.allExplicitPaths
-          _ <- Fox.fromBool(newPaths.forall(oldPaths.contains))
+          _ <- Fox.fromBool(newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
           _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
                                                       name,
                                                       abstractDataSource.hashCode(),

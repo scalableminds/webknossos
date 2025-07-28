@@ -228,10 +228,17 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[GenericDataSource[DataLayer]] ?~> "Failed to get data source from remote webknossos"
 
+  private lazy val datasetIdCache: AlfuCache[(String, String), ObjectId] =
+    AlfuCache(timeToLive = 5 minutes, timeToIdle = 5 minutes)
+
   def getDatasetId(organizationId: String, datasetDirectoryName: String): Fox[ObjectId] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetId")
-      .addQueryString("key" -> dataStoreKey)
-      .addQueryString("organizationId" -> organizationId)
-      .addQueryString("datasetDirectoryName" -> datasetDirectoryName)
-      .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
+    datasetIdCache.getOrLoad(
+      (organizationId, datasetDirectoryName),
+      _ =>
+        rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetId")
+          .addQueryString("key" -> dataStoreKey)
+          .addQueryString("organizationId" -> organizationId)
+          .addQueryString("datasetDirectoryName" -> datasetDirectoryName)
+          .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
+    )
 }

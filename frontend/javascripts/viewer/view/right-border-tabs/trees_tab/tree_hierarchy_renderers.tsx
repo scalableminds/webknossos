@@ -77,7 +77,8 @@ export function renderTreeNode(
   onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void,
   hideContextMenu: () => void,
   node: TreeNode,
-  setIsCurrentlyEditingName: (isEditing: boolean) => void,
+  increaseEditCounter: () => void,
+  decreaseEditCounter: () => void,
 ): React.ReactNode {
   const tree = props.trees.getNullable(node.id);
   if (tree == null) return null;
@@ -103,8 +104,8 @@ export function renderTreeNode(
       <EditableTextLabel
         value={tree.name}
         label="Tree Name"
-        onRenameStart={() => setIsCurrentlyEditingName(true)}
-        onRenameEnd={() => setIsCurrentlyEditingName(false)}
+        onRenameStart={increaseEditCounter}
+        onRenameEnd={decreaseEditCounter}
         onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
         hideEditIcon
         margin={0}
@@ -230,6 +231,8 @@ export function renderGroupNode(
   hideContextMenu: () => void,
   node: TreeNode,
   expandedNodeKeys: string[],
+  increaseEditCounter: () => void,
+  decreaseEditCounter: () => void,
 ) {
   // The root group must not be removed or renamed
   const { id, name } = node;
@@ -253,6 +256,8 @@ export function renderGroupNode(
         onChange={(newValue) => api.tracing.renameSkeletonGroup(id, newValue)}
         hideEditIcon
         margin={0}
+        onRenameStart={increaseEditCounter}
+        onRenameEnd={decreaseEditCounter}
       />
       {}
     </div>

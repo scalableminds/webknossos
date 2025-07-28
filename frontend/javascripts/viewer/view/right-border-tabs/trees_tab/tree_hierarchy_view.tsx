@@ -67,7 +67,9 @@ function TreeHierarchyView(props: Props) {
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [menu, setMenu] = useState<MenuProps | null>(null);
 
-  const [isEditingName, setIsEditingName] = useState(false);
+  const [renamingCounter, setRenamingCounter] = useState(0);
+  const increaseRenamingCounter = () => setRenamingCounter((prev) => prev + 1);
+  const decreaseRenamingCounter = () => setRenamingCounter((prev) => Math.max(prev - 1, 0));
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -258,7 +260,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   function isNodeDraggable(node: TreeNode): boolean {
-    return props.allowUpdate && node.id !== MISSING_GROUP_ID && !isEditingName;
+    return props.allowUpdate && node.id !== MISSING_GROUP_ID && renamingCounter === 0;
   }
 
   // checkedKeys includes all nodes with a "selected" checkbox
@@ -324,7 +326,8 @@ function TreeHierarchyView(props: Props) {
                           onOpenContextMenu,
                           hideContextMenu,
                           node,
-                          setIsEditingName,
+                          increaseRenamingCounter,
+                          decreaseRenamingCounter,
                         )
                       : renderGroupNode(
                           props,
@@ -332,6 +335,8 @@ function TreeHierarchyView(props: Props) {
                           hideContextMenu,
                           node,
                           expandedNodeKeys,
+                          increaseRenamingCounter,
+                          decreaseRenamingCounter,
                         )
                   }
                   switcherIcon={<DownOutlined />}

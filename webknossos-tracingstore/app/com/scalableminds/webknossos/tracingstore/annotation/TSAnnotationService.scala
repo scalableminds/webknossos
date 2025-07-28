@@ -240,8 +240,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     else
       tracingDataStore.annotations.put(annotationId.toString, version, annotationProto)
 
-  def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long)(
+  def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long, truncate: Boolean)(
       implicit ec: ExecutionContext): Fox[JsValue] = {
+    val MaxUpdateActionEntriesPerVersion = 1000
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -258,7 +259,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(batchTo),
           Some(batchFrom))(fromJsonBytes[List[UpdateAction]])
       }
-    } yield Json.toJson(updateActionBatches.flatten.map(versionedTupleToJson))
+      truncatedUpdateActionBatches = if (truncate)
+        updateActionBatches.map(batch =>
+          batch.map {
+            case (version, updateActions) => (version, updateActions.take(MaxUpdateActionEntriesPerVersion))
+        })
+      else updateActionBatches
+    } yield Json.toJson(truncatedUpdateActionBatches.flatten.map(versionedTupleToJson))
   }
 
   def findEditableMappingInfo(annotationId: ObjectId, tracingId: String, version: Option[Long] = None)(

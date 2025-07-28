@@ -403,12 +403,11 @@ export const expandParentGroupsOfTreeAction = (tree: Tree) =>
     tree,
   }) as const;
 
-export const focusTreeAction = (tree: Tree) => {
-  return {
+export const focusTreeAction = (tree: Tree) =>
+  ({
     type: "FOCUS_TREE",
     tree,
-  } as const;
-};
+  }) as const;
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>
   ({

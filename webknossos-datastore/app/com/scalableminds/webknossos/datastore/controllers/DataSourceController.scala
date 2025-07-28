@@ -704,8 +704,12 @@ class DataSourceController @Inject()(
           .toFox
       }
       _ <- dataSourceFromDir match {
-        case Some(ds) => dsRemoteWebknossosClient.updateDataSource(ds, datasetId)
-        case _        => Fox.successful(())
+        case Some(ds) =>
+          for {
+            _ <- dsRemoteWebknossosClient.updateDataSource(ds, datasetId)
+            _ = datasetCache.invalidateCache(datasetId)
+          } yield ()
+        case _ => Fox.successful(())
       }
       dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
     } yield dataSource

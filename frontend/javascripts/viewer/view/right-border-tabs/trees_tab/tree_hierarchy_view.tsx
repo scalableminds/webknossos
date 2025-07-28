@@ -67,6 +67,8 @@ function TreeHierarchyView(props: Props) {
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [menu, setMenu] = useState<MenuProps | null>(null);
 
+  const [isEditingName, setIsEditingName] = useState(false);
+
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -256,7 +258,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   function isNodeDraggable(node: TreeNode): boolean {
-    return props.allowUpdate && node.id !== MISSING_GROUP_ID;
+    return props.allowUpdate && node.id !== MISSING_GROUP_ID && !isEditingName;
   }
 
   // checkedKeys includes all nodes with a "selected" checkbox
@@ -317,7 +319,13 @@ function TreeHierarchyView(props: Props) {
                   ref={treeRef}
                   titleRender={(node) =>
                     node.type === GroupTypeEnum.TREE
-                      ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
+                      ? renderTreeNode(
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          setIsEditingName,
+                        )
                       : renderGroupNode(
                           props,
                           onOpenContextMenu,

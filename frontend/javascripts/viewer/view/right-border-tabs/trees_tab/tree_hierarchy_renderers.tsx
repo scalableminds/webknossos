@@ -77,6 +77,7 @@ export function renderTreeNode(
   onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void,
   hideContextMenu: () => void,
   node: TreeNode,
+  setIsCurrentlyEditingName: (isEditing: boolean) => void,
 ): React.ReactNode {
   const tree = props.trees.getNullable(node.id);
   if (tree == null) return null;
@@ -102,6 +103,8 @@ export function renderTreeNode(
       <EditableTextLabel
         value={tree.name}
         label="Tree Name"
+        onRenameStart={() => setIsCurrentlyEditingName(true)}
+        onRenameEnd={() => setIsCurrentlyEditingName(false)}
         onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
         hideEditIcon
         margin={0}

@@ -70,7 +70,7 @@ function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
       action.callback();
       return;
     }
-    yield* take("SET_BLOCKED_BY_USER");
+    yield* take(["SET_USER_HOLDING_MUTEX", "SET_IS_MUTEX_ACQUIRED"]);
   }
 }
 
@@ -125,13 +125,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchForOthersMayEditChange, mutexLogicState);
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
+  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit) {
     // Only start initial acquiring of mutex if othersMayEdit is already turned on.
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
-  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
 }
 
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
@@ -296,6 +296,8 @@ function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<ne
       doneSaving: take("DONE_SAVING"),
     });
     if (doneSaving) {
+      // No need to keep continuously fetching the mutex as saving was successful.
+      yield* call(restartMutexAcquiringSaga, mutexLogicState);
       yield* call(releaseMutex);
     }
   }

@@ -4,22 +4,16 @@ import { type WebknossosTestContext, setupWebknossosForTesting } from "test/help
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { call, put, select, take } from "redux-saga/effects";
 import { startSaga } from "viewer/store";
-import {
-  initializeMappingAndTool,
-  mockInitialBucketAndAgglomerateData,
-} from "./proofreading/proofreading_test_utils";
+import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import {
   updateSegmentAction,
   setActiveCellAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { Store } from "viewer/singletons";
-import { ColoredLogger } from "libs/utils";
-import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
-import { initialMapping } from "./proofreading/proofreading_fixtures";
+import { sleep } from "libs/utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { powerOrga } from "test/fixtures/dummy_organization";
@@ -42,6 +36,35 @@ function makeProofreadAnnotation(
     }
     return tracing;
   });
+}
+
+async function makeProofreadMerge(context: WebknossosTestContext): Promise<void> {
+  const { annotation } = Store.getState();
+  const { tracingId } = annotation.volumes[0];
+
+  const task = startSaga(function* () {
+    yield put(setActiveOrganizationAction(powerOrga));
+    yield put(setZoomStepAction(0.3));
+    const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+    expect(currentMag).toEqual([1, 1, 1]);
+    yield put(setToolAction(AnnotationTool.PROOFREAD));
+
+    // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
+    // is only maintained for loaded buckets). => Forces loading of mapping.
+    const valueAt444 = yield call(() => context.api.data.getDataValue(tracingId, [4, 4, 4], 0));
+    expect(valueAt444).toBe(4);
+    yield take("SET_MAPPING");
+    // Set up the merge-related segment partners. Normally, this would happen
+    // due to the user's interactions.
+    yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+    yield put(setActiveCellAction(1));
+    // Execute the actual merge and wait for the finished mapping.
+    yield put(proofreadMergeAction([4, 4, 4], 1));
+    // Wait for UI made busy and back to idle again to ensure saving of the whole sagas is done.
+    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+  });
+  await task.toPromise();
 }
 
 describe("Annotation Saga", () => {
@@ -170,7 +193,7 @@ describe("Annotation Saga", () => {
     await task.toPromise();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = false should not try to instantly acquire the mutex.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = false should not try to instantly acquire the mutex nor should it be fetched upon proofreading action.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(
       context,
       "hybrid",
@@ -183,14 +206,15 @@ describe("Annotation Saga", () => {
         };
       },
     );
+    mockInitialBucketAndAgglomerateData(context);
+    // Give mutex saga time to potentially acquire the mutex. This should not happen!
+    await sleep(500);
+    expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    await makeProofreadMerge(context);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = true should not  try to instantly acquire the mutex only after an proofread annotation action.", async (context: WebknossosTestContext) => {
-    // setupWebknossosForTesting is needed to have a valid api for mockInitialBucketAndAgglomerateData.
-    // And mockInitialBucketAndAgglomerateData is needed to have the backend mocked for properly from the beginning for the proofreading annotation.
-    await setupWebknossosForTesting(context, "hybrid");
-    mockInitialBucketAndAgglomerateData(context);
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = true should not try to instantly acquire the mutex only after an proofread annotation action.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(
       context,
       "hybrid",
@@ -207,44 +231,68 @@ describe("Annotation Saga", () => {
         };
       },
     );
+    mockInitialBucketAndAgglomerateData(context);
+    // Give mutex saga time to potentially acquire the mutex. This should not happen!
+    await sleep(500);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    await makeProofreadMerge(context);
+    expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+  });
 
-    const { annotation } = Store.getState();
-    const { tracingId } = annotation.volumes[0];
+  const ToolsAllowedInProofreadingModeWithoutLiveCollabSupport = [
+    AnnotationTool.SKELETON,
+    AnnotationTool.BOUNDING_BOX,
+  ];
 
-    const task = startSaga(function* () {
-      yield put(setActiveOrganizationAction(powerOrga));
-      yield put(setZoomStepAction(0.3));
-      const currentMag = yield select((state) => getCurrentMag(state, tracingId));
-      expect(currentMag).toEqual([1, 1, 1]);
-      yield put(setToolAction(AnnotationTool.PROOFREAD));
+  it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = true should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[0].id}.`, async (context: WebknossosTestContext) => {
+    await setupWebknossosForTesting(
+      context,
+      "hybrid",
+      ({ tracings, annotationProto, dataset, annotation }) => {
+        const annotationWithUpdatingAllowedTrue = update(annotation, {
+          restrictions: { allowUpdate: { $set: true }, allowSave: { $set: true } },
+          othersMayEdit: { $set: true },
+        });
+        return {
+          tracings: makeProofreadAnnotation(tracings),
+          annotationProto,
+          dataset,
+          annotation: annotationWithUpdatingAllowedTrue,
+        };
+      },
+    );
+    mockInitialBucketAndAgglomerateData(context);
+    // Give mutex saga time to potentially acquire the mutex. This should not happen!
+    await sleep(500);
+    expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    Store.dispatch(setToolAction(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[0]));
+    await sleep(500);
+    expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+  });
 
-      // Read data from the 0,0,0 bucket so that it is in memory (important because the mapping
-      // is only maintained for loaded buckets). => Forces loading of mapping.
-      const valueAt444 = yield call(() => context.api.data.getDataValue(tracingId, [4, 4, 4], 0));
-      expect(valueAt444).toBe(4);
-      yield take("SET_MAPPING");
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      yield put(setActiveCellAction(1));
-      // Execute the actual merge and wait for the finished mapping.
-      // TODOM: check why this does not trigger a mutex fetch
-      // -> seems to be stuck in a ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action loop :/
-      yield put(proofreadMergeAction([4, 4, 4], 1));
-      ColoredLogger.logBlue("Waiting for FINISH_MAPPING_INITIALIZATION");
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      ColoredLogger.logBlue("Waiting for SET_MAPPING");
-      yield take("SET_MAPPING");
-      ColoredLogger.logBlue("Waiting for SET_IS_MUTEX_ACQUIRED");
-      yield take("SET_IS_MUTEX_ACQUIRED");
-      const mapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
-      console.log("mapping", mapping);
-    });
-    await task.toPromise();
+  it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = true should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[1].id}.`, async (context: WebknossosTestContext) => {
+    await setupWebknossosForTesting(
+      context,
+      "hybrid",
+      ({ tracings, annotationProto, dataset, annotation }) => {
+        const annotationWithUpdatingAllowedTrue = update(annotation, {
+          restrictions: { allowUpdate: { $set: true }, allowSave: { $set: true } },
+          othersMayEdit: { $set: true },
+        });
+        return {
+          tracings: makeProofreadAnnotation(tracings),
+          annotationProto,
+          dataset,
+          annotation: annotationWithUpdatingAllowedTrue,
+        };
+      },
+    );
+    mockInitialBucketAndAgglomerateData(context);
+    // Give mutex saga time to potentially acquire the mutex. This should not happen!
+    await sleep(500);
+    expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    Store.dispatch(setToolAction(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[1]));
+    await sleep(500);
+    expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
 });

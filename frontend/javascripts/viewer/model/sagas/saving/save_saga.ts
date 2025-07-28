@@ -164,12 +164,12 @@ function* watchForSaveConflicts(): Saga<void> {
     // we only want to poll the newest version once. This is why the current implementation
     // uses a sliding buffer of size 1. However, this means that dropped actions won't get
     // their callback's notified. This is a problem and could lead to infinite waiting.
-    buffers.sliding<EnsureHasNewestVersionAction>(1),
+    buffers.expanding<EnsureHasNewestVersionAction>(1),
   );
 
   while (true) {
     const interval = yield* call(getPollInterval);
-    const { ensureHasNewestVersion } = yield* race({
+    let { ensureHasNewestVersion } = yield* race({
       sleep: call(sleep, interval),
       ensureHasNewestVersion: take(channel),
     });
@@ -183,10 +183,11 @@ function* watchForSaveConflicts(): Saga<void> {
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
       } else {
-        if (ensureHasNewestVersion) {
+        while (ensureHasNewestVersion != null) {
           // checkForNewVersion was done in response to a ensureHasNewestVersion action.
           // We invoke the callback to signal that the newest version was ensured.
           (ensureHasNewestVersion as EnsureHasNewestVersionAction).callback();
+          ensureHasNewestVersion = channel.isEmpty() ? null : channel.take();
         }
       }
     } catch (exception) {

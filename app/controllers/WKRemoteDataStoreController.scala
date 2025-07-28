@@ -311,8 +311,12 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
           abstractDataSource = request.body.copy(dataLayers = request.body.dataLayers.map(AbstractDataLayer.from))
+          oldDataSource <- datasetService.fullDataSourceFor(dataset)
+          oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
+          newPaths = request.body.allExplicitPaths
+          _ <- Fox.fromBool(newPaths.forall(oldPaths.contains))
           _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
                                                       name,
                                                       abstractDataSource.hashCode(),

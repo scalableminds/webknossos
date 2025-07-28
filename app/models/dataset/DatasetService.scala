@@ -201,7 +201,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                                                  organization._id)
               foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
               existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
+                updateDataSourceFromDataStore(dataStore, dataSource, foundDatasetsByDirectoryName))
             } yield existingIds.flatten
           case _ =>
             logger.info(
@@ -212,19 +212,24 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       .map(_.flatten)
   }
 
-  private def updateDataSource(
+  private def updateDataSourceFromDataStore(
       dataStore: DataStore,
       dataSource: InboxDataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
-    foundDatasetOpt match {
-      case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-        updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
-      case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
-        updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
-      case _ =>
-        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+    val isVirtual = foundDatasetOpt.exists(_.isVirtual)
+    if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
+      Fox.successful(foundDatasetOpt.map(_._id))
+    } else {
+      foundDatasetOpt match {
+        case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
+          updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
+        case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
+          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
+        case _ =>
+          insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+      }
     }
   }
 

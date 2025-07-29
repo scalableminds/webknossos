@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers } from "redux-saga";
-import { actionChannel, call, fork, put, race, takeEvery, flush } from "typed-redux-saga";
+import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {

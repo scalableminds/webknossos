@@ -6,7 +6,7 @@ import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
-import Constants, { type Vector2 } from "viewer/constants";
+import Constants, { type Vector3, type Vector2 } from "viewer/constants";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
@@ -18,10 +18,11 @@ import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { NumberLike, SaveQueueEntry } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
 import type { BucketOverride, WebknossosTestContext } from "test/helpers/apiHelpers";
+import type { NeighborInfo } from "admin/rest_api";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -147,6 +148,32 @@ class BackendMock {
           }) as ServerUpdateAction,
       ),
     }));
+  };
+  getNeighborsForAgglomerateNode = async (
+    _tracingStoreUrl: string,
+    _tracingId: string,
+    segmentInfo: {
+      segmentId: NumberLike;
+      mag: Vector3;
+      agglomerateId: NumberLike;
+      editableMappingId: string;
+    },
+  ): Promise<NeighborInfo> => {
+    if (segmentInfo.segmentId === 2) {
+      return {
+        segmentId: 2,
+        neighbors: [
+          {
+            segmentId: 3,
+            position: [3, 3, 3],
+          },
+        ],
+      };
+    }
+    return {
+      segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+      neighbors: [],
+    };
   };
 
   sendSaveRequestWithToken = async (
@@ -286,6 +313,9 @@ export function mockInitialBucketAndAgglomerateData(context: WebknossosTestConte
     backendMock.getCurrentMappingEntriesFromServer,
   );
   mocks.acquireAnnotationMutex.mockImplementation(backendMock.acquireAnnotationMutex);
+  mocks.getNeighborsForAgglomerateNode.mockImplementation(
+    backendMock.getNeighborsForAgglomerateNode,
+  );
   backendMock.receivedDataPerSaveRequest = context.receivedDataPerSaveRequest;
   mocks.sendSaveRequestWithToken.mockImplementation(backendMock.sendSaveRequestWithToken);
   mocks.getUpdateActionLog.mockImplementation(backendMock.getUpdateActionLog);

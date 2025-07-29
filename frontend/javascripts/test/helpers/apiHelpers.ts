@@ -41,6 +41,7 @@ import {
   acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
+  getNeighborsForAgglomerateNode,
   getUpdateActionLog,
   sendSaveRequestWithToken,
   type MinCutTargetEdge,
@@ -60,6 +61,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
+import type { ArbitraryObject } from "types/globals";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -73,6 +75,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
     getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
     acquireAnnotationMutex: Mock<typeof acquireAnnotationMutex>;
+    getNeighborsForAgglomerateNode: Mock<typeof getNeighborsForAgglomerateNode>;
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
   };
@@ -174,6 +177,13 @@ vi.mock("admin/rest_api.ts", async () => {
       },
     ),
     acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    getNeighborsForAgglomerateNode: vi.fn(
+      (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) =>
+        Promise.resolve({
+          segmentId: _segmentInfo.segmentId,
+          neighbors: [],
+        }),
+    ),
     getUpdateActionLog: vi.fn(() => Promise.resolve([])),
   };
 });
@@ -351,6 +361,7 @@ export async function setupWebknossosForTesting(
     getCurrentMappingEntriesFromServer,
     getEdgesForAgglomerateMinCut,
     acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
+    getNeighborsForAgglomerateNode: vi.mocked(getNeighborsForAgglomerateNode),
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
   };

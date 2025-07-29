@@ -1,7 +1,10 @@
 import { call, put, select, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import {
+  cutAgglomerateFromNeighborsAction,
+  proofreadMergeAction,
+} from "viewer/model/actions/proofread_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
@@ -23,7 +26,7 @@ import {
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { WkDevFlags } from "viewer/api/wk_dev";
 
-WkDevFlags.logActions = true;
+WkDevFlags.logActions = false;
 describe("Proofreading (Multi User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -196,4 +199,159 @@ describe("Proofreading (Multi User)", () => {
 
     await task.toPromise();
   }, 8000);
+
+  it("should split two agglomerates after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(7, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+      yield put(setActiveCellAction(2));
+
+      yield call(createEditableMapping);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        cutAgglomerateFromNeighborsAction(
+          [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      yield take("DONE_SAVING");
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 2,
+            segmentId2: 3,
+          },
+        },
+      ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 8],
+          [3, 9],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should merge two agglomerates after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(7, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
+      yield put(setActiveCellAction(3));
+
+      yield call(createEditableMapping);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          3, // unmappedId=1 maps to 1
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      yield take("DONE_SAVING");
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 3,
+            segmentId2: 4,
+          },
+        },
+      ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 8],
+          [3, 8],
+          [4, 8],
+          [5, 8],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  // TODOM: Implement tests for proofreading tree interactions.
 });

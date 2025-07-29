@@ -109,8 +109,8 @@ object Dependencies {
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    // Play framework relies on an older version of jackson-databind than webauthn4j, because of that we set the version
-    // to the version required by Play.
+    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
+    // version to newest version supported by Play.
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
   )
 }

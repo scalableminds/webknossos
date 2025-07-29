@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
+import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;

@@ -40,7 +40,7 @@ function RegistrationViewGeneric() {
         Loading...
       </Card>
     );
-  } else if (organization != null) {
+  } else if (organization != null && features().registerToDefaultOrgaEnabled) {
     content = (
       <>
         <Card

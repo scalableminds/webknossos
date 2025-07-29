@@ -83,9 +83,8 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
-                organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
-                  GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                _ <- Fox.fromBool(inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled) ?~> "auth.register.needInvite"
+                organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext)
                 _ <- organizationService
                   .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -443,8 +442,7 @@ class AuthenticationController @Inject()(
           loginUser(loginInfo)
         case Empty =>
           for {
-            organization: Organization <- organizationService.findOneByInviteByIdOrDefault(None, None)(
-              GlobalAccessContext)
+            organization: Organization <- organizationService.findOneByInviteOrDefault(None)(GlobalAccessContext)
             user <- createUser(
               organization,
               openIdConnectUserInfo.email,

@@ -764,6 +764,7 @@ export type APIFeatureToggles = {
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
+  readonly registerToDefaultOrgaEnabled?: boolean;
 };
 export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;

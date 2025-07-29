@@ -4,9 +4,10 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { updateOrganization } from "admin/rest_api";
 import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-import type { APIOrganization } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 
@@ -17,7 +18,10 @@ type FormValues = {
   newUserMailingList: string;
 };
 
-export function OrganizationNotificationsView({ organization }: { organization: APIOrganization }) {
+export function OrganizationNotificationsView() {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const [form] = Form.useForm<FormValues>();
   const [ownerEmail, setOwnerEmail] = useState<string>("");
 
@@ -94,22 +98,22 @@ export function OrganizationNotificationsView({ organization }: { organization: 
         <Col span={12}>
           <SettingsCard
             title="WEBKNOSSOS Plan & Subscription"
-            explanation="Get notified when your WK subscription is about to expire or reach user and storage limits."
-            description={ownerEmail}
+            tooltip="Get notified when your WK subscription is about to expire or reach user and storage limits."
+            content={ownerEmail}
           />
         </Col>
         <Col span={12}>
           <SettingsCard
             title="AI Job Completion"
-            explanation="Get notified when a background conversion or AI job is completed."
-            description="Users are notified individually."
+            tooltip="Get notified when a background conversion or AI job is completed."
+            content="Users are notified individually."
           />
         </Col>
         <Col span={12}>
           <SettingsCard
             title="New User Signup"
-            explanation="Get notified when a new user signs up to your organization."
-            description={getNewUserNotificationsSettings()}
+            tooltip="Get notified when a new user signs up to your organization."
+            content={getNewUserNotificationsSettings()}
           />
         </Col>
       </Row>

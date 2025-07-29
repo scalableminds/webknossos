@@ -1,19 +1,37 @@
 import app from "app";
 import { V3 } from "libs/mjs";
 import ResizableBuffer from "libs/resizable_buffer";
-import * as THREE from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  DataTexture,
+  DoubleSide,
+  DynamicDrawUsage,
+  Euler,
+  Group,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+  RGBAFormat,
+  RepeatWrapping,
+  Vector3 as ThreeVector3,
+  Vector2,
+} from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 
-export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
-export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
+export const CONTOUR_COLOR_NORMAL = new Color(0x0000ff);
+export const CONTOUR_COLOR_DELETE = new Color(0xff0000);
 
 export class ContourGeometry {
-  color: THREE.Color;
-  line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
-  connectingLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  color: Color;
+  line: Line<BufferGeometry, LineBasicMaterial>;
+  connectingLine: Line<BufferGeometry, LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
   connectingLinePositions: Float32Array;
   viewport: OrthoView;
@@ -24,28 +42,25 @@ export class ContourGeometry {
     this.viewport = OrthoViews.PLANE_XY;
     this.showConnectingLine = showConnectingLine;
 
-    const edgeGeometry = new THREE.BufferGeometry();
-    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    const edgeGeometry = new BufferGeometry();
+    const positionAttribute = new BufferAttribute(new Float32Array(3), 3);
+    positionAttribute.setUsage(DynamicDrawUsage);
     edgeGeometry.setAttribute("position", positionAttribute);
-    this.line = new THREE.Line(
+    this.line = new Line(
       edgeGeometry,
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         linewidth: 2,
       }),
     );
-    const connectingLineGeometry = new THREE.BufferGeometry();
+    const connectingLineGeometry = new BufferGeometry();
     this.connectingLinePositions = new Float32Array(6);
-    const connectingLinePositionAttribute = new THREE.BufferAttribute(
-      this.connectingLinePositions,
-      3,
-    );
-    connectingLinePositionAttribute.setUsage(THREE.DynamicDrawUsage);
+    const connectingLinePositionAttribute = new BufferAttribute(this.connectingLinePositions, 3);
+    connectingLinePositionAttribute.setUsage(DynamicDrawUsage);
     connectingLineGeometry.setAttribute("position", connectingLinePositionAttribute);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
-    this.connectingLine = new THREE.Line(
+    positionAttribute.setUsage(DynamicDrawUsage);
+    this.connectingLine = new Line(
       connectingLineGeometry,
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         linewidth: 2,
       }),
     );
@@ -57,7 +72,7 @@ export class ContourGeometry {
   reset() {
     this.viewport = OrthoViews.PLANE_XY;
     this.line.material.color = this.color;
-    this.connectingLine.material.color = new THREE.Color(0x00ffff);
+    this.connectingLine.material.color = new Color(0x00ffff);
     this.vertexBuffer.clear();
     this.connectingLinePositions.fill(0);
     this.finalizeMesh();
@@ -72,6 +87,12 @@ export class ContourGeometry {
   }
 
   addEdgePoint(pos: Vector3) {
+    const pointCount = this.vertexBuffer.getLength();
+    const lastPoint = this.vertexBuffer.getBuffer().subarray((pointCount - 1) * 3, pointCount * 3);
+    if (V3.equals(pos, lastPoint)) {
+      // Skip adding the point if it is the same as the last one.
+      return;
+    }
     this.vertexBuffer.push(pos);
     const startPoint = this.vertexBuffer.getBuffer().subarray(0, 3);
     // Setting start and end point to form the connecting line.
@@ -98,8 +119,8 @@ export class ContourGeometry {
     const mesh = this.line;
     if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
-      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
-      positionAttribute.setUsage(THREE.DynamicDrawUsage);
+      const positionAttribute = new BufferAttribute(this.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setUsage(DynamicDrawUsage);
       mesh.geometry.dispose();
       mesh.geometry.setAttribute("position", positionAttribute);
     }
@@ -119,16 +140,13 @@ export class ContourGeometry {
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
-    const scaleVector = new THREE.Vector2(
-      voxelSizeFactor[dimIndices[0]],
-      voxelSizeFactor[dimIndices[1]],
-    );
+    const scaleVector = new Vector2(voxelSizeFactor[dimIndices[0]], voxelSizeFactor[dimIndices[1]]);
     for (let i = 0; i < pointCount; i++) {
-      const start = new THREE.Vector2(
+      const start = new Vector2(
         points[previousPointIndex * 3 + dimIndices[0]],
         points[previousPointIndex * 3 + dimIndices[1]],
       ).multiply(scaleVector);
-      const end = new THREE.Vector2(
+      const end = new Vector2(
         points[i * 3 + dimIndices[0]],
         points[i * 3 + dimIndices[1]],
       ).multiply(scaleVector);
@@ -154,42 +172,42 @@ export class ContourGeometry {
 }
 
 const rotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(0, 0, 0),
-  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, -(1 / 2) * Math.PI, Math.PI),
-  [OrthoViews.PLANE_XZ]: new THREE.Euler((1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.PLANE_XY]: new Euler(0, 0, 0),
+  [OrthoViews.PLANE_YZ]: new Euler(Math.PI, -(1 / 2) * Math.PI, Math.PI),
+  [OrthoViews.PLANE_XZ]: new Euler((1 / 2) * Math.PI, 0, 0),
   [OrthoViews.TDView]: null,
 };
 
 export class QuickSelectGeometry {
-  color: THREE.Color;
-  meshGroup: THREE.Group;
-  centerMarkerColor: THREE.Color;
-  rectangle: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
-  centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  color: Color;
+  meshGroup: Group;
+  centerMarkerColor: Color;
+  rectangle: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  centerMarker: Mesh<PlaneGeometry, MeshBasicMaterial>;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
-    this.centerMarkerColor = new THREE.Color(0xff00ff);
+    this.centerMarkerColor = new Color(0xff00ff);
 
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    const material = new THREE.MeshBasicMaterial({
-      side: THREE.DoubleSide,
+    const geometry = new PlaneGeometry(1, 1);
+    const material = new MeshBasicMaterial({
+      side: DoubleSide,
       transparent: true,
       opacity: 0.5,
     });
-    this.rectangle = new THREE.Mesh(geometry, material);
+    this.rectangle = new Mesh(geometry, material);
 
     const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
-    const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
-    const centerMaterial = new THREE.MeshBasicMaterial({
+    const centerGeometry = new PlaneGeometry(baseWidth, baseWidth);
+    const centerMaterial = new MeshBasicMaterial({
       color: this.centerMarkerColor,
-      side: THREE.DoubleSide,
+      side: DoubleSide,
       transparent: true,
       opacity: 0.9,
     });
-    this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
+    this.centerMarker = new Mesh(centerGeometry, centerMaterial);
 
-    this.meshGroup = new THREE.Group();
+    this.meshGroup = new Group();
     this.meshGroup.add(this.rectangle);
     this.meshGroup.add(this.centerMarker);
 
@@ -231,13 +249,13 @@ export class QuickSelectGeometry {
     this.rectangle.setRotationFromEuler(rotation);
     this.centerMarker.setRotationFromEuler(rotation);
     this.centerMarker.scale.copy(
-      new THREE.Vector3(
+      new ThreeVector3(
         ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
       ),
     );
   }
 
-  setColor(color: THREE.Color) {
+  setColor(color: Color) {
     this.color = color;
     // Copy this.color into this.centerMarkerColor
     this.centerMarkerColor.copy(this.color);
@@ -303,9 +321,9 @@ export class QuickSelectGeometry {
   attachTextureMask(ndData: Uint8Array, width: number, height: number) {
     // Attach the array as a binary mask so that the rectangle preview
     // is only rendered where the passed array is 1.
-    const texture = new THREE.DataTexture(ndData, width, height, THREE.RGBAFormat);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    const texture = new DataTexture(ndData, width, height, RGBAFormat);
+    texture.wrapS = RepeatWrapping;
+    texture.wrapT = RepeatWrapping;
     texture.needsUpdate = true;
 
     const rectangle = this.rectangle;
@@ -323,8 +341,8 @@ export class QuickSelectGeometry {
 
 // This class is used to display connected line segments and is used by the LineMeasurementTool.
 export class LineMeasurementGeometry {
-  color: THREE.Color;
-  line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  color: Color;
+  line: Line<BufferGeometry, LineBasicMaterial>;
   vertexBuffer: ResizableBuffer<Float32Array>;
   viewport: OrthoView;
   visible: boolean;
@@ -336,13 +354,13 @@ export class LineMeasurementGeometry {
     this.color = CONTOUR_COLOR_NORMAL;
     this.visible = false;
 
-    const lineGeometry = new THREE.BufferGeometry();
-    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    const lineGeometry = new BufferGeometry();
+    const positionAttribute = new BufferAttribute(new Float32Array(3), 3);
+    positionAttribute.setUsage(DynamicDrawUsage);
     lineGeometry.setAttribute("position", positionAttribute);
-    this.line = new THREE.Line(
+    this.line = new Line(
       lineGeometry,
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         linewidth: 2,
       }),
     );
@@ -401,8 +419,8 @@ export class LineMeasurementGeometry {
     const mesh = this.line;
     if (mesh.geometry.attributes.position.array !== this.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
-      const positionAttribute = new THREE.BufferAttribute(this.vertexBuffer.getBuffer(), 3);
-      positionAttribute.setUsage(THREE.DynamicDrawUsage);
+      const positionAttribute = new BufferAttribute(this.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setUsage(DynamicDrawUsage);
       mesh.geometry.dispose();
       mesh.geometry.setAttribute("position", positionAttribute);
     }
@@ -414,7 +432,7 @@ export class LineMeasurementGeometry {
   }
 
   getDistance(voxelSizeFactor: Vector3): number {
-    const scaleVector = new THREE.Vector3(...voxelSizeFactor);
+    const scaleVector = new ThreeVector3(...voxelSizeFactor);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {
@@ -422,8 +440,8 @@ export class LineMeasurementGeometry {
     }
     let accDistanceInUnit = 0;
     for (let i = 0; i < pointCount - 1; i++) {
-      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
-      const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
+      const start = new ThreeVector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
+      const end = new ThreeVector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
         scaleVector,
       );
       accDistanceInUnit += start.distanceTo(end);

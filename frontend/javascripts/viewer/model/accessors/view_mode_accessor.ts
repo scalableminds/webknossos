@@ -1,6 +1,7 @@
 import { V3 } from "libs/mjs";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
   OrthoView,
   OrthoViewExtents,
@@ -17,9 +18,10 @@ import constants, {
   OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Flycam, WebknossosState } from "viewer/store";
+import Dimensions from "../dimensions";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
@@ -90,45 +92,66 @@ export function getViewportScale(state: WebknossosState, viewport: Viewport): [n
   return [xScale, yScale];
 }
 
+export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
+
+// Avoiding object creation with each call.
+const flycamRotationEuler = new Euler();
+const flycamRotationMatrix = new Matrix4();
+const flycamPositionMatrix = new Matrix4();
+const rotatedDiff = new ThreeVector3();
+const planeRatioVector = new ThreeVector3();
+
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
-  planeId?: OrthoView | null | undefined,
-): Vector3 | null | undefined {
-  let position: Vector3;
-  planeId = planeId || state.viewModeData.plane.activeViewport;
+  planeIdOpt?: OrthoView | null | undefined,
+): PositionWithRounding | null | undefined {
+  let roundedPosition: Vector3, floatingPosition: Vector3;
+  const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
+  const flycamRotation = getRotationInRadian(state.flycam);
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
-  const diffX = (width / 2 - clickPos.x) * state.flycam.zoomStep;
-  const diffY = (height / 2 - clickPos.y) * state.flycam.zoomStep;
+  const diffU = (width / 2 - clickPos.x) * state.flycam.zoomStep;
+  const diffV = (height / 2 - clickPos.y) * state.flycam.zoomStep;
+  const diffUvw = [diffU, diffV, 0] as Vector3;
+  const diffXyz = Dimensions.transDim(diffUvw, planeId);
+  flycamRotationMatrix.makeRotationFromEuler(flycamRotationEuler.set(...flycamRotation, "ZYX"));
+  flycamPositionMatrix.makeTranslation(...curGlobalPos);
+  rotatedDiff.set(...diffXyz).applyMatrix4(flycamRotationMatrix);
+  const scaledRotatedPosition = rotatedDiff
+    .multiply(planeRatioVector.set(...planeRatio))
+    .multiplyScalar(-1);
+
+  const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
+  floatingPosition = globalFloatingPosition.toArray() as Vector3;
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      position = [
-        Math.round(curGlobalPos[0] - diffX * planeRatio[0]),
-        Math.round(curGlobalPos[1] - diffY * planeRatio[1]),
-        Math.floor(curGlobalPos[2]),
+      roundedPosition = [
+        Math.round(globalFloatingPosition.x),
+        Math.round(globalFloatingPosition.y),
+        Math.floor(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [
-        Math.floor(curGlobalPos[0]),
-        Math.round(curGlobalPos[1] - diffY * planeRatio[1]),
-        Math.round(curGlobalPos[2] - diffX * planeRatio[2]),
+      roundedPosition = [
+        Math.floor(globalFloatingPosition.x),
+        Math.round(globalFloatingPosition.y),
+        Math.round(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [
-        Math.round(curGlobalPos[0] - diffX * planeRatio[0]),
-        Math.floor(curGlobalPos[1]),
-        Math.round(curGlobalPos[2] - diffY * planeRatio[2]),
+      roundedPosition = [
+        Math.round(globalFloatingPosition.x),
+        Math.floor(globalFloatingPosition.y),
+        Math.round(globalFloatingPosition.z),
       ];
       break;
     }
@@ -137,57 +160,83 @@ function _calculateMaybeGlobalPos(
       return null;
   }
 
-  return position;
+  return { rounded: roundedPosition, floating: floatingPosition };
+}
+
+// This function inverts parts of the _calculateMaybeGlobalPos function.
+// It takes a global position and calculates a screen space vector relative to the flycam position for it.
+// The result it like the input of position of _calculateMaybeGlobalPos but as a 3D vector from which the
+// viewport dependant coordinates need to be extracted (xy -> xy, yz -> zy, xz -> xz).
+function _calculateInViewportPos(
+  globalPosition: Vector3,
+  flycamPosition: Vector3,
+  flycamRotationInRadian: Vector3,
+  planeRatio: Vector3,
+  zoomStep: number,
+): ThreeVector3 {
+  // Difference in world space
+  const positionDiff = new ThreeVector3(...V3.sub(globalPosition, flycamPosition));
+
+  // Inverse rotate the world difference vector into local plane-aligned space
+  const inverseRotationMatrix = new Matrix4()
+    .makeRotationFromEuler(new Euler(...flycamRotationInRadian, "ZYX"))
+    .invert();
+
+  // Unscale from voxel ratio (undo voxel scaling)
+  const posInScreenSpaceScaling = positionDiff.divide(new ThreeVector3(...planeRatio));
+  const rotatedIntoScreenSpace = posInScreenSpaceScaling.applyMatrix4(inverseRotationMatrix);
+  const unzoomedPosition = rotatedIntoScreenSpace.multiplyScalar(1 / zoomStep);
+  return unzoomedPosition;
 }
 
 function _calculateMaybePlaneScreenPos(
   state: WebknossosState,
   globalPosition: Vector3,
-  planeId?: OrthoView | null | undefined,
-): Point2 | null | undefined {
-  // This method does the reverse of _calculateMaybeGlobalPos. It takes a global position
-  // and calculates the corresponding screen position in the given plane.
-  // This is achieved by reversing the calculations in _calculateMaybeGlobalPos.
-  let point: Point2;
-  planeId = planeId || state.viewModeData.plane.activeViewport;
-  const navbarHeight = state.uiInformation.navbarHeight;
-  const curGlobalPos = getPosition(state.flycam);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  planeId: OrthoView,
+): Vector2 | null | undefined {
+  // This method now accounts for flycam rotation, matching the forward transformation
+  let point: Vector2;
+
   const { width, height, top, left } = getInputCatcherRect(state, planeId);
-  const positionDiff = V3.sub(globalPosition, curGlobalPos);
+
+  const flycamPosition = getPosition(state.flycam);
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const navbarHeight = state.uiInformation.navbarHeight;
+
+  const positionInViewportPerspective = calculateInViewportPos(
+    globalPosition,
+    flycamPosition,
+    flycamRotation,
+    planeRatio,
+    state.flycam.zoomStep,
+  );
+
+  // Get plane-aligned screen-space coordinates (u/v)
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      point = {
-        x: positionDiff[0] / state.flycam.zoomStep / planeRatio[0],
-        y: positionDiff[1] / state.flycam.zoomStep / planeRatio[1],
-      };
+      point = [positionInViewportPerspective.x, positionInViewportPerspective.y];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      point = {
-        x: positionDiff[2] / state.flycam.zoomStep / planeRatio[2],
-        y: positionDiff[1] / state.flycam.zoomStep / planeRatio[1],
-      };
+      point = [positionInViewportPerspective.z, positionInViewportPerspective.y];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      point = {
-        x: positionDiff[0] / state.flycam.zoomStep / planeRatio[0],
-        y: positionDiff[2] / state.flycam.zoomStep / planeRatio[2],
-      };
+      point = [positionInViewportPerspective.x, positionInViewportPerspective.z];
       break;
     }
 
     default:
       return null;
   }
-  point.x += width / 2 + left;
-  point.y += height / 2 + top + navbarHeight;
-  point.x = Math.round(point.x);
-  point.y = Math.round(point.y);
 
+  point = [
+    Math.round(point[0] + width / 2 + left),
+    Math.round(point[1] + height / 2 + top + navbarHeight),
+  ];
   return point;
 }
 
@@ -229,15 +278,15 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
-): Vector3 {
-  const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
+): PositionWithRounding {
+  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
 
-  if (!position) {
+  if (!positions || !positions.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
-    return [0, 0, 0];
+    return { rounded: [0, 0, 0], floating: [0, 0, 0] };
   }
 
-  return position;
+  return positions;
 }
 
 function _calculateGlobalDelta(
@@ -289,6 +338,7 @@ export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGl
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
+export const calculateInViewportPos = reuseInstanceOnEquality(_calculateInViewportPos);
 export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

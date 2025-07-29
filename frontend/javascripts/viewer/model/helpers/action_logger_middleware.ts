@@ -13,6 +13,7 @@ let lastActionCount: number = 0;
 const actionBlacklist = [
   "ADD_TO_LAYER",
   "MOVE_FLYCAM",
+  "MOVE_FLYCAM_ABSOLUTE",
   "MOVE_FLYCAM_ORTHO",
   "MOVE_PLANE_FLYCAM_ORTHO",
   "PUSH_SAVE_QUEUE_TRANSACTION",

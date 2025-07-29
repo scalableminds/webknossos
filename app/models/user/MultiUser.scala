@@ -26,6 +26,7 @@ case class MultiUser(
     selectedTheme: Theme = Theme.auto,
     created: Instant = Instant.now,
     isEmailVerified: Boolean = false,
+    emailChangeDate: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -57,6 +58,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         theme,
         Instant.fromSql(r.created),
         r.isemailverified,
+        Instant.fromSql(r.emailchangedate),
         r.isdeleted
       )
     }
@@ -91,7 +93,8 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- run(q"""UPDATE webknossos.multiusers
                    SET
                      email = $email,
-                     isEmailVerified = false
+                     isEmailVerified = false,
+                     emailChangeDate = NOW()
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 

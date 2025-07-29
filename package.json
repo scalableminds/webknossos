@@ -29,7 +29,6 @@
     "@types/react": "^18.3.1",
     "@types/react-command-palette": "^0.18.4",
     "@types/react-dom": "^18.3.0",
-    "@types/react-router-dom": "^5.3.3",
     "@types/shelljs": "^0.8.5",
     "@types/three": "^0.169.0",
     "@types/url-join": "^4.0.0",
@@ -67,7 +66,7 @@
     "vitest": "^3.1.1",
     "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.0"
+    "webpack-dev-server": "^5.2.1"
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",
@@ -131,9 +130,9 @@
     "@github/webauthn-json": "^2.1.1",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.8.1",
-    "@tanstack/query-sync-storage-persister": "4.36.1",
-    "@tanstack/react-query": "^4.36.1",
-    "@tanstack/react-query-persist-client": "4.36.1",
+    "@tanstack/query-async-storage-persister": "^5.83.0",
+    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-query-persist-client": "^5.83.0",
     "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
     "antd": "5.22",
@@ -155,7 +154,6 @@
     "file-saver": "^2.0.1",
     "flexlayout-react": "0.7.15",
     "hammerjs": "^2.0.8",
-    "history": "^4.7.2",
     "html2canvas": "^1.4.1",
     "immutability-helper": "^3.1.1",
     "javascript-natural-sort": "^0.7.1",
@@ -188,7 +186,7 @@
     "react-json-tree": "0.19.0",
     "react-markdown": "^8.0.7",
     "react-redux": "^8.1.0",
-    "react-router-dom": "5.3.4",
+    "react-router-dom": "^6.30.1",
     "react-tooltip": "^5.27.1",
     "react-virtualized-auto-sizer": "^1.0.24",
     "redux": "4.1.2",
@@ -204,5 +202,5 @@
     "url-join": "^4.0.0",
     "worker-loader": "^3.0.8"
   },
-  "packageManager": "yarn@4.4.1"
+  "packageManager": "yarn@4.9.2"
 }

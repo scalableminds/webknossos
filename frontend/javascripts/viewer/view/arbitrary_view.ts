@@ -1,9 +1,15 @@
 import app from "app";
 import window from "libs/window";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  Matrix4,
+  Object3D,
+  OrthographicCamera,
+  PerspectiveCamera,
+  Vector3 as ThreeVector3,
+} from "three";
 import TWEEN from "tween.js";
-import type { OrthoViewMap, Viewport } from "viewer/constants";
+import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
 import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
@@ -20,11 +26,13 @@ import {
 import { clearCanvas, renderToTexture, setupRenderArea } from "viewer/view/rendering_utils";
 
 type GeometryLike = {
-  addToScene: (obj: THREE.Object3D) => void;
+  addToScene: (obj: Object3D) => void;
 };
 
+const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
+
 class ArbitraryView {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
   animate: () => void;
@@ -34,13 +42,13 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
-  camera: THREE.PerspectiveCamera = null;
+  camera: PerspectiveCamera = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
-  tdCamera: THREE.OrthographicCamera = null;
+  tdCamera: OrthographicCamera = null;
   geometries: Array<GeometryLike> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
-  group: THREE.Object3D;
-  cameraPosition: Array<number>;
+  group: Object3D;
+  cameraPosition: Vector3;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
@@ -48,18 +56,18 @@ class ArbitraryView {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
 
     const { scene } = getSceneController();
-    // Initialize main THREE.js components
-    this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+    // Initialize main js components
+    this.camera = new PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
     this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
-    const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
-    tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
-    tdCamera.up = new THREE.Vector3(0, 0, -1);
+    const tdCamera = new OrthographicCamera(0, 0, 0, 0);
+    tdCamera.position.copy(new ThreeVector3(10, 10, -10));
+    tdCamera.up = new ThreeVector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
     this.tdCamera = tdCamera;
-    const dummyCamera = new THREE.OrthographicCamera(45, 1, 50, 1000);
+    const dummyCamera = new OrthographicCamera(0, 0, 0, 0);
     this.cameras = {
       TDView: tdCamera,
       PLANE_XY: dummyCamera,
@@ -70,7 +78,7 @@ class ArbitraryView {
     this.needsRerender = true;
   }
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<OrthographicCamera> {
     return this.cameras;
   }
 
@@ -92,7 +100,7 @@ class ArbitraryView {
         }),
       );
 
-      this.group = new THREE.Object3D();
+      this.group = new Object3D();
       this.group.add(this.camera);
       getSceneController().rootGroup.add(this.group);
       this.resizeImpl();
@@ -165,9 +173,8 @@ class ArbitraryView {
         m[2], m[6], m[10], m[14],
         m[3], m[7], m[11], m[15],
       );
-      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
-      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
+      camera.matrix.multiply(flipYRotationMatrix);
+      camera.matrix.multiply(new Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);
       const storeState = Store.getState();
@@ -254,7 +261,7 @@ class ArbitraryView {
   };
 
   addGeometry(geometry: GeometryLike): void {
-    // Adds a new Three.js geometry to the scene.
+    // Adds a new js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
     this.geometries.push(geometry);
     geometry.addToScene(this.group);

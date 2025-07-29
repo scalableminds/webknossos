@@ -3,10 +3,14 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteOrganization } from "admin/rest_api";
 import { Button, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
+import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
-import type { APIOrganization } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 
-export function OrganizationDangerZoneView({ organization }: { organization: APIOrganization }) {
+export function OrganizationDangerZoneView() {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleDeleteButtonClicked(): Promise<void> {
@@ -50,7 +54,7 @@ export function OrganizationDangerZoneView({ organization }: { organization: API
       />
       <SettingsCard
         title="Danger Zone"
-        description={
+        content={
           <Button
             danger
             loading={isDeleting}

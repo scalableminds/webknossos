@@ -15,14 +15,14 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common._
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
 import java.net.URI
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
@@ -46,10 +46,10 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
 
-  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-  private val logFileName = Paths.get("datasource-properties-backups.log")
+  private val propertiesFileName = Path.of(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+  private val logFileName = Path.of("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
 
@@ -138,7 +138,7 @@ class DataSourceService @Inject()(
     if (isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
     } else {
-      val magPath = Paths.get(magURI)
+      val magPath = Path.of(magURI.getPath)
       val realPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
       val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
@@ -159,7 +159,7 @@ class DataSourceService @Inject()(
       layerPath.getFileName.toString,
       mag
     )
-    (uri, DataVaultService.isRemoteScheme(uri.getScheme))
+    (uri, uri.getScheme != null && DataVaultService.isRemoteScheme(uri.getScheme))
   }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
@@ -226,7 +226,10 @@ class DataSourceService @Inject()(
       val uri = new URI(pathStr)
       if (DataVaultService.isRemoteScheme(uri.getScheme)) true
       else {
-        val path = Path.of(new URI(pathStr).getPath).normalize().toAbsolutePath
+        val path = organizationDir
+          .resolve(dataSource.id.directoryName)
+          .resolve(Path.of(new URI(pathStr).getPath).normalize())
+          .toAbsolutePath
         val allowedParent = organizationDir.toAbsolutePath
         if (path.startsWith(allowedParent)) true else false
       }
@@ -266,7 +269,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] = {
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {
@@ -274,10 +277,28 @@ class DataSourceService @Inject()(
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting && preventNewPaths)(assertNoNewPaths(dataSourcePath, dataSource)) ?~> "dataSource.update.newExplicitPaths"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+  }
+
+  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: DataSource): Fox[Unit] = {
+    val propertiesPath = dataSourcePath.resolve(propertiesFileName)
+    if (Files.exists(propertiesPath)) {
+      Fox
+        .runOptional(newDataSource.toUsable) { newUsableDataSource =>
+          Fox.runOptional(dataSourceFromDir(dataSourcePath, newDataSource.id.organizationId).toUsable) {
+            oldUsableDataSource =>
+              val oldPaths = oldUsableDataSource.allExplicitPaths.toSet
+              Fox.fromBool(newUsableDataSource.allExplicitPaths.forall(oldPaths.contains))
+          }
+        }
+        .map(_ => ())
+    } else {
+      Fox.successful(())
+    }
   }
 
   private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
@@ -366,6 +387,8 @@ class DataSourceService @Inject()(
         dataLayer <- dataLayerOpt
         _ = dataLayer.mags.foreach(mag =>
           remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+        _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
+          remoteSourceDescriptorService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 }

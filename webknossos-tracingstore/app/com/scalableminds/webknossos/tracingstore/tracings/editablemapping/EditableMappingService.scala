@@ -35,13 +35,13 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, Json, OFormat}
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.util
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -107,7 +107,7 @@ class EditableMappingService @Inject()(
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
-  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, datasetErrorLoggingService)
+  private val binaryDataService = new BinaryDataService(Path.of(""), None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService

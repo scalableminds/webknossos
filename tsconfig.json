@@ -12,16 +12,8 @@
     "target": "esnext",
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./frontend/javascripts",
     "paths": {
-      "viewer/*": ["./viewer/*"],
-      "libs/*": ["./libs/*"],
-      "dashboard/*": ["./dashboard/*"],
-      "components/*": ["./components/*"],
-      "admin/*": ["./admin/*"],
-      "types/*": ["./types/*"],
-      "test/*": ["./test/*"],
-      "features": ["./features.ts"]
+      "*": ["./frontend/javascripts/*"]
     }
   },
   "include": [

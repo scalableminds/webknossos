@@ -38,7 +38,7 @@ import _ from "lodash";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
@@ -56,6 +56,14 @@ const persistence = new Persistence<{ searchQuery: string }>(
 
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
+  const { taskId, projectId, taskTypeId } = useParams();
+
+  initialFieldValues = {
+    ...initialFieldValues,
+    taskId,
+    projectId,
+    taskTypeId,
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);
@@ -360,10 +368,10 @@ function TaskListView({ initialFieldValues }: Props) {
             <div>
               <a
                 href={`/annotations/CompoundTask/${task.id}`}
-                title="View all Finished Annotations"
+                title="Show Compound Annotation of All Finished Annotations"
               >
                 <EyeOutlined className="icon-margin-right" />
-                View
+                View Merged
               </a>
             </div>
           ) : null}
@@ -389,7 +397,7 @@ function TaskListView({ initialFieldValues }: Props) {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
                 }}
-                title="Download all Finished Annotations"
+                title="Download All Finished Annotations"
                 icon={<DownloadOutlined className="icon-margin-right" />}
               >
                 Download

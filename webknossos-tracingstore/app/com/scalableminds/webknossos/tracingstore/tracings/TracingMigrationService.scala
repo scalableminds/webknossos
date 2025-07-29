@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto => ProtoBox}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext

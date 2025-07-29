@@ -4,13 +4,14 @@ import { UnitLong, OrthoViews } from "viewer/constants";
 import update from "immutability-helper";
 import {
   getPosition,
-  getRotation,
+  getRotationInDegrees,
   getUp,
   getLeft,
   getZoomedMatrix,
 } from "viewer/model/accessors/flycam_accessor";
 import * as FlycamActions from "viewer/model/actions/flycam_actions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 import { describe, it, expect } from "vitest";
 
 function equalWithEpsilon(a: number[], b: number[], epsilon = 1e-10) {
@@ -36,7 +37,9 @@ const initialState = {
   flycam: {
     zoomStep: 2,
     additionalCoordinates: [],
-    currentMatrix: M4x4.identity(),
+    // Apply the default 180 z axis rotation to get correct result in ortho related tests.
+    // This makes the calculated flycam rotation to  [0, 0, 0]. Otherwise it would be  [0, 0, 180].
+    currentMatrix: FlycamMatrixWithDefaultRotation,
     spaceDirectionOrtho: [1, 1, 1],
   },
   temporaryConfiguration: {
@@ -45,8 +48,12 @@ const initialState = {
 };
 
 describe("Flycam", () => {
+  // Removing the default rotation from the matrix to have an easy expected matrix. Else the scaled rotation matrix would be harder to test.
+  const stateWithoutDefaultFlycamRotation = update(initialState, {
+    flycam: { currentMatrix: { $set: M4x4.identity() } },
+  });
   it("should calculate zoomed matrix", () => {
-    expect(Array.from(getZoomedMatrix(initialState.flycam))).toEqual([
+    expect(Array.from(getZoomedMatrix(stateWithoutDefaultFlycamRotation.flycam))).toEqual([
       2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1,
     ]);
   });
@@ -54,26 +61,43 @@ describe("Flycam", () => {
   it("should move the flycam", () => {
     const moveAction = FlycamActions.moveFlycamAction([1, 2, 3]);
     const newState = FlycamReducer(initialState, moveAction);
-    equalWithEpsilon(getPosition(newState.flycam), [1, 2, 3]);
+    // Due to initial rotation of 180 degree around z axis, x and y values are inverted.
+    equalWithEpsilon(getPosition(newState.flycam), [-1, -2, 3]);
   });
 
   it("should move the flycam backwards", () => {
     const moveAction = FlycamActions.moveFlycamAction([-1, -2, -3]);
     const newState = FlycamReducer(initialState, moveAction);
-    equalWithEpsilon(getPosition(newState.flycam), [-1, -2, -3]);
+    // Due to initial rotation of 180 degree around z axis, x and y values are inverted.
+    equalWithEpsilon(getPosition(newState.flycam), [1, 2, -3]);
   });
 
   it("should move the flycam and move it again", () => {
     const moveAction = FlycamActions.moveFlycamAction([1, 2, 3]);
     let newState = FlycamReducer(initialState, moveAction);
     newState = FlycamReducer(newState, moveAction);
-    equalWithEpsilon(getPosition(newState.flycam), [2, 4, 6]);
+    // Due to initial rotation of 180 degree around z axis, x and y values are inverted.
+    equalWithEpsilon(getPosition(newState.flycam), [-2, -4, 6]);
+  });
+
+  it("should move the flycam absolute without taking base rotation into account", () => {
+    const moveAction = FlycamActions.moveFlycamAbsoluteAction([1, 2, 3]);
+    const newState = FlycamReducer(initialState, moveAction);
+    // The absolute action should move the flycam without taking the rotation into account. So no invert.
+    equalWithEpsilon(getPosition(newState.flycam), [1, 2, 3]);
+  });
+
+  it("should move the flycam absolute backwards without taking base rotation into account", () => {
+    const moveAction = FlycamActions.moveFlycamAbsoluteAction([-1, -2, -3]);
+    const newState = FlycamReducer(initialState, moveAction);
+    // The absolute action should move the flycam without taking the rotation into account. So no invert.
+    equalWithEpsilon(getPosition(newState.flycam), [-1, -2, -3]);
   });
 
   it("should set the rotation the flycam", () => {
     const rotateAction = FlycamActions.setRotationAction([180, 0, 0]);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [180, 0, 0]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [180, 0, 0]);
     equalWithEpsilon(getUp(newState.flycam), [0, 1, -0]);
     equalWithEpsilon(getLeft(newState.flycam), [-1, 0, 0]);
   });
@@ -100,33 +124,33 @@ describe("Flycam", () => {
     const rotateAction = FlycamActions.rotateFlycamAction(0.5 * Math.PI, [1, 1, 0]);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, 0]);
-    equalWithEpsilon(V3.floor(getRotation(newState.flycam)), [270, 315, 135]);
+    equalWithEpsilon(V3.floor(getRotationInDegrees(newState.flycam)), [270, 315, 315]);
   });
 
   it("should pitch the flycam", () => {
     const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, 0]);
-    equalWithEpsilon(getRotation(newState.flycam), [270, 0, 180]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [270, 0, 0]);
   });
 
   it("should pitch the flycam with spherical cap radius", () => {
     const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI, true);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getPosition(newState.flycam), [0, -200, -200]);
-    equalWithEpsilon(getRotation(newState.flycam), [270, 0, 180]);
+    equalWithEpsilon(getPosition(newState.flycam), [0, 200, -200]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [270, 0, 0]);
   });
 
   it("should yaw the flycam", () => {
     const rotateAction = FlycamActions.yawFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [0, 270, 180]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [180, 270, 180]);
   });
 
   it("should roll the flycam", () => {
     const rotateAction = FlycamActions.rollFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [0, 0, 90]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [0, 0, 270]);
   });
 
   it("should move in ortho mode", () => {
@@ -139,9 +163,18 @@ describe("Flycam", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,
-      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
+      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY, true),
     );
     equalWithEpsilon(getPosition(newState.flycam), [2, 0, -2]);
+  });
+
+  it("should move not in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    newState = FlycamReducer(
+      newState,
+      FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
+    );
+    equalWithEpsilon(getPosition(newState.flycam), [2, 0, 2]);
   });
 
   it("should move by plane in ortho mode (1/3)", () => {
@@ -178,9 +211,18 @@ describe("Flycam", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,
-      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
+      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true, true),
     );
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, -2]);
+  });
+
+  it("should not move by plane in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    newState = FlycamReducer(
+      newState,
+      FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
+    );
+    equalWithEpsilon(getPosition(newState.flycam), [0, 0, 2]);
   });
 
   it("should not change additional coordinates value when layers don't have any", () => {

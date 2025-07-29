@@ -12,9 +12,10 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, MappingService}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import com.scalableminds.util.tools.{Box, Failure}
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.routing.RoundRobinPool

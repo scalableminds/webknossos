@@ -26,7 +26,7 @@ import {
   type ServerUpdateAction,
   revertToVersion,
   serverCreateTracing,
-} from "viewer/model/sagas/update_actions";
+} from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import { api } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
@@ -80,7 +80,7 @@ export async function previewVersion(version?: number) {
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
 
   for (const segmentationLayer of segmentationLayersToReload) {
-    segmentationLayer.cube.collectAllBuckets();
+    segmentationLayer.cube.removeAllBuckets();
     segmentationLayer.layerRenderingManager.refresh();
   }
 }
@@ -168,6 +168,7 @@ async function getUpdateActionLogPage(
     annotationId,
     oldestVersionInPage,
     newestVersionInPage,
+    true,
   );
 
   // The backend won't send the version 0 as that does not exist. The frontend however
@@ -254,7 +255,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     // is loaded from scratch. This is important since the loaded page numbers
     // are relative to the base version. If the version of the tracing changed,
     // old pages are not valid anymore.
-    queryClient.removeQueries(queryKey);
+    queryClient.removeQueries({
+      queryKey: queryKey,
+    });
     // Will be set back by handleRestoreVersion or handleCloseRestoreView
     Store.dispatch(setAnnotationAllowUpdateAction(false));
   });
@@ -269,9 +272,12 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     hasPreviousPage,
     fetchPreviousPage,
     isFetchingPreviousPage,
-  } = useInfiniteQuery(queryKey, fetchPaginatedVersions, {
+  } = useInfiniteQuery({
+    queryKey,
+    queryFn: fetchPaginatedVersions,
     refetchOnWindowFocus: false,
     staleTime: Number.POSITIVE_INFINITY,
+    initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });

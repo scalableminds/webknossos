@@ -1,7 +1,6 @@
 import {
   BarChartOutlined,
   BellOutlined,
-  CheckOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -25,7 +24,6 @@ import {
 import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 import LoginForm from "admin/auth/login_form";
@@ -33,10 +31,10 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
   getUsersOrganizations,
+  logoutUser,
   sendAnalyticsEvent,
   switchToOrganization,
   updateNovelUserExperienceInfos,
-  updateSelectedThemeOfUser,
 } from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
@@ -44,28 +42,20 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import { getAntdTheme, getSystemColorTheme } from "theme";
-import type {
-  APIOrganizationCompact,
-  APIUser,
-  APIUserCompact,
-  APIUserTheme,
-} from "types/api_types";
+import { getAntdTheme } from "theme";
+import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
-  isAnnotationFromDifferentOrganization,
+  isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -79,23 +69,6 @@ const MAX_RENDERED_ORGANIZATION = 20;
 // exist.
 const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
-type OwnProps = {
-  isAuthenticated: boolean;
-};
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-  isInAnnotationView: boolean;
-  hasOrganizations: boolean;
-  othersMayEdit: boolean;
-  allowUpdate: boolean;
-  isLockedByOwner: boolean;
-  isAnnotationFromDifferentOrganization: boolean;
-  isAnnotationOwner: boolean;
-  annotationOwnerName: string;
-  blockedByUser: APIUserCompact | null | undefined;
-  navbarHeight: number;
-};
-type Props = OwnProps & StateProps;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
@@ -488,7 +461,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
+      // Setting the target lazily, to finally let olvy load the "what's new" modal, as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
@@ -573,7 +546,7 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
   const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
@@ -590,16 +563,6 @@ function LoggedInAvatar({
   const onEnterOrganization = () => {
     if (filteredOrganizations.length > 0) {
       switchTo(filteredOrganizations[0]);
-    }
-  };
-
-  const setSelectedTheme = async (newTheme: APIUserTheme) => {
-    if (newTheme === "auto") newTheme = getSystemColorTheme();
-
-    if (selectedTheme !== newTheme) {
-      const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
-      Store.dispatch(setThemeAction(newTheme));
-      Store.dispatch(setActiveUserAction(newUser));
     }
   };
 
@@ -650,12 +613,21 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
+            {
+              type: "divider",
+            },
+            {
+              key: "changeEmail",
+              label: <Link to="/auth/changeEmail">Change Email</Link>,
+            },
+            {
+              key: "account",
+              label: <Link to="/account">Account Settings</Link>,
+            },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
-                  label: (
-                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
-                  ),
+                  label: <Link to={"/organization/overview"}>Organization Settings</Link>,
                 }
               : null,
             isMultiMember
@@ -673,30 +645,6 @@ function LoggedInAvatar({
                   ],
                 }
               : null,
-            {
-              key: "resetpassword",
-              label: <Link to="/auth/changePassword">Change Password</Link>,
-            },
-            { key: "token", label: <Link to="/auth/token">Auth Token</Link> },
-            {
-              key: "theme",
-              label: "Theme",
-              children: [
-                ["auto", "System-default"],
-                ["light", "Light"],
-                ["dark", "Dark"],
-              ].map(([key, label]) => {
-                return {
-                  key,
-                  label: label,
-                  icon: selectedTheme === key ? <CheckOutlined /> : null,
-                  onClick: () => {
-                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-                    setSelectedTheme(key);
-                  },
-                };
-              }),
-            },
             {
               key: "logout",
               label: (
@@ -809,25 +757,28 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
   );
 }
 
-function Navbar({
-  activeUser,
-  isAuthenticated,
-  isInAnnotationView,
-  hasOrganizations,
-  othersMayEdit,
-  blockedByUser,
-  allowUpdate,
-  annotationOwnerName,
-  isLockedByOwner,
-  isAnnotationFromDifferentOrganization,
-  navbarHeight,
-  isAnnotationOwner,
-}: Props) {
+function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+  const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
+  const blockedByUser = useWkSelector((state) => state.annotation.blockedByUser);
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const annotationOwnerName = useWkSelector((state) =>
+    formatUserName(state.activeUser, state.annotation.owner),
+  );
+  const isAnnotationOwner = useWkSelector((state) => isAnnotationOwnerAccessor(state));
+  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
+    isAnnotationFromDifferentOrganizationAccessor(state),
+  );
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
+
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    await Request.receiveJSON("/api/auth/logout");
+    await logoutUser();
     Store.dispatch(logoutUserAction());
     // Hard navigation
     location.href = "/";
@@ -1010,19 +961,4 @@ function GlobalProgressBar() {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: state.activeUser,
-  isInAnnotationView: state.uiInformation.isInAnnotationView,
-  hasOrganizations: state.uiInformation.hasOrganizations,
-  othersMayEdit: state.annotation.othersMayEdit,
-  blockedByUser: state.annotation.blockedByUser,
-  allowUpdate: state.annotation.restrictions.allowUpdate,
-  isLockedByOwner: state.annotation.isLockedByOwner,
-  annotationOwnerName: formatUserName(state.activeUser, state.annotation.owner),
-  isAnnotationOwner: isAnnotationOwnerAccessor(state),
-  isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
-  navbarHeight: state.uiInformation.navbarHeight,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(Navbar);
+export default Navbar;

@@ -5,14 +5,18 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import * as React from "react";
+import React from "react";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
 import constants, { ArbitraryViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
 import ArbitraryPlane from "viewer/geometries/arbitrary_plane";
 import Crosshair from "viewer/geometries/crosshair";
-import { getMoveOffset3d, getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import {
+  getMoveOffset3d,
+  getPosition,
+  getRotationInDegrees,
+} from "viewer/model/accessors/flycam_accessor";
 import {
   getActiveNode,
   getMaxNodeId,
@@ -35,12 +39,12 @@ import {
   createBranchPointAction,
   createNodeAction,
   createTreeAction,
-  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   setActiveNodeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
@@ -293,7 +297,9 @@ class ArbitraryController extends React.PureComponent<Props> {
       return;
     }
     // implicit cast from boolean to int
-    Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1));
+    Store.dispatch(
+      setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1, false, false, false),
+    );
   }
 
   move(timeFactor: number): void {
@@ -402,7 +408,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
     const state = Store.getState();
     const position = getPosition(state.flycam);
-    const rotation = getRotation(state.flycam);
+    const rotation = getRotationInDegrees(state.flycam);
     const additionalCoordinates = state.flycam.additionalCoordinates;
     Store.dispatch(
       createNodeAction(

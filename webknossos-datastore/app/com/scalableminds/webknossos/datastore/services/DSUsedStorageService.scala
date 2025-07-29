@@ -5,12 +5,12 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -30,7 +30,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     extends FoxImplicits
     with LazyLogging {
 
-  private val baseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  private val baseDir: Path = Path.of(config.Datastore.baseDirectory)
 
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 

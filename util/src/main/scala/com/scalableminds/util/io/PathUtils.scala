@@ -1,10 +1,10 @@
 package com.scalableminds.util.io
 
 import java.io.File
-import java.nio.file.{Path, _}
+import java.nio.file._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
@@ -42,7 +42,7 @@ trait PathUtils extends LazyLogging {
     val elements = p1.iterator.asScala.zip(p2.iterator.asScala).takeWhile(Function.tupled(_ == _)).map(_._1)
     val joined = elements.mkString("/")
     val absoluteIfNeeded = if (p1.startsWith("/")) f"/$joined" else joined
-    Paths.get(absoluteIfNeeded)
+    Path.of(absoluteIfNeeded)
   }
 
   def commonPrefix(ps: List[Path]): Path =
@@ -162,14 +162,14 @@ trait PathUtils extends LazyLogging {
     lastCutOffIndex match {
       case -1 => path
       // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
-      case 0 => Paths.get("")
+      case 0 => Path.of("")
       case i => path.subpath(0, i)
     }
   }
 
   // Remove a single file name from previously computed common prefix
   def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
+    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Path.of(fileName).getFileName)
 
     fileNames match {
       case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
@@ -180,7 +180,7 @@ trait PathUtils extends LazyLogging {
 
   private def removeOneName(path: Path): Path =
     if (path.getNameCount == 1) {
-      Paths.get("")
+      Path.of("")
     } else path.getParent
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {

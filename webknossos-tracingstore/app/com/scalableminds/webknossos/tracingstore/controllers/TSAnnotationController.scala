@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import collections.SequenceUtils
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -28,14 +28,16 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingMergeService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-case class MergedFromIdsRequest(annotationIds: Seq[ObjectId], ownerIds: Seq[ObjectId])
+case class MergedFromIdsRequest(annotationIds: Seq[ObjectId],
+                                ownerIds: Seq[ObjectId],
+                                additionalBoundingBoxes: Seq[NamedBoundingBox])
 
 object MergedFromIdsRequest {
   implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
@@ -78,14 +80,16 @@ class TSAnnotationController @Inject()(
 
   def updateActionLog(annotationId: ObjectId,
                       newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
+                      oldestVersion: Option[Long] = None,
+                      truncate: Option[Boolean] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
           updateLog <- annotationService.updateActionLog(annotationId,
                                                          newestVersion.getOrElse(newestMaterializableVersion),
-                                                         oldestVersion.getOrElse(0))
+                                                         oldestVersion.getOrElse(0),
+                                                         truncate.getOrElse(false))
         } yield Ok(updateLog)
       }
     }
@@ -243,7 +247,11 @@ class TSAnnotationController @Inject()(
                                                                       toTemporaryStore) ?~> "mergeVolumeData.failed"
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
-                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)
+                .merge(volumeTracings,
+                       mergedVolumeStats,
+                       newMappingName,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
@@ -254,7 +262,11 @@ class TSAnnotationController @Inject()(
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
+              skeletonTracingService
+                .merge(skeletonTracings,
+                       newVersion = newTargetVersion,
+                       additionalBoundingBoxes = request.body.additionalBoundingBoxes)
+                .toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

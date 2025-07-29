@@ -4,10 +4,10 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.tracingstore.cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FileUtils
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
@@ -21,7 +21,7 @@ trait TempFileService extends LazyLogging {
   implicit protected def ec: ExecutionContext
   protected def moduleName: String
 
-  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve(s"${moduleName}-tempfiles")
+  private val tmpDir: Path = Path.of(System.getProperty("java.io.tmpdir")).resolve(s"$moduleName-tempfiles")
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 

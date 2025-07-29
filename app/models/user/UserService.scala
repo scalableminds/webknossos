@@ -13,8 +13,8 @@ import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team._
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -198,7 +198,10 @@ class UserService @Inject()(conf: WkConf,
     }
     for {
       oldEmail <- emailFor(user)
-      _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
+      _ <- Fox.runIf(oldEmail != email)(for {
+        _ <- multiUserDAO.updateEmail(user._multiUser, email)
+        _ = logger.info(s"Email of MultiUser ${user._multiUser} changed from $oldEmail to $email")
+      } yield ())
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,

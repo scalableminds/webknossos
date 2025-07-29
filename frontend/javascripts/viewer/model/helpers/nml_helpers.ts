@@ -8,15 +8,10 @@ import messages from "messages";
 import Saxophone from "saxophone";
 import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import {
-  type BoundingBoxType,
-  IdentityTransform,
-  type TreeType,
-  TreeTypeEnum,
-  type Vector3,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
   getMaximumGroupId,
@@ -201,7 +196,7 @@ function serializeMetaInformation(
 }
 
 function serializeTaskBoundingBox(
-  boundingBox: BoundingBoxType | null | undefined,
+  boundingBox: BoundingBoxMinMaxType | null | undefined,
   tagName: string,
 ): string {
   if (boundingBox) {
@@ -249,7 +244,7 @@ function serializeParameters(
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
   const { additionalAxes } = skeletonTracing;
 
-  const editRotation = getRotation(state.flycam);
+  const editRotation = getRotationInDegrees(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
 
@@ -1120,6 +1115,7 @@ export function parseNml(nmlString: string): Promise<{
           case "volume": {
             isParsingVolumeTag = true;
             containedVolumes = true;
+            break;
           }
 
           default:
@@ -1172,6 +1168,7 @@ export function parseNml(nmlString: string): Promise<{
 
           case "volume": {
             isParsingVolumeTag = false;
+            break;
           }
 
           default:

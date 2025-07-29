@@ -10,9 +10,12 @@ import ch.systemsx.cisd.hdf5.{
   IHDF5StringReader
 }
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import net.liftweb.common.{Box, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
+import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
+import com.scalableminds.webknossos.datastore.services.mesh.MeshFileUtils
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.Path
@@ -21,7 +24,8 @@ import scala.util.Using
 class CachedHdf5File(reader: IHDF5Reader)
     extends SafeCachable
     with AutoCloseable
-    with Hdf5HashedArrayUtils
+    with ArrayArtifactHashing
+    with MeshFileUtils
     with LazyLogging {
 
   override protected def onFinalize(): Unit = reader.close()
@@ -35,12 +39,15 @@ class CachedHdf5File(reader: IHDF5Reader)
   lazy val stringReader: IHDF5StringReader = reader.string()
   lazy val float64Reader: IHDF5DoubleReader = reader.float64()
 
-  // For Meshfile
-  lazy val nBuckets: Long = uint64Reader.getAttr("/", "n_buckets")
-  lazy val meshFormat: String = stringReader.getAttr("/", "mesh_format")
+  // For MeshFile
+  lazy val nBuckets: Long = uint64Reader.getAttr("/", attrKeyNBuckets)
+  lazy val meshFormat: String = stringReader.getAttr("/", attrKeyMeshFormat)
+  lazy val mappingName: String = stringReader.getAttr("/", attrKeyMappingName)
 
-  // For Meshfile and SegmentIndexFile
-  lazy val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", "hash_function"))
+  // For MeshFile and SegmentIndexFile
+  lazy val hashFunction: Long => Long = getHashFunction(stringReader.getAttr("/", attrKeyHashFunction))
+
+  lazy val artifactSchemaVersion: Long = int64Reader.getAttr("/", "artifact_schema_version")
 }
 
 object CachedHdf5File {
@@ -53,6 +60,11 @@ object CachedHdf5File {
 class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, CachedHdf5File] {
   override def onElementRemoval(key: String, value: CachedHdf5File): Unit =
     value.scheduleForRemoval()
+
+  def getCachedHdf5File(attachment: LayerAttachment)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
+    for {
+      localPath <- tryo(attachment.localPath)
+    } yield getCachedHdf5File(localPath)(loadFn)
 
   def getCachedHdf5File(filePath: Path)(loadFn: Path => CachedHdf5File): CachedHdf5File = {
     val fileKey = filePath.toString
@@ -89,4 +101,11 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
+
+  def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
+    for {
+      localAttachmentPath <- tryo(attachment.localPath)
+      result <- withCachedHdf5(localAttachmentPath)(block)
+    } yield result
+
 }

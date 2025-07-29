@@ -1,4 +1,11 @@
-import * as THREE from "three";
+import {
+  RedFormat,
+  RedIntegerFormat,
+  RGFormat,
+  RGIntegerFormat,
+  RGBAFormat,
+  RGBAIntegerFormat,
+} from "three";
 import { vi } from "vitest";
 
 /*
@@ -7,12 +14,12 @@ import { vi } from "vitest";
  * since RGBAFormat is also used for 3 channels which would make the key not unique.
  */
 const formatToChannelCount = new Map([
-  [THREE.RedFormat, 1],
-  [THREE.RedIntegerFormat, 1],
-  [THREE.RGFormat, 2],
-  [THREE.RGIntegerFormat, 2],
-  [THREE.RGBAFormat, 4],
-  [THREE.RGBAIntegerFormat, 4],
+  [RedFormat, 1],
+  [RedIntegerFormat, 1],
+  [RGFormat, 2],
+  [RGIntegerFormat, 2],
+  [RGBAFormat, 4],
+  [RGBAIntegerFormat, 4],
 ]);
 
 class MockUpdatableTexture {

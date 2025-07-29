@@ -61,6 +61,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
   areGeometriesTransformed,
   getActiveNode,
@@ -96,7 +97,7 @@ import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
-  proofreadMerge,
+  proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   loadAdHocMeshAction,
@@ -108,7 +109,6 @@ import {
   createTreeAction,
   deleteBranchpointByIdAction,
   deleteEdgeAction,
-  deleteNodeAsUserAction,
   expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
@@ -125,8 +125,8 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/min_cut_saga";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
+import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/volume/min_cut_saga";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
 import type {
@@ -138,6 +138,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
@@ -164,6 +165,7 @@ type Props = {
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
   allowUpdate: boolean;
+  isRotated: boolean;
   segments: SegmentMap | null | undefined;
 };
 
@@ -396,6 +398,7 @@ function getMeshItems(
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
   meshFileMappingName: string | null | undefined,
+  isRotated: boolean,
 ): MenuItemType[] {
   const {
     meshId: clickedMeshId,
@@ -406,7 +409,8 @@ function getMeshItems(
     clickedMeshId == null ||
     meshIntersectionPosition == null ||
     visibleSegmentationLayer == null ||
-    volumeTracing == null
+    volumeTracing == null ||
+    isRotated
   ) {
     return [];
   }
@@ -449,7 +453,9 @@ function getMeshItems(
               // Should not happen due to the disabled property.
               return;
             }
-            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
+            return Store.dispatch(
+              proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId),
+            );
           },
           label: (
             <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
@@ -562,10 +568,11 @@ function getNodeContextMenuOptions({
   infoRows,
   allowUpdate,
   currentMeshFile,
+  isRotated,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-  const isVolumeModificationAllowed = !hasEditableMapping(state);
+  const isVolumeModificationAllowed = !hasEditableMapping(state) && !isRotated;
 
   if (skeletonTracing == null) {
     throw new Error(
@@ -602,6 +609,7 @@ function getNodeContextMenuOptions({
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
+    isRotated,
   );
 
   const menuItems: ItemType[] = [
@@ -770,6 +778,7 @@ function getBoundingBoxMenuOptions({
   activeTool,
   userBoundingBoxes,
   allowUpdate,
+  isRotated,
 }: NoNodeContextMenuProps): ItemType[] {
   const { globalPosition, clickedBoundingBoxId } = contextInfo;
   if (globalPosition == null) return [];
@@ -786,6 +795,8 @@ function getBoundingBoxMenuOptions({
         {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
       </>
     ),
+    disabled: isRotated,
+    title: isRotated ? "Not available while view is rotated." : undefined,
   };
 
   if (!allowUpdate && clickedBoundingBoxId != null) {
@@ -933,6 +944,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     mappingInfo,
     infoRows,
     allowUpdate,
+    isRotated,
   } = props;
   const { globalPosition } = contextInfo;
 
@@ -1078,12 +1090,19 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
+  const globalPositionForNode = globalPosition
+    ? { rounded: globalPosition, floating: globalPosition }
+    : undefined;
   const skeletonActions: ItemType[] =
-    skeletonTracing != null && globalPosition != null && allowUpdate
+    skeletonTracing != null &&
+    globalPosition != null &&
+    globalPositionForNode != null &&
+    allowUpdate
       ? [
           {
             key: "create-node",
-            onClick: () => handleCreateNodeFromGlobalPosition(globalPosition, viewport, false),
+            onClick: () =>
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
             disabled: areGeometriesTransformed(state),
           },
@@ -1091,7 +1110,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node-with-tree",
             onClick: () => {
               Store.dispatch(createTreeAction());
-              handleCreateNodeFromGlobalPosition(globalPosition, viewport, false);
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false);
             },
             label: (
               <>
@@ -1136,7 +1155,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
+                onClick: () => Store.dispatch(proofreadMergeAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={
@@ -1318,6 +1337,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
+    isRotated,
   );
 
   if (isSkeletonToolActive) {
@@ -1465,6 +1485,8 @@ function ContextMenuInner() {
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
   const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
+
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
       ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
@@ -1493,6 +1515,7 @@ function ContextMenuInner() {
   const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
 
   const props: Props = {
+    isRotated: isFlycamRotated,
     skeletonTracing,
     visibleSegmentationLayer,
     volumeTracing,

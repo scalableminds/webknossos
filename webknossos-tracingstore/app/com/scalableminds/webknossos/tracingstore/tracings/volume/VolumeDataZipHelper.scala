@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.IOUtils
 
 import java.util.zip.{ZipEntry, ZipFile}
@@ -95,10 +95,12 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     val additionalAxesNames: Seq[String] = dimensionNames.toSeq.drop(1).dropRight(3) // drop channel left, and xyz right
 
     // assume additionalAxes,x,y,z
-    val chunkPathRegex = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/c\\.(.+)".r
+    // the c. at the beginning of chunk names is optional
+    // (used in "default" chunk encoding, which was used for volume downloads previously)
+    val chunkPathRegex = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/(c\\.)?(.+)".r
 
     path match {
-      case chunkPathRegex(_, magStr, dimsStr) =>
+      case chunkPathRegex(_, magStr, _, dimsStr) =>
         val dims: Seq[String] = dimsStr.split("\\.").toSeq
         val additionalAxesDims = dims.drop(1).dropRight(3) // drop channel left, and xyz right
         val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(additionalAxesDims).map {

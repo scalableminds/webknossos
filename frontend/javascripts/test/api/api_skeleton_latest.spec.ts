@@ -5,8 +5,42 @@ import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_action
 import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import type { Vector3 } from "viewer/constants";
+import {
+  OrthoBaseRotations,
+  OrthoViewToNumber,
+  OrthoViewValuesWithoutTDView,
+  type Vector3,
+} from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import { setRotationAction } from "viewer/model/actions/flycam_actions";
+import { MathUtils, Matrix4, Euler, Quaternion } from "three";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "viewer/model/helpers/rotation_helpers";
+import testRotations from "test/fixtures/test_rotations";
+import { map3 } from "libs/utils";
+
+const toRadian = (arr: Vector3): Vector3 => [
+  MathUtils.degToRad(arr[0]),
+  MathUtils.degToRad(arr[1]),
+  MathUtils.degToRad(arr[2]),
+];
+
+function applyRotationInFlycamReducerSpace(
+  flycamRotationInRadian: Vector3,
+  rotationToApply: Euler,
+): Vector3 {
+  // eulerAngleToReducerInternalMatrix and reducerInternalMatrixToEulerAngle are tested in rotation_helpers.spec.ts.
+  // Calculate expected rotation and make it a quaternion for equal comparison.
+  const rotationMatrix = eulerAngleToReducerInternalMatrix(flycamRotationInRadian);
+  const rotationMatrixWithViewport = rotationMatrix.multiply(
+    new Matrix4().makeRotationFromEuler(rotationToApply),
+  );
+  const resultingAngle = reducerInternalMatrixToEulerAngle(rotationMatrixWithViewport);
+  return resultingAngle;
+}
 
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -297,5 +331,73 @@ describe("API Skeleton", () => {
     expect(enforceSkeletonTracing(Store.getState().annotation).trees.getOrThrow(2).isVisible).toBe(
       true,
     );
+  });
+
+  it<WebknossosTestContext>("should create skeleton nodes with correct properties.", ({ api }) => {
+    const flycamRotation = [0, 0, 0] as Vector3;
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const rotationForComparison = applyRotationInFlycamReducerSpace(
+        flycamRotation,
+        OrthoBaseRotations[planeId],
+      );
+      const rotationQuaternion = new Quaternion().setFromEuler(new Euler(...rotationForComparison));
+      Store.dispatch(setRotationAction(flycamRotation));
+      Store.dispatch(setViewportAction(planeId));
+      api.tracing.createNode([10, 10, 10], { activate: true });
+      const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+      // Throw error if no node / tree is active by passing -1 as id.
+      const newNode = skeletonTracing.trees
+        .getOrThrow(skeletonTracing.activeTreeId || -1)
+        .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
+      const propsToCheck = {
+        untransformedPosition: newNode.untransformedPosition,
+        additionalCoordinates: newNode.additionalCoordinates,
+        viewport: newNode.viewport,
+        mag: newNode.mag,
+      };
+      expect(propsToCheck).toStrictEqual({
+        untransformedPosition: [10, 10, 10],
+        additionalCoordinates: [],
+        viewport: OrthoViewToNumber[planeId],
+        mag: 0,
+      });
+      const newNodeQuaternion = new Quaternion().setFromEuler(
+        new Euler(...toRadian(newNode.rotation)),
+      );
+      expect(
+        rotationQuaternion.angleTo(newNodeQuaternion),
+        `Node rotation ${newNode.rotation} is not nearly equal to ${map3(MathUtils.radToDeg, rotationForComparison)} in viewport ${planeId}.`,
+      ).toBeLessThan(0.000001);
+    }
+  });
+  it<WebknossosTestContext>("should create skeleton nodes with correct rotation when flycam is rotated in all three viewports.", ({
+    api,
+  }) => {
+    for (const testRotation of testRotations) {
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        const rotationInRadian = toRadian(testRotation);
+        const resultingAngle = applyRotationInFlycamReducerSpace(
+          rotationInRadian,
+          OrthoBaseRotations[planeId],
+        );
+        const rotationQuaternion = new Quaternion().setFromEuler(new Euler(...resultingAngle));
+        // Test node creation.
+        Store.dispatch(setRotationAction(testRotation));
+        Store.dispatch(setViewportAction(planeId));
+        api.tracing.createNode([10, 10, 10], { activate: true });
+        const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+        // Throw error if no node / tree is active by passing -1 as id.
+        const newNode = skeletonTracing.trees
+          .getOrThrow(skeletonTracing.activeTreeId || -1)
+          .nodes.getOrThrow(skeletonTracing.activeNodeId || -1);
+        const newNodeQuaternion = new Quaternion().setFromEuler(
+          new Euler(...toRadian(newNode.rotation)),
+        );
+        expect(
+          rotationQuaternion.angleTo(newNodeQuaternion),
+          `Node rotation ${newNode.rotation} is not nearly equal to ${map3(MathUtils.radToDeg, resultingAngle)} in viewport ${planeId}.`,
+        ).toBeLessThan(0.000001);
+      }
+    }
   });
 });

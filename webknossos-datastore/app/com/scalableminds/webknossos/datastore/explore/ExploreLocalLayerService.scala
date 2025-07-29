@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets

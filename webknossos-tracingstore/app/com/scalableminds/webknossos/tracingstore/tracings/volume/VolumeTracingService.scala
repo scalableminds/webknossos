@@ -26,11 +26,11 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io._
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
@@ -72,7 +72,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, datasetErrorLoggingService)
+  private val binaryDataService = new BinaryDataService(Path.of(""), None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -241,7 +241,7 @@ class VolumeTracingService @Inject()(
                     segmentIndexBuffer,
                     bucketPosition,
                     filteredBytes,
-                    Some(data),
+                    Full(data),
                     editableMappingTracingId(volumeTracing, tracingId)
                   )
                 } yield ()
@@ -712,7 +712,8 @@ class VolumeTracingService @Inject()(
   def merge(tracings: Seq[VolumeTracing],
             mergedVolumeStats: MergedVolumeStats,
             newEditableMappingIdOpt: Option[String],
-            newVersion: Long): Box[VolumeTracing] = {
+            newVersion: Long,
+            additionalBoundingBoxes: Seq[NamedBoundingBox]): Box[VolumeTracing] = {
     def mergeTwoWithStats(tracingAWithIndex: Box[(VolumeTracing, Int)],
                           tracingBWithIndex: Box[(VolumeTracing, Int)]): Box[(VolumeTracing, Int)] =
       for {
@@ -730,7 +731,8 @@ class VolumeTracingService @Inject()(
         createdTimestamp = System.currentTimeMillis(),
         version = newVersion,
         mappingName = newEditableMappingIdOpt,
-        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex)
+        hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
+        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
       )
   }
 

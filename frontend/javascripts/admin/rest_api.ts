@@ -150,6 +150,10 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
+export async function logoutUser(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logout");
+}
+
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);
@@ -234,6 +238,12 @@ export async function getAuthToken(): Promise<string> {
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
+  });
+}
+
+export async function changePassword(data: Record<string, string>): Promise<void> {
+  await Request.sendJSONReceiveJSON("/api/auth/changePassword", {
+    data: data,
   });
 }
 
@@ -767,9 +777,11 @@ export function getUpdateActionLog(
   annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
+  truncateActionLog: boolean = false,
+  sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
+  return doWithToken(async (token) => {
+    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
     params.set("token", token);
     if (oldestVersion != null) {
       params.set("oldestVersion", oldestVersion.toString());
@@ -777,9 +789,14 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    return Request.receiveJSON(
+    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
+
+    if (sortAscending) {
+      log.reverse();
+    }
+    return log;
   });
 }
 
@@ -1722,13 +1739,23 @@ export async function updateOrganization(
   name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
-    method: "PATCH",
-    data: {
-      name,
-      newUserMailingList,
+  const updatedOrganization = await Request.sendJSONReceiveJSON(
+    `/api/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      data: {
+        name,
+        newUserMailingList,
+      },
     },
-  });
+  );
+
+  return {
+    ...updatedOrganization,
+    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function isDatasetAccessibleBySwitching(
@@ -1969,18 +1996,23 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   mappingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
+      ),
     );
   });
   // Ensure that the values are bigint if the keys are bigint
@@ -1999,6 +2031,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   annotationId: string,
   version?: number | null | undefined,
 ): Promise<Mapping> {
+  if (segmentIds.length === 0) {
+    return new Map();
+  }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());
@@ -2009,15 +2044,18 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+    return Utils.retryAsyncFunction(() =>
+      Request.receiveArraybuffer(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          showErrorToast: false,
         },
-      },
+      ),
     );
   });
 
@@ -2181,7 +2219,7 @@ export function getSynapseTypes(
   );
 }
 
-type MinCutTargetEdge = {
+export type MinCutTargetEdge = {
   position1: Vector3;
   position2: Vector3;
   segmentId1: number;
@@ -2199,17 +2237,19 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
-      {
-        data: {
-          ...segmentsInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId1: Number(segmentsInfo.segmentId1),
-          segmentId2: Number(segmentsInfo.segmentId2),
-          agglomerateId: Number(segmentsInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+        {
+          data: {
+            ...segmentsInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId1: Number(segmentsInfo.segmentId1),
+            segmentId2: Number(segmentsInfo.segmentId2),
+            agglomerateId: Number(segmentsInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }
@@ -2230,16 +2270,18 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
-      {
-        data: {
-          ...segmentInfo,
-          // TODO: Proper 64 bit support (#6921)
-          segmentId: Number(segmentInfo.segmentId),
-          agglomerateId: Number(segmentInfo.agglomerateId),
+    Utils.retryAsyncFunction(() =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+        {
+          data: {
+            ...segmentInfo,
+            // TODO: Proper 64 bit support (#6921)
+            segmentId: Number(segmentInfo.segmentId),
+            agglomerateId: Number(segmentInfo.agglomerateId),
+          },
         },
-      },
+      ),
     ),
   );
 }

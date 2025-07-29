@@ -1,5 +1,17 @@
+import { V3 } from "libs/mjs";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Euler,
+  Line,
+  LineBasicMaterial,
+  LineSegments,
+  Matrix4,
+  Mesh,
+  PlaneGeometry,
+  Vector3 as ThreeVector3,
+} from "three";
 import type { OrthoView, Vector3 } from "viewer/constants";
 import constants, {
   OrthoViewColors,
@@ -8,9 +20,7 @@ import constants, {
   OrthoViewValues,
 } from "viewer/constants";
 import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";
-import Dimensions from "viewer/model/dimensions";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import Store from "viewer/store";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -27,20 +37,30 @@ import Store from "viewer/store";
 // subdivision would probably be the next step.
 export const PLANE_SUBDIVISION = 100;
 
+const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
+
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: THREE.Mesh;
+  plane: Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Array<THREE.LineSegments>;
+  crosshair: Array<LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
-  TDViewBorders: THREE.Line;
+  TDViewBorders: Line;
   lastScaleFactors: [number, number];
+  // baseRotation is the base rotation the plane has in an unrotated scene. It will be applied additional to the flycams rotation.
+  // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
+  baseRotation: Euler;
+  storePropertyUnsubscribers: Array<() => void> = [];
+  datasetScaleFactor: Vector3 = [1, 1, 1];
+
+  // Properties are only created here to avoid new creating objects for each setRotation call.
+  baseRotationMatrix = new Matrix4();
+  flycamRotationMatrix = new Matrix4();
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -50,30 +70,28 @@ class Plane {
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
-    const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.baseScaleVector = new THREE.Vector3(...scaleArray);
+    this.baseRotation = new Euler(0, 0, 0);
+    this.bindToEvents();
     this.createMeshes();
   }
 
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    const planeGeo = new PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       true,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
-    this.plane = new THREE.Mesh(planeGeo, textureMaterial);
-    // create crosshair
-    const crosshairGeometries = [];
+    this.plane = new Mesh(planeGeo, textureMaterial);
+
+    // Create crosshairs
     this.crosshair = new Array(2);
-
     for (let i = 0; i <= 1; i++) {
-      crosshairGeometries.push(new THREE.BufferGeometry());
-
+      const crosshairGeometry = new BufferGeometry();
       // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
@@ -81,13 +99,10 @@ class Plane {
         25 * i, 25 * (1 - i), 0,
         (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
       ]);
+      crosshairGeometry.setAttribute("position", new BufferAttribute(crosshairVertices, 3));
 
-      crosshairGeometries[i].setAttribute(
-        "position",
-        new THREE.BufferAttribute(crosshairVertices, 3),
-      );
-      this.crosshair[i] = new THREE.LineSegments(
-        crosshairGeometries[i],
+      this.crosshair[i] = new LineSegments(
+        crosshairGeometry,
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
       // Objects are rendered according to their renderOrder (lowest to highest).
@@ -96,17 +111,18 @@ class Plane {
       this.crosshair[i].renderOrder = 1;
     }
 
-    // create borders
-    const vertices = [];
-    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(-pWidth / 2, pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    const tdViewBordersGeo = new THREE.BufferGeometry().setFromPoints(vertices);
+    // Create borders
+    const vertices = [
+      new ThreeVector3(-pWidth / 2, -pWidth / 2, 0),
+      new ThreeVector3(-pWidth / 2, pWidth / 2, 0),
+      new ThreeVector3(pWidth / 2, pWidth / 2, 0),
+      new ThreeVector3(pWidth / 2, -pWidth / 2, 0),
+      new ThreeVector3(-pWidth / 2, -pWidth / 2, 0),
+    ];
+    const tdBorderGeometry = new BufferGeometry().setFromPoints(vertices);
 
-    this.TDViewBorders = new THREE.Line(
-      tdViewBordersGeo,
+    this.TDViewBorders = new Line(
+      tdBorderGeometry,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
   }
@@ -117,7 +133,7 @@ class Plane {
 
   getLineBasicMaterial = _.memoize(
     (color: number, linewidth: number) =>
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         color,
         linewidth,
       }),
@@ -145,45 +161,43 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-
-    const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(xFactor, yFactor, 1),
-      this.baseScaleVector,
-    );
-    this.plane.scale.copy(scaleVec);
-    this.TDViewBorders.scale.copy(scaleVec);
-    this.crosshair[0].scale.copy(scaleVec);
-    this.crosshair[1].scale.copy(scaleVec);
+    // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
+    const scaleVector: Vector3 = V3.multiply([xFactor, yFactor, 1], this.datasetScaleFactor);
+    this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
-  setRotation = (rotVec: THREE.Euler): void => {
-    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
-      mesh.setRotationFromEuler(rotVec),
-    );
+  setBaseRotation = (rotVec: Euler): void => {
+    this.baseRotation.copy(rotVec);
+    this.baseRotationMatrix.makeRotationFromEuler(this.baseRotation);
+  };
+
+  updateToFlycamRotation = (flycamRotationVec: Euler): void => {
+    // rotVec must be in "ZYX" order as this is how the flycam operates (see flycam_reducer setRotationReducer)
+    this.flycamRotationMatrix.makeRotationFromEuler(flycamRotationVec);
+    const combinedMatrix = this.flycamRotationMatrix.multiply(this.baseRotationMatrix);
+    this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
   };
 
   // In case the plane's position was offset to make geometries
   // on the plane visible (by moving the plane to the back), one can
-  // additionally pass the originalPosition (which is necessary for the
+  // additionally pass the offset of the position (which is necessary for the
   // shader)
-  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
-    const [x, y, z] = pos;
-    this.TDViewBorders.position.set(x, y, z);
-    this.crosshair[0].position.set(x, y, z);
-    this.crosshair[1].position.set(x, y, z);
-    this.plane.position.set(x, y, z);
+  setPosition = (
+    originalPosition: Vector3,
+    positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
+  ): void => {
+    // The world scaling by the dataset scale factor is inverted by the scene group
 
-    if (originalPosition == null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-      this.plane.material.setGlobalPosition(x, y, z);
-    } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-      this.plane.material.setGlobalPosition(
-        originalPosition[0],
-        originalPosition[1],
-        originalPosition[2],
-      );
-    }
+    // containing all planes to avoid sheering in anisotropic scaled datasets.
+    // Thus, this scale needs to be applied manually to the position here.
+    const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
+    // The offset is in world space already so no scaling is necessary.
+    const offsetPosition = V3.add(scaledPosition, positionOffset);
+    this.TDViewBorders.position.set(...offsetPosition);
+    this.crosshair[0].position.set(...offsetPosition);
+    this.crosshair[1].position.set(...offsetPosition);
+    this.plane.position.set(...offsetPosition);
+    this.plane.material.setPositionOffset(...positionOffset);
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
@@ -195,12 +209,22 @@ class Plane {
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 
   destroy() {
     this.materialFactory.destroy();
+    this.storePropertyUnsubscribers.forEach((f) => f());
+    this.storePropertyUnsubscribers = [];
+  }
+
+  bindToEvents(): void {
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.dataset.dataSource.scale.factor,
+        (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
+      ),
+    ];
   }
 }
 

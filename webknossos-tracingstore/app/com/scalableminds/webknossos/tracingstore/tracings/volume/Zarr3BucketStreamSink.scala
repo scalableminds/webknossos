@@ -41,7 +41,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader.fromDataLayer(layer, mags.headOption.getOrElse(Vec3Int.ones))
+    val header = Zarr3ArrayHeader.fromDataLayer(layer,
+                                                mags.headOption.getOrElse(Vec3Int.ones),
+                                                additionalCodecs = Seq(compressorConfiguration))
     bucketStream.flatMap {
       case (bucket, data) =>
         val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
@@ -100,7 +102,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     val additionalCoordinatesPart =
       additionalCoordinatesFilePath(bucketPosition.additionalCoordinates, additionalAxesSorted)
     val channelPart = 0
-    s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
+    s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
@@ -115,6 +117,15 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
 
   private def zarrHeaderFilePath(layerName: String, mag: Vec3Int): String =
     s"$layerName/${mag.toMagLiteral(allowScalar = true)}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
+
+  private lazy val compressorConfiguration =
+    BloscCodecConfiguration(
+      BloscCompressor.defaultCname,
+      BloscCompressor.defaultCLevel,
+      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
+      Some(BloscCompressor.defaultTypesize),
+      BloscCompressor.defaultBlocksize
+    )
 
   private lazy val compressor =
     new BloscCompressor(

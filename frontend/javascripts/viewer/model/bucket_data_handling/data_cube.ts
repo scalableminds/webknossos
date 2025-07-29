@@ -11,16 +11,11 @@ import {
 } from "libs/utils";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import * as THREE from "three";
+import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import type {
-  BoundingBoxType,
-  BucketAddress,
-  LabelMasksByBucketAndW,
-  Vector3,
-  Vector4,
-} from "viewer/constants";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -414,7 +409,7 @@ class DataCube {
       }
 
       if (foundCollectibleBucket) {
-        this.collectBucket(this.buckets[this.bucketIterator]);
+        this.removeBucket(this.buckets[this.bucketIterator]);
       } else {
         const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
 
@@ -447,11 +442,11 @@ class DataCube {
     this.bucketIterator = (this.bucketIterator + 1) % (this.buckets.length + 1);
   }
 
-  collectAllBuckets(): void {
-    this.collectBucketsIf(() => true);
+  removeAllBuckets(): void {
+    this.removeBucketsIf(() => true);
   }
 
-  collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
+  removeBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     // This method is always called in the context of reloading data.
     // All callers should ensure a saved state. This is encapsulated in the
     // api's reloadBuckets function that is used for most refresh-related
@@ -484,7 +479,7 @@ class DataCube {
           false,
         )
       ) {
-        this.collectBucket(bucket);
+        this.removeBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);
       }
@@ -518,7 +513,7 @@ class DataCube {
     return valueSet;
   }
 
-  collectBucket(bucket: DataBucket): void {
+  removeBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
@@ -570,15 +565,15 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
-    _floodfillBoundingBox: BoundingBoxType,
+    _floodfillBoundingBox: BoundingBoxMinMaxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
-    splitBoundaryMesh: THREE.Mesh | null,
+    splitBoundaryMesh: Mesh | null,
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
     wasBoundingBoxExceeded: boolean;
-    coveredBoundingBox: BoundingBoxType;
+    coveredBoundingBox: BoundingBoxMinMaxType;
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
@@ -1079,7 +1074,7 @@ class DataCube {
 
 export default DataCube;
 
-function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
+function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
   /* Returns true if an intersection is found */
 
   const geometry = bentMesh.geometry;
@@ -1089,16 +1084,16 @@ function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointB
     geometry.computeBoundsTree();
   }
   const scale = Store.getState().dataset.dataSource.scale.factor;
-  const pointA = new THREE.Vector3(...V3.scale3(pointAVec3, scale));
-  const pointB = new THREE.Vector3(...V3.scale3(pointBVec3, scale));
+  const pointA = new ThreeVector3(...V3.scale3(pointAVec3, scale));
+  const pointB = new ThreeVector3(...V3.scale3(pointBVec3, scale));
 
   // Create a ray from A to B
-  const ray = new THREE.Ray();
+  const ray = new Ray();
   ray.origin.copy(pointA);
   ray.direction.subVectors(pointB, pointA).normalize();
 
   // Perform raycast
-  const raycaster = new THREE.Raycaster();
+  const raycaster = new Raycaster();
   raycaster.ray = ray;
   raycaster.far = pointA.distanceTo(pointB);
   raycaster.firstHitOnly = true;

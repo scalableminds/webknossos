@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -16,8 +15,8 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
@@ -64,8 +63,8 @@ case class Zarr3ArrayHeader(
 
   def assertValid: Box[Unit] =
     for {
-      _ <- bool2Box(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
-      _ <- bool2Box(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
+      _ <- Box.fromBool(zarr_format == 3) ?~! s"Expected zarr_format 3, got $zarr_format"
+      _ <- Box.fromBool(node_type == "array") ?~! s"Expected node_type 'array', got $node_type"
       _ <- tryo(resolvedDataType) ?~! "Data type is not supported"
       _ <- shardingCodecConfiguration
         .map(_.isSupported)
@@ -259,7 +258,9 @@ object Zarr3ArrayHeader extends JsonImplicits {
       )
 
   }
-  def fromDataLayer(dataLayer: DataLayer, mag: Vec3Int): Zarr3ArrayHeader = {
+  def fromDataLayer(dataLayer: DataLayer,
+                    mag: Vec3Int,
+                    additionalCodecs: Seq[CodecConfiguration] = Seq.empty): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
     val xyzBBounds = Array(
       // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
@@ -288,7 +289,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       codecs = Seq(
         TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
         BytesCodecConfiguration(Some("little")),
-      ),
+      ) ++ additionalCodecs,
       storage_transformers = None,
       dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
     )

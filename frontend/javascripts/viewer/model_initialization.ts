@@ -87,6 +87,7 @@ import {
   setMappingAction,
   setMappingEnabledAction,
   setViewModeAction,
+  updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
@@ -780,6 +781,7 @@ function determineDefaultState(
 }
 
 export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
+  console.log("apply urlState", state); //TODO_C remove
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.
@@ -804,6 +806,12 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
 
   if (state.additionalCoordinates != null) {
     Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
+  }
+
+  if (state.nativelyRenderedLayerName != null) {
+    Store.dispatch(
+      updateDatasetSettingAction("nativelyRenderedLayerName", state.nativelyRenderedLayerName),
+    );
   }
 }
 

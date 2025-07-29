@@ -20,7 +20,10 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
+WkDevFlags.logActions = true;
 describe("Proofreading (Multi User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -57,6 +60,7 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -132,6 +136,7 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.

@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers } from "redux-saga";
-import { actionChannel, call, fork, put, race, takeEvery } from "typed-redux-saga";
+import { actionChannel, call, fork, put, race, takeEvery, flush } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -39,7 +39,7 @@ const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
 function* watchForSaveConflicts(): Saga<void> {
-  function* checkForNewVersion(): Saga<boolean> {
+  function* checkForAndTryToIncorporateNewVersion(): Saga<boolean> {
     /*
      * Checks whether there is a newer version on the server. If so,
      * the saga tries to also update the current annotation to the newest
@@ -177,17 +177,22 @@ function* watchForSaveConflicts(): Saga<void> {
       continue;
     }
     try {
-      const didAskUserToRefreshPage = yield* call(checkForNewVersion);
+      const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
       if (didAskUserToRefreshPage) {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
       } else {
-        while (ensureHasNewestVersion != null) {
-          // checkForNewVersion was done in response to a ensureHasNewestVersion action.
-          // We invoke the callback to signal that the newest version was ensured.
-          (ensureHasNewestVersion as EnsureHasNewestVersionAction).callback();
-          ensureHasNewestVersion = channel.isEmpty() ? null : channel.take();
+        // drain all accumulated actions at once
+        const pendingActions: EnsureHasNewestVersionAction[] = yield* flush(channel);
+
+        // include the first action we already took from the race
+        const actionsToProcess = ensureHasNewestVersion
+          ? [ensureHasNewestVersion, ...pendingActions]
+          : pendingActions;
+
+        for (const action of actionsToProcess) {
+          (action as EnsureHasNewestVersionAction).callback();
         }
       }
     } catch (exception) {

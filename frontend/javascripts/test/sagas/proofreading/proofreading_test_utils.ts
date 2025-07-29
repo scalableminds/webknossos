@@ -153,6 +153,9 @@ class BackendMock {
     _urlWithoutToken: string,
     payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
   ): Promise<void> => {
+    if (payload.data[0].version !== this.agglomerateMapping.currentVersion + 1) {
+      throw new Error("Version mismatch");
+    }
     // Store the received request.
     this.receivedDataPerSaveRequest.push(payload.data);
 

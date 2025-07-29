@@ -19,7 +19,7 @@ import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -89,7 +89,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
     extends FoxImplicits
     with LazyLogging {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
   private val localConnectomesDir = "connectomes"
   private val hdf5ConnectomeFileExtension = "hdf5"
 

@@ -62,6 +62,7 @@ user.email.verification.keyInvalid=Verification key is invalid.
 user.email.verification.keyUsed=Verification key has already been used.
 user.email.verification.emailDoesNotMatch=This verification key is associated with a different email address.
 user.email.verification.linkExpired=The email verification link is expired.
+user.email.change.passwordWrong=The password you entered is incorrect.
 user.firstName.invalid=Please check your first name for any special characters
 user.lastName.invalid=Please check your last name for any special characters
 user.configuration.invalid=Could not parse configuration
@@ -129,6 +130,8 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
+dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
+dataSource.update.newExplicitPaths=Cannot update a dataset with new explicit paths. To add mags or layers, please use the compose functionality.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
@@ -373,6 +376,7 @@ folder.delete.notEmpty.datasets=Cannot delete folders that still contain dataset
 folder.notFound=Could not find the requested folder
 folder.delete.root=Cannot delete the organization’s root folder
 folder.move.root=Cannot move the organization’s root folder
+folder.move.self=Cannot move a folder into itself
 folder.update.notAllowed=No write access on this folder
 folder.noWriteAccess=No write access in this folder
 folder.update.name.failed=Failed to update the folder’s name

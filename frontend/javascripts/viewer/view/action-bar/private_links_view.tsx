@@ -44,23 +44,20 @@ import type { ZarrPrivateLink } from "types/api_types";
 import { getDataLayers } from "viewer/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 
-// TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
-// https://github.com/TanStack/query/pull/4706
 function useLinksQuery(annotationId: string) {
-  return useQuery<ZarrPrivateLink[], Error>(
-    ["links", annotationId],
-    () => getPrivateLinksByAnnotation(annotationId),
-    {
-      refetchOnWindowFocus: false,
-    },
-  );
+  return useQuery({
+    queryKey: ["links", annotationId],
+    queryFn: () => getPrivateLinksByAnnotation(annotationId),
+    refetchOnWindowFocus: false,
+  });
 }
 
 function useCreateLinkMutation(annotationId: string) {
   const queryClient = useQueryClient();
   const mutationKey = ["links", annotationId];
 
-  return useMutation(createPrivateLink, {
+  return useMutation({
+    mutationFn: createPrivateLink,
     mutationKey,
     onSuccess: (newLink) => {
       queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
@@ -77,11 +74,14 @@ function useUpdatePrivateLink(annotationId: string) {
   const queryClient = useQueryClient();
   const mutationKey = ["links", annotationId];
 
-  return useMutation(updatePrivateLink, {
+  return useMutation({
+    mutationFn: updatePrivateLink,
     mutationKey,
     onMutate: async (updatedLinkItem) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries(mutationKey);
+      await queryClient.cancelQueries({
+        queryKey: mutationKey,
+      });
 
       // Snapshot the previous value
       const previousLink = queryClient.getQueryData(mutationKey);
@@ -109,11 +109,14 @@ function useDeleteLinkMutation(annotationId: string) {
 
   const mutationKey = ["links", annotationId];
 
-  return useMutation(deletePrivateLink, {
+  return useMutation({
+    mutationFn: deletePrivateLink,
     mutationKey,
     onMutate: async (linkIdToDelete) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries(mutationKey);
+      await queryClient.cancelQueries({
+        queryKey: mutationKey,
+      });
 
       // Snapshot the previous value
       const previousLinks = queryClient.getQueryData(mutationKey);
@@ -323,7 +326,7 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
-  const { error, data: links, isLoading } = useLinksQuery(annotationId);
+  const { error, data: links, isPending } = useLinksQuery(annotationId);
   const createLinkMutation = useCreateLinkMutation(annotationId);
   const deleteMutation = useDeleteLinkMutation(annotationId);
 
@@ -370,7 +373,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
         regardless of other sharing settings.
       </div>
 
-      {isLoading || links == null ? (
+      {isPending || links == null ? (
         <div
           style={{
             margin: "40px 0",
@@ -417,8 +420,12 @@ export function _PrivateLinksModal({
   annotationId: string;
 }) {
   const mutationKey = ["links", annotationId];
-  const isFetchingCount = useIsFetching(mutationKey);
-  const isMutatingCount = useIsMutating(mutationKey);
+  const isFetchingCount = useIsFetching({
+    queryKey: mutationKey,
+  });
+  const isMutatingCount = useIsMutating({
+    mutationKey: mutationKey,
+  });
   const isBusy = isFetchingCount + isMutatingCount > 0;
 
   return (

@@ -1,25 +1,33 @@
 import UpdatableTexture from "libs/UpdatableTexture";
-import * as THREE from "three";
+import {
+  ClampToEdgeWrapping,
+  NearestFilter,
+  type PixelFormat,
+  type PixelFormatGPU,
+  type TextureDataType,
+  UVMapping,
+  type WebGLRenderer,
+} from "three";
 
 // This function has to be in its own file as non-resolvable cycles are created otherwise
 export function createUpdatableTexture(
   width: number,
   height: number,
-  type: THREE.TextureDataType,
-  renderer: THREE.WebGLRenderer,
-  format: THREE.PixelFormat,
-  internalFormat?: THREE.PixelFormatGPU,
+  type: TextureDataType,
+  renderer: WebGLRenderer,
+  format: PixelFormat,
+  internalFormat?: PixelFormatGPU,
 ): UpdatableTexture {
   const newTexture = new UpdatableTexture(
     width,
     height,
     format,
     type,
-    THREE.UVMapping,
-    THREE.ClampToEdgeWrapping,
-    THREE.ClampToEdgeWrapping,
-    THREE.NearestFilter,
-    THREE.NearestFilter,
+    UVMapping,
+    ClampToEdgeWrapping,
+    ClampToEdgeWrapping,
+    NearestFilter,
+    NearestFilter,
   );
   newTexture.setRenderer(renderer);
 

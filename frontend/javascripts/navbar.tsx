@@ -617,6 +617,10 @@ function LoggedInAvatar({
               type: "divider",
             },
             {
+              key: "changeEmail",
+              label: <Link to="/auth/changeEmail">Change Email</Link>,
+            },
+            {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
             },

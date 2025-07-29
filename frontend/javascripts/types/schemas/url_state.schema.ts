@@ -194,6 +194,9 @@ export default {
         stateByLayer: {
           $ref: "#/definitions/types::UrlStateByLayer",
         },
+        nativelyRenderedLayerName: {
+          type: "string",
+        },
       },
       additionalProperties: false,
     },

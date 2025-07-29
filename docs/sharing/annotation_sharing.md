@@ -120,6 +120,7 @@ The information is JSON-encoded in the URL fragment and has the following format
     rotation?: Vector3,
     stateByLayer?: UrlStateByLayer,
     additionalCoordinates?: AdditionalCoordinate[];
+    nativelyRenderedLayerName?: string;
   |};
 
   ```

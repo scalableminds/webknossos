@@ -122,6 +122,7 @@ export type UrlManagerState = {
   rotation?: Vector3;
   stateByLayer?: UrlStateByLayer;
   additionalCoordinates?: AdditionalCoordinate[] | null;
+  nativelyRenderedLayerName: string | null;
 };
 export type PartialUrlManagerState = Partial<UrlManagerState>;
 
@@ -380,6 +381,7 @@ class UrlManager {
       mode,
       zoomStep,
       additionalCoordinates: state.flycam.additionalCoordinates,
+      nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName, // TODO_c can be null!!!! fix-me
       ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
@@ -406,6 +408,7 @@ class UrlManager {
 
   buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
+    console.log("urlState", urlState); //TODO_C remove
     return encodeUrlHash(JSON.stringify(urlState));
   }
 

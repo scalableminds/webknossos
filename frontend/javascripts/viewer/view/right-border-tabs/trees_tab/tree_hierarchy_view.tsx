@@ -15,6 +15,7 @@ import {
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import { Store } from "viewer/singletons";
@@ -102,13 +103,9 @@ function TreeHierarchyView(props: Props) {
 
   useEffect(() => {
     // scroll to active tree if it changes
-    if (treeRef.current && activeTreeId) {
-      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, activeTreeId);
-
+    if (activeTreeId) {
       // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
-      setTimeout(() => {
-        if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
-      }, 50);
+      setTimeout(() => scrollToActiveTree(), 50);
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
@@ -282,19 +279,26 @@ function TreeHierarchyView(props: Props) {
     );
     if (expandedGroups == null) return;
     setExpandedGroups(expandedGroups);
-    setTimeout(() => {
-      if (treeRef.current && activeTreeId)
-        treeRef.current.scrollTo({
-          key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
-          align: "auto",
-        });
-    }, 300);
   }, [activeTreeId]);
 
-  useEffect(
-    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
-    [selectedKeys[0]],
-  );
+  const scrollToActiveTree = () => {
+    if (activeTreeId && treeRef.current) {
+      treeRef.current.scrollTo({
+        key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
+        align: "auto",
+      });
+    }
+  };
+
+  // Scroll to the active key after the component has been rendered.
+  // This is necessary outside of the useEffect hooks because a longer delay is needed to ensure the active tree has been rendered.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This should be equivalent to componentDidMount
+  useEffect(() => {
+    setTimeout(scrollToActiveTree, 900);
+  }, []);
+
+  // Allow scrolling to the active tree even if it is not changed
+  useReduxActionListener("FOCUS_TREE", scrollToActiveTree);
 
   return (
     <>

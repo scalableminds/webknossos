@@ -296,7 +296,7 @@ export function mockInitialBucketAndAgglomerateData(context: WebknossosTestConte
   const { mocks } = context;
 
   const backendMock = new BackendMock([
-    // { position: [0, 0, 0], value: 1337 },
+    { position: [100, 100, 100], value: 1337 },
     { position: [1, 1, 1], value: 1 },
     { position: [2, 2, 2], value: 2 },
     { position: [3, 3, 3], value: 3 },

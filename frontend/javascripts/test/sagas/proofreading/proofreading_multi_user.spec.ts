@@ -186,11 +186,11 @@ describe("Proofreading (Multi User)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 8],
-          [2, 8],
+          [1, 1338],
+          [2, 1338],
           [3, 1],
-          [4, 8],
-          [5, 8],
+          [4, 1338],
+          [5, 1338],
           [6, 6],
           [7, 6],
         ]),
@@ -263,8 +263,8 @@ describe("Proofreading (Multi User)", () => {
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
-          [2, 8],
-          [3, 9],
+          [2, 1338],
+          [3, 1339],
           [4, 4],
           [5, 4],
           [6, 6],
@@ -340,10 +340,10 @@ describe("Proofreading (Multi User)", () => {
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
-          [2, 8],
-          [3, 8],
-          [4, 8],
-          [5, 8],
+          [2, 1338],
+          [3, 1338],
+          [4, 1338],
+          [5, 1338],
           [6, 6],
           [7, 6],
         ]),

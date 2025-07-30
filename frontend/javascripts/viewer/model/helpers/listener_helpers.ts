@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { eventBus } from "./event_bus";
 
 // Allows to listen on a certain property of the store.
 // This function should only be used when listening to the Store
@@ -41,4 +43,16 @@ export function listenToStoreProperty<T>(
   // return the unsubscribe function
   return Store.subscribe(handleChange);
 }
+
+export function useReduxActionListener(actionType: string, callback: () => void) {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+  useEffect(() => {
+    const unsubscribe = eventBus.on(actionType, callbackRef.current);
+    return () => {
+      unsubscribe();
+    };
+  }, [actionType]);
+}
+
 export default {};

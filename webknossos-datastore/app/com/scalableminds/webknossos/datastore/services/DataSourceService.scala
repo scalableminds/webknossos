@@ -138,7 +138,7 @@ class DataSourceService @Inject()(
     if (isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
     } else {
-      val magPath = Path.of(magURI)
+      val magPath = Path.of(magURI.getPath)
       val realPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
       val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
@@ -159,7 +159,7 @@ class DataSourceService @Inject()(
       layerPath.getFileName.toString,
       mag
     )
-    (uri, DataVaultService.isRemoteScheme(uri.getScheme))
+    (uri, uri.getScheme != null && DataVaultService.isRemoteScheme(uri.getScheme))
   }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =

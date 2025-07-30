@@ -64,10 +64,7 @@ class BackendMock {
   requestDelay = 5;
   updateActionLog: APIUpdateActionBatch[] = [];
   onSavedListeners: Array<() => void> = [];
-  agglomerateMapping = new AgglomerateMapping(
-    edgesForInitialMapping,
-    1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
-  );
+  agglomerateMapping: AgglomerateMapping;
 
   // todop: this is a reference to the same variable that is
   // set up in apiHelpers. when BackendMock is used in other tests,
@@ -75,7 +72,15 @@ class BackendMock {
   // `updateActionLog` which is mostly equivalent.
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
 
-  constructor(public overrides: BucketOverride[]) {}
+  constructor(
+    public overrides: BucketOverride[],
+    additionalEdges: Vector2[] = [],
+  ) {
+    this.agglomerateMapping = new AgglomerateMapping(
+      edgesForInitialMapping.concat(additionalEdges),
+      1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
+    );
+  }
 
   private addOnSavedListener = (fn: () => void) => {
     // Attached listeners are called after the mock received a
@@ -292,19 +297,25 @@ class BackendMock {
   }
 }
 
-export function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
+export function mockInitialBucketAndAgglomerateData(
+  context: WebknossosTestContext,
+  additionalEdges: Vector2[] = [],
+) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock([
-    { position: [100, 100, 100], value: 1337 },
-    { position: [1, 1, 1], value: 1 },
-    { position: [2, 2, 2], value: 2 },
-    { position: [3, 3, 3], value: 3 },
-    { position: [4, 4, 4], value: 4 },
-    { position: [5, 5, 5], value: 5 },
-    { position: [6, 6, 6], value: 6 },
-    { position: [7, 7, 7], value: 7 },
-  ]);
+  const backendMock = new BackendMock(
+    [
+      { position: [100, 100, 100], value: 1337 },
+      { position: [1, 1, 1], value: 1 },
+      { position: [2, 2, 2], value: 2 },
+      { position: [3, 3, 3], value: 3 },
+      { position: [4, 4, 4], value: 4 },
+      { position: [5, 5, 5], value: 5 },
+      { position: [6, 6, 6], value: 6 },
+      { position: [7, 7, 7], value: 7 },
+    ],
+    additionalEdges,
+  );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     backendMock.sendJSONReceiveArraybufferWithHeaders,

@@ -48,7 +48,8 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   boundingBox: String,
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String],
-                                  workflowYaml: Option[String])
+                                  workflowYaml: Option[String],
+                                  invertColorLayer: Option[Boolean])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -196,7 +197,8 @@ class AiModelController @Inject()(
           "model_id" -> request.body.aiModelId,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
+          "invert_color_layer" -> request.body.invertColorLayer
         )
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(

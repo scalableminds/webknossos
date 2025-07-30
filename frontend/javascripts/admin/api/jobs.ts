@@ -191,13 +191,18 @@ export function startNucleiInferralJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
+  invertColorLayer?: boolean,
 ): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${datasetId}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
-  );
+  const urlParams = new URLSearchParams({
+    layerName,
+    newDatasetName,
+  });
+  if (invertColorLayer != null) {
+    urlParams.append("invertColorLayer", `${invertColorLayer}`);
+  }
+  return Request.receiveJSON(`/api/jobs/run/inferNuclei/${datasetId}?${urlParams.toString()}`, {
+    method: "POST",
+  });
 }
 
 export function startNeuronInferralJob(
@@ -211,6 +216,7 @@ export function startNeuronInferralJob(
   evalMaxEdgeLength?: number,
   evalSparseTubeThresholdNm?: number,
   evalMinMergerPathLengthNm?: number,
+  invertColorLayer?: boolean,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
@@ -235,6 +241,9 @@ export function startNeuronInferralJob(
     if (evalMinMergerPathLengthNm != null) {
       urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
     }
+  }
+  if (invertColorLayer != null) {
+    urlParams.append("invertColorLayer", `${invertColorLayer}`);
   }
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
@@ -384,6 +393,7 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
+  invertColorLayer?: boolean;
   // maskAnnotationLayerName?: string | null
 };
 

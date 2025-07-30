@@ -185,7 +185,7 @@ function AccountPasswordView() {
           <SettingsTitle title="Passkeys" description="Login passwordless with Passkeys" />
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col span={12}>
-              <SettingsCard title="Passkeys" description={<PasskeysView />} />
+              <SettingsCard title="Passkeys" content={<PasskeysView />} />
             </Col>
           </Row>
         </>

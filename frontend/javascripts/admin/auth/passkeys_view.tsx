@@ -8,7 +8,6 @@ import {
 import { Button, Input, Modal, Table } from "antd";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
 
 function ChangePasswordView() {
   /// Passkeys
@@ -26,12 +25,10 @@ function ChangePasswordView() {
     fetchPasskeys();
   }, []);
 
-  function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): () => Promise<void> {
-    return async function () {
-      await removeWebAuthnKey(passkey.id);
-      Toast.success("Passkey '" + passkey.name + "' is removed.");
-      await fetchPasskeys();
-    };
+  async function webauthnRemoveKey(passkey: WebAuthnKeyDescriptor): Promise<void> {
+    await removeWebAuthnKey(passkey.id);
+    Toast.success("Passkey '" + passkey.name + "' is removed.");
+    await fetchPasskeys();
   }
 
   const registerNewPasskey = async () => {
@@ -66,7 +63,7 @@ function ChangePasswordView() {
           type="default"
           shape="circle"
           icon={<DeleteOutlined />}
-          onClick={webauthnRemoveKey(passkey)}
+          onClick={() => webauthnRemoveKey(passkey)}
           size="small"
         />
       ),
@@ -106,4 +103,4 @@ function ChangePasswordView() {
   );
 }
 
-export default withRouter<RouteComponentProps, any>(ChangePasswordView);
+export default ChangePasswordView;

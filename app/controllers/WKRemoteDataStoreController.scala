@@ -323,7 +323,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
+  def updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
@@ -332,7 +332,7 @@ class WKRemoteDataStoreController @Inject()(
           oldDataSource <- datasetService.fullDataSourceFor(dataset)
           oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
           newPaths = request.body.allExplicitPaths
-          _ <- Fox.fromBool(newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
+          _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
           _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
                                                       name,
                                                       abstractDataSource.hashCode(),

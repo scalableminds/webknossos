@@ -1,7 +1,6 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 ->  /v10/ datastore.latest.Routes
-->  /v9/  datastore.latest.Routes
 
 # Read image data
 POST          /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossosV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
@@ -16,6 +15,7 @@ GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 POST          /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMeshV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
 GET           /v9/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJsonV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
 
+POST          /v9/triggers/reload/:organizationId/:datasetDirectoryName                                                                                  @com.scalableminds.webknossos.datastore.controllers.LegacyController.reloadDatasourceV9(organizationId: String, datasetDirectoryName: String, layerName: Option[String])
 
 # Zarr2 compatible routes
 GET           /v9/zarr/:organizationId/:datasetDirectoryName                                                                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContentsV9(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)
@@ -43,7 +43,7 @@ GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestZarrJsonForMagV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String)
 GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
-->  /v8/  datastore.latest.Routes
+->  /v9/  datastore.latest.Routes
 
 # Read image data
 POST          /v8/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossosV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
@@ -57,6 +57,8 @@ GET           /v8/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 
 POST          /v8/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMeshV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
 GET           /v8/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJsonV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
+
+POST          /v8/triggers/reload/:organizationId/:datasetDirectoryName                                                                                  @com.scalableminds.webknossos.datastore.controllers.LegacyController.reloadDatasourceV9(organizationId: String, datasetDirectoryName: String, layerName: Option[String])
 
 
 # Zarr2 compatible routes
@@ -85,8 +87,7 @@ GET           /v8/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v8/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestZarrJsonForMagV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String)
 GET           /v8/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
-
-->  /v7/  datastore.latest.Routes
+->  /v8/  datastore.latest.Routes
 
 # Read image data
 POST          /v7/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossosV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
@@ -101,6 +102,7 @@ GET           /v7/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 POST          /v7/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMeshV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
 GET           /v7/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJsonV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
 
+POST          /v7/triggers/reload/:organizationId/:datasetDirectoryName                                                                                  @com.scalableminds.webknossos.datastore.controllers.LegacyController.reloadDatasourceV9(organizationId: String, datasetDirectoryName: String, layerName: Option[String])
 
 # Zarr2 compatible routes
 GET           /v7/zarr/:organizationId/:datasetDirectoryName                                                                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContentsV9(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)
@@ -128,7 +130,7 @@ GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestZarrJsonForMagV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String)
 GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
-->  /v6/  datastore.latest.Routes
+->  /v7/  datastore.latest.Routes
 
 # Read image data
 POST          /v6/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossosV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
@@ -143,6 +145,7 @@ GET           /v6/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 POST          /v6/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMeshV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
 GET           /v6/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJsonV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
 
+POST          /v6/triggers/reload/:organizationId/:datasetDirectoryName                                                                                  @com.scalableminds.webknossos.datastore.controllers.LegacyController.reloadDatasourceV9(organizationId: String, datasetDirectoryName: String, layerName: Option[String])
 
 # Zarr2 compatible routes
 GET           /v6/zarr/:organizationId/:datasetDirectoryName                                                                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContentsV9(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)
@@ -170,7 +173,7 @@ GET           /v6/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v6/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestZarrJsonForMagV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String)
 GET           /v6/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
-->  /v5/  datastore.latest.Routes
+->  /v6/  datastore.latest.Routes
 
 # Read image data
 POST          /v5/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestViaWebknossosV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
@@ -185,6 +188,7 @@ GET           /v5/datasets/:organizationId/:datasetDirectoryName/layers/:dataLay
 POST          /v5/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/adHocMesh                                                         @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestAdHocMeshV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String)
 GET           /v5/datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/mappings/:mappingName                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.mappingJsonV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mappingName: String)
 
+POST          /v5/triggers/reload/:organizationId/:datasetDirectoryName                                                                                  @com.scalableminds.webknossos.datastore.controllers.LegacyController.reloadDatasourceV9(organizationId: String, datasetDirectoryName: String, layerName: Option[String])
 
 # Zarr2 compatible routes
 GET           /v5/zarr/:organizationId/:datasetDirectoryName                                                                                             @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestDataSourceDirectoryContentsV9(organizationId: String, datasetDirectoryName: String, zarrVersion: Int = 2)
@@ -212,5 +216,5 @@ GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/zarr.json                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestZarrJsonForMagV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String)
 GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
-
+->  /v5/  datastore.latest.Routes
 ->  /     datastore.latest.Routes

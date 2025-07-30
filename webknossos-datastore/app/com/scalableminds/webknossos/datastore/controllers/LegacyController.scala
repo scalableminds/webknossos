@@ -42,6 +42,7 @@ class LegacyController @Inject()(
     fullMeshService: DSFullMeshService,
     binaryDataController: BinaryDataController,
     zarrStreamingController: ZarrStreamingController,
+    dataSourceController: DataSourceController
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
@@ -445,4 +446,17 @@ class LegacyController @Inject()(
       }
     }
 
+  // ACTIONS
+
+  def reloadDatasourceV9(organizationId: String,
+                         datasetDirectoryName: String,
+                         layerName: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
+        for {
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(dataSourceController.reload(organizationId, datasetId, layerName)(request))
+        } yield result
+      }
+    }
 }

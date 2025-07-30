@@ -87,7 +87,7 @@ function RegistrationViewGeneric() {
           <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
             <h3>Sign Up</h3>
             {content}
-            <Link to="/auth/login">Already have an account? Login instead.</Link>
+            <Link to="/auth/login">Already have an account? Log in instead.</Link>
           </Card>
         </Col>
       </Row>

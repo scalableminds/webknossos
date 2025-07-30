@@ -145,6 +145,8 @@ describe("Annotation Saga", () => {
     const isUpdatingAllowed = Store.getState().annotation.isUpdatingCurrentlyAllowed;
     expect(isUpdatingAllowed).toBe(true);
   });
+  // TODOM: Test fail from here on when executed in a row and not solely. Fix this. Likely some  test isolation problem or so.
+  // The acquireAnnotationMutex spy reports that it was called although it shouldn't.
 
   it<WebknossosTestContext>("An annotation where othersMayEdit is turned on should try to acquire the annotation mutex.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");

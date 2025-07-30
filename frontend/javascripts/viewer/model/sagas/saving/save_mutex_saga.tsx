@@ -43,7 +43,11 @@ import { ensureWkReady } from "../ready_sagas";
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
 const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
-const RETRY_COUNT = 12; // 12 retries with 60/12=5 seconds backup delay
+const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
+const INITIAL_BACKOFF_TIME = 1000;
+const BACKOFF_TIME_MULTIPLIER = 1.5;
+const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
+const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 
 // TODOM
 const DISABLE_EAGER_MUTEX_ACQUISITION = true;
@@ -217,6 +221,63 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   }
 }
 
+// TODO:
+function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void> {
+  /*
+   * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
+   * race).
+   */
+  console.log("started tryAcquireMutexForSaving");
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
+  mutexLogicState.isInitialRequest = true; // Never show popup about the mutex now being acquired.
+  let hasMutex = false;
+  let backoffTime = INITIAL_BACKOFF_TIME;
+
+  // We can simply use an infinite loop here, because the saga will be cancelled by
+  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  while (hasMutex) {
+    console.log("tryAcquireMutexForSaving loop");
+    try {
+      const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
+      if (canEdit) {
+        yield* put(setIsMutexAcquiredAction(canEdit));
+        hasMutex = true;
+      }
+    } catch (error) {
+      if (process.env.IS_TESTING) {
+        // In unit tests, that explicitly control this generator function,
+        // the console.error after the next yield won't be printed, because
+        // test assertions on the yield will already throw.
+        // Therefore, we also print the error in the test context.
+        console.error("Error while trying to acquire mutex:", error);
+      }
+      console.error("Error while trying to acquire mutex.", error);
+    }
+    const wasCanceled = yield* cancelled();
+    console.log("wasCanceled", wasCanceled);
+    if (wasCanceled) {
+      return;
+    }
+    const backOffJitter =
+      Math.random() * (BACKOFF_JITTER_UPPER_PERCENT - BACKOFF_JITTER_LOWER_PERCENT) +
+      BACKOFF_JITTER_LOWER_PERCENT;
+    backoffTime = Math.min(
+      backoffTime * BACKOFF_TIME_MULTIPLIER + backoffTime * backOffJitter,
+      ACQUIRE_MUTEX_INTERVAL,
+    );
+    yield* call(delay, backoffTime);
+  }
+  // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
+  while (hasMutex) {
+    const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
+    if (!canEdit) {
+      // TODOM: Thnk of a better way to handle this.
+      console.error("Failed to continuously acquire mutex.");
+    }
+    yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+  }
+}
+
 function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<void> {
   function* reactToOthersMayEditChanges({
     othersMayEdit,
@@ -291,11 +352,14 @@ function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<ne
     // console.log("taking ENSURE_MAY_SAVE_NOW");
     yield* take("ENSURE_MAY_SAVE_NOW");
     // console.log("took ENSURE_MAY_SAVE_NOW");
+    // TODOM: ensure tryAcquireMutexForSaving works correctly even when mutex not received initially.
+    // Write tests for this!
     const { doneSaving } = yield* race({
-      tryAcquireMutexContinuously: fork(tryAcquireMutexContinuously, mutexLogicState),
+      tryAcquireMutexForSaving: fork(tryAcquireMutexForSaving, mutexLogicState),
       doneSaving: take("DONE_SAVING"),
     });
     if (doneSaving) {
+      yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
       // No need to keep continuously fetching the mutex as saving was successful.
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
       yield* call(releaseMutex);

@@ -188,19 +188,22 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def updateAll(name: String, key: String): Action[List[InboxDataSource]] =
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[InboxDataSource]] =
     Action.async(validateJson[List[InboxDataSource]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val dataSources = request.body
         for {
           before <- Instant.nowFox
+          selectedOrgaLabel = organizationId.map(id => s"for organization $id").getOrElse("for all organizations")
           _ = logger.info(
-            s"Received dataset list from datastore '${dataStore.name}': " +
+            s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
               s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
           existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-          _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
+          _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))
-            Instant.logSince(before, s"Updating datasources from datastore '${dataStore.name}'", logger)
+            Instant.logSince(before,
+                             s"Updating datasources from datastore ${dataStore.name} $selectedOrgaLabel",
+                             logger)
         } yield Ok
       }
     }

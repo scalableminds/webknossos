@@ -38,12 +38,12 @@ class DataSourceRepository @Inject()(
       _ <- remoteWebknossosClient.reportDataSource(dataSource)
     } yield ()
 
-  def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
+  def updateDataSources(dataSources: List[InboxDataSource], organizationId: Option[String]): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       _ = removeAll()
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
-      _ <- remoteWebknossosClient.reportDataSources(dataSources)
+      _ <- remoteWebknossosClient.reportDataSources(dataSources, organizationId)
     } yield ()
 
   def removeDataSource(dataSourceId: DataSourceId): Fox[Unit] =

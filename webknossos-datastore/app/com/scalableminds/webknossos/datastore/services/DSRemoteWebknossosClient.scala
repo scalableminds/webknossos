@@ -154,7 +154,8 @@ class DSRemoteWebknossosClient @Inject()(
       datasetId = response.body
     } yield datasetId
 
-  def updateDataSource(dataSource: DataSource, datasetId: ObjectId, allowNewPaths: Boolean = false)(implicit tc: TokenContext): Fox[_] =
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId, allowNewPaths: Boolean = false)(
+      implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("allowNewPaths" -> allowNewPaths.toString)

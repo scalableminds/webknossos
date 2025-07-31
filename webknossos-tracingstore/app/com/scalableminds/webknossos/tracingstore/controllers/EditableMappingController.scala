@@ -153,11 +153,8 @@ class EditableMappingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-          (addedEdges, removedEdges) <- editableMappingService.getEditedEdges(annotationId,
-                                                                              tracingId,
-                                                                              version,
-                                                                              remoteFallbackLayer)
-        } yield Ok(Json.obj("addedEdges" -> Json.toJson(addedEdges), "removedEdges" -> Json.toJson(removedEdges)))
+          editedEdges <- editableMappingService.getEditedEdges(annotationId, tracingId, version, remoteFallbackLayer)
+        } yield Ok(Json.obj("editedEdges" -> Json.toJson(editedEdges)))
       }
     }
 

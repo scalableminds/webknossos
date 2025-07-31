@@ -411,6 +411,6 @@ function* releaseMutex() {
     releaseAnnotationMutex,
     annotationId,
   );
-  //yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
-  //yield* put(setUserHoldingMutexAction(null));
+  yield* put(setIsMutexAcquiredAction(false));
+  yield* put(setUserHoldingMutexAction(null));
 }

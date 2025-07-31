@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
   WKWDataLayer,
-  WKWResolution,
   WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
@@ -267,16 +266,8 @@ trait DataLayerLike {
     case _                                   => None
   }
 
-  def wkwResolutionsOpt: Option[List[WKWResolution]] = this match {
-    case layer: AbstractDataLayer         => layer.wkwResolutions
-    case layer: AbstractSegmentationLayer => layer.wkwResolutions
-    case layer: WKWDataLayer              => Some(layer.wkwResolutions)
-    case layer: WKWSegmentationLayer      => Some(layer.wkwResolutions)
-    case _                                => None
-  }
-
   def allExplicitPaths: Seq[String] =
-    magsOpt.map(_.flatMap(_.path)).orElse(wkwResolutionsOpt.map(_.flatMap(_.path))).getOrElse(Seq.empty) ++
+    magsOpt.map(_.flatMap(_.path)).getOrElse(Seq.empty) ++
       attachments.map(_.allAttachments.map(_.path.toString)).getOrElse(Seq.empty)
 }
 
@@ -308,11 +299,6 @@ trait SegmentationLayerLike extends DataLayerLike {
 trait DataLayer extends DataLayerLike {
 
   def dataFormat: DataFormat.Value
-
-  /**
-    * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
-    */
-  def lengthOfUnderlyingCubes(mag: Vec3Int): Int
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
@@ -493,6 +479,22 @@ trait DataLayerWithMagLocators extends DataLayer {
           name = name,
           coordinateTransformations = coordinateTransformations
         )
+      case l: WKWDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: WKWSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
       case _ => throw new Exception("Encountered unsupported layer format")
     }
 
@@ -506,6 +508,8 @@ trait DataLayerWithMagLocators extends DataLayer {
       case layer: ZarrSegmentationLayer        => layer.mags
       case layer: Zarr3DataLayer               => layer.mags
       case layer: Zarr3SegmentationLayer       => layer.mags
+      case layer: WKWDataLayer                 => layer.mags
+      case layer: WKWSegmentationLayer         => layer.mags
       case _                                   => throw new Exception("Encountered unsupported layer format")
     }
 
@@ -530,7 +534,6 @@ case class AbstractDataLayer(
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
-    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -549,8 +552,7 @@ object AbstractDataLayer {
       layer.attachments,
       layer.magsOpt,
       layer.numChannelsOpt,
-      layer.dataFormatOpt,
-      layer.wkwResolutionsOpt
+      layer.dataFormatOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -572,7 +574,6 @@ case class AbstractSegmentationLayer(
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
-    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -594,7 +595,6 @@ object AbstractSegmentationLayer {
       layer.magsOpt,
       layer.numChannelsOpt,
       layer.dataFormatOpt,
-      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

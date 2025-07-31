@@ -20,8 +20,6 @@ trait PrecomputedLayer extends DataLayerWithMagLocators {
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def lengthOfUnderlyingCubes(mag: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
-
   def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
 }
 

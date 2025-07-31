@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Datas
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int,
@@ -15,13 +15,15 @@ case class WKWResolution(resolution: Vec3Int,
                          credentialId: Option[String] = None) {
   def toMagLocator: MagLocator =
     MagLocator(mag = resolution, path = path, credentialId = credentialId)
-}
 
+}
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
+
+  def defaultCubeSize = 1024
 }
 
-trait WKWLayer extends DataLayer {
+trait WKWLayer extends DataLayerWithMagLocators {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
@@ -29,39 +31,68 @@ trait WKWLayer extends DataLayer {
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
-
-  def wkwResolutions: List[WKWResolution]
-
-  def mags: List[MagLocator] = wkwResolutions.map(_.toMagLocator)
-
-  def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
-
-  def lengthOfUnderlyingCubes(mag: Vec3Int): Int =
-    wkwResolutions.find(_.resolution == mag).map(_.cubeLength).getOrElse(0)
-
 }
 
 case class WKWDataLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
-    wkwResolutions: List[WKWResolution],
+    mags: List[MagLocator],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None,
-) extends WKWLayer
+) extends WKWLayer {
+  override def resolutions: List[Vec3Int] = mags.map(_.mag)
+}
 
 object WKWDataLayer {
-  implicit val jsonFormat: OFormat[WKWDataLayer] = Json.format[WKWDataLayer]
+  implicit val jsonFormat: Format[WKWDataLayer] = new Format[WKWDataLayer] {
+    def reads(json: JsValue): JsResult[WKWDataLayer] =
+      for {
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WKWResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
+        }
+        name <- (json \ "name").validate[String]
+        category <- (json \ "category").validate[Category.Value]
+        boundingBox <- (json \ "boundingBox").validate[BoundingBox]
+        elementClass <- (json \ "elementClass").validate[ElementClass.Value]
+        defaultViewConfiguration <- (json \ "defaultViewConfiguration").validateOpt[LayerViewConfiguration]
+        adminViewConfiguration <- (json \ "adminViewConfiguration").validateOpt[LayerViewConfiguration]
+        coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
+        additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
+        attachments <- (json \ "attachments").validateOpt[DatasetLayerAttachments]
+      } yield {
+        WKWDataLayer(
+          name,
+          category,
+          boundingBox,
+          mags,
+          elementClass,
+          defaultViewConfiguration,
+          adminViewConfiguration,
+          coordinateTransformations,
+          additionalAxes,
+          attachments
+        )
+      }
+
+    def writes(layer: WKWDataLayer): JsValue =
+      Json.writes[WKWDataLayer].writes(layer)
+  }
 }
 
 case class WKWSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
-    wkwResolutions: List[WKWResolution],
+    mags: List[MagLocator],
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
     largestSegmentId: Option[Long] = None,
@@ -71,8 +102,49 @@ case class WKWSegmentationLayer(
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
     attachments: Option[DatasetLayerAttachments] = None
 ) extends SegmentationLayer
-    with WKWLayer
+    with WKWLayer {
+  override def resolutions: List[Vec3Int] = mags.map(_.mag)
+}
 
 object WKWSegmentationLayer {
-  implicit val jsonFormat: OFormat[WKWSegmentationLayer] = Json.format[WKWSegmentationLayer]
+  implicit val jsonFormat: Format[WKWSegmentationLayer] = new Format[WKWSegmentationLayer] {
+    def reads(json: JsValue): JsResult[WKWSegmentationLayer] =
+      for {
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WKWResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
+        }
+        name <- (json \ "name").validate[String]
+        boundingBox <- (json \ "boundingBox").validate[BoundingBox]
+        elementClass <- (json \ "elementClass").validate[ElementClass.Value]
+        largestSegmentId <- (json \ "largestSegmentId").validateOpt[Long]
+        mappings <- (json \ "mappings").validateOpt[Set[String]]
+        defaultViewConfiguration <- (json \ "defaultViewConfiguration").validateOpt[LayerViewConfiguration]
+        adminViewConfiguration <- (json \ "adminViewConfiguration").validateOpt[LayerViewConfiguration]
+        coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
+        additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
+        attachments <- (json \ "attachments").validateOpt[DatasetLayerAttachments]
+      } yield {
+        WKWSegmentationLayer(
+          name,
+          boundingBox,
+          mags,
+          elementClass,
+          mappings,
+          largestSegmentId,
+          defaultViewConfiguration,
+          adminViewConfiguration,
+          coordinateTransformations,
+          additionalAxes,
+          attachments
+        )
+      }
+
+    def writes(layer: WKWSegmentationLayer): JsValue =
+      Json.writes[WKWSegmentationLayer].writes(layer)
+  }
 }

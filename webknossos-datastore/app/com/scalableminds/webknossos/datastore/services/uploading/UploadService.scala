@@ -453,6 +453,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Empty =>
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
@@ -460,6 +461,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         logger.warn(s"Error while $label: $msg, $e")
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
         dataSourceRepository.removeDataSource(dataSourceId)
@@ -506,9 +508,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers,
-                                                expectExisting = true,
-                                                preventNewPaths = false) ?~> "Could not write combined properties file"
+        _ <- dataSourceService.updateDataSourceOnDisk(
+          dataSourceWithLinkedLayers,
+          expectExisting = true,
+          preventNewPaths = false) ?~> "Could not write combined properties file"
       } yield ()
     }
 

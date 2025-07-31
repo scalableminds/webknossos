@@ -156,8 +156,9 @@ class WKRemoteTracingStoreClient(
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None,
+                             datasetId: ObjectId,
                              dataSource: DataSourceLike): Fox[Unit] = {
-    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
@@ -201,6 +202,7 @@ class WKRemoteTracingStoreClient(
                                     newTracingId: String,
                                     tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
+                                    datasetId: ObjectId,
                                     initialData: List[Option[File]]): Fox[Unit] = {
     logger.debug(
       s"Called to merge ${tracings.tracings.length} VolumeTracings by contents into $newAnnotationId/$newTracingId." + baseInfo)
@@ -210,7 +212,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProto[VolumeTracings](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("annotationId" -> newAnnotationId.toString)
@@ -226,9 +228,10 @@ class WKRemoteTracingStoreClient(
                         tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: DataSourceLike): Fox[Unit] = {
+                        dataSource: DataSourceLike,
+                        datasetId: ObjectId): Fox[Unit] = {
     logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
-    annotationDataSourceTemporaryStore.store(annotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(annotationId, dataSource, datasetId)
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)

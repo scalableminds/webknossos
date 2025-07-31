@@ -49,12 +49,12 @@ export default {
         boundingBox: {
           $ref: "#/definitions/types::BoundingBox",
         },
-        wkwResolutions: {
+        mags: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              resolution: {
+              mag: {
                 anyOf: [
                   {
                     type: "number",
@@ -64,15 +64,27 @@ export default {
                   },
                 ],
               },
-              cubeLength: {
-                type: "number",
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
               },
             },
-            required: ["resolution", "cubeLength"],
+            required: ["mag"],
           },
         },
       },
-      required: ["dataFormat", "boundingBox", "wkwResolutions"],
+      required: ["dataFormat", "mags"],
     },
     "types::DataLayerZarrPartial": {
       title: "DataLayerZarr",

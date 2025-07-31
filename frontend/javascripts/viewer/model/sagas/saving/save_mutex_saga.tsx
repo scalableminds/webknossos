@@ -1,4 +1,4 @@
-import { acquireAnnotationMutex } from "admin/rest_api";
+import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -235,7 +235,7 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
-  while (hasMutex) {
+  while (!hasMutex) {
     console.log("tryAcquireMutexForSaving loop");
     try {
       const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
@@ -359,9 +359,7 @@ function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<ne
       doneSaving: take("DONE_SAVING"),
     });
     if (doneSaving) {
-      yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
-      // No need to keep continuously fetching the mutex as saving was successful.
-      yield* call(restartMutexAcquiringSaga, mutexLogicState);
+      console.log("releasing mutex");
       yield* call(releaseMutex);
     }
   }
@@ -406,12 +404,13 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
 
 function* releaseMutex() {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
+  // TODO!!!!
   yield* retry(
     RETRY_COUNT,
     ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
-    acquireAnnotationMutex,
+    releaseAnnotationMutex,
     annotationId,
   );
-  yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
-  yield* put(setUserHoldingMutexAction(null));
+  //yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
+  //yield* put(setUserHoldingMutexAction(null));
 }

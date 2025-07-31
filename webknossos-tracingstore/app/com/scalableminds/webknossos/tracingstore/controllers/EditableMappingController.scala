@@ -144,4 +144,18 @@ class EditableMappingController @Inject()(
         } yield Ok(agglomerateSkeletonBytes)
       }
     }
+
+  def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
+          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
+          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
+          editedEdges <- editableMappingService.getEditedEdges(annotationId, tracingId, version, remoteFallbackLayer)
+        } yield Ok(Json.obj("editedEdges" -> Json.toJson(editedEdges)))
+      }
+    }
+
 }

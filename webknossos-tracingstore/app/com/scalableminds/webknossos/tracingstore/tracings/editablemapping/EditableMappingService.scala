@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
@@ -37,6 +38,7 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateGroupHandling}
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -103,6 +105,7 @@ class EditableMappingService @Inject()(
     with ReversionHelper
     with EditableMappingElementKeys
     with LazyLogging
+    with UpdateGroupHandling
     with ProtoGeometryImplicits {
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
@@ -534,4 +537,40 @@ class EditableMappingService @Inject()(
     neighborNodes
   }
 
+  def getEditedEdges(
+      annotationId: ObjectId,
+      tracingId: String,
+      version: Option[Long],
+      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Seq[(Long, Long, Boolean)]] =
+    for {
+      updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+        annotationId.toString,
+        newestVersion = version)(fromJsonBytes[List[UpdateAction]])
+      updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
+      editedEdges <- Fox.serialCombined(updatesIroned) {
+        case update: SplitAgglomerateUpdateAction if update.actionTracingId == tracingId =>
+          for {
+            segmentId1 <- findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
+                                                          update.segmentPosition1,
+                                                          update.segmentId1,
+                                                          update.mag)
+            segmentId2 <- findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
+                                                          update.segmentPosition2,
+                                                          update.segmentId2,
+                                                          update.mag)
+          } yield Some(segmentId1, segmentId2, false)
+        case update: MergeAgglomerateUpdateAction if update.actionTracingId == tracingId =>
+          for {
+            segmentId1 <- findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
+                                                          update.segmentPosition1,
+                                                          update.segmentId1,
+                                                          update.mag)
+            segmentId2 <- findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
+                                                          update.segmentPosition2,
+                                                          update.segmentId2,
+                                                          update.mag)
+          } yield Some(segmentId1, segmentId2, true)
+        case _ => Fox.successful(None)
+      }
+    } yield editedEdges.flatten
 }

@@ -71,20 +71,15 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization)
+      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
       case None =>
-        organizationIdOpt match {
-          case Some(organizationId) => organizationDAO.findOne(organizationId)
-          case None =>
-            for {
-              allOrganizations <- organizationDAO.findAll
-              _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
-              defaultOrganization <- allOrganizations.headOption.toFox
-            } yield defaultOrganization
-        }
+        for {
+          allOrganizations <- organizationDAO.findAll
+          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          defaultOrganization <- allOrganizations.headOption.toFox
+        } yield defaultOrganization
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {

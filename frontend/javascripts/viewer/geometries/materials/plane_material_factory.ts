@@ -874,10 +874,10 @@ class PlaneMaterialFactory {
             if (hasTransform) {
               countOfLayersWithTransforms++;
             }
-            this.uniforms.doAllLayersHaveTransforms = {
-              value: countOfLayersWithTransforms === layers.length,
-            };
           }
+          this.uniforms.doAllLayersHaveTransforms = {
+            value: countOfLayersWithTransforms === layers.length,
+          };
           this.recomputeShaders();
         },
         true,

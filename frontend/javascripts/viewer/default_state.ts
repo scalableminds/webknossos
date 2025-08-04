@@ -55,6 +55,7 @@ const defaultState: WebknossosState = {
     autoSaveLayouts: true,
     autoRenderMeshInProofreading: true,
     selectiveVisibilityInProofreading: true,
+    isMultiSplitActive: false,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,

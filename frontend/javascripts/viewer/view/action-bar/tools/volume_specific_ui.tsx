@@ -2,6 +2,7 @@ import {
   ClearOutlined,
   DownOutlined,
   InfoCircleOutlined,
+  ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import {
@@ -71,6 +72,10 @@ const handleToggleAutomaticMeshRendering = (value: boolean) => {
 
 const handleToggleSelectiveVisibilityInProofreading = (value: boolean) => {
   Store.dispatch(updateUserSettingAction("selectiveVisibilityInProofreading", value));
+};
+
+const handleToggleIsMultiSplitActive = (value: boolean) => {
+  Store.dispatch(updateUserSettingAction("isMultiSplitActive", value));
 };
 
 const handleCreateCell = () => {
@@ -450,6 +455,8 @@ export function ProofreadingComponents() {
     (state) => state.userConfiguration.selectiveVisibilityInProofreading,
   );
 
+  const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
+
   return (
     <Space.Compact
       style={{
@@ -483,6 +490,16 @@ export function ProofreadingComponents() {
         }
       >
         <i className="fas fa-highlighter" />
+      </ToggleButton>
+      <ToggleButton
+        active={isMultiSplitActive}
+        title={`${
+          isMultiSplitActive ? "Disable" : "Enable"
+        } multi splitting. When enabled, two partitions can be selected in the 3D viewport to split more accurately.`}
+        style={NARROW_BUTTON_STYLE}
+        onClick={() => handleToggleIsMultiSplitActive(!isMultiSplitActive)}
+      >
+        <ScissorOutlined />
       </ToggleButton>
     </Space.Compact>
   );

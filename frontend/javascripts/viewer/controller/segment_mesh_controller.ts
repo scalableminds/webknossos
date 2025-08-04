@@ -24,7 +24,7 @@ import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import Store from "viewer/store";
+import Store, { type MinCutPartitions } from "viewer/store";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import Constants from "viewer/constants";
@@ -40,14 +40,20 @@ const hslToSRGB = (hsl: Vector3) => new Color().setHSL(...hsl).convertSRGBToLine
 const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
+const PARTITION_COLORS = {
+  1: [1, 0, 0] as Vector3,
+  2: [0, 1, 0] as Vector3,
+};
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
 
 type MeshMaterial = MeshLambertMaterial & { originalColor: Vector3 };
-type HighlightState = Vector2 | "full" | null;
+type HighlightEntry = { range: Vector2; color?: Vector3 };
+type HighlightState = HighlightEntry[] | "full" | null;
 export type MeshSceneNode = Mesh<BufferGeometryWithInfo, MeshMaterial> & {
   hoveredState?: HighlightState;
   activeState?: HighlightState;
+  partitionedState?: HighlightState;
   parent: SceneGroupForMeshes;
   isMerged: boolean;
 };
@@ -484,6 +490,7 @@ export default class SegmentMeshController {
     mesh: MeshSceneNode,
     isHovered: boolean | undefined,
     isActiveUnmappedSegment?: boolean | undefined,
+    partitioned?: boolean,
     highlightState?: HighlightState,
   ) {
     // This method has three steps:
@@ -501,12 +508,12 @@ export default class SegmentMeshController {
     }
 
     let wasChanged = false;
-    const rangesToReset: Vector2[] = [];
+    let highlightEntriesToReset: HighlightEntry[] = [];
 
     if (isHovered != null) {
       if (!_.isEqual(mesh.hoveredState, highlightState)) {
         if (mesh.hoveredState != null && mesh.hoveredState !== "full") {
-          rangesToReset.push(mesh.hoveredState);
+          highlightEntriesToReset = highlightEntriesToReset.concat(mesh.hoveredState);
         }
         mesh.hoveredState = highlightState;
         wasChanged = true;
@@ -516,9 +523,19 @@ export default class SegmentMeshController {
     if (isActiveUnmappedSegment != null) {
       if (!_.isEqual(mesh.activeState, highlightState)) {
         if (mesh.activeState != null && mesh.activeState !== "full") {
-          rangesToReset.push(mesh.activeState);
+          highlightEntriesToReset = highlightEntriesToReset.concat(mesh.activeState);
         }
         mesh.activeState = highlightState;
+        wasChanged = true;
+      }
+    }
+
+    if (partitioned != null) {
+      if (!_.isEqual(mesh.partitionedState, highlightState)) {
+        if (mesh.partitionedState != null && mesh.partitionedState !== "full") {
+          highlightEntriesToReset = highlightEntriesToReset.concat(mesh.partitionedState);
+        }
+        mesh.partitionedState = highlightState;
         wasChanged = true;
       }
     }
@@ -539,8 +556,8 @@ export default class SegmentMeshController {
 
     // Reset ranges
     if (mesh.material.originalColor != null) {
-      for (const rangeToReset of rangesToReset) {
-        setRangeToColor(mesh.geometry, rangeToReset, mesh.material.originalColor);
+      for (const rangeToReset of highlightEntriesToReset) {
+        setRangeToColor(mesh.geometry, rangeToReset.range, mesh.material.originalColor);
       }
     }
 
@@ -581,13 +598,23 @@ export default class SegmentMeshController {
 
     if (mesh.activeState && mesh.activeState !== "full") {
       const newColor = ACTIVATED_COLOR_VEC3;
-      setRangeToColor(mesh.geometry, mesh.activeState, newColor);
+      for (const highlightEntry of mesh.activeState) {
+        setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
+      }
     }
-    // Setting the hovered part needs to happen after setting the active part,
+    if (mesh.partitionedState && mesh.partitionedState !== "full") {
+      const newColor = ACTIVATED_COLOR_VEC3;
+      for (const highlightEntry of mesh.partitionedState) {
+        setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
+      }
+    }
+    // Setting the hovered part needs to happen after setting the active & partition part,
     // so that there is still a hover effect for an active super voxel.
     if (mesh.hoveredState && mesh.hoveredState !== "full") {
       const newColor = HOVERED_COLOR_VEC3;
-      setRangeToColor(mesh.geometry, mesh.hoveredState, newColor);
+      for (const highlightEntry of mesh.hoveredState) {
+        setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
+      }
     }
     mesh.geometry.attributes.color.needsUpdate = true;
   }
@@ -613,11 +640,51 @@ export default class SegmentMeshController {
 
       if (activeUnmappedSegmentId != null && containsSegmentId) {
         // Highlight (parts of) the mesh as active
-        this.updateMeshAppearance(obj, undefined, true, indexRange);
+        const highlightEntries =
+          indexRange !== null ? [{ range: indexRange, color: undefined }] : null;
+        this.updateMeshAppearance(obj, undefined, true, undefined, highlightEntries);
       } else if (obj.activeState) {
         // The mesh has an activeState, but that id is no longer
         // active. Therefore, clear it.
-        this.updateMeshAppearance(obj, undefined, false, null);
+        this.updateMeshAppearance(obj, undefined, false, undefined, null);
+      }
+    });
+  };
+
+  updateMinCutPartitionHighlighting = (mincutPartitions: MinCutPartitions | null) => {
+    this.meshesLayerLODRootGroup.traverse((_obj) => {
+      if (!("geometry" in _obj)) {
+        return;
+      }
+      // The cast is safe because MeshSceneNode adds only optional properties
+      const obj = _obj as MeshSceneNode;
+
+      const vertexSegmentMapping = obj.geometry.vertexSegmentMapping;
+
+      const highlightRanges: HighlightState = [];
+      if (vertexSegmentMapping && mincutPartitions) {
+        for (const partitionNumber of [1, 2]) {
+          const partition = partitionNumber as 1 | 2;
+          const partitionColor = PARTITION_COLORS[partition];
+          for (const segmentId of mincutPartitions[partition]) {
+            const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);
+            if (containsSegmentId) {
+              const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(segmentId);
+              if (indexRange) {
+                highlightRanges.push({ range: indexRange, color: partitionColor });
+              }
+            }
+          }
+        }
+      }
+
+      if (highlightRanges.length > 0) {
+        // Highlight (parts of) the mesh as active
+        this.updateMeshAppearance(obj, undefined, undefined, true, highlightRanges);
+      } else if (obj.partitionedState) {
+        // The mesh has an activeState, but that id is no longer
+        // active. Therefore, clear it.
+        this.updateMeshAppearance(obj, undefined, undefined, false, null);
       }
     });
   };

@@ -175,14 +175,17 @@ class PlaneView {
     const face = intersections.length > 0 ? intersections[0].face : null;
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
     let unmappedSegmentId = null;
-    let indexRange = null;
+    let highlightEntry = null;
 
     if (hitObject && face) {
       if ("vertexSegmentMapping" in hitObject.geometry) {
         const vertexSegmentMapping = hitObject.geometry
           .vertexSegmentMapping as VertexSegmentMapping;
         unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
-        indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
+        const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
+        if (indexRange) {
+          highlightEntry = { range: indexRange, color: undefined };
+        }
       }
     }
 
@@ -210,7 +213,7 @@ class PlaneView {
       hitObject != null
         ? {
             node: hitObject,
-            indexRange,
+            indexRange: highlightEntry?.range || null,
             unmappedSegmentId,
             point: intersections[0].point.toArray(),
           }
@@ -218,7 +221,13 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      segmentMeshController.updateMeshAppearance(hitObject, true, undefined, indexRange || "full");
+      segmentMeshController.updateMeshAppearance(
+        hitObject,
+        true,
+        undefined,
+        undefined,
+        highlightEntry ? [highlightEntry] : "full",
+      );
 
       Store.dispatch(
         updateTemporarySettingAction(
@@ -237,7 +246,13 @@ class PlaneView {
     if (oldRaycasterHit?.node.parent != null) {
       const sceneController = getSceneController();
       const { segmentMeshController } = sceneController;
-      segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
+      segmentMeshController.updateMeshAppearance(
+        oldRaycasterHit.node,
+        false,
+        undefined,
+        undefined,
+        null,
+      );
       oldRaycasterHit = null;
     }
   };
@@ -334,6 +349,22 @@ class PlaneView {
           // Note that this code is responsible for highlighting the *active*
           // (not necessarily hovered) segment.
           segmentMeshController.highlightActiveUnmappedSegmentId(activeUnmappedSegmentId),
+        true,
+      ),
+    );
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => {
+          const segmentationTracing = getActiveSegmentationTracing(storeState);
+          if (segmentationTracing == null) {
+            return null;
+          }
+          return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
+            ? storeState.localSegmentationData[segmentationTracing.tracingId].mincutPartitions
+            : null;
+        },
+        (mincutPartitions) =>
+          segmentMeshController.updateMinCutPartitionHighlighting(mincutPartitions),
         true,
       ),
     );

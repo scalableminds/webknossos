@@ -98,6 +98,7 @@ import {
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   loadAdHocMeshAction,
@@ -420,13 +421,14 @@ function getMeshItems(
   const activeCellId = getActiveCellId(volumeTracing);
   const { activeUnmappedSegmentId } = volumeTracing;
   const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
+  const { isMultiSplitActive } = state.userConfiguration;
   // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
   // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
   // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
   // by looking the segment id up the segments list and checking against null.
   const activeSegmentMissing = segments.getNullable(activeCellId) == null;
 
-  const getTooltip = (actionVerb: "merge" | "split", actionNeedsActiveSegment: boolean) => {
+  const getTooltip = (actionVerb: "add" | "merge" | "split", actionNeedsActiveSegment: boolean) => {
     return !isProofreadingActive
       ? `Cannot ${actionVerb} because the proofreading tool is not active.`
       : maybeUnmappedSegmentId == null
@@ -443,9 +445,45 @@ function getMeshItems(
     activeSegmentMissing ||
     maybeUnmappedSegmentId == null ||
     meshFileMappingName != null;
+  const segmentIdLabel =
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `within Segment ${clickedMeshId}`
+      : clickedMeshId;
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+
+  // TODOM: Make togglable -> add possibility to remove from partition.
+  const proofreadingMultiSplitToolActions =
+    isProofreadingActive && isMultiSplitActive && maybeUnmappedSegmentId != null
+      ? [
+          {
+            key: "mark-as-partition-1",
+            onClick: () =>
+              Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 1)),
+            label: (
+              <FastTooltip title={getTooltip("add", false)}>
+                Add {segmentOrSuperVoxel} (${segmentIdLabel}) to Partition 1{" "}
+                {shortcutBuilder(["Ctrl", "leftMouse"])}
+              </FastTooltip>
+            ),
+          },
+          {
+            key: "mark-as-partition-2",
+            onClick: () =>
+              Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 2)),
+            label: (
+              <FastTooltip title={getTooltip("add", false)}>
+                Add {segmentOrSuperVoxel} (${segmentIdLabel}) to Partition 2{" "}
+                {shortcutBuilder(["Shift", "leftMouse"])}
+              </FastTooltip>
+            ),
+          },
+        ]
+      : [];
 
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
+        ...proofreadingMultiSplitToolActions,
         {
           key: "merge-agglomerate-skeleton",
           disabled: shouldAgglomerateSkeletonActionsBeDisabled || clickedMeshId === activeCellId,
@@ -459,7 +497,10 @@ function getMeshItems(
             );
           },
           label: (
-            <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
+            <FastTooltip title={getTooltip("merge", true)}>
+              Merge with active segment
+              {isMultiSplitActive ? "" : shortcutBuilder(["Ctrl", "leftMouse"])}
+            </FastTooltip>
           ),
         },
         {
@@ -479,7 +520,9 @@ function getMeshItems(
             );
           },
           label: (
-            <FastTooltip title={getTooltip("split", true)}>Split from active segment</FastTooltip>
+            <FastTooltip title={getTooltip("split", true)}>
+              Split {isMultiSplitActive ? "partitions" : "from active segment"}
+            </FastTooltip>
           ),
         },
         {
@@ -503,12 +546,6 @@ function getMeshItems(
       ]
     : [];
 
-  const segmentIdLabel =
-    isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId}`
-      : clickedMeshId;
-  const segmentOrSuperVoxel =
-    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
   const isAlreadySelected =
     activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;
   return [

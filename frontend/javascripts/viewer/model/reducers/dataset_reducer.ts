@@ -38,6 +38,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
             group: null,
           },
           hideUnregisteredSegments: false,
+          mincutPartitions: { 1: [], 2: [] },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

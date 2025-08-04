@@ -142,7 +142,7 @@ class DSRemoteWebknossosClient @Inject()(
     } yield reserveUploadInfo
 
   def registerDataSource(dataSource: DataSource, dataSourceId: DataSourceId, folderId: Option[String])(
-      implicit tc: TokenContext): Fox[String] =
+      implicit tc: TokenContext): Fox[ObjectId] =
     for {
       _ <- Fox.successful(())
       info = DataSourceRegistrationInfo(dataSource, folderId)
@@ -151,7 +151,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("key" -> dataStoreKey)
         .withTokenFromContext
         .postJson[DataSourceRegistrationInfo](info)
-      datasetId = response.body
+      datasetId <- ObjectId.fromString(response.body)
     } yield datasetId
 
   def updateDataSource(dataSource: DataSource, datasetId: ObjectId, allowNewPaths: Boolean = false)(

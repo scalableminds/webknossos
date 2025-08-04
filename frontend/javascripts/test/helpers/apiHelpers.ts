@@ -79,7 +79,7 @@ vi.mock("libs/request", () => ({
     sendJSONReceiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
-      .mockImplementation(createBucketResponseFunction(Uint8Array, 0)),
+      .mockImplementation(createBucketResponseFunction(Uint16Array, 0)),
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
@@ -226,7 +226,13 @@ export function createBucketResponseFunction(
 ) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
     await sleep(delay);
+    console.log(_url, "was requested. repyling with", TypedArrayClass);
     const bucketCount = payload.data.length;
+    TypedArrayClass = _url.includes("color")
+      ? Uint8Array
+      : _url.includes("segmentation")
+        ? Uint32Array
+        : Uint16Array;
     const typedArray = new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue);
 
     for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {

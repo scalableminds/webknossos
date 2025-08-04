@@ -19,7 +19,17 @@ object ObjectId extends FoxImplicits {
   def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
     parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  def fromStringSync(input: String): Option[ObjectId] = BSONObjectID.parse(input).map(fromBsonId).toOption
+  def fromStringSync(input: String): Option[ObjectId] =
+    BSONObjectID.parse(input).map(fromBsonId).toOption
+
+  // Accept human-readable prefix: anything-before-hyphen-<ObjectId>
+  def fromHumanReadableStringSync(input: String): Option[ObjectId] = {
+    val objectIdCandidate = input.lastIndexOf('-') match {
+      case -1  => input
+      case idx => input.substring(idx + 1)
+    }
+    BSONObjectID.parse(objectIdCandidate).map(fromBsonId).toOption
+  }
   def dummyId: ObjectId = ObjectId("000000000000000000000000")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {
@@ -38,7 +48,7 @@ object ObjectId extends FoxImplicits {
   implicit def pathBinder: PathBindable[ObjectId] =
     new PathBindable[ObjectId] {
       override def bind(key: String, value: String): Either[String, ObjectId] =
-        fromStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+        fromHumanReadableStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }

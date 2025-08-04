@@ -62,6 +62,7 @@ case class Dataset(_id: ObjectId,
                    directoryName: String,
                    isPublic: Boolean,
                    isUsable: Boolean,
+                   isVirtual: Boolean,
                    name: String,
                    voxelSize: Option[VoxelSize],
                    sharingToken: Option[String],
@@ -145,6 +146,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.directoryname,
         r.ispublic,
         r.isusable,
+        r.isvirtual,
         r.name,
         voxelSize,
         r.sharingtoken,
@@ -611,7 +613,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
-                     description, directoryName, isPublic, isUsable,
+                     description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags,
                      created, isDeleted
@@ -620,7 +622,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
                      ${d._uploader}, ${d._folder},
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
-                     ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable},
+                     ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
                      ${d.created}, ${d.isDeleted}
@@ -655,8 +657,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"TRUE"
-      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
+      if (existingDatasetIds.isEmpty) q"NOT isVirtual"
+      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
@@ -762,25 +764,17 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       layer.magsOpt match {
         case Some(mags) =>
           mags.map(mag => {
-            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, axisOrder, channelIndex, credentialId)
-                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.axisOrder
+            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
+                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder
               .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
           })
         case None =>
-          layer.wkwResolutionsOpt match {
-            case Some(resolutions) =>
-              resolutions.map(wkwResolution => {
-                q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, cubeLength)
-                 VALUES ($datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
-              })
-            case None =>
-              layer.resolutions.distinct.map { mag: Vec3Int =>
-                {
-                  q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+          layer.resolutions.distinct.map { mag: Vec3Int =>
+            {
+              q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
                     VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
-                }
-              }
+            }
           }
       }
 

@@ -12,12 +12,7 @@ import Toast from "libs/toast";
 import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
 import React from "react";
 import { connect } from "react-redux";
-import type {
-  APIConnectomeFile,
-  APIDataSourceId,
-  APIDataset,
-  APISegmentationLayer,
-} from "types/api_types";
+import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import Constants, { MappingStatusEnum } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -355,7 +350,7 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties: [string, APIDataSourceId, string, string] = [
+    const fetchProperties: [string, APIDataset, string, string] = [
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),

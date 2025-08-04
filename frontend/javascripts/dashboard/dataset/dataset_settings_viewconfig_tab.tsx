@@ -8,7 +8,7 @@ import { Vector3Input } from "libs/vector_input";
 import _ from "lodash";
 import messages, { layerViewConfigurations, settings, settingsTooltips } from "messages";
 import { useMemo, useState } from "react";
-import type { APIDataSourceId, APIDataset } from "types/api_types";
+import type { APIDataset } from "types/api_types";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import { BLEND_MODES } from "viewer/constants";
@@ -33,62 +33,62 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
   >({});
 
   const dataStoreURL = dataset.dataStore.url;
-  const dataSourceId: APIDataSourceId = {
-    owningOrganization: dataset.owningOrganization,
-    directoryName: dataset.directoryName,
-  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: validate on dataset change
   const validateDefaultMappings = useMemo(
-    () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
-      let config = {} as DatasetConfiguration["layers"];
-      try {
-        config = JSON.parse(configStr);
-      } catch (e: any) {
-        return Promise.reject(new Error("Invalid JSON format for : " + e.message));
-      }
-      const layerNamesWithDefaultMappings = Object.keys(config).filter(
-        (layerName) => config[layerName].mapping != null,
-      );
-
-      const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
-        if (layerName in availableMappingsPerLayerCache) {
-          return availableMappingsPerLayerCache[layerName];
-        }
+    () =>
+      async (configStr: string, dataStoreURL: string, dataset: APIDataset | null | undefined) => {
+        let config = {} as DatasetConfiguration["layers"];
         try {
-          const jsonAndAgglomerateMappings = await Promise.all([
-            getMappingsForDatasetLayer(dataStoreURL, dataSourceId, layerName),
-            getAgglomeratesForDatasetLayer(dataStoreURL, dataSourceId, layerName),
-          ]);
-          setAvailableMappingsPerLayer((prev) => ({
-            ...prev,
-            [layerName]: jsonAndAgglomerateMappings,
-          }));
-          return jsonAndAgglomerateMappings;
+          config = JSON.parse(configStr);
         } catch (e: any) {
-          console.error(e);
-          throw new Error(messages["mapping.loading_failed"](layerName));
+          return Promise.reject(new Error("Invalid JSON format for : " + e.message));
         }
-      });
-      const mappings = await Promise.all(maybeMappingRequests);
-      const errors = layerNamesWithDefaultMappings
-        .map((layerName, index) => {
-          const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
-          const mappingType = config[layerName]?.mapping?.type;
-          const mappingName = config[layerName]?.mapping?.name;
-          const doesMappingExist =
-            mappingType === "HDF5"
-              ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
-              : mappingsForLayer.some((mapping) => mapping === mappingName);
-          return doesMappingExist
-            ? null
-            : `The mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
-        })
-        .filter((error) => error != null);
-      if (errors.length > 0) {
-        throw new Error("The following mappings are invalid: " + errors.join("\n"));
-      }
-    },
+        const layerNamesWithDefaultMappings = Object.keys(config).filter(
+          (layerName) => config[layerName].mapping != null,
+        );
+
+        const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
+          if (layerName in availableMappingsPerLayerCache) {
+            return availableMappingsPerLayerCache[layerName];
+          }
+          try {
+            if (!dataset) {
+              throw new Error("Dataset is not defined.");
+            }
+            const jsonAndAgglomerateMappings = await Promise.all([
+              getMappingsForDatasetLayer(dataStoreURL, dataset, layerName),
+              getAgglomeratesForDatasetLayer(dataStoreURL, dataset, layerName),
+            ]);
+            setAvailableMappingsPerLayer((prev) => ({
+              ...prev,
+              [layerName]: jsonAndAgglomerateMappings,
+            }));
+            return jsonAndAgglomerateMappings;
+          } catch (e: any) {
+            console.error(e);
+            throw new Error(messages["mapping.loading_failed"](layerName));
+          }
+        });
+        const mappings = await Promise.all(maybeMappingRequests);
+        const errors = layerNamesWithDefaultMappings
+          .map((layerName, index) => {
+            const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
+            const mappingType = config[layerName]?.mapping?.type;
+            const mappingName = config[layerName]?.mapping?.name;
+            const doesMappingExist =
+              mappingType === "HDF5"
+                ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
+                : mappingsForLayer.some((mapping) => mapping === mappingName);
+            return doesMappingExist
+              ? null
+              : `The mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
+          })
+          .filter((error) => error != null);
+        if (errors.length > 0) {
+          throw new Error("The following mappings are invalid: " + errors.join("\n"));
+        }
+      },
     [availableMappingsPerLayerCache, dataset], // Add dataset to dependencies for dataSourceId
   );
 
@@ -316,7 +316,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
                       Promise.all([
                         validateLayerViewConfigurationObjectJSON(_rule, config),
                         dataStoreURL
-                          ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
+                          ? validateDefaultMappings(config, dataStoreURL, dataset)
                           : Promise.resolve(),
                       ]),
                   },

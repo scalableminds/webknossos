@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
@@ -16,21 +17,35 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BloscCodecConfiguration,
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  EmptyZarr3GroupHeader,
+  Zarr3ArrayHeader,
+  Zarr3DataType
+}
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   IntCompressionSetting,
   StringCompressionSetting
 }
+import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.ByteBuffer
+import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
 class EditableMappingController @Inject()(
     volumeTracingService: VolumeTracingService,
     annotationService: TSAnnotationService,
     remoteWebknossosClient: TSRemoteWebknossosClient,
+    tempFileService: TsTempFileService,
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
@@ -151,6 +166,8 @@ class EditableMappingController @Inject()(
       }
     }
 
+  val chunkShape = 10000
+
   def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -165,12 +182,87 @@ class EditableMappingController @Inject()(
                                                                                            remoteFallbackLayer)
           edgesZarrChunks: Iterator[Array[Byte]] = editedEdgesToZarrChunks(editedEdges)
           isAdditionZarrChunks: Iterator[Array[Byte]] = edgeIsAdditionToZarrChunks(editedEdges)
-        } yield Ok(Json.obj("editedEdges" -> Json.toJson(editedEdges)))
+          edgesZarrChunksStream = edgesZarrChunks.zipWithIndex.map {
+            case (chunk, index) => NamedFunctionStream.fromBytes(f"edges/$index.0", chunk)
+          }
+          edgesZarrHeader = Zarr3ArrayHeader(
+            zarr_format = 3,
+            node_type = "array",
+            shape = Array(editedEdges.length, 2),
+            data_type = Left(Zarr3DataType.uint64.toString),
+            chunk_grid = Left(
+              ChunkGridSpecification("regular",
+                                     ChunkGridConfiguration(
+                                       chunk_shape = Array(chunkShape, 2)
+                                     ))),
+            chunk_key_encoding =
+              ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+            fill_value = Right(0),
+            attributes = None,
+            codecs = Seq(compressorConfiguration),
+            storage_transformers = None,
+            dimension_names = None
+          )
+          isAdditionZarrChunksStream = isAdditionZarrChunks.zipWithIndex.map {
+            case (chunk, index) => NamedFunctionStream.fromBytes(f"edgeIsAddition/$index", chunk)
+          }
+          isAdditionZarrHeader = Zarr3ArrayHeader(
+            zarr_format = 3,
+            node_type = "array",
+            shape = Array(editedEdges.length),
+            data_type = Left(Zarr3DataType.bool.toString),
+            chunk_grid = Left(
+              ChunkGridSpecification("regular",
+                                     ChunkGridConfiguration(
+                                       chunk_shape = Array(chunkShape)
+                                     ))),
+            chunk_key_encoding =
+              ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+            fill_value = Right(0),
+            attributes = None,
+            codecs = Seq(compressorConfiguration),
+            storage_transformers = None,
+            dimension_names = None
+          )
+          edgesHeaderStream = NamedFunctionStream.fromString("edges/zarr.json",
+                                                             Json.prettyPrint(Json.toJson(edgesZarrHeader)))
+          isAdditionHeaderStream = NamedFunctionStream.fromString("edgeIsAddition/zarr.json",
+                                                                  Json.prettyPrint(Json.toJson(isAdditionZarrHeader)))
+          groupHeader = EmptyZarr3GroupHeader(
+            zarr_format = 3,
+            node_type = "group"
+          )
+          groupHeaderStream = NamedFunctionStream.fromString("zarr.json", Json.toJson(groupHeader).toString())
+          allStreams = edgesZarrChunksStream ++ isAdditionZarrChunksStream ++ Seq(edgesHeaderStream,
+                                                                                  isAdditionHeaderStream,
+                                                                                  groupHeaderStream)
+          zipped = tempFileService.create(f"${tracingId}_editedMappingEdges.zip")
+          outputStream = new BufferedOutputStream(new FileOutputStream(new File(zipped.toString)))
+          _ <- ZipIO.zip(allStreams, outputStream, level = Deflater.BEST_SPEED)
+        } yield Ok.sendPath(zipped)
       }
     }
 
+  private lazy val compressorConfiguration =
+    BloscCodecConfiguration(
+      BloscCompressor.defaultCname,
+      BloscCompressor.defaultCLevel,
+      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
+      Some(BloscCompressor.defaultTypesize),
+      BloscCompressor.defaultBlocksize
+    )
+
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] = {
     val chunkSize = 10000 // 10000 edges per chunk (an edge is one boolean)
+    editedEdges.grouped(chunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+      val bytes = ByteBuffer.allocate(2 * chunkSize)
+      edgeTupleChunk.foreach {
+        case (_, _, isAddedEdge) =>
+          val boolAsByte: Byte = if (isAddedEdge) 0 else 1
+          bytes.put(boolAsByte)
+      }
+      compressor.compress(bytes.array)
+    }
   }
 
   private def editedEdgesToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] = {

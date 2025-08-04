@@ -253,6 +253,7 @@ class PlaneMaterialFactory {
       },
       blendMode: { value: 1.0 },
       isFlycamRotated: { value: false },
+      doAllLayersHaveTransforms: { value: false },
       inverseFlycamRotationMatrix: { value: new Matrix4() },
     };
 
@@ -850,6 +851,7 @@ class PlaneMaterialFactory {
           this.scaledTpsInvPerLayer = {};
           const state = Store.getState();
           const layers = state.dataset.dataSource.dataLayers;
+          let countOfLayersWithTransforms = 0;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
@@ -868,6 +870,12 @@ class PlaneMaterialFactory {
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
+            };
+            if (hasTransform) {
+              countOfLayersWithTransforms++;
+            }
+            this.uniforms.doAllLayersHaveTransforms = {
+              value: countOfLayersWithTransforms === layers.length,
             };
           }
           this.recomputeShaders();

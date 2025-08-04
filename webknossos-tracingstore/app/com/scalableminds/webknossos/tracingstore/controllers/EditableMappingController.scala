@@ -16,9 +16,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  IntCompressionSetting,
+  StringCompressionSetting
+}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
+import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
 
 class EditableMappingController @Inject()(
@@ -153,9 +159,41 @@ class EditableMappingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-          editedEdges <- editableMappingService.getEditedEdges(annotationId, tracingId, version, remoteFallbackLayer)
+          editedEdges: Seq[(Long, Long, Boolean)] <- editableMappingService.getEditedEdges(annotationId,
+                                                                                           tracingId,
+                                                                                           version,
+                                                                                           remoteFallbackLayer)
+          edgesZarrChunks: Iterator[Array[Byte]] = editedEdgesToZarrChunks(editedEdges)
+          isAdditionZarrChunks: Iterator[Array[Byte]] = edgeIsAdditionToZarrChunks(editedEdges)
         } yield Ok(Json.obj("editedEdges" -> Json.toJson(editedEdges)))
       }
     }
+
+  private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] = {
+    val chunkSize = 10000 // 10000 edges per chunk (an edge is one boolean)
+  }
+
+  private def editedEdgesToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] = {
+    val chunkSize = 10000 // 10000 edges per chunk (an edge is two Longs)
+    editedEdges.grouped(chunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+      val bytes = ByteBuffer.allocate(2 * chunkSize * 8)
+      edgeTupleChunk.foreach {
+        case (src, dst, _) =>
+          bytes.putLong(src)
+          bytes.putLong(dst)
+      }
+      compressor.compress(bytes.array)
+    }
+  }
+
+  private lazy val compressor =
+    new BloscCompressor(
+      Map(
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
+        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
+      ))
 
 }

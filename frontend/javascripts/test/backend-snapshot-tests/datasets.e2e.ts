@@ -98,7 +98,6 @@ describe("Dataset API (E2E)", () => {
 
   async function getTestDatasetId(datasetName: string = "test-dataset"): Promise<string> {
     let datasets = await api.getActiveDatasetsOfMyOrganization();
-    datasets = _.sortBy(datasets, (d) => d.name);
     const dataset = datasets.find((d) => d.name === datasetName);
     if (!dataset) {
       throw new Error(`Dataset with name ${datasetName} not found`);

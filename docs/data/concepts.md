@@ -102,7 +102,7 @@ This is an example:
 
 Note that the `mag` property within the elements of `mags` is always an array of length 3, denoting the scaling factor for x, y, and z. The `path` property specifies the location of the data for each magnification step.
 The term "magnifications" is used synonymously for mags throughout the UI.
-At the moment, WebKnossos guarantees correct rendering of data with non-uniform mag factors only if the z-component between two mags changes by a factor of 1 or 2.
+At the moment, WEBKNOSSOS guarantees correct rendering of data with non-uniform mag factors only if the z-component between two mags changes by a factor of 1 or 2.
 
 Most users do not create these metadata files manually.
 When using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).

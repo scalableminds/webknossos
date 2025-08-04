@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   BloscCodecConfiguration,
+  BytesCodecConfiguration,
   ChunkGridConfiguration,
   ChunkGridSpecification,
   ChunkKeyEncoding,
@@ -199,9 +200,9 @@ class EditableMappingController @Inject()(
               ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
             fill_value = Right(0),
             attributes = None,
-            codecs = Seq(compressorConfiguration),
+            codecs = Seq(BytesCodecConfiguration(Some("big")), compressorConfiguration),
             storage_transformers = None,
-            dimension_names = None
+            dimension_names = Some(Array("edge", "srcDst"))
           )
           isAdditionZarrChunksStream = isAdditionZarrChunks.zipWithIndex.map {
             case (chunk, index) => NamedFunctionStream.fromBytes(f"edgeIsAddition/$index", chunk)
@@ -218,11 +219,11 @@ class EditableMappingController @Inject()(
                                      ))),
             chunk_key_encoding =
               ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
-            fill_value = Right(0),
+            fill_value = Left("false"),
             attributes = None,
-            codecs = Seq(compressorConfiguration),
+            codecs = Seq(BytesCodecConfiguration(Some("big")), compressorConfiguration),
             storage_transformers = None,
-            dimension_names = None
+            dimension_names = Some(Array("edge"))
           )
           edgesHeaderStream = NamedFunctionStream.fromString("edges/zarr.json",
                                                              Json.prettyPrint(Json.toJson(edgesZarrHeader)))
@@ -255,7 +256,7 @@ class EditableMappingController @Inject()(
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] = {
     val chunkSize = 10000 // 10000 edges per chunk (an edge is one boolean)
     editedEdges.grouped(chunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
-      val bytes = ByteBuffer.allocate(2 * chunkSize)
+      val bytes = ByteBuffer.allocate(chunkSize)
       edgeTupleChunk.foreach {
         case (_, _, isAddedEdge) =>
           val boolAsByte: Byte = if (isAddedEdge) 0 else 1

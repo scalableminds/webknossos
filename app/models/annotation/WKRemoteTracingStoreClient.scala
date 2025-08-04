@@ -270,7 +270,16 @@ class WKRemoteTracingStoreClient(
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
-      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
+      editedMappingEdgesData <- Fox.runIf(!skipVolumeData && tracing.getHasEditableMapping) {
+        rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/editedEdgesZip").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryStringOptional("version", version.map(_.toString))
+          .getWithBytesResponse
+      }
+      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer,
+                                                                           Right(tracing),
+                                                                           data,
+                                                                           editedMappingEdgesData)
     } yield fetchedAnnotationLayer
   }
 

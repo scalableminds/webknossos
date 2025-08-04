@@ -861,7 +861,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
     for {
-      // We assume non-WKW Datasets here (WKW Resolutions are not handled)
       rows <- run(
         q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
            FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])

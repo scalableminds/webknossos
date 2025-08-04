@@ -118,7 +118,6 @@ export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
   datasetId: string;
-  dataSourceId: APIDataSourceId;
   datasetName: string;
   sourceName: string;
   newName: string;

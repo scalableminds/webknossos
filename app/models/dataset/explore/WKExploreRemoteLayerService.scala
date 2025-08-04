@@ -105,17 +105,21 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
 
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
-                          datasetName: String,
-                          user: User,
-                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addRemoteDatasourceToDatabase(dataSource: GenericDataSource[DataLayer],
+                                    datasetName: String,
+                                    user: User,
+                                    folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+      organizationId = user._organization
       _ <- datasetService.assertValidDatasetName(datasetName)
-      client = new WKRemoteDataStoreClient(dataStore, rpc)
-      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)
+      _ <- datasetService.createVirtualDataset(
+        dataSource.id.directoryName,
+        organizationId,
+        dataStore,
+        dataSource,
+        folderId.map(_.toString),
+        user
+      )
     } yield ()
-
 }

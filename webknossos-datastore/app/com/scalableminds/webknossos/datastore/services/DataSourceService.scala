@@ -269,7 +269,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
+  def updateDataSourceOnDisk(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {

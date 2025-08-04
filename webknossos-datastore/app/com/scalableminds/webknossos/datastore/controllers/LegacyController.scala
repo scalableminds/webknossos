@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
@@ -10,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -26,10 +27,11 @@ import com.scalableminds.webknossos.datastore.services.{
   DataSourceRepository,
   DataSourceService,
   DataStoreAccessTokenService,
+  DatasetCache,
   UserAccessRequest
 }
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, Result}
 
 import scala.concurrent.ExecutionContext
 
@@ -45,7 +47,8 @@ class LegacyController @Inject()(
     binaryDataController: BinaryDataController,
     zarrStreamingController: ZarrStreamingController,
     dataSourceController: DataSourceController,
-    dataSourceService: DataSourceService
+    dataSourceService: DataSourceService,
+    datasetCache: DatasetCache
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
@@ -453,30 +456,45 @@ class LegacyController @Inject()(
 
   def reloadDatasourceV9(organizationId: String,
                          datasetDirectoryName: String,
-                         layerName: Option[String]): Action[AnyContent] =
+                         layerName: Option[String]): Action[AnyContent] = {
+    def loadFromDisk(): Fox[Result] = {
+      // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
+      val dataSource = dataSourceService.dataSourceFromDir(
+        dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
+        organizationId)
+      dataSource match {
+        case GenericDataSource(_, _, _, _) =>
+          for {
+            _ <- dataSourceRepository.updateDataSource(dataSource)
+          } yield Ok(Json.toJson(dataSource))
+        case UnusableDataSource(_, status, _, _) =>
+          Fox.failure(s"Dataset not found in DB or in directory: ${status}, cannot reload.") ~> NOT_FOUND
+      }
+    }
+
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
         for {
-          datasetIdOpt <- Fox.fromFuture(
+          datasetIdOpt: Option[ObjectId] <- Fox.fromFuture(
             remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).toFutureOption)
           result <- datasetIdOpt match {
             case Some(datasetId) =>
-              Fox.fromFuture(dataSourceController.reload(organizationId, datasetId, layerName)(request))
+              // Dataset is present in DB
+              for {
+                dataSourceOpt: Option[DataSource] <- Fox.fromFuture(datasetCache.getById(datasetId).toFutureOption)
+                // The dataset may be unusable (in which case dataSourceOpt will be None)
+                r <- dataSourceOpt match {
+                  case Some(_) =>
+                    Fox.fromFuture(dataSourceController.reload(organizationId, datasetId, layerName)(request))
+                  // Load from disk if the dataset is not usable in the DB
+                  case None => loadFromDisk()
+                }
+              } yield r
             case None =>
-              // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
-              val dataSource = dataSourceService.dataSourceFromDir(
-                dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
-                organizationId)
-              dataSource match {
-                case GenericDataSource(_, _, _, _) =>
-                  for {
-                    _ <- dataSourceRepository.updateDataSource(dataSource)
-                  } yield Ok(Json.toJson(dataSource))
-                case UnusableDataSource(_, status, _, _) =>
-                  Fox.failure(s"Dataset not found in DB or in directory: ${status}, cannot reload.") ~> NOT_FOUND
-              }
+              loadFromDisk()
           }
         } yield result
       }
     }
+  }
 }

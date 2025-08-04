@@ -13,8 +13,8 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike, InboxDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveAdditionalInformation,
@@ -225,10 +225,12 @@ class DSRemoteWebknossosClient @Inject()(
           .getWithJsonResponse[DataVaultCredential]
     )
 
-  def getDataset(datasetId: String): Fox[GenericDataSource[DataLayer]] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId")
-      .addQueryString("key" -> dataStoreKey)
-      .getWithJsonResponse[GenericDataSource[DataLayer]] ?~> "Failed to get data source from remote webknossos"
+  def getDataset(datasetId: ObjectId): Fox[InboxDataSource] =
+    for {
+      inboxDataSource <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId")
+        .addQueryString("key" -> dataStoreKey)
+        .getWithJsonResponse[InboxDataSource] ?~> "Failed to get data source from remote webknossos"
+    } yield inboxDataSource
 
   private lazy val datasetIdCache: AlfuCache[(String, String), ObjectId] =
     AlfuCache(timeToLive = 5 minutes, timeToIdle = 5 minutes)

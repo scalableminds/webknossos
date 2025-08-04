@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters
 }
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
@@ -408,7 +409,7 @@ class DataSourceController @Inject()(
       }
     }
 
-  private def clearCachesOfDataSource(dataSource: DataSource, layerName: Option[String]): Unit = {
+  private def clearCachesOfDataSource(dataSource: InboxDataSource, layerName: Option[String]): Unit = {
     val dataSourceId = dataSource.id
     val organizationId = dataSourceId.organizationId
     val datasetDirectoryName = dataSourceId.directoryName
@@ -432,8 +433,8 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-          _ = clearCachesOfDataSource(dataSource, layerName)
+          inboxDataSource <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
+          _ = clearCachesOfDataSource(inboxDataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -692,8 +693,8 @@ class DataSourceController @Inject()(
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =
     for {
-      dataSourceInDB <- datasetCache.getById(datasetId) ~> NOT_FOUND
-      dataSourceId = dataSourceInDB.id
+      inboxDataSourceInDB <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
+      dataSourceId = inboxDataSourceInDB.id
       dataSourceFromDir <- Fox.runIf(
         dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
         dataSourceService

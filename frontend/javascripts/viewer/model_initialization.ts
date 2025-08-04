@@ -279,7 +279,7 @@ export async function initialize(
 
   const defaultState = determineDefaultState(UrlManager.initialState, userState, serverTracings);
   // Don't override zoom when swapping the task
-  applyState(defaultState, !initialFetch);
+  applyState(defaultState, !initialFetch, dataset);
 
   if (initialFetch) {
     setInitialTool();
@@ -780,8 +780,11 @@ function determineDefaultState(
   };
 }
 
-export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
-  console.log("apply urlState", state); //TODO_C remove
+export function applyState(
+  state: PartialUrlManagerState,
+  ignoreZoom: boolean = false,
+  dataset?: APIDataset,
+) {
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.
@@ -808,10 +811,18 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
     Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
   }
 
-  if (state.nativelyRenderedLayerName != null) {
-    Store.dispatch(
-      updateDatasetSettingAction("nativelyRenderedLayerName", state.nativelyRenderedLayerName),
-    );
+  if ("nativelyRenderedLayerName" in state) {
+    const isNativelyRenderedNamePresent =
+      state.nativelyRenderedLayerName === null ||
+      getIsNativelyRenderedNamePresent(dataset, state.nativelyRenderedLayerName);
+    if (isNativelyRenderedNamePresent) {
+      Store.dispatch(
+        updateDatasetSettingAction(
+          "nativelyRenderedLayerName",
+          state.nativelyRenderedLayerName || null,
+        ),
+      );
+    }
   }
 }
 
@@ -964,6 +975,21 @@ function enforcePricingRestrictionsOnUserConfiguration(
   return userConfiguration;
 }
 
+const getIsNativelyRenderedNamePresent = (
+  dataset: APIDataset | null | undefined,
+  nativelyRenderedLayerName: string | null | undefined,
+  maybeAnnotation?: APIAnnotation | null,
+) => {
+  if (dataset == null) return false;
+  return (
+    dataset.dataSource.dataLayers.some(
+      (layer) =>
+        layer.name === nativelyRenderedLayerName ||
+        (layer.category === "segmentation" && layer.fallbackLayer === nativelyRenderedLayerName),
+    ) || maybeAnnotation?.annotationLayers.some((layer) => layer.name === nativelyRenderedLayerName)
+  );
+};
+
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
   dataset: StoreDataset,
@@ -981,16 +1007,11 @@ function applyAnnotationSpecificViewConfiguration(
     _.cloneDeep(originalDatasetSettings);
 
   if (originalDatasetSettings.nativelyRenderedLayerName) {
-    const isNativelyRenderedNamePresent =
-      dataset.dataSource.dataLayers.some(
-        (layer) =>
-          layer.name === originalDatasetSettings.nativelyRenderedLayerName ||
-          (layer.category === "segmentation" &&
-            layer.fallbackLayer === originalDatasetSettings.nativelyRenderedLayerName),
-      ) ||
-      annotation?.annotationLayers.some(
-        (layer) => layer.name === originalDatasetSettings.nativelyRenderedLayerName,
-      );
+    const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
+      dataset,
+      originalDatasetSettings.nativelyRenderedLayerName,
+      annotation,
+    );
     if (!isNativelyRenderedNamePresent) {
       initialDatasetSettings.nativelyRenderedLayerName = null;
     }

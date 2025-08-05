@@ -267,6 +267,7 @@ function CreateAnimationModal(props: Props) {
           return {
             layerName: fullLayerName,
             tracingId: layer.tracingId || null,
+            annotationId: state.annotation?.annotationId || null,
             adhocMag,
             color: segmentColorRGBA,
             ...meshInfo,

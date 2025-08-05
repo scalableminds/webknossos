@@ -1182,7 +1182,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
-    AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
+    AdditionalAxis(row.name, Seq(row.lowerbound, row.upperbound), row.index)
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {

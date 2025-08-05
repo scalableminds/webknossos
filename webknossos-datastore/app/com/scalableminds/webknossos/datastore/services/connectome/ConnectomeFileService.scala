@@ -2,10 +2,7 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -13,13 +10,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -82,9 +76,7 @@ object ConnectomeFileNameWithMappingName {
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
-class ConnectomeFileService @Inject()(config: DataStoreConfig,
-                                      remoteSourceDescriptorService: RemoteSourceDescriptorService,
-                                      hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
+class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
                                       zarrConnectomeFileService: ZarrConnectomeFileService)
     extends FoxImplicits
     with LazyLogging {

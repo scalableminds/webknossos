@@ -3,7 +3,8 @@
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
-# version log:updateDatasetV8
+# version log
+ # changed in v10: Datasets are accessed by their id, not their name and organization id. This leads to changes to the datastore routes.
  # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a dataset id instead of a name and organization id tuple.
    # Requests to the TracingStore and DatasStore need to address a dataset based on its directoryName and organization id.
  # changed in v8: Datasets' name was renamed to id and the displayName is now named name.
@@ -14,6 +15,7 @@
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
 
+->       /v10/                                                                webknossos.latest.Routes
 ->       /v9/                                                                 webknossos.latest.Routes
 
 # v8: support changes to v9

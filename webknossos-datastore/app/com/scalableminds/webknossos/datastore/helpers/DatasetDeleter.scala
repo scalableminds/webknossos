@@ -1,4 +1,5 @@
 package com.scalableminds.webknossos.datastore.helpers
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
@@ -21,10 +22,20 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
   def dataBaseDir: Path
 
-  def deleteOnDisk(organizationId: String,
-                   datasetName: String,
-                   isInConversion: Boolean = false,
-                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
+  def existsOnDisk(organizationId: String, datasetDirectoryName: String, isInConversion: Boolean = false): Boolean = {
+    val dataSourcePath =
+      if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetDirectoryName)
+      else dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
+
+    Files.exists(dataSourcePath)
+  }
+
+  def deleteOnDisk(
+      organizationId: String,
+      datasetName: String,
+      datasetId: Option[ObjectId], // Is only set for datasets that are already registered in WK. In this case, we query WK using this id for symlink paths and move them.
+      isInConversion: Boolean = false,
+      reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     @tailrec
     def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
       try {
@@ -63,7 +74,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
       else dataBaseDir.resolve(organizationId).resolve(datasetName)
 
     for {
-      _ <- moveSymlinks(organizationId, datasetName) ?~> "Failed to remake symlinks"
+      _ <- Fox.runOptional(datasetId)(d => moveSymlinks(organizationId, datasetName, d)) ?~> "Failed to remake symlinks"
       _ <- moveToTrash(organizationId, datasetName, dataSourcePath, reason)
     } yield ()
   }
@@ -72,10 +83,11 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
 
   // Handle references to layers and mags that are deleted
 
-  private def moveSymlinks(organizationId: String, datasetName: String)(implicit ec: ExecutionContext) =
+  private def moveSymlinks(organizationId: String, datasetName: String, datasetId: ObjectId)(
+      implicit ec: ExecutionContext) =
     for {
       dataSourceId <- Fox.successful(DataSourceId(datasetName, organizationId))
-      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(dataSourceId)
+      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(datasetId)
       exceptionBoxes = layersAndLinkedMags.map(layerMagLinkInfo =>
         handleLayerSymlinks(dataSourceId, layerMagLinkInfo.layerName, layerMagLinkInfo.magLinkInfos.toList))
       _ <- Fox.assertNoFailure(exceptionBoxes) ?~> "Failed to move symlinks"

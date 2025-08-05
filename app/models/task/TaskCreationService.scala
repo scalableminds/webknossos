@@ -181,7 +181,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
             editPosition = Some(params.editPosition),
             editRotation = Some(params.editRotation),
             magRestrictions = magRestrictions,
-            dataSource = dataSource
+            dataSource = dataSource,
+            datasetId = params.datasetId
           )
         case None =>
           annotationService
@@ -198,7 +199,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                                    newVolumeTracingId,
                                                    _,
                                                    magRestrictions = magRestrictions,
-                                                   dataSource = dataSource))
+                                                   dataSource = dataSource,
+                                                   datasetId = params.datasetId))
       }
     } yield newVolumeTracingId
 
@@ -486,7 +488,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                                              tracing,
                                                              initialFile,
                                                              magRestrictions = taskType.settings.magRestrictions,
-                                                             dataSource)
+                                                             dataSource,
+                                                             params.datasetId)
         } yield saveResult
       case f: Failure => f.toFox
       case _          => Fox.empty

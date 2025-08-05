@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{
   DSFullMeshService,
@@ -20,7 +20,7 @@ class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
     fullMeshService: DSFullMeshService,
-    dataSourceRepository: DataSourceRepository,
+    datasetCache: DatasetCache,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
     val binaryDataServiceHolder: BinaryDataServiceHolder
@@ -30,21 +30,17 @@ class DSMeshController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def listMeshFiles(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
+  def listMeshFiles(datasetId: ObjectId, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileInfos <- meshFileService.listMeshFiles(dataSource.id, dataLayer)
         } yield Ok(Json.toJson(meshFileInfos))
       }
     }
 
-  def listMeshChunksForSegment(organizationId: String,
-                               datasetDirectoryName: String,
+  def listMeshChunksForSegment(datasetId: ObjectId,
                                dataLayerName: String,
                                /* If targetMappingName is set, assume that meshFile contains meshes for
                                             the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
@@ -55,12 +51,9 @@ class DSMeshController @Inject()(
                                targetMappingName: Option[String],
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
           mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
           segmentIds: Seq[Long] <- segmentIdsForAgglomerateIdIfNeeded(
@@ -77,16 +70,11 @@ class DSMeshController @Inject()(
       }
     }
 
-  def readMeshChunk(organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String): Action[MeshChunkDataRequestList] =
+  def readMeshChunk(datasetId: ObjectId, dataLayerName: String): Action[MeshChunkDataRequestList] =
     Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
           (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> "mesh.file.loadChunk.failed"
         } yield {
@@ -97,17 +85,12 @@ class DSMeshController @Inject()(
       }
     }
 
-  def loadFullMeshStl(organizationId: String,
-                      datasetDirectoryName: String,
-                      dataLayerName: String): Action[FullMeshRequest] =
+  def loadFullMeshStl(datasetId: ObjectId, dataLayerName: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          data: Array[Byte] <- fullMeshService.loadFor(organizationId,
-                                                       datasetDirectoryName,
-                                                       dataLayerName,
-                                                       request.body) ?~> "mesh.file.loadChunk.failed"
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, request.body) ?~> "mesh.file.loadChunk.failed"
 
         } yield Ok(data)
       }

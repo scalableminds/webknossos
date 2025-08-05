@@ -1467,7 +1467,7 @@ export function getEditableMappingInfo(
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
   mappingName: string,
   segmentId: number,
@@ -1478,9 +1478,7 @@ export function getPositionForSegmentInAgglomerate(
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
-        dataSourceId.directoryName
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
+      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });

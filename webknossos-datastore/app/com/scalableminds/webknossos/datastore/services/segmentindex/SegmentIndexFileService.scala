@@ -3,10 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -23,27 +20,20 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import com.scalableminds.webknossos.datastore.services.{ArrayArtifactHashing, BinaryDataServiceHolder}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.services.BinaryDataServiceHolder
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class SegmentIndexFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
-class SegmentIndexFileService @Inject()(config: DataStoreConfig,
-                                        hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
+class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
                                         zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
-                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         agglomerateService: AgglomerateService,
                                         binaryDataServiceHolder: BinaryDataServiceHolder)
     extends FoxImplicits
-    with ArrayArtifactHashing
     with SegmentStatistics {
-  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
-  private val localSegmentIndexDir = "segmentIndex"
-  private val hdf5SegmentIndexFileExtension = "hdf5"
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
@@ -53,42 +43,18 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   def lookUpSegmentIndexFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit ec: ExecutionContext): Fox[SegmentIndexFileKey] =
     segmentIndexFileKeyCache.getOrLoad((dataSourceId, dataLayer.name),
-                                       _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer))
+                                       _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer).toFox)
 
-  private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit ec: ExecutionContext): Fox[SegmentIndexFileKey] = {
-    val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments.flatMap(_.segmentIndex)
-    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-    val localAttachment: Option[LayerAttachment] = findLocalSegmentIndexFile(localDatasetDir, dataLayer).toOption
+  private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId,
+                                            dataLayer: DataLayer): Option[SegmentIndexFileKey] =
     for {
-      registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
-        attachment.copy(
-          path =
-            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
-      }).toFox
-      selectedAttachment <- registeredAttachmentNormalized.orElse(localAttachment).toFox ?~> "segmentIndexFile.notFound"
+      attachment <- dataLayer.attachments.flatMap(_.segmentIndex)
     } yield
       SegmentIndexFileKey(
         dataSourceId,
         dataLayer.name,
-        selectedAttachment
+        attachment
       )
-  }
-
-  private def findLocalSegmentIndexFile(localDatasetDir: Path, dataLayer: DataLayer): Box[LayerAttachment] = {
-    val segmentIndexDir = localDatasetDir.resolve(dataLayer.name).resolve(this.localSegmentIndexDir)
-    for {
-      files <- PathUtils.listFiles(segmentIndexDir,
-                                   silent = true,
-                                   PathUtils.fileExtensionFilter(hdf5SegmentIndexFileExtension))
-      file <- Box(files.headOption)
-    } yield
-      LayerAttachment(
-        file.getFileName.toString,
-        file.toUri,
-        LayerAttachmentDataformat.hdf5
-      )
-  }
 
   /**
     * Read the segment index file and return the bucket positions for the given segment id.

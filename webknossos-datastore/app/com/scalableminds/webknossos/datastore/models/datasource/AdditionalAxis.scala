@@ -78,7 +78,7 @@ object AdditionalAxis {
     }
     val additionalAxes = additionalAxesMap.iterator.map {
       case (name, (index, lowerBound, upperBound)) =>
-        AdditionalAxis(name, Array(lowerBound, upperBound), index)
+        AdditionalAxis(name, Seq(lowerBound, upperBound), index)
     }.toSeq
     if (additionalAxes.isEmpty) {
       None

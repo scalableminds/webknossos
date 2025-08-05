@@ -408,7 +408,6 @@ class UrlManager {
 
   buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
-    console.log("urlState", urlState); //TODO_C remove
     return encodeUrlHash(JSON.stringify(urlState));
   }
 

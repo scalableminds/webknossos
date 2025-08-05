@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 136, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 137, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 CREATE TABLE webknossos.webauthnCredentials(
   _id TEXT PRIMARY KEY,
@@ -23,6 +23,6 @@ CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthn
 ALTER TABLE webknossos.webauthnCredentials
   ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 137;
+UPDATE webknossos.releaseInformation SET schemaVersion = 138;
 
 COMMIT TRANSACTION;

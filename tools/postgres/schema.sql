@@ -475,9 +475,9 @@ CREATE TABLE webknossos.webauthnCredentials(
   serializedAttestationStatement JSONB NOT NULL,
   serializedAttestedCredential BYTEA NOT NULL,
   serializedExtensions JSONB NOT NULL,
-  signatureCount INTEGER NOT NULL,
+  signatureCount INTEGER NOT NULL DEFAULT 0,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (_id, credentialId)
+  UNIQUE (_multiUser, credentialId)
 );
 
 

@@ -683,6 +683,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction): Saga<void> 
 
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
+  yield* put(resetMultiCutToolPartitionsAction());
 
   console.log("start updating the mapping after a min-cut");
 

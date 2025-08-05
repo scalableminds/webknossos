@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Box, Failure, Full}
 import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive
-case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
+case class AdditionalAxis(name: String, bounds: Seq[Int], index: Int) {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1
@@ -18,10 +18,10 @@ case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
     val matchingCoordinate = additionalCoordinates.find(ac => ac.name == name)
     matchingCoordinate match {
       case Some(ac) =>
-        AdditionalAxis(name, Array(ac.value, ac.value + 1), index)
+        AdditionalAxis(name, Seq(ac.value, ac.value + 1), index)
       case None =>
         // Use the lower bound as fallback
-        AdditionalAxis(name, Array(lowerBound, lowerBound + 1), index)
+        AdditionalAxis(name, Seq(lowerBound, lowerBound + 1), index)
     }
   }
 }
@@ -42,7 +42,7 @@ object AdditionalAxis {
 
   def fromProtos(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
     additionalAxisProtos.map(
-      p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
+      p => AdditionalAxis(p.name, Seq(p.bounds.x, p.bounds.y), p.index)
     )
 
   def fromProtosAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {

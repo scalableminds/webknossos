@@ -1,5 +1,6 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
+->  /v10/ tracingstore.latest.Routes
 ->  /v9/  tracingstore.latest.Routes
 ->  /v8/  tracingstore.latest.Routes
 ->  /v7/  tracingstore.latest.Routes

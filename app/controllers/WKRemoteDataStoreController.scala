@@ -7,9 +7,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -242,13 +242,38 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def getPaths(name: String, key: String, organizationId: String, directoryName: String): Action[AnyContent] =
+  def deleteVirtualDataset(name: String, key: String): Action[ObjectId] =
+    Action.async(validateJson[ObjectId]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(request.body)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
+          _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
+        } yield Ok
+      }
+    }
+
+  def findDatasetId(name: String,
+                    key: String,
+                    datasetDirectoryName: String,
+                    organizationId: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
-          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(directoryName, organization._id)(
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
             GlobalAccessContext)
+        } yield Ok(Json.toJson(dataset._id))
+      }
+    }
+
+  def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
           magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
@@ -268,6 +293,53 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(dataSource))
       }
 
+    }
+
+  // Register a datasource from the datastore as a dataset in the database.
+  // This is called when adding remote virtual datasets (that should only exist in the database)
+  // by the data store after exploration.
+  def registerDataSource(name: String,
+                         key: String,
+                         organizationId: String,
+                         directoryName: String,
+                         token: String): Action[DataSourceRegistrationInfo] =
+    Action.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          user <- bearerTokenService.userForToken(token)
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationId) ~> NOT_FOUND
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          dataset <- datasetService.createVirtualDataset(
+            directoryName,
+            organizationId,
+            dataStore,
+            request.body.dataSource,
+            request.body.folderId,
+            user
+          )
+        } yield Ok(dataset._id.toString)
+      }
+    }
+
+  def updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          abstractDataSource = request.body.copy(dataLayers = request.body.dataLayers.map(AbstractDataLayer.from))
+          oldDataSource <- datasetService.fullDataSourceFor(dataset)
+          oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
+          newPaths = request.body.allExplicitPaths
+          _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
+          _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
+                                                      name,
+                                                      abstractDataSource.hashCode(),
+                                                      abstractDataSource,
+                                                      isUsable = true)(GlobalAccessContext)
+        } yield Ok
+      }
     }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {

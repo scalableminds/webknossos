@@ -182,10 +182,19 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         isAllowed <- datasetService.isEditableBy(dataset, Some(user))
       } yield UserAccessAnswer(isAllowed)
 
+    def tryDelete: Fox[UserAccessAnswer] =
+      for {
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        datasetId <- ObjectId.fromString(id)
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        user <- userBox.toFox ?~> "auth.token.noUser"
+      } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
+
     mode match {
-      case AccessMode.read  => tryRead
-      case AccessMode.write => tryWrite
-      case _                => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
+      case AccessMode.read   => tryRead
+      case AccessMode.write  => tryWrite
+      case AccessMode.delete => tryDelete
+      case _                 => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
     }
   }
 

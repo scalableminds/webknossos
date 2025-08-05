@@ -2,7 +2,18 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  ByteType,
+  FloatType,
+  type PixelFormat,
+  type PixelFormatGPU,
+  RGBAFormat,
+  RGIntegerFormat,
+  ShortType,
+  type TextureDataType,
+  UnsignedByteType,
+  UnsignedShortType,
+} from "three";
 import type { ElementClass } from "types/api_types";
 import constants from "viewer/constants";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
@@ -353,10 +364,10 @@ export const getSupportedValueRangeForElementClass = _.memoize(
 );
 
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
-  textureType: THREE.TextureDataType;
+  textureType: TextureDataType;
   TypedArrayClass: TypedArrayConstructor;
-  pixelFormat: THREE.PixelFormat;
-  internalFormat: THREE.PixelFormatGPU | undefined;
+  pixelFormat: PixelFormat;
+  internalFormat: PixelFormatGPU | undefined;
   glslPrefix: "" | "u" | "i";
   isSigned: boolean;
   packingDegree: number;
@@ -367,9 +378,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   switch (elementClass) {
     case "int8":
       return {
-        textureType: THREE.ByteType,
+        textureType: ByteType,
         TypedArrayClass: Int8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: "RGBA8_SNORM",
         glslPrefix: "",
         isSigned: true,
@@ -377,9 +388,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
       };
     case "uint8":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -388,9 +399,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
     case "uint24":
       // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -399,9 +410,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "uint16":
       return {
-        textureType: THREE.UnsignedShortType,
+        textureType: UnsignedShortType,
         TypedArrayClass: Uint16Array,
-        pixelFormat: THREE.RGIntegerFormat,
+        pixelFormat: RGIntegerFormat,
         internalFormat: "RG16UI",
         glslPrefix: "u",
         isSigned: false,
@@ -410,9 +421,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "int16":
       return {
-        textureType: THREE.ShortType,
+        textureType: ShortType,
         TypedArrayClass: Int16Array,
-        pixelFormat: THREE.RGIntegerFormat,
+        pixelFormat: RGIntegerFormat,
         internalFormat: "RG16I",
         glslPrefix: "i",
         isSigned: true,
@@ -421,9 +432,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "uint32":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -432,9 +443,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "int32":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -443,9 +454,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "uint64":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,
@@ -454,9 +465,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "int64":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -465,9 +476,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     case "float":
       return {
-        textureType: THREE.FloatType,
+        textureType: FloatType,
         TypedArrayClass: Float32Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -477,9 +488,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
     // We do not fully support double
     case "double":
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: true,
@@ -488,9 +499,9 @@ export function getDtypeConfigForElementClass(elementClass: ElementClass): {
 
     default:
       return {
-        textureType: THREE.UnsignedByteType,
+        textureType: UnsignedByteType,
         TypedArrayClass: Uint8Array,
-        pixelFormat: THREE.RGBAFormat,
+        pixelFormat: RGBAFormat,
         internalFormat: undefined,
         glslPrefix: "",
         isSigned: false,

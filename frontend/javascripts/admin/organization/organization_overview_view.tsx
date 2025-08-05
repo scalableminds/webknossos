@@ -5,12 +5,12 @@ import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useEffect, useState } from "react";
+import { type Key, useEffect, useState } from "react";
 import type { APIPricingPlanStatus } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
-import { SettingsCard } from "../account/helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
 import {
   PlanAboutToExceedAlert,
   PlanExceededAlert,
@@ -119,11 +119,11 @@ export function OrganizationOverviewView() {
     </Tooltip>
   );
 
-  const orgaStats = [
+  const orgaStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "name",
       title: "Name",
-      value: (
+      content: (
         <Typography.Text
           editable={{
             onChange: setOrganizationName,
@@ -136,13 +136,13 @@ export function OrganizationOverviewView() {
     {
       key: "owner",
       title: "Owner",
-      value: organization.ownerName,
+      content: organization.ownerName,
     },
     {
       key: "plan",
       title: "Current Plan",
-      value: organization.pricingPlan,
-      explanation: (
+      content: organization.pricingPlan,
+      tooltip: (
         <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
           Compare all plans
         </a>
@@ -151,20 +151,20 @@ export function OrganizationOverviewView() {
     {
       key: "users",
       title: "Users",
-      value: `${activeUsersCount} / ${maxUsersCountLabel}`,
+      content: `${activeUsersCount} / ${maxUsersCountLabel}`,
       action: upgradeUsersAction,
     },
     {
       key: "storage",
       title: "Storage",
-      value: `${usedStorageLabel} / ${includedStorageLabel}`,
+      content: `${usedStorageLabel} / ${includedStorageLabel}`,
       action: upgradeStorageAction,
     },
 
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
-      value:
+      content:
         organization.creditBalance != null
           ? formatCreditsString(organization.creditBalance)
           : "N/A",
@@ -185,9 +185,9 @@ export function OrganizationOverviewView() {
             <Col span={8} key={stat.key}>
               <SettingsCard
                 title={stat.title}
-                description={stat.value}
+                content={stat.content}
                 action={stat.action}
-                explanation={stat.explanation}
+                tooltip={stat.tooltip}
               />
             </Col>
           ))}

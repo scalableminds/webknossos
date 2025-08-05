@@ -1,11 +1,11 @@
-import type * as THREE from "three";
+import type { BufferGeometry } from "three";
 import type { MeshBVH } from "three-mesh-bvh";
 // @ts-ignore
 import { GenerateMeshBVHWorker } from "three-mesh-bvh/src/workers/GenerateMeshBVHWorker";
 
 const bvhWorker = new GenerateMeshBVHWorker();
 const bvhQueue: Array<{
-  geometry: THREE.BufferGeometry;
+  geometry: BufferGeometry;
   resolve: (bvh: MeshBVH) => void;
   reject: (error: unknown) => void;
 }> = [];
@@ -32,7 +32,7 @@ async function processBvhQueue() {
   }
 }
 
-export async function computeBvhAsync(geometry: THREE.BufferGeometry): Promise<MeshBVH> {
+export async function computeBvhAsync(geometry: BufferGeometry): Promise<MeshBVH> {
   return new Promise((resolve, reject) => {
     bvhQueue.push({ geometry, resolve, reject });
     processBvhQueue();

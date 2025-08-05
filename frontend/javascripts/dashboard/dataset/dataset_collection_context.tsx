@@ -192,7 +192,7 @@ export default function DatasetCollectionContextProvider({
   const isLoading =
     (globalSearchQuery
       ? datasetSearchQuery.isFetching
-      : folderHierarchyQuery.isLoading ||
+      : folderHierarchyQuery.isPending ||
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 

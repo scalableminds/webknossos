@@ -4,7 +4,23 @@ import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 
-import * as THREE from "three";
+import {
+  BoxGeometry,
+  BufferGeometry,
+  EdgesGeometry,
+  Euler,
+  Group,
+  Line,
+  LineBasicMaterial,
+  LineSegments,
+  Matrix4,
+  Mesh,
+  MeshBasicMaterial,
+  type Object3D,
+  Scene,
+  Vector3 as ThreeVector3,
+  type WebGLRenderer,
+} from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
@@ -60,9 +76,9 @@ import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
 
 // Add the extension functions
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
+BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+Mesh.prototype.raycast = acceleratedRaycast;
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
@@ -76,11 +92,11 @@ class SceneController {
   isPlaneVisible: OrthoViewMap<boolean>;
   clippingDistanceInUnit: number;
   datasetBoundingBox!: Cube;
-  userBoundingBoxGroup!: THREE.Group;
-  layerBoundingBoxGroup!: THREE.Group;
+  userBoundingBoxGroup!: Group;
+  layerBoundingBoxGroup!: Group;
   userBoundingBoxes!: Array<Cube>;
   layerBoundingBoxes!: { [layerName: string]: Cube };
-  annotationToolsGeometryGroup!: THREE.Group;
+  annotationToolsGeometryGroup!: Group;
   highlightedBBoxId: number | null | undefined;
   taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
   contour!: ContourGeometry;
@@ -88,17 +104,17 @@ class SceneController {
   lineMeasurementGeometry!: LineMeasurementGeometry;
   areaMeasurementGeometry!: ContourGeometry;
   planes!: OrthoViewWithoutTDMap<Plane>;
-  rootNode!: THREE.Group;
-  renderer!: THREE.WebGLRenderer;
-  scene!: THREE.Scene;
-  rootGroup!: THREE.Group;
+  rootNode!: Group;
+  renderer!: WebGLRenderer;
+  scene!: Scene;
+  rootGroup!: Group;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
-  splitBoundaryMesh: THREE.Mesh | null = null;
+  splitBoundaryMesh: Mesh | null = null;
 
   // Created as instance properties to avoid creating objects in each update call.
-  private rotatedPositionOffsetVector = new THREE.Vector3();
-  private flycamRotationEuler = new THREE.Euler();
+  private rotatedPositionOffsetVector = new ThreeVector3();
+  private flycamRotationEuler = new Euler();
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -118,9 +134,9 @@ class SceneController {
     this.renderer = getRenderer();
     this.createMeshes();
     this.bindToEvents();
-    this.scene = new THREE.Scene();
+    this.scene = new Scene();
     this.highlightedBBoxId = null;
-    this.rootGroup = new THREE.Group();
+    this.rootGroup = new Group();
     this.scene.add(
       this.rootGroup.add(
         this.rootNode,
@@ -135,7 +151,7 @@ class SceneController {
     // scene.scale does not have an effect.
     // The dimension(s) with the highest mag will not be distorted.
     this.rootGroup.scale.copy(
-      new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+      new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
     );
     this.setupDebuggingMethods();
   }
@@ -148,20 +164,20 @@ class SceneController {
       position: Vector3,
       zoomStep: number,
       mag: Vector3,
-      optColor?: string,
+      optColor?: string | null | undefined,
     ) => {
       const bucketSize = [
         constants.BUCKET_WIDTH * mag[0],
         constants.BUCKET_WIDTH * mag[1],
         constants.BUCKET_WIDTH * mag[2],
       ];
-      const boxGeometry = new THREE.BoxGeometry(...bucketSize);
-      const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
-      const material = new THREE.LineBasicMaterial({
+      const boxGeometry = new BoxGeometry(...bucketSize);
+      const edgesGeometry = new EdgesGeometry(boxGeometry);
+      const material = new LineBasicMaterial({
         color: optColor || (zoomStep === 0 ? 0xff00ff : 0x00ffff),
         linewidth: 1,
       });
-      const cube = new THREE.LineSegments(edgesGeometry, material);
+      const cube = new LineSegments(edgesGeometry, material);
       cube.position.x = position[0] + bucketSize[0] / 2;
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;
@@ -174,12 +190,12 @@ class SceneController {
       // Shrink voxels a bit so that it's easier to identify individual voxels.
       const cubeLength = _cubeLength.map((el) => el * 0.9);
 
-      const boxGeometry = new THREE.BoxGeometry(...cubeLength);
-      const material = new THREE.MeshBasicMaterial({
+      const boxGeometry = new BoxGeometry(...cubeLength);
+      const material = new MeshBasicMaterial({
         color: optColor || 0xff00ff,
         opacity: 0.5,
       });
-      const cube = new THREE.Mesh(boxGeometry, material);
+      const cube = new Mesh(boxGeometry, material);
       cube.position.x = position[0] + cubeLength[0] / 2;
       cube.position.y = position[1] + cubeLength[1] / 2;
       cube.position.z = position[2] + cubeLength[2] / 2;
@@ -187,19 +203,19 @@ class SceneController {
       return cube;
     };
 
-    let renderedLines: THREE.Line[] = [];
+    let renderedLines: Line[] = [];
 
     // Utility function for visual debugging
     // @ts-ignore
     window.addLine = (a: Vector3, b: Vector3) => {
-      const material = new THREE.LineBasicMaterial({
+      const material = new LineBasicMaterial({
         color: 0x0000ff,
       });
       const points = [];
-      points.push(new THREE.Vector3(...a));
-      points.push(new THREE.Vector3(...b));
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const line = new THREE.Line(geometry, material);
+      points.push(new ThreeVector3(...a));
+      points.push(new ThreeVector3(...b));
+      const geometry = new BufferGeometry().setFromPoints(points);
+      const line = new Line(geometry, material);
       this.rootNode.add(line);
       renderedLines.push(line);
     };
@@ -215,14 +231,14 @@ class SceneController {
     };
 
     // @ts-ignore
-    window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
+    window.removeBucketMesh = (mesh: LineSegments) => this.rootNode.remove(mesh);
   }
 
   createMeshes(): void {
     this.userBoundingBoxes = [];
-    this.userBoundingBoxGroup = new THREE.Group();
-    this.layerBoundingBoxGroup = new THREE.Group();
-    this.annotationToolsGeometryGroup = new THREE.Group();
+    this.userBoundingBoxGroup = new Group();
+    this.layerBoundingBoxGroup = new Group();
+    this.annotationToolsGeometryGroup = new Group();
     const state = Store.getState();
     // Cubes
     const { min, max } = getDatasetBoundingBox(state.dataset);
@@ -248,19 +264,19 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeGroup = new THREE.Group();
+    const planeGroup = new Group();
     for (const plane of _.values(this.planes)) {
       planeGroup.add(...plane.getMeshes());
     }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
     planeGroup.scale.copy(
-      new THREE.Vector3(1, 1, 1).divide(
-        new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+      new ThreeVector3(1, 1, 1).divide(
+        new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
       ),
     );
 
-    this.rootNode = new THREE.Group().add(
+    this.rootNode = new Group().add(
       this.userBoundingBoxGroup,
       this.layerBoundingBoxGroup,
       this.annotationToolsGeometryGroup.add(
@@ -285,8 +301,8 @@ class SceneController {
       return () => {};
     }
 
-    let splitBoundaryMesh: THREE.Mesh | null = null;
-    let splines: THREE.Object3D[] = [];
+    let splitBoundaryMesh: Mesh | null = null;
+    let splines: Object3D[] = [];
     try {
       const objects = computeSplitBoundaryMeshWithSplines(points);
       splitBoundaryMesh = objects.splitBoundaryMesh;
@@ -297,7 +313,7 @@ class SceneController {
       return () => {};
     }
 
-    const surfaceGroup = new THREE.Group();
+    const surfaceGroup = new Group();
     if (splitBoundaryMesh != null) {
       surfaceGroup.add(splitBoundaryMesh);
     }
@@ -514,12 +530,12 @@ class SceneController {
     app.vent.emit("rerender");
   }
 
-  getRootNode(): THREE.Object3D {
+  getRootNode(): Object3D {
     return this.rootNode;
   }
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
-    const newUserBoundingBoxGroup = new THREE.Group();
+    const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -540,9 +556,9 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  private applyTransformToGroup(transform: Transform, group: THREE.Group | CustomLOD) {
+  private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
     if (transform.affineMatrix) {
-      const matrix = new THREE.Matrix4();
+      const matrix = new Matrix4();
       // @ts-ignore
       matrix.set(...transform.affineMatrix);
       // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
@@ -600,7 +616,7 @@ class SceneController {
     const dataset = state.dataset;
     const layers = getDataLayers(dataset);
 
-    const newLayerBoundingBoxGroup = new THREE.Group();
+    const newLayerBoundingBoxGroup = new Group();
     this.layerBoundingBoxes = Object.fromEntries(
       layers.map((layer) => {
         const boundingBox = getLayerBoundingBox(dataset, layer.name);
@@ -619,7 +635,7 @@ class SceneController {
             state.datasetConfiguration.nativelyRenderedLayerName,
           )?.affineMatrix;
           if (transformMatrix) {
-            const matrix = new THREE.Matrix4();
+            const matrix = new Matrix4();
             // @ts-ignore
             matrix.set(...transformMatrix);
             mesh.applyMatrix4(matrix);
@@ -723,7 +739,7 @@ class SceneController {
       plane.destroy();
     }
 
-    this.rootNode = new THREE.Group();
+    this.rootNode = new Group();
   }
 
   bindToEvents(): void {

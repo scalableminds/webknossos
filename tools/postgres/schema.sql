@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(137);
 COMMIT TRANSACTION;
 
 
@@ -107,6 +107,7 @@ CREATE TABLE webknossos.datasets(
   name TEXT NOT NULL,
   isPublic BOOLEAN NOT NULL DEFAULT FALSE,
   isUsable BOOLEAN NOT NULL DEFAULT FALSE,
+  isVirtual BOOLEAN NOT NULL DEFAULT FALSE,
   directoryName TEXT NOT NULL,
   voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,
@@ -189,7 +190,6 @@ CREATE TABLE webknossos.dataset_mags(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   axisOrder JSONB CONSTRAINT axisOrder_requiredKeys CHECK (axisOrder ? 'x' AND axisOrder ? 'y'),
   channelIndex INT,
-  cubeLength INT,
   credentialId TEXT,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
@@ -459,6 +459,7 @@ CREATE TABLE webknossos.multiUsers(
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity TEXT CONSTRAINT _lastLoggedInIdentity_objectId CHECK (_lastLoggedInIdentity ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
+  emailChangeDate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );

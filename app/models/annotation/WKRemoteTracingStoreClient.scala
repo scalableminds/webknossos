@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import play.api.libs.json.{JsLookupResult, JsObject, JsResult}
+import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 

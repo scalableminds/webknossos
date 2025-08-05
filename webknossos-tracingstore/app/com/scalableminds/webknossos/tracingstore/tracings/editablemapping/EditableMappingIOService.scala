@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -18,7 +19,8 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   Zarr3ArrayHeader,
   Zarr3DataType
 }
-import com.scalableminds.webknossos.tracingstore.files.TempFileService
+import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
+import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
@@ -27,7 +29,7 @@ import java.nio.file.Path
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
-class EditableMappingIOService @Inject()(tempFileService: TempFileService) {
+class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) extends LazyLogging {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)
   private val ChunkSize: Int = 10000
@@ -37,7 +39,7 @@ class EditableMappingIOService @Inject()(tempFileService: TempFileService) {
   def editedMappingEdgesToZippedZarrTempFile(editedEdges: Seq[(Long, Long, Boolean)], tracingId: String)(
       implicit ec: ExecutionContext): Fox[Path] =
     for {
-      _ <- Fox.successful(())
+      before <- Instant.nowFox
       edgesZarrChunks: Iterator[Array[Byte]] = editedEdgesToZarrChunks(editedEdges)
       isAdditionZarrChunks: Iterator[Array[Byte]] = edgeIsAdditionToZarrChunks(editedEdges)
       edgesZarrChunksStream = edgesZarrChunks.zipWithIndex.map {
@@ -62,7 +64,7 @@ class EditableMappingIOService @Inject()(tempFileService: TempFileService) {
         dimension_names = Some(Array("edge", "srcDst"))
       )
       isAdditionZarrChunksStream = isAdditionZarrChunks.zipWithIndex.map {
-        case (chunk, index) => NamedFunctionStream.fromBytes(f"$arrayNameEdges/$index", chunk)
+        case (chunk, index) => NamedFunctionStream.fromBytes(f"$arrayNameEdgeIsAddition/$index", chunk)
       }
       isAdditionZarrHeader = Zarr3ArrayHeader(
         zarr_format = 3,
@@ -97,6 +99,7 @@ class EditableMappingIOService @Inject()(tempFileService: TempFileService) {
       tempFilePath = tempFileService.create(f"${tracingId}_editedMappingEdges")
       outputStream = new BufferedOutputStream(new FileOutputStream(new File(tempFilePath.toString)))
       _ <- ZipIO.zip(allStreams, outputStream, level = Deflater.BEST_SPEED)
+      _ = Instant.logSince(before, s"Exporting ${editedEdges.length} edited mapping edges to zipped zarr", logger)
     } yield tempFilePath
 
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
@@ -104,7 +107,7 @@ class EditableMappingIOService @Inject()(tempFileService: TempFileService) {
       val bytes = ByteBuffer.allocate(ChunkSize)
       edgeTupleChunk.foreach {
         case (_, _, isAddedEdge) =>
-          val boolAsByte: Byte = if (isAddedEdge) 0 else 1
+          val boolAsByte: Byte = if (isAddedEdge) 1 else 0
           bytes.put(boolAsByte)
       }
       compressor.compress(bytes.array)

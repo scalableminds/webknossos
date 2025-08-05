@@ -291,6 +291,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
           if (volumeLayer.editedMappingEdgesOpt.isDefined) {
             writer.writeAttribute("editedMappingEdgesLocation", volumeLayer.editedMappingEdgesZipName(index, isSingle))
           }
+          volumeLayer.baseMappingNameOpt.foreach {
+            writer.writeAttribute("editedMappingBaseMappingName", _)
+          }
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }

@@ -73,7 +73,8 @@ case class FetchedAnnotationLayer(tracingId: String,
                                   name: String,
                                   tracing: Either[SkeletonTracing, VolumeTracing],
                                   volumeDataOpt: Option[Array[Byte]] = None,
-                                  editedMappingEdgesOpt: Option[Array[Byte]] = None) {
+                                  editedMappingEdgesOpt: Option[Array[Byte]] = None,
+                                  baseMappingNameOpt: Option[String] = None) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
 
@@ -95,7 +96,8 @@ object FetchedAnnotationLayer {
       annotationLayer: AnnotationLayer,
       tracing: Either[SkeletonTracing, VolumeTracing],
       volumeDataOpt: Option[Array[Byte]] = None,
-      editedEdgesDataOpt: Option[Array[Byte]] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      editedEdgesDataOpt: Option[Array[Byte]] = None,
+      baseMappingNameOpt: Option[String] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
       _ <- Fox.fromBool(
         (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> "annotation.download.fetch.typeMismatch"
@@ -105,7 +107,8 @@ object FetchedAnnotationLayer {
         annotationLayer.name,
         tracing,
         volumeDataOpt,
-        editedEdgesDataOpt
+        editedEdgesDataOpt,
+        baseMappingNameOpt
       )
     }
 

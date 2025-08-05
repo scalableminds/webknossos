@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -45,7 +45,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSourceController @Inject()(
-    dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
     datasetCache: DatasetCache,
     accessTokenService: DataStoreAccessTokenService,
@@ -55,7 +54,6 @@ class DataSourceController @Inject()(
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
@@ -456,7 +454,7 @@ class DataSourceController @Inject()(
                 dataSourceId.directoryName,
                 Some(datasetId),
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
+              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
             } yield ()
           } else {
             dsRemoteWebknossosClient.deleteVirtualDataset(datasetId)

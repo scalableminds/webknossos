@@ -29,7 +29,6 @@ import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
-    dataSourceRepository: DataSourceRepository,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
@@ -85,7 +84,7 @@ class DataSourceService @Inject()(
           val foundInboxSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
           logFoundDatasources(foundInboxSources, verbose, selectedOrgaLabel)
           for {
-            _ <- dataSourceRepository.updateDataSources(foundInboxSources, organizationId)
+            _ <- remoteWebknossosClient.reportDataSources(foundInboxSources, organizationId)
             _ <- reportRealPaths(foundInboxSources)
           } yield ()
         case e =>
@@ -285,7 +284,6 @@ class DataSourceService @Inject()(
       _ <- Fox.runIf(expectExisting && preventNewPaths)(assertNoNewPaths(dataSourcePath, dataSource)) ?~> "dataSource.update.newExplicitPaths"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
-      _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
   }
 

@@ -26,6 +26,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect, getViewportScale } from "viewer/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
   moveTDViewByVectorWithoutTimeTrackingAction,
   moveTDViewXAction,
@@ -240,23 +241,32 @@ class TDController extends React.PureComponent<Props> {
 
         const unscaledPosition = V3.divide3(hitPosition, this.props.voxelSize.factor);
 
+        const state = Store.getState();
+        const isMultiCutToolActive = state.userConfiguration.isMultiSplitActive;
         if (event.shiftKey) {
-          Store.dispatch(setPositionAction(unscaledPosition));
+          if (isMultiCutToolActive && intersection.unmappedSegmentId != null) {
+            Store.dispatch(toggleSegmentInPartitionAction(intersection.unmappedSegmentId, 2));
+          } else {
+            Store.dispatch(setPositionAction(unscaledPosition));
+          }
         } else if (ctrlOrMetaPressed && intersection.meshId != null) {
-          const state = Store.getState();
-          const volumeTracing = getActiveSegmentationTracing(state);
-          const deselect =
-            volumeTracing?.activeUnmappedSegmentId != null &&
-            volumeTracing?.activeUnmappedSegmentId === intersection.unmappedSegmentId;
+          if (isMultiCutToolActive && intersection.unmappedSegmentId != null) {
+            Store.dispatch(toggleSegmentInPartitionAction(intersection.unmappedSegmentId, 1));
+          } else {
+            const volumeTracing = getActiveSegmentationTracing(state);
+            const deselect =
+              volumeTracing?.activeUnmappedSegmentId != null &&
+              volumeTracing?.activeUnmappedSegmentId === intersection.unmappedSegmentId;
 
-          Store.dispatch(
-            setActiveCellAction(
-              intersection.meshId,
-              undefined,
-              undefined,
-              deselect ? null : intersection.unmappedSegmentId,
-            ),
-          );
+            Store.dispatch(
+              setActiveCellAction(
+                intersection.meshId,
+                undefined,
+                undefined,
+                deselect ? null : intersection.unmappedSegmentId,
+              ),
+            );
+          }
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

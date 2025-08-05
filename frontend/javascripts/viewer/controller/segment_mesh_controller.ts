@@ -651,7 +651,7 @@ export default class SegmentMeshController {
     });
   };
 
-  updateMinCutPartitionHighlighting = (mincutPartitions: MinCutPartitions | null) => {
+  updateMinCutPartitionHighlighting = (minCutPartitions: MinCutPartitions | null) => {
     this.meshesLayerLODRootGroup.traverse((_obj) => {
       if (!("geometry" in _obj)) {
         return;
@@ -662,11 +662,11 @@ export default class SegmentMeshController {
       const vertexSegmentMapping = obj.geometry.vertexSegmentMapping;
 
       const highlightRanges: HighlightState = [];
-      if (vertexSegmentMapping && mincutPartitions) {
+      if (vertexSegmentMapping && minCutPartitions) {
         for (const partitionNumber of [1, 2]) {
           const partition = partitionNumber as 1 | 2;
           const partitionColor = PARTITION_COLORS[partition];
-          for (const segmentId of mincutPartitions[partition]) {
+          for (const segmentId of minCutPartitions[partition]) {
             const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);
             if (containsSegmentId) {
               const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(segmentId);

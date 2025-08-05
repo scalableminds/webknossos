@@ -360,11 +360,11 @@ class PlaneView {
             return null;
           }
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? storeState.localSegmentationData[segmentationTracing.tracingId].mincutPartitions
+            ? storeState.localSegmentationData[segmentationTracing.tracingId].minCutPartitions
             : null;
         },
-        (mincutPartitions) =>
-          segmentMeshController.updateMinCutPartitionHighlighting(mincutPartitions),
+        (minCutPartitions) =>
+          segmentMeshController.updateMinCutPartitionHighlighting(minCutPartitions),
         true,
       ),
     );

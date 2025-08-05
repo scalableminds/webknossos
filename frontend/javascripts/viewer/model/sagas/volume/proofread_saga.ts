@@ -39,17 +39,23 @@ import {
   dispatchMaybeFetchMeshFilesAsync,
   removeMeshAction,
 } from "viewer/model/actions/annotation_actions";
-import type {
-  MinCutAgglomerateWithPositionAction,
-  ProofreadAtPositionAction,
-  ProofreadMergeAction,
+import {
+  type MinCutAgglomerateWithPositionAction,
+  type MinCutPartitionsAction,
+  type ProofreadAtPositionAction,
+  type ProofreadMergeAction,
+  resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
-import { setMappingAction, setMappingNameAction } from "viewer/model/actions/settings_actions";
+import {
+  type UpdateUserSettingAction,
+  setMappingAction,
+  setMappingNameAction,
+} from "viewer/model/actions/settings_actions";
 import {
   type CreateNodeAction,
   type DeleteNodeAction,
@@ -112,6 +118,11 @@ export default function* proofreadRootSaga(): Saga<void> {
     "Proofreading in progress",
   );
   yield* takeEveryUnlessBusy(
+    "MIN_CUT_PARTITIONS",
+    runSagaAndCatchSoftError(performPartitionedMinCut),
+    "Proofreading in progress",
+  );
+  yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
     "Proofreading in progress",
@@ -121,6 +132,20 @@ export default function* proofreadRootSaga(): Saga<void> {
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
     runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
   );
+  yield* takeEvery("UPDATE_USER_SETTING", clearMinCutPartitionsOnMultiCutDeselect);
+}
+
+function* clearMinCutPartitionsOnMultiCutDeselect(
+  updateUSerSettingsAction: UpdateUserSettingAction,
+): Saga<void> {
+  if (updateUSerSettingsAction.propertyName === "isMultiSplitActive") {
+    const newIsMultiSplitActiveState = yield* select(
+      (state) => state.userConfiguration.isMultiSplitActive,
+    );
+    if (!newIsMultiSplitActiveState) {
+      yield* put(resetMultiCutToolPartitionsAction());
+    }
+  }
 }
 
 function proofreadCoarseMagIndex(): number {
@@ -526,8 +551,8 @@ function* performMinCut(
 
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
-    segmentId1: sourceSegmentId,
-    segmentId2: targetSegmentId,
+    partitionOne: [sourceSegmentId],
+    partitionTwo: [targetSegmentId],
     mag: agglomerateFileMag,
     agglomerateId: sourceAgglomerateId,
     editableMappingId: volumeTracingId,
@@ -584,6 +609,154 @@ function* performMinCut(
   }
 
   return false;
+}
+
+function* performPartitionedMinCut(_action: MinCutPartitionsAction): Saga<void> {
+  // TODOM: Make partition activation resilient against selecting segments from different agglomerates.
+  /*if (sourceAgglomerateId !== targetAgglomerateId) {
+    Toast.error(
+      "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
+    );
+    return true;
+  }*/
+
+  const preparation = yield* call(prepareSplitOrMerge, false);
+  if (!preparation) {
+    return;
+  }
+  const partitions = yield* select(
+    (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
+  );
+  if (partitions[1].length <= 0 || partitions[2].length <= 0) {
+    Toast.error(
+      "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
+    );
+    return;
+  }
+  const agglomerateId = preparation.mapSegmentId(partitions[1][0]);
+  const volumeTracingId = preparation.volumeTracing.tracingId;
+  const { agglomerateFileMag: mag, activeMapping } = preparation;
+  const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
+
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  const segmentsInfo = {
+    partitionOne: partitions[1],
+    partitionTwo: partitions[2],
+    mag,
+    agglomerateId: agglomerateId,
+    editableMappingId: preparation.volumeTracing.tracingId,
+  };
+
+  let edgesToRemove;
+  try {
+    edgesToRemove = yield* call(
+      getEdgesForAgglomerateMinCut,
+      tracingStoreUrl,
+      volumeTracingId,
+      segmentsInfo,
+    );
+  } catch (exception) {
+    console.error(exception);
+    Toast.error("Could not determine which edges to delete for cut. Please try again.");
+    return;
+  }
+  if (edgesToRemove.length <= 0) {
+    Toast.error(
+      "Could not detect any edges to split to perform the desired cut operation. Please try again.",
+    );
+  }
+  const items = [];
+
+  for (const edge of edgesToRemove) {
+    console.log(
+      "Splitting agglomerate",
+      agglomerateId,
+      "with segment ids",
+      edge.segmentId1,
+      "and",
+      edge.segmentId2,
+    );
+    items.push(
+      splitAgglomerate(agglomerateId, edge.segmentId1, edge.segmentId2, mag, volumeTracingId),
+    );
+  }
+
+  yield* put(pushSaveQueueTransaction(items));
+  yield* call([Model, Model.ensureSavedState]);
+
+  console.log("start updating the mapping after a min-cut");
+
+  // Now that the changes are saved, we can split the mapping locally (because it requires
+  // communication with the back-end).
+  const splitMapping = yield* splitAgglomerateInMapping(
+    activeMapping,
+    agglomerateId,
+    volumeTracingId,
+  );
+
+  console.log("dispatch setMappingAction in proofreading saga");
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: splitMapping,
+    }),
+  );
+  console.log("finished updating the mapping after a min-cut");
+
+  /* Reload meshes */
+  const newMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
+  );
+  const newAgglomerateIdFromPartitionOne = yield* call(
+    preparation.mapSegmentId,
+    partitions[1][0],
+    newMapping,
+  );
+  const newAgglomerateIdFromPartitionTwo = yield* call(
+    preparation.mapSegmentId,
+    partitions[2][0],
+    newMapping,
+  );
+  // Preserving custom names across merges & splits.
+  if (agglomerate && agglomerate.name != null) {
+    // Assign custom name to split-off target.
+    yield* put(
+      updateSegmentAction(
+        Number(newAgglomerateIdFromPartitionTwo),
+        { name: agglomerate.name },
+        volumeTracingId,
+      ),
+    );
+
+    Toast.info(`Assigned name "${agglomerate.name}" to new split-off segment.`);
+  }
+
+  // Get positions of new meshes from first split edge information.
+  const firstEdgeFirstSegmentNewAgglomerate = yield* call(
+    preparation.mapSegmentId,
+    edgesToRemove[0].segmentId1,
+    newMapping,
+  );
+  const meshLoadingPositionForPartitionOne =
+    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartitionOne
+      ? edgesToRemove[0].position1
+      : edgesToRemove[0].position2;
+  const meshLoadingPositionForPartitionTwo =
+    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartitionTwo
+      ? edgesToRemove[0].position1
+      : edgesToRemove[0].position2;
+
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+    {
+      agglomerateId: agglomerateId,
+      newAgglomerateId: newAgglomerateIdFromPartitionOne,
+      nodePosition: meshLoadingPositionForPartitionOne,
+    },
+    {
+      agglomerateId: agglomerateId,
+      newAgglomerateId: newAgglomerateIdFromPartitionTwo,
+      nodePosition: meshLoadingPositionForPartitionTwo,
+    },
+  ]);
 }
 
 function* performCutFromNeighbors(
@@ -792,12 +965,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
-    if (sourceAgglomerateId !== targetAgglomerateId) {
-      Toast.error(
-        "The selected positions are not part of the same agglomerate and cannot be split.",
-      );
-      return;
-    }
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).

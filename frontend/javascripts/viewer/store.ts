@@ -560,7 +560,7 @@ export type LocalSegmentationData = {
   readonly selectedIds: { segments: number[]; group: number | null };
   readonly connectomeData: ConnectomeData;
   readonly hideUnregisteredSegments: boolean;
-  readonly mincutPartitions: MinCutPartitions;
+  readonly minCutPartitions: MinCutPartitions;
 };
 
 export type StoreDataset = APIDataset & {

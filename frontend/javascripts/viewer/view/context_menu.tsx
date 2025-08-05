@@ -97,6 +97,7 @@ import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
+  minCutPartitionsAction,
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
@@ -140,6 +141,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import _ from "lodash";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -422,13 +424,17 @@ function getMeshItems(
   const { activeUnmappedSegmentId } = volumeTracing;
   const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
   const { isMultiSplitActive } = state.userConfiguration;
+  const minCutPartitions = state.localSegmentationData[volumeTracing.tracingId].minCutPartitions;
   // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
   // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
   // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
   // by looking the segment id up the segments list and checking against null.
   const activeSegmentMissing = segments.getNullable(activeCellId) == null;
 
-  const getTooltip = (actionVerb: "add" | "merge" | "split", actionNeedsActiveSegment: boolean) => {
+  const getTooltip = (
+    actionVerb: "add" | "remove" | "merge" | "split",
+    actionNeedsActiveSegment: boolean,
+  ) => {
     return !isProofreadingActive
       ? `Cannot ${actionVerb} because the proofreading tool is not active.`
       : maybeUnmappedSegmentId == null
@@ -452,7 +458,17 @@ function getMeshItems(
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
 
-  // TODOM: Make togglable -> add possibility to remove from partition.
+  // Multi split min cut tool options
+  const isSegmentInPartitionOne = maybeUnmappedSegmentId
+    ? minCutPartitions[1].includes(maybeUnmappedSegmentId)
+    : false;
+  const isSegmentInPartitionTwo = maybeUnmappedSegmentId
+    ? minCutPartitions[2].includes(maybeUnmappedSegmentId)
+    : false;
+  const togglePartitionOneVerb = isSegmentInPartitionOne ? "add" : "remove";
+  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "add" : "remove";
+  const doBothPartitionsHaveEntries =
+    minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
   const proofreadingMultiSplitToolActions =
     isProofreadingActive && isMultiSplitActive && maybeUnmappedSegmentId != null
       ? [
@@ -461,9 +477,9 @@ function getMeshItems(
             onClick: () =>
               Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 1)),
             label: (
-              <FastTooltip title={getTooltip("add", false)}>
-                Add {segmentOrSuperVoxel} (${segmentIdLabel}) to Partition 1{" "}
-                {shortcutBuilder(["Ctrl", "leftMouse"])}
+              <FastTooltip title={getTooltip(togglePartitionOneVerb, false)}>
+                {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} (${segmentIdLabel}) to
+                Partition 1 {shortcutBuilder(["Ctrl", "leftMouse"])}
               </FastTooltip>
             ),
           },
@@ -472,9 +488,9 @@ function getMeshItems(
             onClick: () =>
               Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 2)),
             label: (
-              <FastTooltip title={getTooltip("add", false)}>
-                Add {segmentOrSuperVoxel} (${segmentIdLabel}) to Partition 2{" "}
-                {shortcutBuilder(["Shift", "leftMouse"])}
+              <FastTooltip title={getTooltip(togglePartitionTwoVerb, false)}>
+                {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} (${segmentIdLabel}) to
+                Partition 2 {shortcutBuilder(["Shift", "leftMouse"])}
               </FastTooltip>
             ),
           },
@@ -503,28 +519,37 @@ function getMeshItems(
             </FastTooltip>
           ),
         },
-        {
-          key: "min-cut-agglomerate-at-position",
-          disabled:
-            shouldAgglomerateSkeletonActionsBeDisabled ||
-            clickedMeshId !== activeCellId ||
-            activeUnmappedSegmentId == null ||
-            maybeUnmappedSegmentId === activeUnmappedSegmentId,
-          onClick: () => {
-            if (maybeUnmappedSegmentId == null) {
-              // Should not happen due to the disabled property.
-              return;
+        isMultiSplitActive && doBothPartitionsHaveEntries
+          ? {
+              key: "min-cut-agglomerate-with-partitions",
+              onClick: () => Store.dispatch(minCutPartitionsAction()),
+              label: "Split partitions",
             }
-            Store.dispatch(
-              minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
-            );
-          },
-          label: (
-            <FastTooltip title={getTooltip("split", true)}>
-              Split {isMultiSplitActive ? "partitions" : "from active segment"}
-            </FastTooltip>
-          ),
-        },
+          : {
+              key: "min-cut-agglomerate-at-position",
+              disabled:
+                shouldAgglomerateSkeletonActionsBeDisabled ||
+                clickedMeshId !== activeCellId ||
+                activeUnmappedSegmentId == null ||
+                maybeUnmappedSegmentId === activeUnmappedSegmentId,
+              onClick: () => {
+                if (maybeUnmappedSegmentId == null) {
+                  // Should not happen due to the disabled property.
+                  return;
+                }
+                Store.dispatch(
+                  minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
+                );
+              },
+              label: (
+                <FastTooltip title={getTooltip("split", true)}>
+                  Split{" "}
+                  {isMultiSplitActive && doBothPartitionsHaveEntries
+                    ? "partitions"
+                    : "from active segment"}
+                </FastTooltip>
+              ),
+            },
         {
           key: "split-from-all-neighbors",
           disabled: maybeUnmappedSegmentId == null || meshFileMappingName != null,

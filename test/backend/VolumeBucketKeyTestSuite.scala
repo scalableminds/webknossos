@@ -44,7 +44,7 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
     }
     "built with additional coordinates" should {
       val additionalAxes =
-        Seq(AdditionalAxis("a", Array(0, 10), 0), AdditionalAxis("b", Array(0, 10), 1))
+        Seq(AdditionalAxis("a", Seq(0, 10), 0), AdditionalAxis("b", Seq(0, 10), 1))
       val additionalCoordinates = Seq(AdditionalCoordinate("a", 4), AdditionalCoordinate("b", 5))
 
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinates))

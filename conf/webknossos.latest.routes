@@ -107,7 +107,7 @@ DELETE        /folders/:id                                                      
 # Datastores
 GET           /datastores                                                                       controllers.DataStoreController.list()
 PUT           /datastores/:name/datasource                                                      controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
-PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
+PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String, organizationId: Option[String])
 PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
 GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)

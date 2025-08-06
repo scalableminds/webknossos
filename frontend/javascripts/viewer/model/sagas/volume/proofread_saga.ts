@@ -1416,7 +1416,7 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
   const position = yield* call(
     getPositionForSegmentInAgglomerate,
     dataStoreUrl,
-    dataset,
+    dataset.id,
     volumeTracing.fallbackLayer,
     editableMapping.baseMappingName,
     segmentId,

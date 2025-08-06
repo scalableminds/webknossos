@@ -115,9 +115,10 @@ class DSRemoteWebknossosClient @Inject()(
       uploadedDatasetId <- JsonHelper.as[String](uploadedDatasetIdJson \ "id").toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
-  def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
+  def reportDataSources(dataSources: List[InboxDataSourceLike], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryStringOptional("organizationId", organizationId)
       .silent
       .putJson(dataSources)
 

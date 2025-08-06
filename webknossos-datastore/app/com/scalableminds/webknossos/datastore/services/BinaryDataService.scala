@@ -75,8 +75,14 @@ class BinaryDataService(val dataBaseDir: Path,
         requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
-        readInstructions = requestsSelected.map(r =>
-          DataReadInstruction(dataBaseDir, dataSourceId, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
+        readInstructions = requestsSelected.map(
+          r =>
+            DataReadInstruction(
+              dataBaseDir,
+              dataSourceId,
+              dataLayer,
+              r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
+              r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
           dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(

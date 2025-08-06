@@ -137,7 +137,8 @@ class AnnotationIOController @Inject()(
                                                          volumeLayersGrouped,
                                                          tracingStoreClient,
                                                          parsedFiles.otherFiles,
-                                                         usableDataSource)
+                                                         usableDataSource,
+                                                         dataset._id)
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
           annotation <- annotationService.createFrom(request.identity,
                                                      dataset,
@@ -167,7 +168,8 @@ class AnnotationIOController @Inject()(
                                        volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
-                                       dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
+                                       dataSource: DataSourceLike,
+                                       datasetId: ObjectId): Fox[List[AnnotationLayer]] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List())
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
@@ -182,7 +184,8 @@ class AnnotationIOController @Inject()(
                                         newTracingId,
                                         uploadedVolumeLayer.tracing,
                                         uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                        dataSource = dataSource)
+                                        dataSource = dataSource,
+                                        datasetId = datasetId)
         } yield
           AnnotationLayer(
             newTracingId,
@@ -200,6 +203,7 @@ class AnnotationIOController @Inject()(
           newTracingId,
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
+          datasetId,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
         )
       } yield
@@ -337,8 +341,7 @@ class AnnotationIOController @Inject()(
       else volumeTracing.boundingBox
 
     for {
-      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationId,
-                                                        dataset.name,
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(dataset._id,
                                                         fallbackLayerOpt.map(_.name),
                                                         remoteDataStoreClient)
       elementClassProto <- fallbackLayerOpt
@@ -358,13 +361,12 @@ class AnnotationIOController @Inject()(
   }
 
   private def canHaveSegmentIndex(
-      organizationId: String,
-      datasetName: String,
+      datasetId: ObjectId,
       fallbackLayerName: Option[String],
       remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
     fallbackLayerName match {
       case Some(layerName) =>
-        remoteDataStoreClient.hasSegmentIndexFile(organizationId, datasetName, layerName)
+        remoteDataStoreClient.hasSegmentIndexFile(datasetId, layerName)
       case None =>
         Fox.successful(true)
     }

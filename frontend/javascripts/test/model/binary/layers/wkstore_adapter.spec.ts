@@ -36,6 +36,7 @@ vi.mock("viewer/store", () => ({
   default: {
     getState: () => ({
       dataset: {
+        id: "datasetId",
         name: "dataset",
         directoryName: "datasetPath",
         dataStore: {
@@ -158,11 +159,11 @@ describe("wkstore_adapter", () => {
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
 
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
-      "url/data/datasets/organization/datasetPath/layers/color/data?token=token",
+      "url/data/datasets/datasetId/layers/color/data?token=token",
       expect.anything(),
     );
     expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
-      "url/data/datasets/organization/datasetPath/layers/color/data?token=token2",
+      "url/data/datasets/datasetId/layers/color/data?token=token2",
       expect.anything(),
     );
   });
@@ -194,7 +195,7 @@ describe("wkstore_adapter", () => {
     layer,
   }) => {
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/datasetId/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
 
     await requestWithFallback(layer, batch).then(() => {
@@ -214,7 +215,7 @@ describe("wkstore_adapter", () => {
     setFourBit(true);
     // test four bit color and 8 bit seg
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/datasetId/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
 
     const RequestMock = vi.mocked(Request);
@@ -233,8 +234,7 @@ describe("wkstore_adapter", () => {
   }) => {
     setFourBit(true);
     const { batch } = prepare();
-    const expectedUrl =
-      "url/data/datasets/organization/datasetPath/layers/segmentation/data?token=token2";
+    const expectedUrl = "url/data/datasets/datasetId/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
 
     const RequestMock = vi.mocked(Request);

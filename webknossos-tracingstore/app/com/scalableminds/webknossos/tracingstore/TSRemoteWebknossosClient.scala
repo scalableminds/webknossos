@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
@@ -50,7 +50,7 @@ class TSRemoteWebknossosClient @Inject()(
 
   private val webknossosUri: String = config.Tracingstore.WebKnossos.uri
 
-  private lazy val dataSourceIdByAnnotationIdCache: AlfuCache[ObjectId, DataSourceId] = AlfuCache()
+  private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, ObjectId] = AlfuCache()
   private lazy val annotationIdByTracingIdCache: AlfuCache[String, ObjectId] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
 
@@ -68,22 +68,21 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .getWithJsonResponse[DataSourceLike]
 
-  def getDataStoreUriForDataSource(organizationId: String, datasetDirectoryName: String): Fox[String] =
-    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetDirectoryName")
-      .addQueryString("organizationId" -> organizationId)
+  def getDataStoreUriForDataset(datasetId: ObjectId): Fox[String] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetId")
       .addQueryString("key" -> tracingStoreKey)
       .silent
       .getWithJsonResponse[String]
 
-  def getDataSourceIdForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[DataSourceId] =
-    dataSourceIdByAnnotationIdCache.getOrLoad(
+  def getDatasetIdForAnnotation(annotationId: ObjectId)(implicit ec: ExecutionContext): Fox[ObjectId] =
+    datasetIdByAnnotationIdCache.getOrLoad(
       annotationId,
       aId =>
-        rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSourceId")
+        rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasetId")
           .addQueryString("annotationId" -> aId.toString)
           .addQueryString("key" -> tracingStoreKey)
           .silent
-          .getWithJsonResponse[DataSourceId]
+          .getWithJsonResponse[ObjectId]
     )
 
   def getAnnotationIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[ObjectId] =

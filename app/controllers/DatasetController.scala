@@ -89,6 +89,7 @@ class DatasetController @Inject()(userService: UserService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
+                                  composeService: ComposeService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
@@ -145,10 +146,10 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
-        _ <- wkExploreRemoteLayerService.addRemoteDatasource(dataSource,
-                                                             request.body.datasetName,
-                                                             request.identity,
-                                                             folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+        _ <- wkExploreRemoteLayerService.addRemoteDatasourceToDatabase(dataSource,
+                                                                       request.body.datasetName,
+                                                                       request.identity,
+                                                                       folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
     }
 
@@ -488,6 +489,13 @@ class DatasetController @Inject()(userService: UserService,
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }
+    }
+
+  def compose(): Action[ComposeRequest] =
+    sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
+      for {
+        (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
+      } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
 }

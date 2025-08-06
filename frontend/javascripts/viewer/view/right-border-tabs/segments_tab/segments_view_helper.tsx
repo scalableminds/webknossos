@@ -54,7 +54,7 @@ export function getVolumeRequestUrl(
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
   if (annotation == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${visibleSegmentationLayer.name}`;
+    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer.name}`;
   } else {
     const tracingStoreHost = annotation?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
@@ -76,9 +76,8 @@ export async function hasSegmentIndex(
   if (maybeVolumeTracing == null) {
     segmentIndexInDataStore = await hasSegmentIndexInDataStore(
       dataset.dataStore.url,
-      dataset.directoryName,
+      dataset.id,
       visibleSegmentationLayer.name,
-      dataset.owningOrganization,
     );
   }
   return (

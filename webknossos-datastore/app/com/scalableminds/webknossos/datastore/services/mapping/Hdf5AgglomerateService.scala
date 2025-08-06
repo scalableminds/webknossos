@@ -263,7 +263,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
   private def openAsCachedAgglomerateFile(agglomerateFileKey: AgglomerateFileKey) = {
     val cumsumPath =
-      Path.of(agglomerateFileKey.attachment.path).getParent.resolve(cumsumFileName)
+      agglomerateFileKey.attachment.localPath.getParent.resolve(cumsumFileName)
 
     val reader = openHdf5(agglomerateFileKey)
 

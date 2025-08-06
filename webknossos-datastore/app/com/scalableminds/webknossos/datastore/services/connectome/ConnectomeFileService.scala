@@ -2,10 +2,7 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -13,13 +10,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -82,16 +76,10 @@ object ConnectomeFileNameWithMappingName {
 
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
-class ConnectomeFileService @Inject()(config: DataStoreConfig,
-                                      remoteSourceDescriptorService: RemoteSourceDescriptorService,
-                                      hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
+class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
                                       zarrConnectomeFileService: ZarrConnectomeFileService)
     extends FoxImplicits
     with LazyLogging {
-
-  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
-  private val localConnectomesDir = "connectomes"
-  private val hdf5ConnectomeFileExtension = "hdf5"
 
   private val connectomeFileKeyCache
     : AlfuCache[(DataSourceId, String, String), ConnectomeFileKey] = AlfuCache() // dataSourceId, layerName, connectomeFileName → ConnectomeFileKey
@@ -104,60 +92,28 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig,
 
   private def lookUpConnectomeFileKeyImpl(dataSourceId: DataSourceId,
                                           dataLayer: DataLayer,
-                                          connectomeFileName: String): Box[ConnectomeFileKey] = {
-    val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
-      case Some(attachments) => attachments.connectomes.find(_.name == connectomeFileName)
-      case None              => None
-    }
-    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+                                          connectomeFileName: String): Option[ConnectomeFileKey] =
     for {
-      registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
-        attachment.copy(
-          path =
-            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
-      })
-      localFallbackAttachment = LayerAttachment(
-        connectomeFileName,
-        localDatasetDir
-          .resolve(dataLayer.name)
-          .resolve(localConnectomesDir)
-          .resolve(connectomeFileName + "." + hdf5ConnectomeFileExtension)
-          .toUri,
-        LayerAttachmentDataformat.hdf5
-      )
-      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
+      attachment <- dataLayer.attachments match {
+        case Some(attachments) => attachments.connectomes.find(_.name == connectomeFileName)
+        case None              => None
+      }
     } yield
       ConnectomeFileKey(
         dataSourceId,
         dataLayer.name,
-        selectedAttachment
+        attachment
       )
-  }
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit ec: ExecutionContext,
       tc: TokenContext,
       m: MessagesProvider): Fox[List[ConnectomeFileNameWithMappingName]] = {
-    val attachedConnectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name).toSet
-
-    val layerDir =
-      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
-    val scannedConnectomeFileNames = PathUtils
-      .listFiles(layerDir.resolve(localConnectomesDir),
-                 silent = true,
-                 PathUtils.fileExtensionFilter(hdf5ConnectomeFileExtension))
-      .map { paths =>
-        paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
-      }
-      .toOption
-      .getOrElse(Nil)
-      .toSet
-
-    val allConnectomeFileNames = attachedConnectomeFileNames ++ scannedConnectomeFileNames
+    val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
-        .serialSequence(allConnectomeFileNames.toSeq) { connectomeFileName =>
+        .serialSequence(connectomeFileNames) { connectomeFileName =>
           for {
             connectomeFileKey <- lookUpConnectomeFileKey(dataSourceId, dataLayer, connectomeFileName) ?~> Messages(
               "connectome.file.lookup.failed",

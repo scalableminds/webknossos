@@ -2,24 +2,16 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
   LayerAttachment,
   LayerAttachmentDataformat
 }
-import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.Box
-import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -64,17 +56,10 @@ object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig,
-                                hdf5MeshFileService: Hdf5MeshFileService,
+class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
                                 zarrMeshFileService: ZarrMeshFileService,
-                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
-                                remoteSourceDescriptorService: RemoteSourceDescriptorService)
-    extends FoxImplicits
-    with ArrayArtifactHashing {
-
-  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
-  private val localMeshesDir = "meshes"
-  private val hdf5MeshFileExtension = "hdf5"
+                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService)
+    extends FoxImplicits {
 
   private val meshFileKeyCache
     : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
@@ -86,57 +71,27 @@ class MeshFileService @Inject()(config: DataStoreConfig,
 
   private def lookUpMeshFileKeyImpl(dataSourceId: DataSourceId,
                                     dataLayer: DataLayer,
-                                    meshFileName: String): Box[MeshFileKey] = {
-    val registeredAttachment: Option[LayerAttachment] = dataLayer.attachments match {
-      case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
-      case None              => None
-    }
-    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+                                    meshFileName: String): Option[MeshFileKey] =
     for {
-      registeredAttachmentNormalized <- tryo(registeredAttachment.map { attachment =>
-        attachment.copy(
-          path =
-            remoteSourceDescriptorService.uriFromPathLiteral(attachment.path.toString, localDatasetDir, dataLayer.name))
-      })
-      localFallbackAttachment = LayerAttachment(
-        meshFileName,
-        localDatasetDir
-          .resolve(dataLayer.name)
-          .resolve(localMeshesDir)
-          .resolve(meshFileName + "." + hdf5MeshFileExtension)
-          .toUri,
-        LayerAttachmentDataformat.hdf5
-      )
-      selectedAttachment = registeredAttachmentNormalized.getOrElse(localFallbackAttachment)
+      registeredAttachment <- dataLayer.attachments match {
+        case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
+        case None              => None
+      }
     } yield
       MeshFileKey(
         dataSourceId,
         dataLayer.name,
-        selectedAttachment
+        registeredAttachment
       )
-  }
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
                                                                       tc: TokenContext,
                                                                       m: MessagesProvider): Fox[Seq[MeshFileInfo]] = {
-    val attachedMeshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name).toSet
-
-    val layerDir =
-      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(dataLayer.name)
-    val scannedMeshFileNames = PathUtils
-      .listFiles(layerDir.resolve(localMeshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5MeshFileExtension))
-      .map { paths =>
-        paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
-      }
-      .toOption
-      .getOrElse(Nil)
-      .toSet
-
-    val allMeshFileNames = attachedMeshFileNames ++ scannedMeshFileNames
+    val meshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
-        .serialSequence(allMeshFileNames.toSeq) { meshFileName =>
+        .serialSequence(meshFileNames) { meshFileName =>
           for {
             meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Messages(
               "mesh.file.lookup.failed",

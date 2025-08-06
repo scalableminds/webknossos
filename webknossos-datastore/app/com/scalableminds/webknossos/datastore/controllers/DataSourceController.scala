@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
@@ -28,7 +29,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
-  ConnectomeFileService,
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
@@ -266,8 +266,8 @@ class DataSourceController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-        agglomerateList = agglomerateService.listAgglomeratesFiles(dataSource.id, dataLayer)
+        (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+        agglomerateList = agglomerateService.listAgglomeratesFiles(dataLayer)
       } yield Ok(Json.toJson(agglomerateList))
     }
   }

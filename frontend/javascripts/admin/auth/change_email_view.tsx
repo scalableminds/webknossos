@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { logoutUser, updateUser } from "admin/rest_api";
-import { Alert, Button, Col, Form, Input, Row } from "antd";
+import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
@@ -15,7 +15,7 @@ const NEW_EMAIL_FIELD_KEY = "newEmail";
 const CONFIRM_NEW_EMAIL_FIELD_KEY = "confirmNewEmail";
 const PASSWORD_FIELD_KEY = "password";
 
-function ChangeEmailView() {
+function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
   useNavigate();
@@ -31,6 +31,7 @@ function ChangeEmailView() {
   function onFinish() {
     const newEmail = form.getFieldValue(NEW_EMAIL_FIELD_KEY);
     const password = form.getFieldValue(PASSWORD_FIELD_KEY);
+
     changeEmail(newEmail, password)
       .then(async () => {
         handleResendVerificationEmail();
@@ -69,119 +70,104 @@ function ChangeEmailView() {
   }
 
   return (
-    <Row
-      justify="center"
-      align="middle"
-      style={{
-        padding: 50,
-      }}
-    >
-      <Col span={8}>
-        <h3>Change Email</h3>
-        <Alert
-          type="info"
-          message="You will be logged out after changing your email address."
-          showIcon
-          style={{
-            marginBottom: 24,
-          }}
-        />
-        <Form onFinish={onFinish} form={form}>
-          <FormItem
-            name={PASSWORD_FIELD_KEY}
-            rules={[
-              {
-                required: true,
-                message: "Please enter your password for verification",
-              },
-            ]}
-          >
-            <Input.Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Your Password"
-            />
-          </FormItem>
-          <FormItem
-            hasFeedback
-            name={NEW_EMAIL_FIELD_KEY}
-            rules={[
-              {
-                required: true,
-                message: "Please enter your new email address",
-              },
-              {
-                type: "email",
-                message: "Please enter a valid email address",
-              },
-              {
-                validator: (_, value: string) =>
-                  checkEmailsAreMatching(value, [CONFIRM_NEW_EMAIL_FIELD_KEY]),
-              },
-              {
-                validator: (_, value: string) => checkEmailIsDifferent(value),
-              },
-            ]}
-          >
-            <Input
-              prefix={
-                <MailOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="New Email Address"
-            />
-          </FormItem>
-          <FormItem
-            hasFeedback
-            name={CONFIRM_NEW_EMAIL_FIELD_KEY}
-            rules={[
-              {
-                required: true,
-                message: "Please confirm your new email address",
-              },
-              {
-                type: "email",
-                message: "Please enter a valid email address",
-              },
-              {
-                validator: (_, value: string) =>
-                  checkEmailsAreMatching(value, [NEW_EMAIL_FIELD_KEY]),
-              },
-            ]}
-          >
-            <Input
-              prefix={
-                <MailOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Confirm New Email Address"
-            />
-          </FormItem>
-          <FormItem>
-            <Button
-              type="primary"
-              htmlType="submit"
+    <Form onFinish={onFinish} form={form}>
+      <FormItem
+        name={PASSWORD_FIELD_KEY}
+        rules={[
+          {
+            required: true,
+            message: "Please enter your password for verification",
+          },
+        ]}
+      >
+        <Input.Password
+          prefix={
+            <LockOutlined
               style={{
-                width: "100%",
+                fontSize: 13,
               }}
-            >
-              Change Email
-            </Button>
-          </FormItem>
-        </Form>
-      </Col>
-    </Row>
+            />
+          }
+          placeholder="Your Password"
+        />
+      </FormItem>
+      <FormItem
+        hasFeedback
+        name={NEW_EMAIL_FIELD_KEY}
+        rules={[
+          {
+            required: true,
+            message: "Please enter your new email address",
+          },
+          {
+            type: "email",
+            message: "Please enter a valid email address",
+          },
+          {
+            validator: (_, value: string) =>
+              checkEmailsAreMatching(value, [CONFIRM_NEW_EMAIL_FIELD_KEY]),
+          },
+          {
+            validator: (_, value: string) => checkEmailIsDifferent(value),
+          },
+        ]}
+      >
+        <Input
+          prefix={
+            <MailOutlined
+              style={{
+                fontSize: 13,
+              }}
+            />
+          }
+          placeholder="New Email Address"
+        />
+      </FormItem>
+      <FormItem
+        hasFeedback
+        name={CONFIRM_NEW_EMAIL_FIELD_KEY}
+        rules={[
+          {
+            required: true,
+            message: "Please confirm your new email address",
+          },
+          {
+            type: "email",
+            message: "Please enter a valid email address",
+          },
+          {
+            validator: (_, value: string) => checkEmailsAreMatching(value, [NEW_EMAIL_FIELD_KEY]),
+          },
+        ]}
+      >
+        <Input
+          prefix={
+            <MailOutlined
+              style={{
+                fontSize: 13,
+              }}
+            />
+          }
+          placeholder="Confirm New Email Address"
+        />
+      </FormItem>
+      <Alert
+        type="info"
+        message="You will be logged out after changing your email address."
+        showIcon
+        style={{
+          marginBottom: 24,
+        }}
+      />
+      <FormItem>
+        <Space>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button type="primary" htmlType="submit">
+            Change Email
+          </Button>
+        </Space>
+      </FormItem>
+    </Form>
   );
 }
 

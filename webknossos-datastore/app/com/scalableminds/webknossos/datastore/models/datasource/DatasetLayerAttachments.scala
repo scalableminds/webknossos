@@ -52,6 +52,14 @@ case class LayerAttachment(name: String,
       Path.of(path)
     }
   }
+
+  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): URI =
+    if (path.getScheme != null) path
+    else {
+      val datasetDirectory =
+        Path.of(dataBaseDir).toAbsolutePath.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+      new URI(s"file://${datasetDirectory.resolve(Path.of(path.toString))}")
+    }
 }
 
 object LayerAttachment {

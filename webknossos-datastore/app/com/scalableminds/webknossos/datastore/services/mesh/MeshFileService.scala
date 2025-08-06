@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -58,7 +59,8 @@ object MeshFileInfo {
 
 class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
                                 zarrMeshFileService: ZarrMeshFileService,
-                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService)
+                                neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
+                                config: DataStoreConfig)
     extends FoxImplicits {
 
   private val meshFileKeyCache
@@ -73,7 +75,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
                                     dataLayer: DataLayer,
                                     meshFileName: String): Option[MeshFileKey] =
     for {
-      registeredAttachment <- dataLayer.attachments match {
+      attachment <- dataLayer.attachments match {
         case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
         case None              => None
       }
@@ -81,7 +83,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       MeshFileKey(
         dataSourceId,
         dataLayer.name,
-        registeredAttachment
+        attachment.copy(path = attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
       )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,

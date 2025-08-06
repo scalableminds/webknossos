@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -31,7 +32,8 @@ case class SegmentIndexFileKey(dataSourceId: DataSourceId, layerName: String, at
 class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
                                         zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
                                         agglomerateService: AgglomerateService,
-                                        binaryDataServiceHolder: BinaryDataServiceHolder)
+                                        binaryDataServiceHolder: BinaryDataServiceHolder,
+                                        config: DataStoreConfig)
     extends FoxImplicits
     with SegmentStatistics {
 
@@ -53,7 +55,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
       SegmentIndexFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment
+        attachment.copy(path = attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
       )
 
   /**

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.connectome
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
@@ -77,7 +78,8 @@ object ConnectomeFileNameWithMappingName {
 case class ConnectomeFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
 
 class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeFileService,
-                                      zarrConnectomeFileService: ZarrConnectomeFileService)
+                                      zarrConnectomeFileService: ZarrConnectomeFileService,
+                                      config: DataStoreConfig)
     extends FoxImplicits
     with LazyLogging {
 
@@ -102,7 +104,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       ConnectomeFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment
+        attachment.copy(path = attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
       )
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(

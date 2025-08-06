@@ -58,7 +58,7 @@
     "puppeteer-core": "^19.7.2",
     "redux-mock-store": "^1.2.2",
     "shelljs": "^0.8.5",
-    "tmp": "0.0.33",
+    "tmp": "0.2.4",
     "ts-loader": "^9.4.1",
     "typescript": "^5.8.0",
     "typescript-coverage-report": "^0.8.0",

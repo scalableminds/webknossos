@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.storage._
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import javax.inject.Inject
 import scala.annotation.tailrec

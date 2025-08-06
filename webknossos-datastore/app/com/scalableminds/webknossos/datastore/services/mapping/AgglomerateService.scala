@@ -75,7 +75,6 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
       agglomerateFileKey <- lookUpAgglomerateFileKey(request.dataSourceIdOrVolumeDummy, request.dataLayer, mappingName)
-      _ = logger.error(s"########## looked up agglomerate file key with path: ${agglomerateFileKey.attachment.path}")
       data <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
           zarrAgglomerateService.applyAgglomerate(agglomerateFileKey, elementClass)(data)

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(137);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(138);
 COMMIT TRANSACTION;
 
 
@@ -464,6 +464,22 @@ CREATE TABLE webknossos.multiUsers(
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
+CREATE TABLE webknossos.webauthnCredentials(
+  _id TEXT PRIMARY KEY,
+  _multiUser TEXT NOT NULL,
+  credentialId BYTEA NOT NULL,
+  name TEXT NOT NULL,
+  userVerified BOOLEAN NOT NULL,
+  backupEligible BOOLEAN NOT NULL,
+  backupState BOOLEAN NOT NULL,
+  serializedAttestationStatement JSONB NOT NULL,
+  serializedAttestedCredential BYTEA NOT NULL,
+  serializedExtensions JSONB NOT NULL,
+  signatureCount INTEGER NOT NULL DEFAULT 0,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_multiUser, credentialId)
+);
+
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
@@ -776,6 +792,7 @@ CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WH
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
 CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
+CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthnCredentials WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -937,6 +954,8 @@ ALTER TABLE webknossos.aiModel_trainingAnnotations
 ALTER TABLE webknossos.aiModel_organizations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.webauthnCredentials
+  ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
@@ -1081,7 +1100,3 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
-
-
-
-

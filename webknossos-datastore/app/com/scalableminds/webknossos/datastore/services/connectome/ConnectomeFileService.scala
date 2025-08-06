@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services.connectome
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -94,17 +95,18 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
 
   private def lookUpConnectomeFileKeyImpl(dataSourceId: DataSourceId,
                                           dataLayer: DataLayer,
-                                          connectomeFileName: String): Option[ConnectomeFileKey] =
+                                          connectomeFileName: String): Box[ConnectomeFileKey] =
     for {
-      attachment <- dataLayer.attachments match {
+      attachment <- Box(dataLayer.attachments match {
         case Some(attachments) => attachments.connectomes.find(_.name == connectomeFileName)
         case None              => None
-      }
+      })
+      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield
       ConnectomeFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment.copy(path = attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+        attachment.copy(path = resolvedPath)
       )
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(

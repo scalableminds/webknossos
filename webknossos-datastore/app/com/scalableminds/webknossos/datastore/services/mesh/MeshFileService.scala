@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -73,12 +74,13 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
 
   private def lookUpMeshFileKeyImpl(dataSourceId: DataSourceId,
                                     dataLayer: DataLayer,
-                                    meshFileName: String): Option[MeshFileKey] =
+                                    meshFileName: String): Box[MeshFileKey] =
     for {
-      attachment <- dataLayer.attachments match {
+      attachment <- Box(dataLayer.attachments match {
         case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
         case None              => None
-      }
+      })
+      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield
       MeshFileKey(
         dataSourceId,

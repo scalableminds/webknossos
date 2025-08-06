@@ -3,7 +3,9 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -31,7 +33,8 @@ case class SegmentIndexFileKey(dataSourceId: DataSourceId, layerName: String, at
 class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
                                         zarrSegmentIndexFileService: ZarrSegmentIndexFileService,
                                         agglomerateService: AgglomerateService,
-                                        binaryDataServiceHolder: BinaryDataServiceHolder)
+                                        binaryDataServiceHolder: BinaryDataServiceHolder,
+                                        config: DataStoreConfig)
     extends FoxImplicits
     with SegmentStatistics {
 
@@ -46,14 +49,15 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
                                        _ => lookUpSegmentIndexFileKeyImpl(dataSourceId, dataLayer).toFox)
 
   private def lookUpSegmentIndexFileKeyImpl(dataSourceId: DataSourceId,
-                                            dataLayer: DataLayer): Option[SegmentIndexFileKey] =
+                                            dataLayer: DataLayer): Box[SegmentIndexFileKey] =
     for {
-      attachment <- dataLayer.attachments.flatMap(_.segmentIndex)
+      attachment <- Box(dataLayer.attachments.flatMap(_.segmentIndex))
+      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield
       SegmentIndexFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment
+        attachment.copy(path = resolvedPath)
       )
 
   /**

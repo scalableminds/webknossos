@@ -45,7 +45,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSourceController @Inject()(
-    dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
     datasetCache: DatasetCache,
     accessTokenService: DataStoreAccessTokenService,
@@ -75,10 +74,13 @@ class DataSourceController @Inject()(
     }
   }
 
-  def triggerInboxCheckBlocking(): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
+  def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(
+      organizationId
+        .map(id => UserAccessRequest.administrateDataSources(id))
+        .getOrElse(UserAccessRequest.administrateDataSources)) {
       for {
-        _ <- dataSourceService.checkInbox(verbose = true)
+        _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
       } yield Ok
     }
   }
@@ -452,7 +454,7 @@ class DataSourceController @Inject()(
                 dataSourceId.directoryName,
                 Some(datasetId),
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dataSourceRepository.removeDataSource(dataSourceId) // also frees the name in the wk-side database
+              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
             } yield ()
           } else {
             dsRemoteWebknossosClient.deleteVirtualDataset(datasetId)

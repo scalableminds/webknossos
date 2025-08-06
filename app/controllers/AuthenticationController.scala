@@ -624,8 +624,7 @@ class AuthenticationController @Inject()(
           "auth.passkeys.unauthorized" ~> UNAUTHORIZED
         multiUser <- multiUserDAO.findOneById(multiUserId)(GlobalAccessContext) ??~>
           "auth.passkeys.unauthorized" ~> UNAUTHORIZED
-        credential <- webAuthnCredentialDAO
-          .findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~>
+        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~>
           "auth.passkeys.unauthorized" ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 

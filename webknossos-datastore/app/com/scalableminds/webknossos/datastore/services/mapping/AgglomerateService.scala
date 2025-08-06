@@ -4,8 +4,10 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, LayerAttachmentDataformat}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -17,7 +19,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateService,
-                                   hdf5AgglomerateService: Hdf5AgglomerateService)
+                                   hdf5AgglomerateService: Hdf5AgglomerateService,
+                                   config: DataStoreConfig)
     extends LazyLogging
     with FoxImplicits {
 
@@ -52,17 +55,18 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
 
   private def lookUpAgglomerateFileImpl(dataSourceId: DataSourceId,
                                         dataLayer: DataLayer,
-                                        mappingName: String): Option[AgglomerateFileKey] =
+                                        mappingName: String): Box[AgglomerateFileKey] =
     for {
-      attachment <- dataLayer.attachments match {
+      attachment <- Box(dataLayer.attachments match {
         case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
         case None              => None
-      }
+      })
+      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
     } yield
       AgglomerateFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment
+        attachment.copy(path = resolvedPath)
       )
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,

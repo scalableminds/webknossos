@@ -465,8 +465,8 @@ function getMeshItems(
   const isSegmentInPartitionTwo = maybeUnmappedSegmentId
     ? minCutPartitions[2].includes(maybeUnmappedSegmentId)
     : false;
-  const togglePartitionOneVerb = isSegmentInPartitionOne ? "add" : "remove";
-  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "add" : "remove";
+  const togglePartitionOneVerb = isSegmentInPartitionOne ? "remove" : "add";
+  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "remove" : "add";
   const doBothPartitionsHaveEntries =
     minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
   const proofreadingMultiSplitToolActions =

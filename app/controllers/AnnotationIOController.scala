@@ -502,6 +502,11 @@ class AnnotationIOController @Inject()(
               zipper.stream.setLevel(Deflater.BEST_SPEED)
               zipper.addFileFromBytes(dataZipName, volumeData)
             }
+            volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
+              val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
+            }
         }
         _ = zipper.close()
       } yield temporaryFile

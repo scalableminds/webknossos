@@ -5,9 +5,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.IOUtils
+import play.api.libs.json.{Json, Writes}
 
 import java.nio.charset.Charset
-import scala.concurrent.{ExecutionContext, Future, blocking}
+import scala.concurrent.ExecutionContext
 
 trait NamedStream {
   def name: String
@@ -29,31 +30,18 @@ object NamedFunctionStream {
 
   def fromString(name: String, str: String)(implicit ec: ExecutionContext): NamedFunctionStream =
     fromBytes(name, str.getBytes(Charset.forName("UTF-8")))
+
+  def fromJsonSerializable[T](name: String, o: T, prettyPrint: Boolean = true)(
+      implicit w: Writes[T],
+      ec: ExecutionContext): NamedFunctionStream = {
+    val jsValue = w.writes(o)
+    val str = if (prettyPrint) Json.prettyPrint(jsValue) else jsValue.toString
+    fromString(name, str)
+  }
 }
 
 case class NamedFunctionStream(name: String, writer: OutputStream => Fox[Unit]) extends NamedStream {
   def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = writer(out)
-}
-
-case class NamedFileStream(name: String, file: File) extends NamedStream {
-  def stream(): InputStream = new FileInputStream(file)
-
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromFuture {
-      Future {
-        blocking {
-          val in = stream()
-          val buffer = new Array[Byte](1024)
-          var len = 0
-          do {
-            len = in.read(buffer)
-            if (len > 0)
-              out.write(buffer, 0, len)
-          } while (len > 0)
-          in.close()
-        }
-      }
-    }
 }
 
 object FileIO {
@@ -77,17 +65,6 @@ object FileIO {
       case ex: Exception =>
         Failure(ex.getMessage)
     }
-
-  def createTempFile(data: String, fileType: String = ".tmp"): File = {
-    val temp = File.createTempFile("temp", System.nanoTime().toString + fileType)
-    val out = new PrintWriter(temp)
-    try {
-      out.print(data)
-    } finally {
-      out.close()
-    }
-    temp
-  }
 
   def readFileToByteArray(file: File): Box[Array[Byte]] =
     tryo {

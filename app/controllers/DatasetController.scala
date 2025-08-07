@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, ElementClass, GenericDataSource}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -21,6 +21,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -45,6 +46,15 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
+
+case class ReserveManualUploadRequest(
+    layersToLink: Seq[LinkedLayerIdentifier],
+    dataSource: GenericDataSource[DataLayerLike]
+)
+
+object ReserveManualUploadRequest {
+  implicit val jsonFormat: OFormat[ReserveManualUploadRequest] = Json.format[ReserveManualUploadRequest]
 }
 
 object SAMInteractionType extends ExtendedEnumeration {
@@ -496,6 +506,13 @@ class DatasetController @Inject()(userService: UserService,
       for {
         (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
+    }
+
+  def reserveManualUpload(): Action[ReserveManualUploadRequest] =
+    sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
+      for {
+        _ <- Fox.successful(())
+      } yield Ok
     }
 
 }

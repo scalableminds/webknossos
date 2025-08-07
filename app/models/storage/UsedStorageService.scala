@@ -2,18 +2,32 @@ package models.storage
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
+import com.scalableminds.webknossos.datastore.services.PathStorageReport
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemoteDataStoreClient}
-import models.organization.{Organization, OrganizationDAO}
+import models.dataset.{
+  DataSourceMagRow,
+  DataStore,
+  DataStoreDAO,
+  Dataset,
+  DatasetLayerAttachmentsDAO,
+  DatasetMagsDAO,
+  DatasetService,
+  WKRemoteDataStoreClient
+}
+import models.organization.{ArtifactStorageReport, Organization, OrganizationDAO}
 import com.scalableminds.util.tools.{Failure, Full}
+import com.scalableminds.webknossos.schema.Tables.DatasetLayerAttachmentsRow
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
+import utils.sql.SqlEscaping
 
+import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -23,10 +37,13 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
                                    dataStoreDAO: DataStoreDAO,
+                                   datasetMagDAO: DatasetMagsDAO,
+                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
     extends LazyLogging
-    with IntervalScheduler {
+    with IntervalScheduler
+    with SqlEscaping {
 
   /* Note that not every tick here will scan something, there is additional logic below:
      Every tick, et most scansPerTick organizations are scanned.
@@ -38,6 +55,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
 
   private val pauseAfterEachOrganization = 5 seconds
   private val organizationCountToScanPerTick = config.WebKnossos.FetchUsedStorage.scansPerTick
+  private val MAX_STORAGE_PATH_REQUESTS_PER_REQUEST = 200
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
@@ -65,37 +83,132 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private def refreshStorageReports(organization: Organization, dataStores: List[DataStore]): Fox[Unit] =
     for {
       storageReportsByDataStore <- Fox.serialCombined(dataStores)(dataStore =>
-        refreshStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
+        getNewestStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
       _ <- organizationDAO.deleteUsedStorage(organization._id) ?~> "Failed to delete outdated used storage entries"
-      _ <- Fox.serialCombined(storageReportsByDataStore.zip(dataStores))(storageForDatastore =>
-        upsertUsedStorage(organization, storageForDatastore)) ?~> "Failed to upsert used storage reports into db"
+      allStorageReports = storageReportsByDataStore.flatten
+      _ <- Fox.runIfNonEmpty(allStorageReports)(organizationDAO.upsertUsedStorage(organization._id, allStorageReports)) ?~> "Failed to upsert used storage reports into db"
       _ <- organizationDAO.updateLastStorageScanTime(organization._id, Instant.now) ?~> "Failed to update last storage scan time in db"
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
-  private def refreshStorageReports(dataStore: DataStore,
-                                    organization: Organization): Fox[List[DirectoryStorageReport]] = {
-    val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-    dataStoreClient.fetchStorageReport(organization._id, datasetName = None)
+  private def getNewestStorageReports(dataStore: DataStore,
+                                      organization: Organization,
+                                      datasetIdOpt: Option[ObjectId] = None): Fox[List[ArtifactStorageReport]] =
+    for {
+      relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id,
+                                                                                  dataStore.name,
+                                                                                  datasetIdOpt)
+      relevantPathsAndUnparsableMags = relevantMagsForStorageReporting.map(resolvePath)
+      unparsableMags = relevantPathsAndUnparsableMags.collect { case Right(mag) => mag }.distinctBy(_._dataset)
+      relevantMagsWithValidPaths = relevantPathsAndUnparsableMags.collect { case Left(magWithPaths) => magWithPaths }
+      relevantMagPaths = relevantPathsAndUnparsableMags.collect { case Left((_, paths)) => paths }.flatten
+      _ = Fox.runIfNonEmpty(unparsableMags)(logger.error(
+        s"Found dataset mags with unparsable mag literals in datastore ${dataStore.name} of organization ${organization._id} with dataset ids : ${unparsableMags
+          .map(_._dataset)}"))
+      relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,
+                                                                                          dataStore.name,
+                                                                                          datasetIdOpt)
+      pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths, relevantAttachments)
+      relevantAttachmentPaths = relevantAttachments.map(_.path)
+      relevantPaths = relevantMagPaths ++ relevantAttachmentPaths
+      reports <- fetchAllStorageReportsForPaths(organization._id, relevantPaths, dataStore)
+      storageReports = buildStorageReportsForPathReports(organization._id, reports, pathToArtifactLookupMap)
+    } yield storageReports
+
+  private def resolvePath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
+    mag.realPath match {
+      case Some(realPath) => Left((mag, List(realPath)))
+      case None =>
+        mag.path match {
+          case Some(path) => Left((mag, List(path)))
+          case None =>
+            val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
+            val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
+
+            parsedMagOpt match {
+              case Some(parsedMag) =>
+                Left(
+                  (
+                    mag,
+                    List(
+                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
+                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString
+                    )
+                  )
+                )
+              case None =>
+                Right(mag)
+            }
+        }
+    }
+
+  private def buildPathToStorageArtifactMap(
+      magsWithValidPaths: List[(DataSourceMagRow, List[String])],
+      relevantAttachments: List[DatasetLayerAttachmentsRow]
+  ): Map[String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow]] = {
+
+    val magEntries: List[(String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow])] =
+      magsWithValidPaths.flatMap {
+        case (mag, paths) =>
+          paths.map(path => path -> Left(mag))
+      }
+
+    val attachmentEntries: List[(String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow])] =
+      relevantAttachments.map(att => att.path -> Right(att))
+
+    (magEntries ++ attachmentEntries).toMap
   }
 
-  private def upsertUsedStorage(organization: Organization,
-                                storageReportsForDatastore: (List[DirectoryStorageReport], DataStore)): Fox[Unit] = {
-    val dataStore = storageReportsForDatastore._2
-    val storageReports = storageReportsForDatastore._1
-    organizationDAO.upsertUsedStorage(organization._id, dataStore.name, storageReports)
+  private def fetchAllStorageReportsForPaths(organizationId: String,
+                                             relevantPaths: List[String],
+                                             dataStore: DataStore): Fox[List[PathStorageReport]] = {
+    val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+    for {
+      storageReportAnswers <- Fox.serialCombined(relevantPaths.grouped(MAX_STORAGE_PATH_REQUESTS_PER_REQUEST).toList)(
+        pathsBatch =>
+          dataStoreClient.fetchStorageReports(organizationId, pathsBatch) ?~> "Could not fetch storage report")
+      storageReports = storageReportAnswers.flatMap(_.reports)
+    } yield storageReports
   }
+
+  private def buildStorageReportsForPathReports(
+      organizationId: String,
+      pathReports: List[PathStorageReport],
+      pathToArtifactMap: Map[String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow]])
+    : List[ArtifactStorageReport] =
+    pathReports.flatMap(pathReport => {
+      pathToArtifactMap(pathReport.path) match {
+        case Left(mag) =>
+          Some(
+            ArtifactStorageReport(organizationId,
+                                  mag._dataset,
+                                  Left(mag._id),
+                                  pathReport.path,
+                                  pathReport.usedStorageBytes))
+        case Right(attachment) =>
+          val attachmentId = ObjectId.fromStringSync(attachment._Id)
+          attachmentId.flatMap(
+            id =>
+              Some(
+                ArtifactStorageReport(organizationId,
+                                      ObjectId(attachment._Dataset),
+                                      Right(id),
+                                      pathReport.path,
+                                      pathReport.usedStorageBytes)))
+
+      }
+    })
 
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
+      _ <- Fox.successful(())
       dataStore <- datasetService.dataStoreFor(dataset)
       _ <- if (dataStore.reportUsedStorageEnabled) {
-        val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
         for {
           organization <- organizationDAO.findOne(dataset._organization)
-          report <- dataStoreClient.fetchStorageReport(organization._id, Some(dataset.name))
+          reports <- getNewestStorageReports(dataStore, organization, Some(dataset._id))
           _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
-          _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
+          _ <- Fox.runIfNonEmpty(reports)(organizationDAO.upsertUsedStorage(organization._id, reports)) ?~> "Failed to upsert used storage reports into db"
         } yield ()
       } else Fox.successful(())
     } yield ()

@@ -264,7 +264,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
-      data <- Fox.runIf(!skipVolumeData) {
+      data <- Fox.runIf(!skipVolumeData && !tracing.getHasEditableMapping) {
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
@@ -280,7 +280,7 @@ class WKRemoteTracingStoreClient(
           .addQueryStringOptional("version", version.map(_.toString))
           .getWithBytesResponse
       }
-      baseMappingNameOpt: Option[String] <- Fox.runIf(tracing.getHasEditableMapping) {
+      baseMappingNameOpt: Option[String] <- Fox.runIf(!skipVolumeData && tracing.getHasEditableMapping) {
         rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/info").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryStringOptional("version", version.map(_.toString))

@@ -73,7 +73,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   def fetchStorageReports(organizationId: String, paths: List[String]): Fox[PathStorageUsageResponse] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken) // TODOM: Maybe make silent again
       .postJsonWithJsonResponse[PathStorageUsageRequest, PathStorageUsageResponse](PathStorageUsageRequest(paths))
 
   def hasSegmentIndexFile(datasetId: ObjectId, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {

@@ -174,7 +174,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         name = datasetName,
         voxelSize = dataSource.voxelSizeOpt,
         sharingToken = None,
-        status = status.orElse(dataSource.statusOpt).getOrElse(""),
+        status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
         metadata = metadata
       )

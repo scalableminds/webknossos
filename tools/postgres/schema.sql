@@ -398,7 +398,6 @@ CREATE TABLE webknossos.organization_usedStorage (
       OR
       (_dataset_mag IS NULL AND _layer_attachment IS NOT NULL)
     ),
-    -- 🧩 THESE ARE THE CRITICAL CHANGES:
   CONSTRAINT unique_dataset_mag UNIQUE (_dataset_mag),
   CONSTRAINT unique_layer_attachment UNIQUE (_layer_attachment)
 );

@@ -15,6 +15,7 @@ case class WKWResolution(resolution: Vec3Int,
                          credentialId: Option[String] = None) {
   def toMagLocator: MagLocator =
     MagLocator(mag = resolution, path = path, credentialId = credentialId)
+
 }
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]

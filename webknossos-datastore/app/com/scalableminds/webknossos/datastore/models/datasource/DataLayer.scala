@@ -234,8 +234,6 @@ trait DataLayerLike {
     case layer: AbstractDataLayer         => layer.mags
     case layer: AbstractSegmentationLayer => layer.mags
     case layer: DataLayerWithMagLocators  => Some(layer.getMags)
-    case layer: WKWDataLayer              => if (layer.mags.isEmpty) None else Some(layer.mags)
-    case layer: WKWSegmentationLayer      => if (layer.mags.isEmpty) None else Some(layer.mags)
     case _                                => None
   }
 
@@ -358,8 +356,6 @@ trait DataLayer extends DataLayerLike {
       case _                               => this
     }
   }
-
-  def asAbstractLayer: DataLayerLike
 }
 
 object DataLayer {

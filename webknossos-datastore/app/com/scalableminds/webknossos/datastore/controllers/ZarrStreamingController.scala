@@ -25,8 +25,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services._
-import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -37,7 +37,6 @@ class ZarrStreamingController @Inject()(
     binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     remoteTracingstoreClient: DSRemoteTracingstoreClient,
-    zarrStreamingService: ZarrStreamingService
 )(implicit ec: ExecutionContext)
     extends Controller
     with Zarr3OutputHelper {
@@ -503,7 +502,7 @@ class ZarrStreamingController @Inject()(
           views.html.datastoreZarrDatasourceDir(
             "Combined datastore and tracingstore directory",
             s"$accessToken",
-            contents
+            additionalEntries ++ layerNames
           ))
     }
 
@@ -514,6 +513,8 @@ class ZarrStreamingController @Inject()(
       }
     }
 
+  private def zGroupJson: JsValue = Json.toJson(NgffGroupHeader(zarr_format = 2))
+
   def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
@@ -523,7 +524,7 @@ class ZarrStreamingController @Inject()(
           remoteTracingstoreClient
             .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
             .map(Ok(_)),
-        orElse = _ => Fox.successful(Ok(zarrStreamingService.zGroupJson))
+        orElse = _ => Fox.successful(Ok(zGroupJson))
       )
     }
 }

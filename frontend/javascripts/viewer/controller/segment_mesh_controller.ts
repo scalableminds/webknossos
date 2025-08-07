@@ -596,23 +596,23 @@ export default class SegmentMeshController {
       setMaterialToVertexColors(mesh.material);
     }
 
+    // The order of highlighting effects by priority is partitioned state > hovered state > active state.
+    // Therefore we need to apply them in reverse priority order to ensure correct highlighting.
     if (mesh.activeState && mesh.activeState !== "full") {
       const newColor = ACTIVATED_COLOR_VEC3;
       for (const highlightEntry of mesh.activeState) {
         setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
       }
     }
-    if (mesh.partitionedState && mesh.partitionedState !== "full") {
-      const newColor = ACTIVATED_COLOR_VEC3;
-      for (const highlightEntry of mesh.partitionedState) {
-        setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
-      }
-    }
-    // Setting the hovered part needs to happen after setting the active & partition part,
-    // so that there is still a hover effect for an active super voxel.
     if (mesh.hoveredState && mesh.hoveredState !== "full") {
       const newColor = HOVERED_COLOR_VEC3;
       for (const highlightEntry of mesh.hoveredState) {
+        setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
+      }
+    }
+    if (mesh.partitionedState && mesh.partitionedState !== "full") {
+      const newColor = ACTIVATED_COLOR_VEC3;
+      for (const highlightEntry of mesh.partitionedState) {
         setRangeToColor(mesh.geometry, highlightEntry.range, highlightEntry.color ?? newColor);
       }
     }

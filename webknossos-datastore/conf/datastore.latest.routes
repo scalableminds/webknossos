@@ -117,7 +117,7 @@ POST          /datasets/exploreRemote                                           
 DELETE        /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
 # Actions
-POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
+POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(organizationId: Option[String])
 POST          /triggers/createOrganizationDirectory                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationId: String)
 POST          /triggers/reload/:organizationId/:datasetId                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 

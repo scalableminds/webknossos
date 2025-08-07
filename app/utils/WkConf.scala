@@ -143,6 +143,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
   }
 
   object Datastore {

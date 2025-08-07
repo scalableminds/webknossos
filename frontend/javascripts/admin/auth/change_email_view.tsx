@@ -72,26 +72,6 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   return (
     <Form onFinish={onFinish} form={form}>
       <FormItem
-        name={PASSWORD_FIELD_KEY}
-        rules={[
-          {
-            required: true,
-            message: "Please enter your password for verification",
-          },
-        ]}
-      >
-        <Input.Password
-          prefix={
-            <LockOutlined
-              style={{
-                fontSize: 13,
-              }}
-            />
-          }
-          placeholder="Your Password"
-        />
-      </FormItem>
-      <FormItem
         hasFeedback
         name={NEW_EMAIL_FIELD_KEY}
         rules={[
@@ -151,9 +131,29 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
           placeholder="Confirm New Email Address"
         />
       </FormItem>
+      <FormItem
+        name={PASSWORD_FIELD_KEY}
+        rules={[
+          {
+            required: true,
+            message: "Please enter your password for verification",
+          },
+        ]}
+      >
+        <Input.Password
+          prefix={
+            <LockOutlined
+              style={{
+                fontSize: 13,
+              }}
+            />
+          }
+          placeholder="Your Password"
+        />
+      </FormItem>
       <Alert
         type="info"
-        message="You will be logged out after changing your email address."
+        message="You will be logged out after successfully changing your email address."
         showIcon
         style={{
           marginBottom: 24,

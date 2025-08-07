@@ -272,7 +272,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", index.toString)
       writer.writeAttribute("name", volumeLayer.name)
-      if (!skipVolumeData) {
+      if (!skipVolumeData && volumeLayer.editedMappingEdgesOpt.isEmpty) {
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
         writer.writeAttribute("format", volumeDataZipFormat.toString)
       }

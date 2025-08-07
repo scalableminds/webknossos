@@ -255,7 +255,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     // is loaded from scratch. This is important since the loaded page numbers
     // are relative to the base version. If the version of the tracing changed,
     // old pages are not valid anymore.
-    queryClient.removeQueries(queryKey);
+    queryClient.removeQueries({
+      queryKey: queryKey,
+    });
     // Will be set back by handleRestoreVersion or handleCloseRestoreView
     Store.dispatch(setAnnotationAllowUpdateAction(false));
   });
@@ -270,9 +272,12 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     hasPreviousPage,
     fetchPreviousPage,
     isFetchingPreviousPage,
-  } = useInfiniteQuery(queryKey, fetchPaginatedVersions, {
+  } = useInfiniteQuery({
+    queryKey,
+    queryFn: fetchPaginatedVersions,
     refetchOnWindowFocus: false,
     staleTime: Number.POSITIVE_INFINITY,
+    initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });

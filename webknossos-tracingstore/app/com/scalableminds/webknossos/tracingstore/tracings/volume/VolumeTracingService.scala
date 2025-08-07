@@ -30,7 +30,7 @@ import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io._
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
@@ -72,7 +72,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, datasetErrorLoggingService)
+  private val binaryDataService = new BinaryDataService(Path.of(""), None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -463,11 +463,11 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(annotationId: ObjectId,
                                     tracingId: String,
                                     tracing: VolumeTracing,
-                                    volumeDataZipFormmat: VolumeDataZipFormat,
+                                    volumeDataZipFormat: VolumeDataZipFormat,
                                     voxelSize: Option[VoxelSize],
                                     os: OutputStream)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
-    val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
+    val buckets: Iterator[NamedStream] = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
         new WKWBucketStreamSink(volumeLayer, tracing.fallbackLayer.nonEmpty)(
           volumeLayer.bucketProvider.bucketStream(Some(tracing.version)),
@@ -973,10 +973,10 @@ class VolumeTracingService @Inject()(
       implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
     for {
       dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
-      dataSourceId = dataSource.id
       layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+      datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
       fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
-        RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+        RemoteFallbackLayer.fromDataLayerAndDatasetId(layerWithFallback, datasetId).toFox
       }
     } yield fallbackLayer
 

@@ -8,13 +8,13 @@ import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartne
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 
-import java.nio.file.Paths
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxImplicits with ConnectomeFileUtils {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 

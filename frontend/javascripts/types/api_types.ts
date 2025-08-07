@@ -118,7 +118,6 @@ export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
   datasetId: string;
-  dataSourceId: APIDataSourceId;
   datasetName: string;
   sourceName: string;
   newName: string;
@@ -764,6 +763,7 @@ export type APIFeatureToggles = {
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
+  readonly registerToDefaultOrgaEnabled?: boolean;
 };
 export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;

@@ -19,6 +19,7 @@ image.create.failed=Failed to create image
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 auth.token.noUser=Could not determine user for access token
+auth.register.needInvite=Registration without invite is disabled for this WEBKNOSSOS instance.
 
 team.created=Team was created successfully
 team.admin.notPossibleBy=User {1} cannot be assigned administrative rights in team {0} because he does not belong to the teams parent team.
@@ -34,6 +35,8 @@ organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} could not be found
 organization.notFound.wrongHost=Organization {0} could not be found. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates {1} while this instance is {2}.
+organization.notFound.byInvite=Organization specified in the invite could not be found.
+organization.ambiguous=Registration without invite is now allowed for instances with multiple organizations.
 organization.list.failed=Failed to retrieve list of organizations.
 organization.id.invalid=This organization id contains illegal characters. Please only use letters and numbers.
 organization.id.alreadyInUse=This id is already claimed by a different organization and not available anymore. Please choose a different id.
@@ -127,6 +130,8 @@ dataVault.setup.failed=Failed to set up remote file system
 dataVault.getPath.failed=Failed to get remote path
 
 dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
+dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
+dataSource.update.newExplicitPaths=Cannot update a dataset with new explicit paths. To add mags or layers, please use the compose functionality.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
@@ -371,6 +376,7 @@ folder.delete.notEmpty.datasets=Cannot delete folders that still contain dataset
 folder.notFound=Could not find the requested folder
 folder.delete.root=Cannot delete the organization’s root folder
 folder.move.root=Cannot move the organization’s root folder
+folder.move.self=Cannot move a folder into itself
 folder.update.notAllowed=No write access on this folder
 folder.noWriteAccess=No write access in this folder
 folder.update.name.failed=Failed to update the folder’s name

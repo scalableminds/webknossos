@@ -4,7 +4,7 @@ import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import com.scalableminds.util.tools.Box
+import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 
@@ -37,7 +37,8 @@ class WKRemoteTracingStoreClient(
     dataset: Dataset,
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
@@ -156,8 +157,9 @@ class WKRemoteTracingStoreClient(
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None,
+                             datasetId: ObjectId,
                              dataSource: DataSourceLike): Fox[Unit] = {
-    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
@@ -201,6 +203,7 @@ class WKRemoteTracingStoreClient(
                                     newTracingId: String,
                                     tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
+                                    datasetId: ObjectId,
                                     initialData: List[Option[File]]): Fox[Unit] = {
     logger.debug(
       s"Called to merge ${tracings.tracings.length} VolumeTracings by contents into $newAnnotationId/$newTracingId." + baseInfo)
@@ -210,7 +213,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProto[VolumeTracings](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("annotationId" -> newAnnotationId.toString)
@@ -226,9 +229,10 @@ class WKRemoteTracingStoreClient(
                         tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: DataSourceLike): Fox[Unit] = {
+                        dataSource: DataSourceLike,
+                        datasetId: ObjectId): Fox[Unit] = {
     logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
-    annotationDataSourceTemporaryStore.store(annotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(annotationId, dataSource, datasetId)
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
@@ -250,7 +254,7 @@ class WKRemoteTracingStoreClient(
                        version: Option[Long],
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
-                       voxelSize: Option[VoxelSize]): Fox[FetchedAnnotationLayer] = {
+                       voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
     logger.debug(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
       _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -270,7 +274,25 @@ class WKRemoteTracingStoreClient(
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
-      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
+      editedMappingEdgesData <- Fox.runIf(!skipVolumeData && tracing.getHasEditableMapping) {
+        rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/editedEdgesZip").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryStringOptional("version", version.map(_.toString))
+          .getWithBytesResponse
+      }
+      baseMappingNameOpt: Option[String] <- Fox.runIf(tracing.getHasEditableMapping) {
+        rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/info").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryStringOptional("version", version.map(_.toString))
+          .addQueryString("annotationId" -> annotationId.toString)
+          .getWithJsonResponse[JsObject]
+          .flatMap(jsObj => JsonHelper.as[String](jsObj \ "baseMappingName").toFox)
+      }
+      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer,
+                                                                           Right(tracing),
+                                                                           data,
+                                                                           editedMappingEdgesData,
+                                                                           baseMappingNameOpt)
     } yield fetchedAnnotationLayer
   }
 

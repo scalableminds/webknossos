@@ -478,7 +478,7 @@ function getMeshItems(
               Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 1)),
             label: (
               <FastTooltip title={getTooltip(togglePartitionOneVerb, false)}>
-                {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} (${segmentIdLabel}) to
+                {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
                 Partition 1 {shortcutBuilder(["Ctrl", "leftMouse"])}
               </FastTooltip>
             ),
@@ -489,7 +489,7 @@ function getMeshItems(
               Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 2)),
             label: (
               <FastTooltip title={getTooltip(togglePartitionTwoVerb, false)}>
-                {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} (${segmentIdLabel}) to
+                {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
                 Partition 2 {shortcutBuilder(["Shift", "leftMouse"])}
               </FastTooltip>
             ),

@@ -440,7 +440,7 @@ class LegacyController @Inject()(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
         organizationId)
       dataSource match {
-        case GenericDataSource(_, _, _, _) =>
+        case GenericDataSource(_, _, _, _, _) =>
           for {
             _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))

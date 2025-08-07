@@ -49,8 +49,10 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 }
 
 case class ReserveManualUploadRequest(
+    datasetName: String,
     layersToLink: Seq[LinkedLayerIdentifier],
-    dataSource: GenericDataSource[DataLayerLike]
+    dataSource: GenericDataSource[DataLayerLike],
+    folderId: Option[ObjectId]
 )
 
 object ReserveManualUploadRequest {
@@ -512,6 +514,11 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
         _ <- Fox.successful(())
+        // include Layers to link
+        // determine all paths for mags + attachments
+        // Store datasource
+        // Store dataset (unusable, with not yet fully uploaded status)
+        // Return: id, new paths
       } yield Ok
     }
 

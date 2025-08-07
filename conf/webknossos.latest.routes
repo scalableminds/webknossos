@@ -94,7 +94,7 @@ PUT           /datasets/:datasetId/clearThumbnailCache                          
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
-POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload(datasetName: String)
+POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

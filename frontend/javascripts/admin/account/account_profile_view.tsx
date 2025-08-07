@@ -1,8 +1,10 @@
-import { CheckOutlined, DownOutlined } from "@ant-design/icons";
+import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
+import ChangeEmailView from "admin/auth/change_email_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Col, Dropdown, Row } from "antd";
+import { Button, Col, Dropdown, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
+import { useState } from "react";
 import { getSystemColorTheme } from "theme";
 import type { APIUserTheme } from "types/api_types";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
@@ -16,7 +18,7 @@ function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
-
+  const [changeEmailVisible, setChangeEmailVisible] = useState(false);
   if (!activeUser) return null;
 
   const role = Utils.isUserAdmin(activeUser)
@@ -63,7 +65,20 @@ function AccountProfileView() {
     },
     {
       title: "Email",
-      content: activeUser.email,
+      content: changeEmailVisible ? (
+        <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />
+      ) : (
+        activeUser.email
+      ),
+      action: (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<EditOutlined />}
+          size="small"
+          onClick={() => setChangeEmailVisible(true)}
+        />
+      ),
     },
     {
       title: "Organization",
@@ -95,7 +110,12 @@ function AccountProfileView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {profileItems.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
+            <SettingsCard
+              title={item.title}
+              content={item.content}
+              tooltip={item.tooltip}
+              action={item.action}
+            />
           </Col>
         ))}
       </Row>

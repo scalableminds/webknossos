@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteS
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 

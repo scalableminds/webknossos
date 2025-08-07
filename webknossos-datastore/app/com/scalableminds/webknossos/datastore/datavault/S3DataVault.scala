@@ -149,7 +149,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         objectListing <- notFoundToFailure(client.listObjectsV2(request).asScala)
         totalCurrentSize = objectListing.contents().asScala.map(_.size()).foldLeft(alreadyMeasuredSize)(_ + _)
         result <- if (objectListing.isTruncated)
-          fetchBatch(Option(objectListing.nextContinuationToken()), totalCurrentSize)
+          fetchBatch(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
         else
           Fox.successful(totalCurrentSize)
       } yield result

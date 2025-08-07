@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters
 }
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService

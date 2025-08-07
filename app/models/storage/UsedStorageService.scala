@@ -116,26 +116,30 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
     } yield storageReports
 
   private def resolvePath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
-    if (mag.realPath.isDefined) {
-      Left(mag, List(mag.realPath.get))
-    } else if (mag.path.isDefined) {
-      Left(mag, List(mag.path.get))
-    } else {
-      val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
-      val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
+    mag.realPath match {
+      case Some(realPath) => Left((mag, List(realPath)))
+      case None =>
+        mag.path match {
+          case Some(path) => Left((mag, List(path)))
+          case None =>
+            val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
+            val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
 
-      parsedMagOpt match {
-        case Some(parsedMag) =>
-          Left(
-            mag,
-            List(
-              layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
-              layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString
-            )
-          )
-        case None =>
-          Right(mag)
-      }
+            parsedMagOpt match {
+              case Some(parsedMag) =>
+                Left(
+                  (
+                    mag,
+                    List(
+                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
+                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString
+                    )
+                  )
+                )
+              case None =>
+                Right(mag)
+            }
+        }
     }
 
   private def buildPathToStorageArtifactMap(

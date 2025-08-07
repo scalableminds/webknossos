@@ -81,7 +81,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
-          folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
+          folderId = uploadInfo.folderId.getOrElse(organization._rootFolder)
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"

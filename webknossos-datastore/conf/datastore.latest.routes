@@ -111,13 +111,13 @@ POST          /datasets/measureUsedStorage/:organizationId                      
 GET           /datasets/:datasetId/readInboxDataSource                                                                                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readInboxDataSource(datasetId: ObjectId)
 PUT           /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(datasetId: ObjectId)
 POST          /datasets/:organizationId/:datasetName                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.add(organizationId: String, datasetName: String, folderId: Option[String])
-DELETE        /datasets/:organizationId/:datasetDirectoryName/deleteOnDisk                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(organizationId: String, datasetDirectoryName: String)
+DELETE        /datasets/:datasetId/deleteOnDisk                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/exploreRemote                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
 
 DELETE        /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
 # Actions
-POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
+POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(organizationId: Option[String])
 POST          /triggers/createOrganizationDirectory                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationId: String)
 POST          /triggers/reload/:organizationId/:datasetId                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 

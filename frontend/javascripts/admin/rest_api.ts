@@ -777,10 +777,11 @@ export function getUpdateActionLog(
   annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
+  truncateActionLog: boolean = false,
   sortAscending: boolean = false,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(async (token) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams([["truncate", truncateActionLog.toString()]]);
     params.set("token", token);
     if (oldestVersion != null) {
       params.set("oldestVersion", oldestVersion.toString());
@@ -1104,19 +1105,9 @@ type DatasetCompositionArgs = {
 export function createDatasetComposition(
   payload: DatasetCompositionArgs,
 ): Promise<NewDatasetReply> {
-  // Formatting the dataSourceId to the old format so that the backend can parse it.
-  // And removing the datasetId as the datastore cannot use it.
-  const updatedLayers = payload.layers.map(({ dataSourceId, datasetId, ...rest }) => ({
-    ...rest,
-    datasetId,
-  }));
-  const payloadWithUpdatedLayers = {
-    ...payload,
-    layers: updatedLayers,
-  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/api/datasets/compose?token=${token}`, {
-      data: payloadWithUpdatedLayers,
+      data: payload,
     }),
   );
 }
@@ -1313,13 +1304,21 @@ export function updateDatasetTeams(
   });
 }
 
-export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
+export async function triggerDatasetCheck(
+  datastoreHost: string,
+  organizationId?: string,
+): Promise<void> {
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.set("token", token);
+    if (organizationId) {
+      params.set("organizationId", organizationId);
+    }
+    return Request.triggerRequest(`/data/triggers/checkInboxBlocking?${params}`, {
       host: datastoreHost,
       method: "POST",
-    }),
-  );
+    });
+  });
 }
 
 export async function triggerDatasetClearCache(
@@ -1344,18 +1343,12 @@ export async function triggerDatasetClearCache(
   });
 }
 
-export async function deleteDatasetOnDisk(
-  datastoreHost: string,
-  dataSourceId: APIDataSourceId,
-): Promise<void> {
+export async function deleteDatasetOnDisk(datastoreHost: string, datasetId: string): Promise<void> {
   await doWithToken((token) =>
-    Request.triggerRequest(
-      `/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/deleteOnDisk?token=${token}`,
-      {
-        host: datastoreHost,
-        method: "DELETE",
-      },
-    ),
+    Request.triggerRequest(`/data/datasets/${datasetId}/deleteOnDisk?token=${token}`, {
+      host: datastoreHost,
+      method: "DELETE",
+    }),
   );
 }
 
@@ -1482,7 +1475,7 @@ export function getEditableMappingInfo(
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
   mappingName: string,
   segmentId: number,
@@ -1493,9 +1486,7 @@ export function getPositionForSegmentInAgglomerate(
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
-        dataSourceId.directoryName
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
+      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });

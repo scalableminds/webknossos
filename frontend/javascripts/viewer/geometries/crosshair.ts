@@ -1,9 +1,20 @@
-import * as THREE from "three";
+import {
+  DoubleSide,
+  Group,
+  Matrix4,
+  Mesh,
+  MeshBasicMaterial,
+  RingGeometry,
+  type Scene,
+  Vector3,
+} from "three";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import Store from "viewer/store";
 
+const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
+
 class Crosshair {
-  mesh: THREE.Group;
+  mesh: Group;
   WIDTH: number;
   COLOR: string;
   SCALE_MIN: number;
@@ -47,9 +58,9 @@ class Crosshair {
       m[11],
       m[15],
     );
-    mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-    mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.5));
-    mesh.matrix.scale(new THREE.Vector3(this.scale, this.scale, this.scale));
+    mesh.matrix.multiply(flipYRotationMatrix);
+    mesh.matrix.multiply(new Matrix4().makeTranslation(0, 0, 0.5));
+    mesh.matrix.scale(new Vector3(this.scale, this.scale, this.scale));
     mesh.matrixWorldNeedsUpdate = true;
     this.isDirty = false;
   }
@@ -63,20 +74,20 @@ class Crosshair {
     }
   }
 
-  addToScene(scene: THREE.Scene) {
+  addToScene(scene: Scene) {
     scene.add(this.mesh);
   }
 
-  createMesh(): THREE.Group {
+  createMesh(): Group {
     const createCircle = (radius: number) => {
-      const geometry = new THREE.RingGeometry(radius, radius + 4, 64);
-      const material = new THREE.MeshBasicMaterial({ color: this.COLOR, side: THREE.DoubleSide });
-      return new THREE.Mesh(geometry, material);
+      const geometry = new RingGeometry(radius, radius + 4, 64);
+      const material = new MeshBasicMaterial({ color: this.COLOR, side: DoubleSide });
+      return new Mesh(geometry, material);
     };
 
     const outerCircle = createCircle(this.WIDTH / 2);
     const innerCircle = createCircle(4);
-    const mesh = new THREE.Group();
+    const mesh = new Group();
 
     mesh.add(outerCircle);
     mesh.add(innerCircle);

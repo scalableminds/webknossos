@@ -39,7 +39,11 @@ const MENU_ITEMS: MenuItemGroupType[] = [
 const OrganizationView = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const selectedKey = location.pathname.split("/").filter(Boolean).pop() || "overview";
+  const selectedKey =
+    location.pathname
+      .split("/")
+      .filter((p) => p.length > 0)
+      .pop() || "overview";
 
   const breadcrumbItems = [
     {

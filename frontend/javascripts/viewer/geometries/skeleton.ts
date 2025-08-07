@@ -1,6 +1,17 @@
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DataTexture,
+  FloatType,
+  Group,
+  LineSegments,
+  Object3D,
+  Points,
+  RGBAFormat,
+  type RawShaderMaterial,
+} from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
@@ -18,8 +29,8 @@ import Store from "viewer/throttled_store";
 
 const MAX_CAPACITY = 1000;
 
-type BufferGeometryWithBufferAttributes = THREE.BufferGeometry & {
-  attributes: Record<string, THREE.BufferAttribute>;
+type BufferGeometryWithBufferAttributes = BufferGeometry & {
+  attributes: Record<string, BufferAttribute>;
 };
 
 type BufferHelper = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
@@ -27,66 +38,63 @@ type Buffer = {
   capacity: number;
   nextIndex: number;
   geometry: BufferGeometryWithBufferAttributes;
-  mesh: THREE.Object3D;
+  mesh: Points | LineSegments;
 };
 type BufferPosition = {
   buffer: Buffer;
   index: number;
 };
 type BufferCollection = {
-  buffers: Array<Buffer>;
+  buffers: Buffer[];
   idToBufferPosition: Map<string, BufferPosition>;
-  freeList: Array<BufferPosition>;
+  freeList: BufferPosition[];
   helper: BufferHelper;
-  material: THREE.RawShaderMaterial;
+  material: RawShaderMaterial;
 };
 
-type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
+type BufferOperation = (position: BufferPosition) => BufferAttribute[];
 const NodeBufferHelperType = {
-  setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
-    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
+  setAttributes(geometry: BufferGeometry, capacity: number): void {
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
-        new THREE.BufferAttribute(new Float32Array(capacity), 1),
+        new BufferAttribute(new Float32Array(capacity), 1),
       );
     }
-    geometry.setAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.setAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.setAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.setAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("radius", new BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("type", new BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("isCommented", new BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("nodeId", new BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("treeId", new BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Object3D {
-    return new THREE.Points(geometry, material);
+  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): Points {
+    return new Points(geometry, material);
   },
 
   supportsPicking: true,
 };
 
 const EdgeBufferHelperType = {
-  setAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(capacity * 2 * 3), 3),
-    );
+  setAttributes(geometry: BufferGeometry, capacity: number): void {
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 2 * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
     for (const idx of _.range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
-        new THREE.BufferAttribute(new Float32Array(capacity * 2), 1),
+        new BufferAttribute(new Float32Array(capacity * 2), 1),
       );
     }
 
-    geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
+    geometry.setAttribute("treeId", new BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Object3D {
-    return new THREE.LineSegments(geometry, material);
+  buildMesh(geometry: BufferGeometry, material: RawShaderMaterial): LineSegments {
+    return new LineSegments(geometry, material);
   },
 
   supportsPicking: false,
@@ -102,8 +110,8 @@ const EdgeBufferHelperType = {
  */
 
 class Skeleton {
-  rootGroup: THREE.Group;
-  pickingNode: THREE.Object3D;
+  rootGroup: Group;
+  pickingNode: Object3D;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'prevTracing' has no initializer and is n... Remove this comment to see the full error message
   prevTracing: SkeletonTracing;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodes' has no initializer and is not def... Remove this comment to see the full error message
@@ -111,7 +119,7 @@ class Skeleton {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'edges' has no initializer and is not def... Remove this comment to see the full error message
   edges: BufferCollection;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'treeColorTexture' has no initializer and... Remove this comment to see the full error message
-  treeColorTexture: THREE.DataTexture;
+  treeColorTexture: DataTexture;
   supportsPicking: boolean;
   stopStoreListening: () => void;
 
@@ -123,8 +131,8 @@ class Skeleton {
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;
-    this.rootGroup = new THREE.Group();
-    this.pickingNode = new THREE.Object3D();
+    this.rootGroup = new Group();
+    this.pickingNode = new Object3D();
     const skeletonTracing = skeletonTracingSelectorFn(Store.getState());
     if (skeletonTracing != null) {
       this.reset(skeletonTracing);
@@ -165,12 +173,12 @@ class Skeleton {
     const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
     const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
 
-    this.treeColorTexture = new THREE.DataTexture(
+    this.treeColorTexture = new DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
       COLOR_TEXTURE_WIDTH,
       COLOR_TEXTURE_WIDTH,
-      THREE.RGBAFormat,
-      THREE.FloatType,
+      RGBAFormat,
+      FloatType,
     );
     this.nodeShader = new NodeShader(this.treeColorTexture);
     this.edgeShader = new EdgeShader(this.treeColorTexture);
@@ -219,7 +227,7 @@ class Skeleton {
 
   initializeBufferCollection(
     initialCapacity: number,
-    material: THREE.RawShaderMaterial,
+    material: RawShaderMaterial,
     helper: BufferHelper,
   ): BufferCollection {
     const initialBuffer = this.initializeBuffer(
@@ -236,12 +244,8 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(
-    capacity: number,
-    material: THREE.RawShaderMaterial,
-    helper: BufferHelper,
-  ): Buffer {
-    const geometry = new THREE.BufferGeometry() as BufferGeometryWithBufferAttributes;
+  initializeBuffer(capacity: number, material: RawShaderMaterial, helper: BufferHelper): Buffer {
+    const geometry = new BufferGeometry() as BufferGeometryWithBufferAttributes;
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     // Frustum culling is disabled because nodes that are transformed
@@ -491,15 +495,15 @@ class Skeleton {
     this.prevTracing = skeletonTracing;
   }
 
-  getAllNodes(): Array<THREE.Object3D> {
+  getAllNodes(): Object3D[] {
     return this.nodes.buffers.map((buffer) => buffer.mesh);
   }
 
-  getRootGroup(): THREE.Object3D {
+  getRootGroup(): Object3D {
     return this.rootGroup;
   }
 
-  startPicking(isTouch: boolean): THREE.Object3D {
+  startPicking(isTouch: boolean): Object3D {
     this.pickingNode.matrixAutoUpdate = false;
     this.pickingNode.matrix.copy(this.rootGroup.matrixWorld);
     this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
@@ -518,7 +522,7 @@ class Skeleton {
    * Combine node, edge and tree ids to a single unique id.
    * @param numbers - Array of node/edge id and treeId
    */
-  combineIds(...numbers: Array<number>): string {
+  combineIds(...numbers: number[]): string {
     return numbers.join(",");
   }
 
@@ -553,31 +557,27 @@ class Skeleton {
    */
   createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
     const id = this.combineIds(node.id, treeId);
-    this.create(
-      id,
-      this.nodes,
-      ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
-        const attributes = buffer.geometry.attributes;
-        const untransformedPosition =
-          "untransformedPosition" in node ? node.untransformedPosition : node.position;
-        attributes.position.set(untransformedPosition, index * 3);
+    this.create(id, this.nodes, ({ buffer, index }: BufferPosition): BufferAttribute[] => {
+      const attributes = buffer.geometry.attributes;
+      const untransformedPosition =
+        "untransformedPosition" in node ? node.untransformedPosition : node.position;
+      attributes.position.set(untransformedPosition, index * 3);
 
-        if (node.additionalCoordinates) {
-          for (const idx of _.range(0, node.additionalCoordinates.length)) {
-            const attributeAdditionalCoordinates =
-              buffer.geometry.attributes[`additionalCoord_${idx}`];
-            attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
-          }
+      if (node.additionalCoordinates) {
+        for (const idx of _.range(0, node.additionalCoordinates.length)) {
+          const attributeAdditionalCoordinates =
+            buffer.geometry.attributes[`additionalCoord_${idx}`];
+          attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
         }
-        attributes.radius.array[index] = node.radius;
-        attributes.type.array[index] = NodeTypes.NORMAL;
-        // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
-        attributes.isCommented.array[index] = false;
-        attributes.nodeId.array[index] = node.id;
-        attributes.treeId.array[index] = treeId;
-        return _.values(attributes);
-      },
-    );
+      }
+      attributes.radius.array[index] = node.radius;
+      attributes.type.array[index] = NodeTypes.NORMAL;
+      // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
+      attributes.isCommented.array[index] = false;
+      attributes.nodeId.array[index] = node.id;
+      attributes.treeId.array[index] = treeId;
+      return _.values(attributes);
+    });
   }
 
   /**

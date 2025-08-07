@@ -10,7 +10,7 @@ import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import * as THREE from "three";
+import { MathUtils, Matrix4 } from "three";
 import {
   actionChannel,
   all,
@@ -92,11 +92,11 @@ import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
-  // In orthogonal view mode, this active planes default rotation is added to the flycam rotation upon node creation.
-  // To get the same flycam rotation as was active during node creation, the default rotation is calculated out from the nodes rotation.
-  const nodeRotationRadian = map3(THREE.MathUtils.degToRad, activeNode.rotation);
+  // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
+  // To get the same flycam rotation as was active during node creation, the default rotation is calculated from the nodes rotation.
+  const nodeRotationRadian = map3(MathUtils.degToRad, activeNode.rotation);
   const nodeRotationInReducerFormatMatrix = eulerAngleToReducerInternalMatrix(nodeRotationRadian);
-  const viewportRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+  const viewportRotationMatrix = new Matrix4().makeRotationFromEuler(
     OrthoBaseRotations[NumberToOrthoView[activeNode.viewport]],
   );
   // Invert the rotation of the viewport to get the rotation configured during node creation.
@@ -105,7 +105,7 @@ function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>):
     viewportRotationMatrixInverted,
   );
   const rotationInRadian = reducerInternalMatrixToEulerAngle(rotationWithoutViewportRotation);
-  const flycamOnlyRotationInDegree = V3.round(map3(THREE.MathUtils.radToDeg, rotationInRadian));
+  const flycamOnlyRotationInDegree = V3.round(map3(MathUtils.radToDeg, rotationInRadian));
   return flycamOnlyRotationInDegree;
 }
 

@@ -3,7 +3,7 @@ import MultiKeyMap from "libs/multi_key_map";
 import { mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import * as THREE from "three";
+import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {
   APIDataLayer,
   APIDataset,
@@ -106,7 +106,7 @@ export function getRotationSettingsFromTransformationIn90DegreeSteps(
 
 export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
   const center = bbox.getCenter();
-  const translationMatrix = new THREE.Matrix4()
+  const translationMatrix = new Matrix4()
     .makeTranslation(-center[0], -center[1], -center[2])
     .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
@@ -114,7 +114,7 @@ export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
 
 export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
   const center = bbox.getCenter();
-  const translationMatrix = new THREE.Matrix4()
+  const translationMatrix = new Matrix4()
     .makeTranslation(center[0], center[1], center[2])
     .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
@@ -124,15 +124,15 @@ export function getRotationMatrixAroundAxis(
   axis: "x" | "y" | "z",
   rotationAndMirroringSettings: RotationAndMirroringSettings,
 ): AffineTransformation {
-  const euler = new THREE.Euler();
+  const euler = new Euler();
   const rotationInRadians = rotationAndMirroringSettings.rotationInDegrees * (Math.PI / 180);
   euler[axis] = rotationInRadians;
-  let rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+  let rotationMatrix = new Matrix4().makeRotationFromEuler(euler);
   if (rotationAndMirroringSettings.isMirrored) {
-    const scaleVector = new THREE.Vector3(1, 1, 1);
+    const scaleVector = new ThreeVector3(1, 1, 1);
     scaleVector[axis] = -1;
     rotationMatrix = rotationMatrix.multiply(
-      new THREE.Matrix4().makeScale(scaleVector.x, scaleVector.y, scaleVector.z),
+      new Matrix4().makeScale(scaleVector.x, scaleVector.y, scaleVector.z),
     );
   }
   rotationMatrix = rotationMatrix.transpose(); // Column-major to row-major
@@ -363,18 +363,18 @@ export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
   return M4x4.transpose(M4x4.inverse(mat));
 });
 
-const translation = new THREE.Vector3();
-const scale = new THREE.Vector3();
-const quaternion = new THREE.Quaternion();
-const IDENTITY_QUATERNION = new THREE.Quaternion();
+const translation = new ThreeVector3();
+const scale = new ThreeVector3();
+const quaternion = new Quaternion();
+const IDENTITY_QUATERNION = new Quaternion();
 
-const NON_SCALED_VECTOR = new THREE.Vector3(1, 1, 1);
+const NON_SCALED_VECTOR = new ThreeVector3(1, 1, 1);
 
 function isTranslationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
-  const threeMatrix = new THREE.Matrix4()
+  const threeMatrix = new Matrix4()
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
@@ -385,7 +385,7 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
-  const threeMatrix = new THREE.Matrix4()
+  const threeMatrix = new Matrix4()
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);

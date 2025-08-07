@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
 import _ from "lodash";
-import * as THREE from "three";
+import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
 import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
@@ -170,9 +170,9 @@ export function handleOpenContextMenu(
 }
 
 // Already defined here at toplevel to avoid object recreation with each call. Make sure to not do anything async between read and writes.
-const flycamRotationEuler = new THREE.Euler();
-const flycamRotationMatrix = new THREE.Matrix4();
-const movementVector = new THREE.Vector3();
+const flycamRotationEuler = new Euler();
+const flycamRotationMatrix = new Matrix4();
+const movementVector = new ThreeVector3();
 
 export function moveNode(
   dx: number,
@@ -425,7 +425,7 @@ export function maybeGetNodeIdFromPosition(
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
-  const pickingScene = new THREE.Scene();
+  const pickingScene = new Scene();
   pickingScene.add(pickingNode);
   const camera = planeView.getCameraForPlane(plane);
 

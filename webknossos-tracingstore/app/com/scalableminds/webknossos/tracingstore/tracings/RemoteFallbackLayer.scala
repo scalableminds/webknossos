@@ -15,10 +15,10 @@ import com.scalableminds.util.tools.Box
 
 import scala.concurrent.ExecutionContext
 
-case class RemoteFallbackLayer(datasetId: String, layerName: String, elementClass: ElementClassProto)
+case class RemoteFallbackLayer(datasetId: ObjectId, layerName: String, elementClass: ElementClassProto)
 
 object RemoteFallbackLayer extends ProtoGeometryImplicits {
-  def fromDataLayerAndDatasetId(dataLayer: DataLayerLike, datasetId: String): Box[RemoteFallbackLayer] = {
+  def fromDataLayerAndDatasetId(dataLayer: DataLayerLike, datasetId: ObjectId): Box[RemoteFallbackLayer] = {
     val elementClassProtoBox = ElementClass.toProto(dataLayer.elementClass)
     elementClassProtoBox.map(elementClassProto => RemoteFallbackLayer(datasetId, dataLayer.name, elementClassProto))
   }

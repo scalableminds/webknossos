@@ -1,21 +1,20 @@
-import * as THREE from "three";
+import { type Intersection, type Object3D, Raycaster } from "three";
 
-export type RaycastIntersection<TIntersected extends THREE.Object3D> =
-  THREE.Intersection<TIntersected>;
+export type RaycastIntersection<TIntersected extends Object3D> = Intersection<TIntersected>;
 
-function ascSort(a: RaycastIntersection<THREE.Object3D>, b: RaycastIntersection<THREE.Object3D>) {
+function ascSort(a: RaycastIntersection<Object3D>, b: RaycastIntersection<Object3D>) {
   return a.distance - b.distance;
 }
 
-export default class VisibilityAwareRaycaster extends THREE.Raycaster {
-  // A modified version of the Raycaster.js from three.js.
-  // The original version can be found here: https://github.com/mrdoob/three.js/blob/dev/src/core/Raycaster.js.
+export default class VisibilityAwareRaycaster extends Raycaster {
+  // A modified version of the Raycaster.js from js.
+  // The original version can be found here: https://github.com/mrdoob/js/blob/dev/src/core/Raycaster.js.
   // Types retrieved from https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/three/src/core/Raycaster.d.ts.
-  intersectObjects<TIntersected extends THREE.Object3D>(
-    objects: THREE.Object3D[],
+  intersectObjects<TIntersected extends Object3D>(
+    objects: Object3D[],
     recursive?: boolean,
-    intersects: THREE.Intersection<TIntersected>[] = [],
-  ): THREE.Intersection<TIntersected>[] {
+    intersects: Intersection<TIntersected>[] = [],
+  ): Intersection<TIntersected>[] {
     for (let i = 0, l = objects.length; i < l; i++) {
       if (objects[i].visible) {
         this.intersectObject(objects[i], recursive, intersects);
@@ -26,11 +25,11 @@ export default class VisibilityAwareRaycaster extends THREE.Raycaster {
 
     return intersects;
   }
-  intersectObject<TIntersected extends THREE.Object3D>(
-    object: THREE.Object3D,
+  intersectObject<TIntersected extends Object3D>(
+    object: Object3D,
     recursive?: boolean,
-    intersects: THREE.Intersection<TIntersected>[] = [],
-  ): THREE.Intersection<TIntersected>[] {
+    intersects: Intersection<TIntersected>[] = [],
+  ): Intersection<TIntersected>[] {
     if (object.layers.test(this.layers)) {
       object.raycast(this, intersects);
     }

@@ -115,7 +115,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(_.asAbstractLayer))
+      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from))
       dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
@@ -140,7 +140,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetName: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None,
-      status: Option[String] = None,
       isVirtual: Boolean = false
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -202,7 +201,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                                                  organization._id)
               foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
               existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
+                updateDataSourceFromDataStore(dataStore, dataSource, foundDatasetsByDirectoryName))
             } yield existingIds.flatten
           case _ =>
             logger.info(
@@ -213,19 +212,24 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       .map(_.flatten)
   }
 
-  private def updateDataSource(
+  private def updateDataSourceFromDataStore(
       dataStore: DataStore,
       dataSource: InboxDataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
-    foundDatasetOpt match {
-      case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-        updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
-      case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
-        updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
-      case _ =>
-        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+    val isVirtual = foundDatasetOpt.exists(_.isVirtual)
+    if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
+      Fox.successful(foundDatasetOpt.map(_._id))
+    } else {
+      foundDatasetOpt match {
+        case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
+          updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
+        case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
+          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
+        case _ =>
+          insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+      }
     }
   }
 
@@ -287,12 +291,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     } else Fox.successful(None)
 
-  def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
-    for {
-      virtualDatasetIds <- datasetDAO.getVirtualDatasetIds()(GlobalAccessContext)
-      validDatasetIds = reportedDatasetIds ++ virtualDatasetIds
-      _ <- datasetDAO.deactivateUnreported(validDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
-    } yield ()
+  def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
+                                      dataStore: DataStore,
+                                      organizationId: Option[String]): Fox[Unit] =
+    datasetDAO.deactivateUnreported(reportedDatasetIds,
+                                    dataStore.name,
+                                    organizationId,
+                                    unreportedStatus,
+                                    inactiveStatusList)
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -325,7 +331,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
   def fullDataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
     (for {
-      dataLayers <- findLayersForDatasetWithMags(dataset._id)
+      dataLayers <- findLayersForDataset(dataset._id)
       dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     } yield {
       if (dataset.isUsable)
@@ -336,10 +342,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
     }).flatten
 
-  private def findLayersForDatasetWithMags(datasetId: ObjectId): Fox[List[DataLayer]] =
+  private def findLayersForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
     for {
       layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
-      _ <- Fox.fromBool(!layers.flatMap(_.dataFormatOpt).contains(DataFormat.wkw)) ?~> "WKW data format not supported in this context, only datasets with MagLocators are supported"
       layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
       layersWithMags <- Fox.serialCombined(layers) { layer =>
         tryo {
@@ -357,8 +362,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                    attachmentsOpt,
                                    _,
                                    numChannels,
-                                   dataFormat,
-                                   _) =>
+                                   dataFormat) =>
               dataFormat match {
                 case Some(df) =>
                   df match {
@@ -449,8 +453,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            attachmentsOpt,
                                            _,
                                            numChannels,
-                                           dataFormat,
-                                           _) =>
+                                           dataFormat) =>
               dataFormat match {
                 case Some(df) =>
                   df match {

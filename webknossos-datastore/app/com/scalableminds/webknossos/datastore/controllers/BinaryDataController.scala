@@ -58,8 +58,8 @@ class BinaryDataController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           val t = Instant.now
           for {
-            dataSource <- datasetCache.getById(datasetId)
-            dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found" ~> NOT_FOUND
+            (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
+              "dataSource.notFound") ~> NOT_FOUND
             (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
             duration = Instant.since(t)
             _ = if (duration > (10 seconds))

@@ -46,6 +46,9 @@ object UserAccessRequest {
   def readDataset(datasetId: ObjectId): UserAccessRequest =
     UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.read)
 
+  def deleteDataset(datasetId: ObjectId): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.delete)
+
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(135);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(137);
 COMMIT TRANSACTION;
 
 -- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
@@ -218,7 +218,6 @@ CREATE TABLE webknossos.dataset_mags(
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   axisOrder JSONB CONSTRAINT axisOrder_requiredKeys CHECK (axisOrder ? 'x' AND axisOrder ? 'y'),
   channelIndex INT,
-  cubeLength INT,
   credentialId TEXT,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
@@ -508,6 +507,7 @@ CREATE TABLE webknossos.multiUsers(
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity TEXT CONSTRAINT _lastLoggedInIdentity_objectId CHECK (_lastLoggedInIdentity ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
+  emailChangeDate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );

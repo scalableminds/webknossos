@@ -139,7 +139,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetId.toString, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetId, layer.name)
         case None => Fox.successful(false)
       }
       elementClassProto <- ElementClass
@@ -271,7 +271,11 @@ class AnnotationService @Inject()(
           _ <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
             case Right(volume) =>
-              tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume, dataSource = dataSource)
+              tracingStoreClient.saveVolumeTracing(annotationId,
+                                                   newTracingId,
+                                                   volume,
+                                                   dataSource = dataSource,
+                                                   datasetId = dataset._id)
           }
         } yield
           AnnotationLayer(newTracingId,

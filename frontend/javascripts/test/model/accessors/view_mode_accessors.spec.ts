@@ -9,7 +9,7 @@ import { M4x4, V3 } from "libs/mjs";
 import Dimensions from "viewer/model/dimensions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import * as THREE from "three";
+import { MathUtils, Vector3 as ThreeVector3, Euler } from "three";
 import { map3 } from "libs/utils";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { almostEqual } from "test/libs/transform_spec_helpers";
@@ -177,7 +177,7 @@ describe("View mode accessors", () => {
       // When using the rotation of the flycam for calculations, one has to invert the z value and interpret the resulting euler angle as ZYX.
       // More info about this at https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c6380138fdac454d4dac2f0.
       const rotationCorrected = [rotation[0], rotation[1], -rotation[2]] as Vector3;
-      const rotationInRadian = map3(THREE.MathUtils.degToRad, rotationCorrected);
+      const rotationInRadian = map3(MathUtils.degToRad, rotationCorrected);
       for (const offset of testOffsets) {
         const stateWithCorrectPlaneActive = update(initialState, {
           viewModeData: { plane: { activeViewport: { $set: OrthoViews.PLANE_XY } } },
@@ -193,8 +193,8 @@ describe("View mode accessors", () => {
           clickPositionAtViewportCenter,
         );
         // Applying the rotation of 83° around the x axis to the offset.
-        const rotatedOffset = new THREE.Vector3(offset[0], offset[1], 0)
-          .applyEuler(new THREE.Euler(...rotationInRadian, "ZYX"))
+        const rotatedOffset = new ThreeVector3(offset[0], offset[1], 0)
+          .applyEuler(new Euler(...rotationInRadian, "ZYX"))
           .toArray();
         const expectedPosition = [...V3.add(initialFlycamPosition, rotatedOffset)] as Vector3;
         almostEqual(
@@ -213,7 +213,7 @@ describe("View mode accessors", () => {
       // When using the rotation of the flycam for calculations, one has to invert the z value and interpret the resulting euler angle as ZYX.
       // More info about this at https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c6380138fdac454d4dac2f0.
       const rotationCorrected = [rotation[0], rotation[1], -rotation[2]] as Vector3;
-      const rotationInRadian = map3(THREE.MathUtils.degToRad, rotationCorrected);
+      const rotationInRadian = map3(MathUtils.degToRad, rotationCorrected);
       for (const offset of testOffsets) {
         const stateWithAnisotropicScale = update(initialState, {
           dataset: { dataSource: { scale: { factor: { $set: anisotropicDatasetScale } } } },
@@ -230,9 +230,9 @@ describe("View mode accessors", () => {
         );
         // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
         const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
-        const rotatedAndScaledOffset = new THREE.Vector3(offset[0], offset[1], 0)
-          .applyEuler(new THREE.Euler(...rotationInRadian, "ZYX"))
-          .multiply(new THREE.Vector3(...scaleFactor))
+        const rotatedAndScaledOffset = new ThreeVector3(offset[0], offset[1], 0)
+          .applyEuler(new Euler(...rotationInRadian, "ZYX"))
+          .multiply(new ThreeVector3(...scaleFactor))
           .toArray();
         const expectedPosition = [
           ...V3.add(initialFlycamPosition, V3.round(rotatedAndScaledOffset)),
@@ -259,7 +259,7 @@ describe("View mode accessors", () => {
       // When using the rotation of the flycam for calculations, one has to invert the z value and interpret the resulting euler angle as ZYX.
       // More info about this at https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c6380138fdac454d4dac2f0.
       const rotationCorrected = [rotation[0], rotation[1], -rotation[2]] as Vector3;
-      const rotationInRadian = map3(THREE.MathUtils.degToRad, rotationCorrected);
+      const rotationInRadian = map3(MathUtils.degToRad, rotationCorrected);
       for (const offset of testOffsets) {
         for (const planeId of OrthoViewValuesWithoutTDView) {
           const stateWithAnisotropicScale = update(initialState, {
@@ -307,7 +307,7 @@ describe("View mode accessors", () => {
       // When using the rotation of the flycam for calculations, one has to invert the z value and interpret the resulting euler angle as ZYX.
       // More info about this at https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c6380138fdac454d4dac2f0.
       const rotationCorrected = [rotation[0], rotation[1], -rotation[2]] as Vector3;
-      const rotationInRadian = map3(THREE.MathUtils.degToRad, rotationCorrected);
+      const rotationInRadian = map3(MathUtils.degToRad, rotationCorrected);
       for (const offset of testOffsets) {
         for (const planeId of OrthoViewValuesWithoutTDView) {
           const stateWithAnisotropicScale = update(initialState, {

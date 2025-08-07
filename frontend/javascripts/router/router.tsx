@@ -48,9 +48,15 @@ const { Content } = Layout;
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
 import AccountPasswordView from "admin/account/account_password_view";
 import AccountProfileView from "admin/account/account_profile_view";
+import ChangeEmailView from "admin/auth/change_email_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
+import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
+import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
+import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
+import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
+import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
 import { useWkSelector } from "libs/react_hooks";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
@@ -269,7 +275,14 @@ const routes = createRoutesFromElements(
           <DatasetSettingsRouteWrapper />
         </SecuredRoute>
       }
-    />
+    >
+      <Route index element={<Navigate to="data" />} />
+      <Route path="data" element={<DatasetSettingsDataTab />} />
+      <Route path="sharing" element={<DatasetSettingsSharingTab />} />
+      <Route path="metadata" element={<DatasetSettingsMetadataTab />} />
+      <Route path="defaultConfig" element={<DatasetSettingsViewConfigTab />} />
+      <Route path="delete" element={<DatasetSettingsDeleteTab />} />
+    </Route>
     <Route
       path="/taskTypes"
       element={
@@ -380,6 +393,14 @@ const routes = createRoutesFromElements(
 
     <Route path="/auth/resetPassword" element={<StartResetPasswordView />} />
     <Route path="/auth/finishResetPassword" element={<FinishResetPasswordView />} />
+    <Route
+      path="/auth/changeEmail"
+      element={
+        <SecuredRoute>
+          <ChangeEmailView />
+        </SecuredRoute>
+      }
+    />
     {/* legacy view mode route */}
     <Route
       path="/datasets/:organizationId/:datasetName/view"

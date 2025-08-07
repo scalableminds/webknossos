@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as THREE from "three";
+import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "viewer/constants";
@@ -71,7 +71,7 @@ export type Uniforms = Record<
   }
 >;
 
-const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
+const DEFAULT_COLOR = new ThreeVector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
   if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
@@ -116,7 +116,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
-  material: THREE.ShaderMaterial | undefined | null;
+  material: ShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
   shaderId: number;
@@ -166,7 +166,7 @@ class PlaneMaterialFactory {
       // configured by the clippingDistance setting. It is necessary to calculate the position of the data that should be rendered by subtracting
       // the offset in the shader. Note, that the position offset should already be in world scale.
       positionOffset: {
-        value: new THREE.Vector3(0, 0, 0),
+        value: new ThreeVector3(0, 0, 0),
       },
       zoomValue: {
         value: 1,
@@ -187,10 +187,10 @@ class PlaneMaterialFactory {
         value: false,
       },
       globalMousePosition: {
-        value: new THREE.Vector3(0, 0, 0),
+        value: new ThreeVector3(0, 0, 0),
       },
       activeSegmentPosition: {
-        value: new THREE.Vector3(-1, -1, -1),
+        value: new ThreeVector3(-1, -1, -1),
       },
       brushSizeInPixel: {
         value: 0,
@@ -217,10 +217,10 @@ class PlaneMaterialFactory {
         value: OrthoViewValues.indexOf(this.planeID),
       },
       bboxMin: {
-        value: new THREE.Vector3(0, 0, 0),
+        value: new ThreeVector3(0, 0, 0),
       },
       bboxMax: {
-        value: new THREE.Vector3(0, 0, 0),
+        value: new ThreeVector3(0, 0, 0),
       },
       renderBucketIndices: {
         value: false,
@@ -253,7 +253,8 @@ class PlaneMaterialFactory {
       },
       blendMode: { value: 1.0 },
       isFlycamRotated: { value: false },
-      inverseFlycamRotationMatrix: { value: new THREE.Matrix4() },
+      doAllLayersHaveTransforms: { value: false },
+      inverseFlycamRotationMatrix: { value: new Matrix4() },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -442,7 +443,7 @@ class PlaneMaterialFactory {
     for (const [name, value] of Object.entries(additionalUniforms)) {
       this.uniforms[name] = value;
     }
-    this.material = new THREE.ShaderMaterial(
+    this.material = new ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
         vertexShader: this.getVertexShader(),
@@ -466,7 +467,7 @@ class PlaneMaterialFactory {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
-    this.material.side = THREE.DoubleSide;
+    this.material.side = DoubleSide;
   }
 
   startListeningForUniforms() {
@@ -602,10 +603,10 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           const position = getPosition(state.flycam);
 
-          const toOrigin = new THREE.Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
-          const backToFlycamCenter = new THREE.Matrix4().makeTranslation(...position);
-          const invertRotation = new THREE.Matrix4()
-            .makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
+          const toOrigin = new Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
+          const backToFlycamCenter = new Matrix4().makeTranslation(...position);
+          const invertRotation = new Matrix4()
+            .makeRotationFromEuler(new Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
             .invert();
           const inverseFlycamRotationMatrix = toOrigin
             .multiply(invertRotation)
@@ -850,6 +851,7 @@ class PlaneMaterialFactory {
           this.scaledTpsInvPerLayer = {};
           const state = Store.getState();
           const layers = state.dataset.dataSource.dataLayers;
+          let countOfLayersWithTransforms = 0;
           for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
             const layer = layers[layerIdx];
             const name = sanitizeName(layer.name);
@@ -869,7 +871,13 @@ class PlaneMaterialFactory {
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
+            if (hasTransform) {
+              countOfLayersWithTransforms++;
+            }
           }
+          this.uniforms.doAllLayersHaveTransforms = {
+            value: countOfLayersWithTransforms === layers.length,
+          };
           this.recomputeShaders();
         },
         true,
@@ -965,7 +973,7 @@ class PlaneMaterialFactory {
 
       if (settings.color != null) {
         const color = this.convertColor(settings.color);
-        this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+        this.uniforms[`${name}_color`].value = new ThreeVector3(...color);
       }
     }
 
@@ -973,7 +981,7 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
   }
 
-  getMaterial(): THREE.ShaderMaterial {
+  getMaterial(): ShaderMaterial {
     if (this.material == null) {
       throw new Error("Tried to access material, but it is null.");
     }

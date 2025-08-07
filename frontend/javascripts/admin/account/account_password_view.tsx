@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsCard } from "./helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -155,10 +155,10 @@ function AccountPasswordView() {
     setResetPasswordVisible(true);
   }
 
-  const passKeyList = [
+  const passKeyList: SettingsCardProps[] = [
     {
       title: "Coming soon",
-      value: "Passwordless login with passkeys is coming soon",
+      content: "Passwordless login with passkeys is coming soon",
       // action: <Button type="default" shape="circle" icon={<DeleteOutlined />} size="small" />,
       action: undefined,
     },
@@ -171,7 +171,7 @@ function AccountPasswordView() {
         <Col span={12}>
           <SettingsCard
             title="Password"
-            description={getPasswordComponent()}
+            content={getPasswordComponent()}
             action={
               <Button
                 type="default"
@@ -189,7 +189,7 @@ function AccountPasswordView() {
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {passKeyList.map((item) => (
           <Col span={12} key={item.title}>
-            <SettingsCard title={item.title} description={item.value} action={item.action} />
+            <SettingsCard title={item.title} content={item.content} action={item.action} />
           </Col>
         ))}
       </Row>

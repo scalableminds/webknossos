@@ -3,7 +3,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as THREE from "three";
+import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type { Vector3 } from "viewer/constants";
 import {
   ZOOM_STEP_INTERVAL,
@@ -43,9 +43,9 @@ export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vect
 }
 
 // Avoid creating new THREE object for some actions.
-const flycamRotationEuler = new THREE.Euler();
-const flycamRotationMatrix = new THREE.Matrix4();
-const deltaInWorld = new THREE.Vector3();
+const flycamRotationEuler = new Euler();
+const flycamRotationMatrix = new Matrix4();
+const deltaInWorld = new ThreeVector3();
 
 function rotateOnAxisWithDistance(
   zoomStep: number,

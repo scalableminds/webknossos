@@ -48,7 +48,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
     with LazyLogging
     with URIUtils {
 
-  private val baseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  private val baseDir: Path = Path.of(config.Datastore.baseDirectory)
 
   def measureStorageForPaths(paths: List[String], organizationId: String)(
       implicit ec: ExecutionContext,

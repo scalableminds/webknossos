@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -30,7 +30,7 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  private val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
 
   override def allowRemoteOrigin: Boolean = true
 

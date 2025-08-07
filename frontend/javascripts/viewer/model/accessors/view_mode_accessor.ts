@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import * as THREE from "three";
+import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
   OrthoView,
   OrthoViewExtents,
@@ -95,11 +95,11 @@ export function getViewportScale(state: WebknossosState, viewport: Viewport): [n
 export type PositionWithRounding = { rounded: Vector3; floating: Vector3 };
 
 // Avoiding object creation with each call.
-const flycamRotationEuler = new THREE.Euler();
-const flycamRotationMatrix = new THREE.Matrix4();
-const flycamPositionMatrix = new THREE.Matrix4();
-const rotatedDiff = new THREE.Vector3();
-const planeRatioVector = new THREE.Vector3();
+const flycamRotationEuler = new Euler();
+const flycamRotationMatrix = new Matrix4();
+const flycamPositionMatrix = new Matrix4();
+const rotatedDiff = new ThreeVector3();
+const planeRatioVector = new ThreeVector3();
 
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
@@ -173,17 +173,17 @@ function _calculateInViewportPos(
   flycamRotationInRadian: Vector3,
   planeRatio: Vector3,
   zoomStep: number,
-): THREE.Vector3 {
+): ThreeVector3 {
   // Difference in world space
-  const positionDiff = new THREE.Vector3(...V3.sub(globalPosition, flycamPosition));
+  const positionDiff = new ThreeVector3(...V3.sub(globalPosition, flycamPosition));
 
   // Inverse rotate the world difference vector into local plane-aligned space
-  const inverseRotationMatrix = new THREE.Matrix4()
-    .makeRotationFromEuler(new THREE.Euler(...flycamRotationInRadian, "ZYX"))
+  const inverseRotationMatrix = new Matrix4()
+    .makeRotationFromEuler(new Euler(...flycamRotationInRadian, "ZYX"))
     .invert();
 
   // Unscale from voxel ratio (undo voxel scaling)
-  const posInScreenSpaceScaling = positionDiff.divide(new THREE.Vector3(...planeRatio));
+  const posInScreenSpaceScaling = positionDiff.divide(new ThreeVector3(...planeRatio));
   const rotatedIntoScreenSpace = posInScreenSpaceScaling.applyMatrix4(inverseRotationMatrix);
   const unzoomedPosition = rotatedIntoScreenSpace.multiplyScalar(1 / zoomStep);
   return unzoomedPosition;

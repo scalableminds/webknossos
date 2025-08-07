@@ -42,7 +42,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
       before <- Instant.nowFox
       edgesZarrChunks: Iterator[Array[Byte]] = editedEdgesToZarrChunks(editedEdges)
       isAdditionZarrChunks: Iterator[Array[Byte]] = edgeIsAdditionToZarrChunks(editedEdges)
-      edgesZarrChunksStream = edgesZarrChunks.zipWithIndex.map {
+      edgesZarrChunkStreams = edgesZarrChunks.zipWithIndex.map {
         case (chunk, index) => NamedFunctionStream.fromBytes(f"$arrayNameEdges/$index.0", chunk)
       }
       edgesZarrHeader = Zarr3ArrayHeader(
@@ -63,7 +63,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
         storage_transformers = None,
         dimension_names = Some(Array("edge", "srcDst"))
       )
-      isAdditionZarrChunksStream = isAdditionZarrChunks.zipWithIndex.map {
+      isAdditionZarrChunkStreams = isAdditionZarrChunks.zipWithIndex.map {
         case (chunk, index) => NamedFunctionStream.fromBytes(f"$arrayNameEdgeIsAddition/$index", chunk)
       }
       isAdditionZarrHeader = Zarr3ArrayHeader(
@@ -93,7 +93,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
       groupHeader = EmptyZarr3GroupHeader()
       groupHeaderStream = NamedFunctionStream.fromJsonSerializable(EmptyZarr3GroupHeader.FILENAME_ZARR_JSON,
                                                                    groupHeader)
-      allStreams = edgesZarrChunksStream ++ isAdditionZarrChunksStream ++ Seq(edgesHeaderStream,
+      allStreams = edgesZarrChunkStreams ++ isAdditionZarrChunkStreams ++ Seq(edgesHeaderStream,
                                                                               isAdditionHeaderStream,
                                                                               groupHeaderStream)
       tempFilePath = tempFileService.create(f"${tracingId}_editedMappingEdges")

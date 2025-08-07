@@ -28,7 +28,7 @@ case class Zarr3ArrayHeader(
     data_type: Either[String, ExtensionDataType],
     chunk_grid: Either[ChunkGridSpecification, ExtensionChunkGridSpecification],
     chunk_key_encoding: ChunkKeyEncoding,
-    fill_value: Either[String, Number], // Boolean not supported
+    fill_value: Either[String, Number], // Reading boolean datasets is not supported. When writing boolean, true and false literals will be stored in the string.
     attributes: Option[JsObject],
     codecs: Seq[CodecConfiguration],
     storage_transformers: Option[Seq[StorageTransformerSpecification]],
@@ -235,7 +235,10 @@ object Zarr3ArrayHeader extends JsonImplicits {
         possibleCodecSpec.map((s: CodecConfiguration) => Seq(s)).getOrElse(Seq[CodecConfiguration]()))
     }
 
-    override def writes(zarrArrayHeader: Zarr3ArrayHeader): JsValue =
+    override def writes(zarrArrayHeader: Zarr3ArrayHeader): JsValue = {
+      val fillValue: JsValue = if (zarrArrayHeader.zarr3DataType == Zarr3DataType.bool) {
+        Json.toJson(zarrArrayHeader.fill_value == Left("true"))
+      } else Json.toJson(zarrArrayHeader.fill_value)
       Json.obj(
         "zarr_format" -> zarrArrayHeader.zarr_format,
         "node_type" -> zarrArrayHeader.node_type,
@@ -247,17 +250,20 @@ object Zarr3ArrayHeader extends JsonImplicits {
             "regular",
             ChunkGridConfiguration(Array(1, 1, 1))))), // Extension not supported for now
         "chunk_key_encoding" -> zarrArrayHeader.chunk_key_encoding,
-        "fill_value" -> zarrArrayHeader.fill_value,
+        "fill_value" -> fillValue,
         "attributes" -> Json.toJsFieldJsValueWrapper(zarrArrayHeader.attributes.getOrElse(JsObject.empty)),
         "codecs" -> zarrArrayHeader.codecs.map { codec: CodecConfiguration =>
           val configurationJson = if (codec.includeConfiguration) Json.obj("configuration" -> codec) else Json.obj()
           Json.obj("name" -> codec.name) ++ configurationJson
-        }.map(JsonHelper.removeGeneratedTypeFieldFromJsonRecursively),
-        "storage_transformers" -> zarrArrayHeader.storage_transformers,
-        "dimension_names" -> zarrArrayHeader.dimension_names
-      )
-
+        }.map(JsonHelper.removeGeneratedTypeFieldFromJsonRecursively)
+      ) ++ (if (zarrArrayHeader.storage_transformers.isDefined)
+              Json.obj("storage_transformers" -> zarrArrayHeader.storage_transformers)
+            else Json.obj()) ++ (if (zarrArrayHeader.dimension_names.isDefined)
+                                   Json.obj("dimension_names" -> zarrArrayHeader.dimension_names)
+                                 else Json.obj())
+    }
   }
+
   def fromDataLayer(dataLayer: DataLayer,
                     mag: Vec3Int,
                     additionalCodecs: Seq[CodecConfiguration] = Seq.empty): Zarr3ArrayHeader = {

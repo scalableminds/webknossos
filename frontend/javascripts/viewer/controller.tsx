@@ -30,6 +30,7 @@ import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import type DataLayer from "./model/data_layer";
+import { AnnotationTool } from "./model/accessors/tool_accessor";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -232,8 +233,14 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
         m: () => {
           // rotate allowed modes
-          const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const { allowedModes } = Store.getState().annotation.restrictions;
+          const state = Store.getState();
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          const currentViewMode = state.temporaryConfiguration.viewMode;
+          if (isProofreadingActive && currentViewMode === constants.MODE_PLANE_TRACING) {
+            // Skipping cycling view mode as m in proofreading is used to toggle multi cut tool.
+            return;
+          }
+          const { allowedModes } = state.annotation.restrictions;
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },

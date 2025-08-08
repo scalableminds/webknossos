@@ -12,13 +12,30 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
   switch (action.type) {
     case "TOGGLE_SEGMENT_IN_PARTITION": {
       const minCutPartitions = state.localSegmentationData[layerName].minCutPartitions;
-      const partition = minCutPartitions[action.partition];
-      const updatedPartition = partition.includes(action.segmentId)
-        ? partition.filter((s) => s !== action.segmentId)
-        : partition.concat(action.segmentId);
       const otherPartitionIndex = action.partition === 1 ? 2 : 1;
+      if (minCutPartitions.agglomerateId !== action.agglomerateId) {
+        // TODOM: Discuss whether to instead ignore the action and show an error toast that the new segment does not belong to the same agglomerate.
+        return update(state, {
+          localSegmentationData: {
+            [layerName]: {
+              minCutPartitions: {
+                [action.partition]: {
+                  $set: [action.unmappedSegmentId],
+                },
+                [otherPartitionIndex]: {
+                  $set: [],
+                },
+              },
+            },
+          },
+        });
+      }
+      const partition = minCutPartitions[action.partition];
+      const updatedPartition = partition.includes(action.unmappedSegmentId)
+        ? partition.filter((s) => s !== action.unmappedSegmentId)
+        : partition.concat(action.unmappedSegmentId);
       const otherPartitionWithoutSegment = minCutPartitions[otherPartitionIndex].filter(
-        (s) => s !== action.segmentId,
+        (s) => s !== action.unmappedSegmentId,
       );
 
       return update(state, {

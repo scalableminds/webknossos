@@ -44,6 +44,7 @@ import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   hideMeasurementTooltipAction,
@@ -1080,6 +1081,15 @@ export class ProofreadToolController {
 
     const state = Store.getState();
     const globalPosition = calculateGlobalPos(state, pos).rounded;
+    const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
+    const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
+    if ((isMultiSplitActive && event.shiftKey) || ctrlOrMetaKey) {
+      const unmappedSegmentId = VolumeHandlers.getUnmappedSegmentIdForPosition(globalPosition);
+      const mappedSegmentId = VolumeHandlers.getSegmentIdForPosition(globalPosition);
+      const partition = ctrlOrMetaKey ? 1 : 2;
+      Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
+      return;
+    }
 
     if (event.shiftKey) {
       Store.dispatch(proofreadMergeAction(globalPosition));

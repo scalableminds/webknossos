@@ -542,7 +542,7 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type MinCutPartitions = { 1: number[]; 2: number[] };
+export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number };
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.

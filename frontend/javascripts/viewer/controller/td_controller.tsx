@@ -244,14 +244,34 @@ class TDController extends React.PureComponent<Props> {
         const state = Store.getState();
         const isMultiCutToolActive = state.userConfiguration.isMultiSplitActive;
         if (event.shiftKey) {
-          if (isMultiCutToolActive && intersection.unmappedSegmentId != null) {
-            Store.dispatch(toggleSegmentInPartitionAction(intersection.unmappedSegmentId, 2));
+          if (
+            isMultiCutToolActive &&
+            intersection.unmappedSegmentId != null &&
+            intersection.meshId != null
+          ) {
+            Store.dispatch(
+              toggleSegmentInPartitionAction(
+                intersection.unmappedSegmentId,
+                2,
+                intersection.meshId,
+              ),
+            );
           } else {
             Store.dispatch(setPositionAction(unscaledPosition));
           }
-        } else if (ctrlOrMetaPressed && intersection.meshId != null) {
+        } else if (
+          ctrlOrMetaPressed &&
+          intersection.meshId != null &&
+          intersection.meshId != null
+        ) {
           if (isMultiCutToolActive && intersection.unmappedSegmentId != null) {
-            Store.dispatch(toggleSegmentInPartitionAction(intersection.unmappedSegmentId, 1));
+            Store.dispatch(
+              toggleSegmentInPartitionAction(
+                intersection.unmappedSegmentId,
+                1,
+                intersection.meshId,
+              ),
+            );
           } else {
             const volumeTracing = getActiveSegmentationTracing(state);
             const deselect =

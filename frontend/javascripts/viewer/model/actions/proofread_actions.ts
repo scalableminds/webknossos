@@ -87,11 +87,16 @@ export const cutAgglomerateFromNeighborsAction = (
     agglomerateId,
   }) as const;
 
-export const toggleSegmentInPartitionAction = (segmentId: number, partition: 1 | 2) =>
+export const toggleSegmentInPartitionAction = (
+  unmappedSegmentId: number,
+  partition: 1 | 2,
+  agglomerateId: number,
+) =>
   ({
     type: "TOGGLE_SEGMENT_IN_PARTITION",
-    segmentId,
+    unmappedSegmentId,
     partition,
+    agglomerateId,
   }) as const;
 
 export const resetMultiCutToolPartitionsAction = () =>

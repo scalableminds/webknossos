@@ -52,6 +52,7 @@ import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinatio
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
+  getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
 import {
@@ -135,6 +136,7 @@ import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   ContextMenuInfo,
+  MinCutPartitions,
   SegmentMap,
   SkeletonTracing,
   UserBoundingBox,
@@ -171,6 +173,7 @@ type Props = {
   allowUpdate: boolean;
   isRotated: boolean;
   segments: SegmentMap | null | undefined;
+  maybeUnmappedSegmentId: number | null;
 };
 
 type NodeContextMenuOptionsProps = Props & {
@@ -396,6 +399,55 @@ function getMaybeMinCutItem(
   };
 }
 
+function getMultiCutToolOptions(
+  unmappedSegmentId: number,
+  mappedSegmentId: number,
+  minCutPartitions: MinCutPartitions,
+  segmentOrSuperVoxel: string,
+  segmentIdLabel: string | number,
+): MenuItemType[] {
+  // Multi split min cut tool options
+  const isSegmentInPartitionOne = minCutPartitions[1].includes(unmappedSegmentId);
+  const isSegmentInPartitionTwo = minCutPartitions[2].includes(unmappedSegmentId);
+  const togglePartitionOneVerb = isSegmentInPartitionOne ? "remove" : "add";
+  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "remove" : "add";
+  const doBothPartitionsHaveEntries =
+    minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
+  return [
+    {
+      key: "mark-as-partition-1",
+      onClick: () =>
+        Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 1, mappedSegmentId)),
+      label: (
+        <>
+          {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
+          Partition 1 {shortcutBuilder(["Ctrl", "leftMouse"])}
+        </>
+      ),
+    },
+    {
+      key: "mark-as-partition-2",
+      onClick: () =>
+        Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 2, mappedSegmentId)),
+      label: (
+        <>
+          {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
+          Partition 2 {shortcutBuilder(["Shift", "leftMouse"])}
+        </>
+      ),
+    },
+    ...(doBothPartitionsHaveEntries
+      ? [
+          {
+            key: "min-cut-agglomerate-with-partitions",
+            onClick: () => Store.dispatch(minCutPartitionsAction()),
+            label: "Split partitions",
+          },
+        ]
+      : []),
+  ];
+}
+
 function getMeshItems(
   volumeTracing: VolumeTracing | null | undefined,
   contextInfo: ContextMenuInfo,
@@ -458,45 +510,16 @@ function getMeshItems(
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
 
-  // Multi split min cut tool options
-  const isSegmentInPartitionOne = maybeUnmappedSegmentId
-    ? minCutPartitions[1].includes(maybeUnmappedSegmentId)
-    : false;
-  const isSegmentInPartitionTwo = maybeUnmappedSegmentId
-    ? minCutPartitions[2].includes(maybeUnmappedSegmentId)
-    : false;
-  const togglePartitionOneVerb = isSegmentInPartitionOne ? "remove" : "add";
-  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "remove" : "add";
-  const doBothPartitionsHaveEntries =
-    minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
   const proofreadingMultiSplitToolActions =
     isProofreadingActive && isMultiSplitActive && maybeUnmappedSegmentId != null
-      ? [
-          {
-            key: "mark-as-partition-1",
-            onClick: () =>
-              Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 1)),
-            label: (
-              <FastTooltip title={getTooltip(togglePartitionOneVerb, false)}>
-                {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
-                Partition 1 {shortcutBuilder(["Ctrl", "leftMouse"])}
-              </FastTooltip>
-            ),
-          },
-          {
-            key: "mark-as-partition-2",
-            onClick: () =>
-              Store.dispatch(toggleSegmentInPartitionAction(maybeUnmappedSegmentId, 2)),
-            label: (
-              <FastTooltip title={getTooltip(togglePartitionTwoVerb, false)}>
-                {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
-                Partition 2 {shortcutBuilder(["Shift", "leftMouse"])}
-              </FastTooltip>
-            ),
-          },
-        ]
+      ? getMultiCutToolOptions(
+          maybeUnmappedSegmentId,
+          clickedMeshId,
+          minCutPartitions,
+          segmentOrSuperVoxel,
+          segmentIdLabel,
+        )
       : [];
-
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
         ...proofreadingMultiSplitToolActions,
@@ -513,43 +536,29 @@ function getMeshItems(
             );
           },
           label: (
-            <FastTooltip title={getTooltip("merge", true)}>
-              Merge with active segment
-              {isMultiSplitActive ? "" : shortcutBuilder(["Ctrl", "leftMouse"])}
-            </FastTooltip>
+            <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
           ),
         },
-        isMultiSplitActive && doBothPartitionsHaveEntries
-          ? {
-              key: "min-cut-agglomerate-with-partitions",
-              onClick: () => Store.dispatch(minCutPartitionsAction()),
-              label: "Split partitions",
+        {
+          key: "min-cut-agglomerate-at-position",
+          disabled:
+            shouldAgglomerateSkeletonActionsBeDisabled ||
+            clickedMeshId !== activeCellId ||
+            activeUnmappedSegmentId == null ||
+            maybeUnmappedSegmentId === activeUnmappedSegmentId,
+          onClick: () => {
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
             }
-          : {
-              key: "min-cut-agglomerate-at-position",
-              disabled:
-                shouldAgglomerateSkeletonActionsBeDisabled ||
-                clickedMeshId !== activeCellId ||
-                activeUnmappedSegmentId == null ||
-                maybeUnmappedSegmentId === activeUnmappedSegmentId,
-              onClick: () => {
-                if (maybeUnmappedSegmentId == null) {
-                  // Should not happen due to the disabled property.
-                  return;
-                }
-                Store.dispatch(
-                  minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
-                );
-              },
-              label: (
-                <FastTooltip title={getTooltip("split", true)}>
-                  Split{" "}
-                  {isMultiSplitActive && doBothPartitionsHaveEntries
-                    ? "partitions"
-                    : "from active segment"}
-                </FastTooltip>
-              ),
-            },
+            Store.dispatch(
+              minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
+            );
+          },
+          label: (
+            <FastTooltip title={getTooltip("split", true)}>Split from active segment</FastTooltip>
+          ),
+        },
         {
           key: "split-from-all-neighbors",
           disabled: maybeUnmappedSegmentId == null || meshFileMappingName != null,
@@ -1009,6 +1018,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     infoRows,
     allowUpdate,
     isRotated,
+    maybeUnmappedSegmentId,
   } = props;
   const { globalPosition } = contextInfo;
 
@@ -1016,9 +1026,17 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const disabledVolumeInfo = getDisabledInfoForTools(state);
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
-
+  const { isMultiSplitActive } = state.userConfiguration;
+  const maybeMinCutPartitions = volumeTracing
+    ? state.localSegmentationData[volumeTracing.tracingId].minCutPartitions
+    : null;
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-
+  const segmentIdLabel =
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `within Segment ${maybeUnmappedSegmentId}`
+      : segmentIdAtPosition;
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
 
   const loadPrecomputedMesh = async () => {
@@ -1215,6 +1233,19 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
               </FastTooltip>
             ),
           },
+
+          ...(isProofreadingActive &&
+          isMultiSplitActive &&
+          maybeMinCutPartitions &&
+          maybeUnmappedSegmentId
+            ? getMultiCutToolOptions(
+                maybeUnmappedSegmentId,
+                segmentIdAtPosition,
+                maybeMinCutPartitions,
+                segmentOrSuperVoxel,
+                segmentIdLabel,
+              )
+            : []),
           isAgglomerateMappingEnabled.value
             ? {
                 key: "merge-agglomerate-skeleton",
@@ -1228,7 +1259,10 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Merge with active segment {shortcutBuilder(["Shift", "leftMouse"])}</span>
+                    <span>
+                      Merge with active segment{" "}
+                      {isMultiSplitActive ? "" : shortcutBuilder(["Shift", "leftMouse"])}
+                    </span>
                   </FastTooltip>
                 ),
               }
@@ -1247,7 +1281,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     }
                   >
                     <span>
-                      Split from active segment {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
+                      Split from active segment{" "}
+                      {isMultiSplitActive ? "" : shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
                     </span>
                   </FastTooltip>
                 ),
@@ -1577,6 +1612,10 @@ function ContextMenuInner() {
     (state) => state.flycam.additionalCoordinates || undefined,
   );
   const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
+  const maybeUnmappedSegmentId =
+    contextInfo.globalPosition != null
+      ? getUnmappedSegmentIdForPosition(contextInfo.globalPosition)
+      : null;
 
   const props: Props = {
     isRotated: isFlycamRotated,
@@ -1595,6 +1634,7 @@ function ContextMenuInner() {
     mappingInfo,
     additionalCoordinates,
     contextInfo,
+    maybeUnmappedSegmentId,
   };
 
   const {

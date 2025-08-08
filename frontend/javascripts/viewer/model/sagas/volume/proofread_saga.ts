@@ -84,6 +84,7 @@ import type { Tree } from "../../types/tree_types";
 import { ensureWkReady } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
 import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
+import getSceneController from "viewer/controller/scene_controller_provider";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -143,8 +144,13 @@ function* clearMinCutPartitionsOnMultiCutDeselect(
     const newIsMultiSplitActiveState = yield* select(
       (state) => state.userConfiguration.isMultiSplitActive,
     );
-    if (newIsMultiSplitActiveState) {
+    if (!newIsMultiSplitActiveState) {
       yield* put(resetMultiCutToolPartitionsAction());
+    } else {
+      // Deactivate current active super voxel to avoid tri-state highlighting (only partition one and two highlighting should be active)
+      const sceneController = getSceneController();
+      const { segmentMeshController } = sceneController;
+      segmentMeshController.highlightActiveUnmappedSegmentId(null);
     }
   } else if (action.type === "ESCAPE") {
     // Clearing on all escape actions should be fine as in case the multi split isn't active, this clearing should also be fine.

@@ -83,6 +83,7 @@ import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
 import { ensureWkReady } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
+import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -118,7 +119,7 @@ export default function* proofreadRootSaga(): Saga<void> {
     "Proofreading in progress",
   );
   yield* takeEveryUnlessBusy(
-    "MIN_CUT_PARTITIONS",
+    ["MIN_CUT_PARTITIONS", "ENTER"],
     runSagaAndCatchSoftError(performPartitionedMinCut),
     "Proofreading in progress",
   );
@@ -132,19 +133,22 @@ export default function* proofreadRootSaga(): Saga<void> {
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
     runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
   );
-  yield* takeEvery("UPDATE_USER_SETTING", clearMinCutPartitionsOnMultiCutDeselect);
+  yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(
-  updateUSerSettingsAction: UpdateUserSettingAction,
+  action: UpdateUserSettingAction | EscapeAction,
 ): Saga<void> {
-  if (updateUSerSettingsAction.propertyName === "isMultiSplitActive") {
+  if (action.type === "UPDATE_USER_SETTING" && action.propertyName === "isMultiSplitActive") {
     const newIsMultiSplitActiveState = yield* select(
       (state) => state.userConfiguration.isMultiSplitActive,
     );
-    if (!newIsMultiSplitActiveState) {
+    if (newIsMultiSplitActiveState) {
       yield* put(resetMultiCutToolPartitionsAction());
     }
+  } else if (action.type === "ESCAPE") {
+    // Clearing on all escape actions should be fine as in case the multi split isn't active, this clearing should also be fine.
+    yield* put(resetMultiCutToolPartitionsAction());
   }
 }
 
@@ -611,7 +615,7 @@ function* performMinCut(
   return false;
 }
 
-function* performPartitionedMinCut(_action: MinCutPartitionsAction): Saga<void> {
+function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction): Saga<void> {
   // TODOM: Make partition activation resilient against selecting segments from different agglomerates.
   /*if (sourceAgglomerateId !== targetAgglomerateId) {
     Toast.error(
@@ -619,6 +623,10 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction): Saga<void> 
     );
     return true;
   }*/
+  const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
+  if (!isMultiSplitActive) {
+    return;
+  }
 
   const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {

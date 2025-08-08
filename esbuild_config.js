@@ -15,7 +15,6 @@ const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
 const esbuildPluginWorker = require("@chialab/esbuild-plugin-worker").default;
 const { wasmLoader } = require("esbuild-plugin-wasm");
 
-
 // Custom Plugins for Webknossos
 const { createWorkerPlugin } = require("./tools/esbuild/workerPlugin.js");
 const { createProtoPlugin } = require("./tools/esbuild/protoPlugin.js");
@@ -38,11 +37,9 @@ async function build(env = {}) {
     ? fs.mkdtempSync(path.join(os.tmpdir(), "esbuild-dev"))
     : outputPath;
 
-  // Base plugins
   const plugins = [
     polyfillNode(),
     createProtoPlugin(protoPath),
-    // Use community plugin for ESM-compatible WASM imports
     wasmLoader(),
     lessLoader({
       javascriptEnabled: true,
@@ -55,7 +52,6 @@ async function build(env = {}) {
         },
       ],
     }),
-    // DRY worker bundling: reuse main config defaults
     createWorkerPlugin({ logLevel: env.logLevel }), // Resolves import Worker from myFunc.worker;
     esbuildPluginWorker() // Resolves new Worker(myWorker.js)
   ];
@@ -64,8 +60,6 @@ async function build(env = {}) {
   const buildOptions = {
     entryPoints: {
       main: path.resolve(srcPath, "main.tsx"),
-      // generateMeshBVHWorker: require.resolve("three-mesh-bvh/src/workers/generateMeshBVH.worker.js"),
-
     },
     bundle: true,
     outdir: buildOutDir,
@@ -81,7 +75,7 @@ async function build(env = {}) {
       "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
       "process.env.BABEL_ENV": JSON.stringify(process.env.BABEL_ENV || "development"),
       "process.browser": "true",
-      "global": "window"
+      "global": "globalThis"
     },
     loader: {
       ".woff": "file",
@@ -91,18 +85,25 @@ async function build(env = {}) {
       ".svg": "file",
       ".png": "file",
       ".jpg": "file",
-      ".wasm": "file",
+      ".jpeg": "file",
+      ".gif": "file",
+      ".webp": "file",
+      ".ico": "file",
+      ".mp4": "file",
+      ".webm": "file",
+      ".ogg": "file",
     },
     resolveExtensions: [".ts", ".tsx", ".js", ".json", ".proto", ".wasm"],
     alias: {
       react: path.resolve(__dirname, "node_modules/react"),
       three: path.resolve(__dirname, "node_modules/three/src/Three.js"),
-      url: require.resolve("url/"),
     },
     plugins: plugins,
-    external: ["/assets/images/*", "fs", "path", "util", "module"],
+    external: ["/assets/images/*", "fs"],
+    logLevel: env.logLevel || "info",
+    legalComments: isProduction ? "inline" : "none",
     publicPath: "/assets/bundle/",
-    metafile: !isWatch, // Don"t generate metafile for dev server
+    metafile: !isWatch, // Don't generate metafile for dev server
     logOverride: {
       "direct-eval": "silent",
     },

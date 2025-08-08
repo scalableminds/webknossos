@@ -41,8 +41,8 @@ const WHITE = new Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 const PARTITION_COLORS = {
-  1: [1, 0, 0] as Vector3,
-  2: [0, 1, 0] as Vector3,
+  1: [0.2, 0.2, 0.2] as Vector3,
+  2: [0.7, 0.7, 0.7] as Vector3,
 };
 const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
 const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;

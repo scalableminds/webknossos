@@ -96,6 +96,34 @@ describe("Dataset API (E2E)", () => {
   //   expect(true).toBe(true);
   // });
 
+  it("Public dataset access", async () => {
+    const datasetCompactList = await api.getDatasets();
+    // Get dataset details (which includes isPublic flag). With this call we also validate that the private dataset
+    // we query can be accessed with the current user token (we later access it without a token and expect it to fail).
+    const datasets = await Promise.all(
+      datasetCompactList.map((dataset) => api.getDataset(dataset.id)),
+    );
+
+    const publicDatasetId = datasets.find((d) => d.isPublic)?.id;
+    const privateDatasetId = datasets.find((d) => !d.isPublic)?.id;
+    if (!publicDatasetId || !privateDatasetId) {
+      throw new Error("Did not find public or private dataset");
+    }
+
+    setUserAuthToken("invalidToken");
+    const publicDataset = await api.getDataset(publicDatasetId);
+    expect(publicDataset).toBeDefined();
+    expect(publicDataset.isPublic).toBe(true);
+    // Accessing private dataset without token should fail
+    try {
+      await api.getDataset(privateDatasetId);
+      expect.fail("Accessing private dataset without token should fail");
+    } catch (error) {
+      expect(error).toBeDefined();
+    }
+    setUserAuthToken(tokenUserA);
+  });
+
   async function getTestDatasetId(datasetName: string = "test-dataset"): Promise<string> {
     let datasets = await api.getActiveDatasetsOfMyOrganization();
     const dataset = datasets.find((d) => d.name === datasetName);

@@ -1083,7 +1083,7 @@ export class ProofreadToolController {
     const globalPosition = calculateGlobalPos(state, pos).rounded;
     const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
     const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
-    if ((isMultiSplitActive && event.shiftKey) || ctrlOrMetaKey) {
+    if (isMultiSplitActive && (event.shiftKey || ctrlOrMetaKey)) {
       const unmappedSegmentId = VolumeHandlers.getUnmappedSegmentIdForPosition(globalPosition);
       const mappedSegmentId = VolumeHandlers.getSegmentIdForPosition(globalPosition);
       const partition = ctrlOrMetaKey ? 1 : 2;

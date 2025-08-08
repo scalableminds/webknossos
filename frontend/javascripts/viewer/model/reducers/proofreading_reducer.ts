@@ -25,6 +25,9 @@ function ProofreadingReducer(state: WebknossosState, action: ProofreadAction): W
                 [otherPartitionIndex]: {
                   $set: [],
                 },
+                agglomerateId: {
+                  $set: action.agglomerateId,
+                },
               },
             },
           },

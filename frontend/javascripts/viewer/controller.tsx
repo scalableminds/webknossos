@@ -29,8 +29,8 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import type DataLayer from "./model/data_layer";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
+import type DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {

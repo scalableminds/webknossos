@@ -14,6 +14,7 @@ import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
 import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
+import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getLayerByName,
   getMagInfo,
@@ -63,6 +64,7 @@ import {
   deleteEdgeAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
   removeSegmentAction,
@@ -83,8 +85,6 @@ import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
 import { ensureWkReady } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
-import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
-import getSceneController from "viewer/controller/scene_controller_provider";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {

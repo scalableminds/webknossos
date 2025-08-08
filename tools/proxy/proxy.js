@@ -35,7 +35,7 @@ const processes = {
       shell: true,
     },
   ),
-  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
+  esbuild_dev: spawnIfNotSpecified("noEsbuildDev", "node ./esbuild_config.js", ["--watch", "--port", PORT + 2], {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
     shell: true,
@@ -88,7 +88,7 @@ for (const [key, proc] of Object.entries(processes).filter((x) => x[1] !== null)
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-proxy.on("error", (err, req, res) => {
+proxy.on("error", (err, _req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
   res.writeHead(503, { "Content-Type": "text/html" });
   res.end(`
@@ -125,6 +125,12 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
+  // Remove the assets/bundle prefix from the URL
+  // EsBuild dev server expects all files from it's root directory, i.e. public/bundle
+  const originalUrl = req.url;
+  const strippedUrl = originalUrl.replace(/^\/assets\/bundle/, '') || '/';
+
+  req.url = strippedUrl;
   proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 

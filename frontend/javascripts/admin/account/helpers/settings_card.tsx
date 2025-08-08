@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Card, Flex, Tooltip, Typography } from "antd";
+import { Card, Flex, Popover, Typography } from "antd";
 
 export type SettingsCardProps = {
   title: string;
@@ -18,9 +18,15 @@ export function SettingsCard({ title, content, tooltip, action, style }: Setting
             {title}
 
             {tooltip != null ? (
-              <Tooltip title={tooltip}>
+              <Popover
+                content={tooltip}
+                overlayInnerStyle={{
+                  maxWidth: 250,
+                  wordWrap: "break-word",
+                }}
+              >
                 <InfoCircleOutlined style={{ marginLeft: 8 }} />
-              </Tooltip>
+              </Popover>
             ) : null}
           </div>
           {action}

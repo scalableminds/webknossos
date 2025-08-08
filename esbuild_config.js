@@ -55,7 +55,8 @@ async function build(env = {}) {
         },
       ],
     }),
-    createWorkerPlugin(buildOutDir, srcPath, target, __dirname, env.logLevel, isProduction), // Resolves import Worker from myFunc.worker;
+    // DRY worker bundling: reuse main config defaults
+    createWorkerPlugin({ logLevel: env.logLevel }), // Resolves import Worker from myFunc.worker;
     esbuildPluginWorker() // Resolves new Worker(myWorker.js)
   ];
 

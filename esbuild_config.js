@@ -96,7 +96,6 @@ async function build(env = {}) {
     resolveExtensions: [".ts", ".tsx", ".js", ".json", ".proto", ".wasm"],
     alias: {
       react: path.resolve(__dirname, "node_modules/react"),
-      three: path.resolve(__dirname, "node_modules/three/src/Three.js"),
     },
     plugins: plugins,
     external: ["/assets/images/*", "fs"],

@@ -13,6 +13,7 @@ const { lessLoader } = require("esbuild-plugin-less");
 const copyPlugin = require("esbuild-plugin-copy").default;
 const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
 const esbuildPluginWorker = require("@chialab/esbuild-plugin-worker").default;
+const { wasmLoader } = require("esbuild-plugin-wasm");
 
 
 // Custom Plugins for Webknossos
@@ -41,6 +42,8 @@ async function build(env = {}) {
   const plugins = [
     polyfillNode(),
     createProtoPlugin(protoPath),
+    // Use community plugin for ESM-compatible WASM imports
+    wasmLoader(),
     lessLoader({
       javascriptEnabled: true,
     }),

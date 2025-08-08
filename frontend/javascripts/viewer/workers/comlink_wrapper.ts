@@ -65,7 +65,7 @@ export function createWorker<T extends (...args: any) => any>(
 
   return wrap(
     // @ts-ignore
-    new Worker(workerFunction),
+    new Worker(workerFunction, { type: "module" }),
   );
 }
 export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {

@@ -23,8 +23,7 @@ const path = require("node:path");
 // Community plugins
 const { lessLoader } = require("esbuild-plugin-less");
 const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
-// const wasmLoader = require("esbuild-plugin-wasm").default;
-const {wasmPlugin} = require("./wasmPlugin.js");
+const { wasmLoader } = require("esbuild-plugin-wasm");
 
 // Custom worker plugin that creates separate bundles for .worker.ts files
 const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot, logLevel, isProduction) => ({
@@ -67,7 +66,7 @@ const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot, logLevel,
           await esbuild.build({
             entryPoints: [workerPath],
             bundle: true,
-            format: "iife",
+            format: "esm",
             target: target,
             outfile: path.join(buildOutDir, workerOutputPath),
             minify: isProduction,
@@ -81,10 +80,10 @@ const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot, logLevel,
               url: require.resolve("url/"),
             },
             external: [], // Bundle everything for workers
-            resolveExtensions: [".ts", ".tsx", ".js", ".json"],
+            resolveExtensions: [".ts", ".tsx", ".js", ".json", ".wasm"],
             plugins: [
               polyfillNode(),
-              wasmPlugin(),
+              wasmLoader(),
               lessLoader({
                 javascriptEnabled: true,
               }),

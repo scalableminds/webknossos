@@ -28,7 +28,7 @@ const createProtoPlugin = (protoPath) => ({
       }
 
       return {
-        errors: [{ text: "Could not resolve .proto file: ${args.path}" }],
+        errors: [{ text: `Could not resolve .proto file: ${args.path}` }],
       };
     });
 

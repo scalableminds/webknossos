@@ -16,18 +16,20 @@
  * import workerUrl from './my.worker';
  * const worker = new Worker(workerUrl);
  */
-// esbuild plugin for handling web workers.
-// This plugin identifies .worker.ts files, creates separate esbuild bundles for each,
-// and provides a virtual module that exports the URL to the bundled worker file.
 
 const esbuild = require("esbuild");
 const path = require("node:path");
 
+// Community plugins
+const { lessLoader } = require("esbuild-plugin-less");
+const polyfillNode = require("esbuild-plugin-polyfill-node").polyfillNode;
+// const wasmLoader = require("esbuild-plugin-wasm").default;
+const {wasmPlugin} = require("./wasmPlugin.js");
+
 // Custom worker plugin that creates separate bundles for .worker.ts files
-const createWorkerPlugin = (buildOutDir, srcPath, target, polyfillNode, lessLoader, projectRoot, logLevel) => ({
+const createWorkerPlugin = (buildOutDir, srcPath, target, projectRoot, logLevel, isProduction) => ({
   name: "worker",
   setup(build) {
-    const isProduction = process.env.NODE_ENV === "production";
     const workerEntries = new Map();
     
     // Collect all worker files during the resolve phase
@@ -79,16 +81,14 @@ const createWorkerPlugin = (buildOutDir, srcPath, target, polyfillNode, lessLoad
               url: require.resolve("url/"),
             },
             external: [], // Bundle everything for workers
-            // Don"t inject process-shim in workers
-            inject: [],
             resolveExtensions: [".ts", ".tsx", ".js", ".json"],
             plugins: [
               polyfillNode(),
+              wasmPlugin(),
               lessLoader({
                 javascriptEnabled: true,
               }),
             ],
-            loader: {".wasm": "file"}
           });
           
           if (logLevel !== "silent") {

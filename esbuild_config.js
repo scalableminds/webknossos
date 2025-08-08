@@ -52,7 +52,7 @@ async function build(env = {}) {
         },
       ],
     }),
-    createWorkerPlugin(buildOutDir, srcPath, target, polyfillNode, lessLoader, __dirname, env.logLevel), // Resolves import Worker from myFunc.worker;
+    createWorkerPlugin(buildOutDir, srcPath, target, __dirname, env.logLevel, isProduction), // Resolves import Worker from myFunc.worker;
     esbuildPluginWorker() // Resolves new Worker(myWorker.js)
   ];
 

@@ -43,7 +43,6 @@ import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
 
-import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext

@@ -152,7 +152,7 @@ function AccountPasswordView() {
   }
 
   function handleResetPassword() {
-    setResetPasswordVisible(true);
+    setResetPasswordVisible(!isResetPasswordVisible);
   }
 
   const passKeyList: SettingsCardProps[] = [

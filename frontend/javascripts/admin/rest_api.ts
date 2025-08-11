@@ -1256,27 +1256,29 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+type StoreRemoteDatasetArgs = {
+  dataStoreName: string;
+  dataSource: string;
+  folderId?: string | null;
+};
+
 export async function storeRemoteDataset(
-  datastoreUrl: string,
+  dataStoreName: string,
   datasetName: string,
-  organizationId: string,
-  datasource: string,
+  datasource: any,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    if (folderId) {
-      params.set("folderId", folderId);
-    }
+  const payload: StoreRemoteDatasetArgs = {
+    dataSource: datasource,
+    dataStoreName: dataStoreName,
+  };
+  if (folderId) {
+    payload["folderId"] = folderId;
+  }
 
-    return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
-      {
-        method: "POST",
-        data: datasource,
-      },
-    );
+  return Request.sendJSONReceiveJSON(`/api/datasets/addVirtualDataset/${datasetName}`, {
+    method: "POST",
+    data: payload,
   });
 }
 

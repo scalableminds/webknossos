@@ -367,20 +367,6 @@ class DataSourceController @Inject()(
       }
     }
 
-  // Called by the frontend after the user has set datasetName / FolderId of an explored dataSource
-  // This route adds this data source to the WK database
-  def add(organizationId: String, datasetName: String, folderId: Option[String]): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
-        for {
-          _ <- Fox.successful(())
-          dataSourceId = DataSourceId(datasetName, organizationId)
-          dataSource = request.body.copy(id = dataSourceId)
-          datasetId <- dsRemoteWebknossosClient.registerDataSource(dataSource, dataSourceId, folderId) ?~> "dataset.add.failed"
-        } yield Ok(Json.obj("newDatasetId" -> datasetId))
-      }
-    }
-
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
       UserAccessRequest.administrateDataSources(organizationId)) {

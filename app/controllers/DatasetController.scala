@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -69,6 +69,12 @@ case class SegmentAnythingMaskParameters(
 
 object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
+}
+
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String], dataStoreName: String)
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
 class DatasetController @Inject()(userService: UserService,
@@ -151,6 +157,26 @@ class DatasetController @Inject()(userService: UserService,
                                                                        request.identity,
                                                                        folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
+    }
+
+  def addVirtualDataset(name: String): Action[DataSourceRegistrationInfo] =
+    sil.SecuredAction.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+      for {
+        dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> Messages(
+          "datastore.notFound",
+          request.body.dataStoreName) ~> NOT_FOUND
+        user = request.identity
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+        mayAddVirtualDataset <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
+        dataset <- datasetService.createVirtualDataset(
+          name,
+          user._organization,
+          dataStore,
+          request.body.dataSource,
+          request.body.folderId,
+          user
+        )
+      } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
   // List all accessible datasets (list of json objects, one per dataset)

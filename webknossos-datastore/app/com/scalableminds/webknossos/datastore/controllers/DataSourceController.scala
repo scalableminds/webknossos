@@ -457,7 +457,7 @@ class DataSourceController @Inject()(
               _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
             } yield ()
           } else {
-            dsRemoteWebknossosClient.deleteVirtualDataset(datasetId)
+            Fox.successful(logger.warn(s"Tried to delete dataset ${dataSource.id} that is not on disk."))
           }
         } yield Ok
       }

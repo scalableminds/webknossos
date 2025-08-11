@@ -226,6 +226,9 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  /**
+    * Called by the datastore after a dataset has been deleted on disk.
+    */
   def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -244,17 +247,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok
       }
   }
-
-  def deleteVirtualDataset(name: String, key: String): Action[ObjectId] =
-    Action.async(validateJson[ObjectId]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(request.body)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
-          _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
-        } yield Ok
-      }
-    }
 
   def findDatasetId(name: String,
                     key: String,

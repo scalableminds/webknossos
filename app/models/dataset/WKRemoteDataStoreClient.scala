@@ -105,4 +105,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .delete()
     } yield ()
 
+  def deleteOnDisk(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .delete()
+    } yield ()
+
 }

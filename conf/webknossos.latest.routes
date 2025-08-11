@@ -93,6 +93,7 @@ POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask            
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 
 # Folders
@@ -118,7 +119,6 @@ POST          /datastores/:name/reserveUpload                                   
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
 POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetDirectoryName: String, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
-POST          /datastores/:name/deleteVirtualDataset                                            controllers.WKRemoteDataStoreController.deleteVirtualDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
 GET           /datastores/:name/findCredential                                                  controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: ObjectId)

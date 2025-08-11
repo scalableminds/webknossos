@@ -656,6 +656,21 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield magInfosAndLinkedMags
 
+  def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- Fox.successful()
+      isVirtual = dataset.isVirtual
+      _ <- if (isVirtual) {
+        // At this point, we should also free space in S3 once implemented.
+        datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
+      } else {
+        for {
+          datastoreClient <- clientFor(dataset)
+          _ <- datastoreClient.deleteOnDisk(dataset._id)
+        } yield ()
+      } ?~> "dataset.delete.failed"
+    } yield ()
+
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization] = None,

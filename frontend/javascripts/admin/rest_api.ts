@@ -1343,13 +1343,10 @@ export async function triggerDatasetClearCache(
   });
 }
 
-export async function deleteDatasetOnDisk(datastoreHost: string, datasetId: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/datasets/${datasetId}/deleteOnDisk?token=${token}`, {
-      host: datastoreHost,
-      method: "DELETE",
-    }),
-  );
+export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+    method: "DELETE",
+  });
 }
 
 export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {

@@ -491,6 +491,17 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization && request.identity.isAdmin)
+        _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
+      } yield Ok
+    }
+
   def compose(): Action[ComposeRequest] =
     sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
       for {

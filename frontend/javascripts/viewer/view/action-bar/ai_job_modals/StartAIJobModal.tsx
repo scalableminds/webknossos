@@ -1,0 +1,53 @@
+import { Modal, Tabs } from "antd";
+import _ from "lodash";
+import { useWkSelector } from "libs/react_hooks";
+import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { Store } from "viewer/singletons";
+import { TrainAiModelFromAnnotationTab } from "../../jobs/train_ai_model";
+import type { StartAIJobModalState } from "./constants";
+import { AlignmentTab } from "./tabs/AlignmentTab";
+import { RunAiModelTab } from "./tabs/RunAiModelTab";
+
+export type StartAIJobModalProps = {
+  aIJobModalState: StartAIJobModalState;
+};
+
+export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
+  const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
+  const tabs = _.compact([
+    {
+      label: "Run a model",
+      key: "runModel",
+      children: <RunAiModelTab aIJobModalState={aIJobModalState} />,
+    },
+    isSuperUser
+      ? {
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
+        }
+      : null,
+    {
+      label: "Alignment",
+      key: "alignment",
+      children: <AlignmentTab />,
+    },
+  ]);
+  return aIJobModalState !== "invisible" ? (
+    <Modal
+      width={875}
+      open
+      title={
+        <>
+          <i className="fas fa-magic icon-margin-right" />
+          AI Analysis
+        </>
+      }
+      onCancel={onClose}
+      footer={null}
+    >
+      <Tabs items={tabs} />
+    </Modal>
+  ) : null;
+}

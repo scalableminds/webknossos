@@ -39,7 +39,7 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { BoundingBoxSelection } from "./starting_job_modals";
+import { BoundingBoxSelection } from "./ai_job_modals/components/BoundingBoxSelection";
 
 type Props = {
   isOpen: boolean;

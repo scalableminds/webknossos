@@ -18,10 +18,10 @@ import { Store } from "viewer/singletons";
 import {
   CollapsibleSplitMergerEvaluationSettings,
   SplitMergerEvaluationSettings,
-} from "../components/CollapsibleSplitMergerEvaluationSettings";
-import { ExperimentalInferenceAlert } from "../components/ExperimentalInferenceAlert";
+} from "../components/collapsible_split_merger_evaluation_settings";
+import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
-import { StartJobForm } from "./StartJobForm";
+import { StartJobForm } from "./start_job_form";
 
 export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);

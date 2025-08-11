@@ -5,11 +5,11 @@ import { APIJobType } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
 import { jobNameToImagePath } from "../constants";
-import { CustomAiModelInferenceForm } from "../forms/CustomAiModelInferenceForm";
-import { MitochondriaSegmentationForm } from "../forms/MitochondriaSegmentationForm";
-import { NeuronSegmentationForm } from "../forms/NeuronSegmentationForm";
-import { NucleiDetectionForm } from "../forms/NucleiDetectionForm";
-import { AlignSectionsForm } from "../forms/AlignSectionsForm";
+import { CustomAiModelInferenceForm } from "../forms/custom_ai_model_inference_form";
+import { MitochondriaSegmentationForm } from "../forms/mitochondria_segmentation_form";
+import { NeuronSegmentationForm } from "../forms/neuron_segmentation_form";
+import { NucleiDetectionForm } from "../forms/nuclei_detection_form";
+import { AlignSectionsForm } from "../forms/align_sections_form";
 
 export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   const centerImageStyle = {

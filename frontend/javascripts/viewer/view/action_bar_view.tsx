@@ -41,7 +41,7 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { StartAIJobModal } from "./action-bar/ai_job_modals/StartAIJobModal";
+import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";

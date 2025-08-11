@@ -6,7 +6,7 @@ import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
 import { isBoundingBoxExportable } from "../../download_modal_view";
-import { BoundingBoxSelection } from "./BoundingBoxSelection";
+import { BoundingBoxSelection } from "./bounding_box_selection";
 
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;

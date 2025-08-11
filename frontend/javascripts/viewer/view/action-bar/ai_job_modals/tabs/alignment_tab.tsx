@@ -1,6 +1,6 @@
 import { Card, Radio, Row, Space } from "antd";
 import { jobNameToImagePath } from "../constants";
-import { AlignSectionsForm } from "../forms/AlignSectionsForm";
+import { AlignSectionsForm } from "../forms/align_sections_form";
 
 export function AlignmentTab() {
   const centerImageStyle = {

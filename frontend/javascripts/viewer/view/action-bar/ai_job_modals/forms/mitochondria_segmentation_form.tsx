@@ -6,9 +6,9 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
-import { ExperimentalInferenceAlert } from "../components/ExperimentalInferenceAlert";
+import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
-import { StartJobForm } from "./StartJobForm";
+import { StartJobForm } from "./start_job_form";
 
 export function MitochondriaSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);

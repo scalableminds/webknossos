@@ -5,7 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
-import { StartJobForm } from "./StartJobForm";
+import { StartJobForm } from "./start_job_form";
 
 export function AlignSectionsForm() {
   const dataset = useWkSelector((state) => state.dataset);

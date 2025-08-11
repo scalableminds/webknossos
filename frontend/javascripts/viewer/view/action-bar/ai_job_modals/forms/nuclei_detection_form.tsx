@@ -6,7 +6,7 @@ import { APIJobType } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
-import { StartJobForm } from "./StartJobForm";
+import { StartJobForm } from "./start_job_form";
 
 const { ThinSpace } = Unicode;
 

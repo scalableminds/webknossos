@@ -10,7 +10,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { jobNameToImagePath } from "./constants";
-import { StartJobForm } from "./forms/StartJobForm";
+import { StartJobForm } from "./forms/start_job_form";
 
 type Props = {
   handleClose: () => void;

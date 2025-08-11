@@ -5,8 +5,8 @@ import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
 import { TrainAiModelFromAnnotationTab } from "../../jobs/train_ai_model";
 import type { StartAIJobModalState } from "./constants";
-import { AlignmentTab } from "./tabs/AlignmentTab";
-import { RunAiModelTab } from "./tabs/RunAiModelTab";
+import { AlignmentTab } from "./tabs/alignment_tab";
+import { RunAiModelTab } from "./tabs/run_ai_model_tab";
 
 export type StartAIJobModalProps = {
   aIJobModalState: StartAIJobModalState;

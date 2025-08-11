@@ -9,7 +9,7 @@ import {
 } from "@ant-design/icons";
 import { Tree as AntdTree, Dropdown, type GetRef, Space, Tooltip, type TreeProps } from "antd";
 import type { EventDataNode } from "antd/es/tree";
-import { useLifecycle } from "beautiful-react-hooks";
+import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";

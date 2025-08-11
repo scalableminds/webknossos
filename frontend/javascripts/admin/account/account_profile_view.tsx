@@ -18,7 +18,7 @@ function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
-  const [changeEmailVisible, setChangeEmailVisible] = useState(false);
+  const [isChangeEmailVisible, setChangeEmailVisible] = useState(false);
   if (!activeUser) return null;
 
   const role = Utils.isUserAdmin(activeUser)
@@ -65,7 +65,7 @@ function AccountProfileView() {
     },
     {
       title: "Email",
-      content: changeEmailVisible ? (
+      content: isChangeEmailVisible ? (
         <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />
       ) : (
         activeUser.email
@@ -76,7 +76,7 @@ function AccountProfileView() {
           shape="circle"
           icon={<EditOutlined />}
           size="small"
-          onClick={() => setChangeEmailVisible(true)}
+          onClick={() => setChangeEmailVisible(!isChangeEmailVisible)}
         />
       ),
     },

@@ -10,7 +10,7 @@ class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits
     a.name == b.name && a.index == b.index && a.lowerBound == b.lowerBound && a.upperBound == b.upperBound
 
   "Additional coordinate axis" when {
-    val axisT = AdditionalAxis("t", Array(0, 25), 0)
+    val axisT = AdditionalAxis("t", Seq(0, 25), 0)
     "converting to proto" should {
       "return correct value" in {
         val proto = AdditionalAxis.toProto(Some(Seq(axisT)))
@@ -26,15 +26,12 @@ class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits
       }
     }
     "merging" should {
-      val axisA = AdditionalAxis("a", Array(10, 30), 1)
-      val axisB = AdditionalAxis("b", Array(0, 100), 2)
-      val axisT2 = AdditionalAxis("t", Array(10, 40), 3)
+      val axisA = AdditionalAxis("a", Seq(10, 30), 1)
+      val axisB = AdditionalAxis("b", Seq(0, 100), 2)
+      val axisT2 = AdditionalAxis("t", Seq(10, 40), 3)
       "give merge" in {
         val merged =
-          AdditionalAxis
-            .merge(Seq(Some(Seq(axisA, axisB)), Some(Seq(axisT))))
-            .get
-            .sortBy(_.index)
+          AdditionalAxis.merge(Seq(Some(Seq(axisA, axisB)), Some(Seq(axisT)))).get.sortBy(_.index)
 
         assert(
           definitionsEqual(merged(0), axisT) &&
@@ -47,13 +44,11 @@ class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits
       }
       "using assert same coordinates" should {
         "fail when coordinates are not the same" in {
-          val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-            Seq(Some(Seq(axisA)), Some(Seq(axisT))))
+          val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(Seq(Some(Seq(axisA)), Some(Seq(axisT))))
           assert(merged.isEmpty)
         }
         "succeed when coordinates are the same" in {
-          val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(
-            Seq(Some(Seq(axisT)), Some(Seq(axisT2))))
+          val merged = AdditionalAxis.mergeAndAssertSameAdditionalAxes(Seq(Some(Seq(axisT)), Some(Seq(axisT2))))
           assert(!merged.isEmpty)
           assert(merged.getOrThrow("test").get.head.name == "t")
         }

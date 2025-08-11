@@ -1304,13 +1304,21 @@ export function updateDatasetTeams(
   });
 }
 
-export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
+export async function triggerDatasetCheck(
+  datastoreHost: string,
+  organizationId?: string,
+): Promise<void> {
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.set("token", token);
+    if (organizationId) {
+      params.set("organizationId", organizationId);
+    }
+    return Request.triggerRequest(`/data/triggers/checkInboxBlocking?${params}`, {
       host: datastoreHost,
       method: "POST",
-    }),
-  );
+    });
+  });
 }
 
 export async function triggerDatasetClearCache(

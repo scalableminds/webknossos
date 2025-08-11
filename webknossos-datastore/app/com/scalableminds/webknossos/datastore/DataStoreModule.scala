@@ -38,7 +38,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(actorSystem)
-    bind(classOf[DataSourceRepository]).asEagerSingleton()
     bind(classOf[UploadService]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[DataVaultService]).asEagerSingleton()

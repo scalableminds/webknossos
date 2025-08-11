@@ -544,8 +544,7 @@ class DatasetController @Inject()(userService: UserService,
                                                     request.identity._organization,
                                                     newDatasetId)
         dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
-        // TODO allowsManualUpload? validate where layersToLink live if they contain a dataset that is not virtual?
-        dataStore <- dataStoreDAO.findOneWithManualUploadsAllowed
+        dataStore <- findReferencedDataStore(request.body.layersToLink)
         // TODO requireUniqueName?
         // TODO give unique directoryName
         dataSet <- datasetService.createPreliminaryDataset(newDatasetId,
@@ -557,6 +556,22 @@ class DatasetController @Inject()(userService: UserService,
         // Store dataSourceWithLayersToLink (keep isUsable=false and status)
       } yield Ok(Json.obj("id" -> dataSet._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
+
+  private def findReferencedDataStore(layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[DataStore] = {
+    val datasetIds = layersToLink.map(_.datasetId).toSet
+    for {
+      datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
+      referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore)
+      // TODO isVirtual is not enough. only require for datasets with local data. Maybe as follow-up?
+      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
+      dataStore <- referencedDatastoreNames.headOption match {
+        case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
+        case None                     => dataStoreDAO.findOneWithManualUploadsAllowed
+      }
+      _ <- Fox.fromBool(dataStore.allowsManualUpload) ?~> "dataStore.manualUploadNotAllowed"
+    } yield dataStore
+  }
 
   private def addPathsToDatasource(dataSource: GenericDataSource[DataLayerLike],
                                    organizationId: String,

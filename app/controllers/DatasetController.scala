@@ -167,7 +167,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.dataStoreName) ~> NOT_FOUND
         user = request.identity
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-        mayAddVirtualDataset <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
+        _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         dataset <- datasetService.createVirtualDataset(
           name,
           user._organization,
@@ -523,7 +524,7 @@ class DatasetController @Inject()(userService: UserService,
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(request.identity._organization == dataset._organization && request.identity.isAdmin)
+        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ~> FORBIDDEN
         _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
       } yield Ok
     }

@@ -1258,18 +1258,18 @@ export async function exploreRemoteDataset(
 
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
-  dataSource: string;
+  dataSource: APIDataSource;
   folderId?: string | null;
 };
 
 export async function storeRemoteDataset(
   dataStoreName: string,
   datasetName: string,
-  datasource: any,
+  dataSource: APIDataSource,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
-    dataSource: datasource,
+    dataSource,
     dataStoreName: dataStoreName,
   };
   if (folderId) {

@@ -149,11 +149,6 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .postJson(id)
 
-  def deleteVirtualDataset(id: ObjectId): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteVirtualDataset")
-      .addQueryString("key" -> dataStoreKey)
-      .postJson(id)
-
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
       .addQueryString("jobId" -> jobId)

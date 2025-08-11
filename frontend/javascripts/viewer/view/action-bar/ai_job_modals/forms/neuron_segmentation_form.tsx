@@ -1,5 +1,5 @@
 import { startNeuronInferralJob } from "admin/rest_api";
-import { FormInstance, Row, Space } from "antd";
+import { type FormInstance, Row, Space } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -17,7 +17,7 @@ import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
 import {
   CollapsibleSplitMergerEvaluationSettings,
-  SplitMergerEvaluationSettings,
+  type SplitMergerEvaluationSettings,
 } from "../components/collapsible_split_merger_evaluation_settings";
 import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";

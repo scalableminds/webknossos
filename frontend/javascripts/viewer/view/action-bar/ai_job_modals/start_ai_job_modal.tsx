@@ -1,6 +1,6 @@
 import { Modal, Tabs } from "antd";
-import _ from "lodash";
 import { useWkSelector } from "libs/react_hooks";
+import _ from "lodash";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
 import { TrainAiModelFromAnnotationTab } from "../../jobs/train_ai_model";

@@ -1,4 +1,4 @@
-import { APIJobType } from "types/api_types";
+import type { APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 
 export type ModalJobTypes =
@@ -28,10 +28,7 @@ export const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
   infer_mitochondria: [4, 4, 4],
 };
 
-export const MEAN_VX_SIZE: Record<
-  APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
-  Vector3
-> = {
+export const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
   infer_neurons: [7.96, 7.96, 31.2],
   infer_nuclei: [179.84, 179.84, 224.0],
   // "infer_mitochondria" infers on finest available mag

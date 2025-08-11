@@ -5,19 +5,7 @@ import {
   getUnversionedAnnotationInformation,
   runNeuronTraining,
 } from "admin/rest_api";
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Col,
-  Collapse,
-  Form,
-  type FormInstance,
-  Input,
-  Row,
-  Select,
-  Tooltip,
-} from "antd";
+import { Alert, Button, Col, Form, type FormInstance, Input, Row, Select, Tooltip } from "antd";
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import { MagSelectionFormItem } from "components/mag_selection";
 import { formatVoxels } from "libs/format_utils";
@@ -25,7 +13,6 @@ import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { computeArrayFromBoundingBox } from "libs/utils";
 import _ from "lodash";
 import React, { useRef, useState } from "react";
 import {
@@ -35,7 +22,7 @@ import {
   AnnotationLayerEnum,
   type ServerVolumeTracing,
 } from "types/api_types";
-import type { Vector3, Vector6 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import {
   getColorLayers,
   getMagInfo,
@@ -48,12 +35,12 @@ import { MagInfo } from "viewer/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model } from "viewer/singletons";
-import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
+import type { StoreAnnotation } from "viewer/store";
 import { CollapsibleWorkflowYamlEditor } from "../components/collapsible_workflow_yaml_editor";
 import {
+  type AnnotationInfoForAITrainingJob,
   checkAnnotationsForErrorsAndWarnings,
   checkBoundingBoxesForErrorsAndWarnings,
-  type AnnotationInfoForAITrainingJob,
 } from "../utils";
 
 const { TextArea } = Input;

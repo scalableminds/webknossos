@@ -5,6 +5,7 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
 } from "libs/utils";
+import _ from "lodash";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
 import { APIJobType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
@@ -14,7 +15,6 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
 import { MEAN_VX_SIZE, MIN_BBOX_EXTENT, type ModalJobTypes } from "./constants";
-import _ from "lodash";
 
 export const getMinimumDSSize = (jobType: ModalJobTypes) => {
   switch (jobType) {

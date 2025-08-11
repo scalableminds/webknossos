@@ -1,7 +1,7 @@
 import { getAiModels, runNeuronInferenceWithAiModelJob } from "admin/rest_api";
 import { Form, Row, Select, Space } from "antd";
-import { useWkSelector } from "libs/react_hooks";
 import { useGuardedFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";

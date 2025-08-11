@@ -19,11 +19,11 @@ import {
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import { CollapsibleWorkflowYamlEditor } from "../../../jobs/train_ai_model";
-import DEFAULT_PREDICT_WORKFLOW from "../templates/default-predict-workflow-template";
 import { BoundingBoxSelectionFormItem } from "../components/bounding_box_selection_form_item";
 import { JobCreditCostInformation } from "../components/job_credit_cost_information";
 import { ShouldUseTreesFormItem } from "../components/should_use_trees_form_item";
 import { useCurrentlySelectedBoundingBox } from "../hooks/use_currently_selected_bounding_box";
+import DEFAULT_PREDICT_WORKFLOW from "../templates/default-predict-workflow-template";
 import { getBoundingBoxesForLayers } from "../utils";
 
 type Props = {

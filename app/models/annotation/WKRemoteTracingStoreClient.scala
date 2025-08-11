@@ -4,7 +4,7 @@ import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
-import com.scalableminds.util.tools.Box
+import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 
@@ -37,7 +37,8 @@ class WKRemoteTracingStoreClient(
     dataset: Dataset,
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
@@ -253,7 +254,7 @@ class WKRemoteTracingStoreClient(
                        version: Option[Long],
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
-                       voxelSize: Option[VoxelSize]): Fox[FetchedAnnotationLayer] = {
+                       voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
     logger.debug(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
       _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -273,7 +274,25 @@ class WKRemoteTracingStoreClient(
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
-      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
+      editedMappingEdgesData <- Fox.runIf(!skipVolumeData && tracing.getHasEditableMapping) {
+        rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/editedEdgesZip").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryStringOptional("version", version.map(_.toString))
+          .getWithBytesResponse
+      }
+      baseMappingNameOpt: Option[String] <- Fox.runIf(tracing.getHasEditableMapping) {
+        rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/info").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryStringOptional("version", version.map(_.toString))
+          .addQueryString("annotationId" -> annotationId.toString)
+          .getWithJsonResponse[JsObject]
+          .flatMap(jsObj => JsonHelper.as[String](jsObj \ "baseMappingName").toFox)
+      }
+      fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer,
+                                                                           Right(tracing),
+                                                                           data,
+                                                                           editedMappingEdgesData,
+                                                                           baseMappingNameOpt)
     } yield fetchedAnnotationLayer
   }
 

@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataLayerLike,
+  DatasetLayerAttachments,
   ElementClass,
   GenericDataSource
 }
@@ -26,6 +27,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
   N5DataLayer,
   N5SegmentationLayer,
@@ -549,7 +551,26 @@ class DatasetController @Inject()(userService: UserService,
     }
 
   private def addPathsToDatasource(
-      dataSource: GenericDataSource[DataLayerLike]): Fox[GenericDataSource[DataLayerLike]] = ???
+      dataSource: GenericDataSource[DataLayerLike]): Fox[GenericDataSource[DataLayerLike]] =
+    for {
+      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(addPathsToLayer)
+    } yield dataSource.copy(dataLayers = layersWithPaths)
+
+  private def addPathsToLayer(dataLayer: DataLayerLike): Fox[DataLayerLike] =
+    for {
+      mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
+      magsWithPaths <- Fox.serialCombined(mags)(addPathToMag)
+      attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments)
+    } yield dataLayer // TODO copy with new values
+
+  private def addPathToMag(mag: MagLocator): Fox[MagLocator] = ???
+
+  private def addPathsToAttachments(
+      attachmentsOpt: Option[DatasetLayerAttachments]): Fox[Option[DatasetLayerAttachments]] =
+    attachmentsOpt match {
+      case None              => Fox.successful(None)
+      case Some(attachments) => Fox.successful(Some(attachments.copy())) // TODO
+    }
 
   private def addLayersToLink(dataSource: GenericDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
       implicit ctx: DBAccessContext): Fox[GenericDataSource[DataLayerLike]] =

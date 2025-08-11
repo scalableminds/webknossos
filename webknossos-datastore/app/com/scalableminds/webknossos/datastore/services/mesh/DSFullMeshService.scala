@@ -34,8 +34,7 @@ object FullMeshRequest {
   implicit val jsonFormat: OFormat[FullMeshRequest] = Json.format[FullMeshRequest]
 }
 
-class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
-                                  meshFileService: MeshFileService,
+class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
                                   val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,

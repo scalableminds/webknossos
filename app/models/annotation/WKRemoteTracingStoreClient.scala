@@ -252,7 +252,7 @@ class WKRemoteTracingStoreClient(
   def getVolumeTracing(annotationId: ObjectId,
                        annotationLayer: AnnotationLayer,
                        version: Option[Long],
-                       skipVolumeData: Boolean,
+                       skipVolumeAndEdgesData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
                        voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
     logger.debug(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
@@ -264,7 +264,8 @@ class WKRemoteTracingStoreClient(
         .addQueryString("annotationId" -> annotationId.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
-      data <- Fox.runIf(!skipVolumeData) {
+      omitEmptyVolumeDataDueToEditableMapping = tracing.getHasEditableMapping
+      data <- Fox.runIf(!skipVolumeAndEdgesData && !omitEmptyVolumeDataDueToEditableMapping) {
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
@@ -274,13 +275,13 @@ class WKRemoteTracingStoreClient(
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
-      editedMappingEdgesData <- Fox.runIf(!skipVolumeData && tracing.getHasEditableMapping) {
+      editedMappingEdgesData <- Fox.runIf(!skipVolumeAndEdgesData && tracing.getHasEditableMapping) {
         rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/editedEdgesZip").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryStringOptional("version", version.map(_.toString))
           .getWithBytesResponse
       }
-      baseMappingNameOpt: Option[String] <- Fox.runIf(tracing.getHasEditableMapping) {
+      baseMappingNameOpt: Option[String] <- Fox.runIf(!skipVolumeAndEdgesData && tracing.getHasEditableMapping) {
         rpc(s"${tracingStore.url}/tracings/mapping/$tracingId/info").withLongTimeout
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryStringOptional("version", version.map(_.toString))

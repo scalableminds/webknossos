@@ -7,7 +7,12 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, ElementClass, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataLayerLike,
+  ElementClass,
+  GenericDataSource
+}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -21,7 +26,18 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
+}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -46,6 +62,12 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
+
+case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
+
+object LinkedLayerIdentifier {
+  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
 case class ReserveManualUploadRequest(
@@ -513,13 +535,51 @@ class DatasetController @Inject()(userService: UserService,
   def reserveManualUpload(): Action[ReserveManualUploadRequest] =
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
-        _ <- Fox.successful(())
-        // include Layers to link
-        // determine all paths for mags + attachments
-        // Store datasource
-        // Store dataset (unusable, with not yet fully uploaded status)
-        // Return: id, new paths
-      } yield Ok
+        dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource)
+        dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
+        // TODO allowsManualUpload? validate where layersToLink live if they contain a dataset that is not virtual?
+        dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+        // TODO requireUniqueName?
+        dataSet <- datasetService.createPreliminaryDataset(request.body.datasetName,
+                                                           request.identity._organization,
+                                                           dataStore,
+                                                           requireUniqueName = false)
+        // Store dataSourceWithLayersToLink (keep isUsable=false and status)
+      } yield Ok(Json.obj("id" -> dataSet._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
+
+  private def addPathsToDatasource(
+      dataSource: GenericDataSource[DataLayerLike]): Fox[GenericDataSource[DataLayerLike]] = ???
+
+  private def addLayersToLink(dataSource: GenericDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[GenericDataSource[DataLayerLike]] =
+    for {
+      linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
+    } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
+
+  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(
+      implicit ctx: DBAccessContext): Fox[DataLayerLike] =
+    for {
+      dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
+      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.notFound"
+      usable <- dataSource.toUsable.toFox ?~> "dataSource.notUsable"
+      layer: DataLayerLike <- usable.dataLayers
+        .find(_.name == layerToLink.layerName)
+        .toFox ?~> "dataset.layerToLink.layerNotFound"
+      newName = layerToLink.newLayerName.getOrElse(layer.name)
+      layerRenamed: DataLayer <- layer match {
+        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
+        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
+        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
+        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
+        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
+        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
+        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
+        case _                               => Fox.failure("Unknown layer type for link")
+      }
+    } yield layerRenamed
 
 }

@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
-  LinkedLayerIdentifier,
+  LegacyLinkedLayerIdentifier,
   ReserveAdditionalInformation,
   ReserveUploadInformation
 }
@@ -130,9 +130,9 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(
+  private def validateLayerToLink(layerIdentifier: LegacyLinkedLayerIdentifier, requestingUser: User)(
       implicit ec: ExecutionContext,
-      m: MessagesProvider): Fox[LinkedLayerIdentifier] =
+      m: MessagesProvider): Fox[LegacyLinkedLayerIdentifier] =
     for {
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",

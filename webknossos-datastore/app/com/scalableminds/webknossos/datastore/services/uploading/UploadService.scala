@@ -35,7 +35,7 @@ case class ReserveUploadInformation(
     totalFileCount: Long,
     filePaths: Option[List[String]],
     totalFileSizeInBytes: Option[Long],
-    layersToLink: Option[List[LinkedLayerIdentifier]],
+    layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean])
@@ -56,21 +56,19 @@ object ReserveManualUploadInformation {
 
 case class ReserveAdditionalInformation(newDatasetId: ObjectId,
                                         directoryName: String,
-                                        layersToLink: Option[List[LinkedLayerIdentifier]])
+                                        layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
 object ReserveAdditionalInformation {
   implicit val reserveAdditionalInformation: OFormat[ReserveAdditionalInformation] =
     Json.format[ReserveAdditionalInformation]
 }
 
-case class LinkedLayerIdentifier(organizationId: Option[String],
-                                 organizationName: Option[String],
-                                 // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
-                                 datasetDirectoryName: Option[String],
-                                 dataSetName: String,
-                                 layerName: String,
-                                 newLayerName: Option[String] = None) {
-  def this(organizationId: String, dataSetName: String, layerName: String, newLayerName: Option[String]) =
-    this(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
+                                       organizationName: Option[String],
+                                       // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
+                                       datasetDirectoryName: Option[String],
+                                       dataSetName: String,
+                                       layerName: String,
+                                       newLayerName: Option[String] = None) {
 
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 
@@ -80,16 +78,16 @@ case class LinkedLayerIdentifier(organizationId: Option[String],
   }
 }
 
-object LinkedLayerIdentifier {
+object LegacyLinkedLayerIdentifier {
   def apply(organizationId: String,
             dataSetName: String,
             layerName: String,
-            newLayerName: Option[String]): LinkedLayerIdentifier =
-    new LinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
+            newLayerName: Option[String]): LegacyLinkedLayerIdentifier =
+    new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
 }
 
-case class LinkedLayerIdentifiers(layersToLink: Option[List[LinkedLayerIdentifier]])
+case class LinkedLayerIdentifiers(layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
 object LinkedLayerIdentifiers {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
@@ -369,7 +367,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
                                             unpackToDir: Path,
                                             dataSourceId: DataSourceId,
-                                            layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
+                                            layersToLink: Option[List[LegacyLinkedLayerIdentifier]]): Fox[Unit] =
     if (datasetNeedsConversion)
       Fox.successful(())
     else {
@@ -494,7 +492,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationId: String,
-                                                    layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+                                                    layersToLink: List[LegacyLinkedLayerIdentifier]): Fox[Unit] =
     if (layersToLink.isEmpty) {
       Fox.successful(())
     } else {
@@ -510,7 +508,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield ()
     }
 
-  private def layerFromIdentifier(layerIdentifier: LinkedLayerIdentifier): Fox[DataLayer] = {
+  private def layerFromIdentifier(layerIdentifier: LegacyLinkedLayerIdentifier): Fox[DataLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
     val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
     for {

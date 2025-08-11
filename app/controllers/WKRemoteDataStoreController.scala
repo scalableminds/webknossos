@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -27,7 +27,6 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -85,12 +84,12 @@ class WKRemoteDataStoreController @Inject()(
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          dataset <- datasetService.createPreliminaryDataset(
-            ObjectId.generate,
-            uploadInfo.name,
-            uploadInfo.organization,
-            dataStore,
-            uploadInfo.requireUniqueName.getOrElse(false)) ?~> "dataset.upload.creation.failed"
+          newDatasetId = ObjectId.generate
+          dataset <- datasetService.createPreliminaryDataset(newDatasetId,
+                                                             uploadInfo.name,
+                                                             generateDirectoryName(uploadInfo.name, newDatasetId),
+                                                             uploadInfo.organization,
+                                                             dataStore) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
@@ -100,6 +99,13 @@ class WKRemoteDataStoreController @Inject()(
                                                         else Some(layersToLinkWithDatasetId))
         } yield Ok(Json.toJson(additionalInfo))
       }
+    }
+
+  // TODO duplication, extract somewhere
+  private def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
+    TextUtils.normalizeStrong(datasetName) match {
+      case Some(prefix) => s"$prefix-$datasetId"
+      case None         => datasetId.toString
     }
 
   def getUnfinishedUploadsForUser(name: String,

@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
@@ -27,7 +27,6 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
   N5DataLayer,
@@ -540,6 +539,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
+        newDirectoryName = generateDirectoryName(request.body.datasetName, newDatasetId)
         dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
                                                     request.identity._organization,
                                                     newDatasetId)
@@ -547,14 +547,22 @@ class DatasetController @Inject()(userService: UserService,
         dataStore <- findReferencedDataStore(request.body.layersToLink)
         // TODO requireUniqueName?
         // TODO give unique directoryName
-        dataSet <- datasetService.createPreliminaryDataset(newDatasetId,
-                                                           request.body.datasetName,
-                                                           request.identity._organization,
-                                                           dataStore,
-                                                           requireUniqueName = false)
+        dataSet <- datasetService.createPreliminaryDataset(
+          newDatasetId,
+          request.body.datasetName,
+          newDirectoryName,
+          request.identity._organization,
+          dataStore
+        )
         _ <- datasetService.updateDataSources(dataStore, List(dataSourceWithLayersToLink))
         // Store dataSourceWithLayersToLink (keep isUsable=false and status)
       } yield Ok(Json.obj("id" -> dataSet._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
+    }
+
+  private def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
+    TextUtils.normalizeStrong(datasetName) match {
+      case Some(prefix) => s"$prefix-$datasetId"
+      case None         => datasetId.toString
     }
 
   private def findReferencedDataStore(layersToLink: Seq[LinkedLayerIdentifier])(

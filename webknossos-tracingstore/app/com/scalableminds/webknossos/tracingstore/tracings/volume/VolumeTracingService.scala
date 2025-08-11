@@ -463,11 +463,11 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(annotationId: ObjectId,
                                     tracingId: String,
                                     tracing: VolumeTracing,
-                                    volumeDataZipFormmat: VolumeDataZipFormat,
+                                    volumeDataZipFormat: VolumeDataZipFormat,
                                     voxelSize: Option[VoxelSize],
                                     os: OutputStream)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
-    val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
+    val buckets: Iterator[NamedStream] = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
         new WKWBucketStreamSink(volumeLayer, tracing.fallbackLayer.nonEmpty)(
           volumeLayer.bucketProvider.bucketStream(Some(tracing.version)),

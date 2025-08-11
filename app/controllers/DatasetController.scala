@@ -49,6 +49,7 @@ import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
 import java.net.URI
+import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -585,8 +586,11 @@ class DatasetController @Inject()(userService: UserService,
                                    organizationId: String,
                                    datasetId: ObjectId): Fox[GenericDataSource[DataLayerLike]] =
     for {
+      // TODO if empty, find sensible local manualUploadPrefix
       datasetPath <- tryo(
-        new URI(conf.WebKnossos.Datasets.uploadPrefix).resolve(organizationId).resolve(datasetId.toString)).toFox
+        new URI(conf.WebKnossos.Datasets.manualUploadPrefix.getOrElse(s"file://${Paths.get(".").toAbsolutePath}"))
+          .resolve(organizationId)
+          .resolve(datasetId.toString)).toFox
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
 

@@ -270,9 +270,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
                                 skipVolumeData: Boolean,
                                 volumeDataZipFormat: VolumeDataZipFormat)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("volume") {
+      val omitEmptyVolumeDataDueToEditableMapping = volumeLayer.editedMappingEdgesOpt.isDefined
       writer.writeAttribute("id", index.toString)
       writer.writeAttribute("name", volumeLayer.name)
-      if (!skipVolumeData) {
+      if (!skipVolumeData && !omitEmptyVolumeDataDueToEditableMapping) {
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
         writer.writeAttribute("format", volumeDataZipFormat.toString)
       }

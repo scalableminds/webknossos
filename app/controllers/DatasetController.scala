@@ -5,6 +5,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -48,6 +49,7 @@ import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
+import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -537,36 +539,47 @@ class DatasetController @Inject()(userService: UserService,
   def reserveManualUpload(): Action[ReserveManualUploadRequest] =
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
-        dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource)
+        newDatasetId <- Fox.successful(ObjectId.generate)
+        dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
+                                                    request.identity._organization,
+                                                    newDatasetId)
         dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
         // TODO allowsManualUpload? validate where layersToLink live if they contain a dataset that is not virtual?
-        dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+        dataStore <- dataStoreDAO.findOneWithManualUploadsAllowed
         // TODO requireUniqueName?
-        dataSet <- datasetService.createPreliminaryDataset(request.body.datasetName,
+        // TODO give unique directoryName
+        dataSet <- datasetService.createPreliminaryDataset(newDatasetId,
+                                                           request.body.datasetName,
                                                            request.identity._organization,
                                                            dataStore,
                                                            requireUniqueName = false)
+        _ <- datasetService.updateDataSources(dataStore, List(dataSourceWithLayersToLink))
         // Store dataSourceWithLayersToLink (keep isUsable=false and status)
       } yield Ok(Json.obj("id" -> dataSet._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
-  private def addPathsToDatasource(
-      dataSource: GenericDataSource[DataLayerLike]): Fox[GenericDataSource[DataLayerLike]] =
+  private def addPathsToDatasource(dataSource: GenericDataSource[DataLayerLike],
+                                   organizationId: String,
+                                   datasetId: ObjectId): Fox[GenericDataSource[DataLayerLike]] =
     for {
-      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(addPathsToLayer)
+      datasetPath <- tryo(
+        new URI(conf.WebKnossos.Datasets.uploadPrefix).resolve(organizationId).resolve(datasetId.toString)).toFox
+      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
 
-  private def addPathsToLayer(dataLayer: DataLayerLike): Fox[DataLayerLike] =
+  private def addPathsToLayer(dataLayer: DataLayerLike, dataSourcePath: URI): Fox[DataLayerLike] =
     for {
+      layerPath <- tryo(dataSourcePath.resolve(dataLayer.name)).toFox
       mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
-      magsWithPaths <- Fox.serialCombined(mags)(addPathToMag)
-      attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments)
+      magsWithPaths = mags.map(mag => addPathToMag(mag, layerPath))
+      attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments, layerPath)
     } yield dataLayer // TODO copy with new values
 
-  private def addPathToMag(mag: MagLocator): Fox[MagLocator] = ???
+  private def addPathToMag(mag: MagLocator, layerPath: URI): MagLocator =
+    mag.copy(path = Some(layerPath.resolve(mag.mag.toMagLiteral()).toString))
 
-  private def addPathsToAttachments(
-      attachmentsOpt: Option[DatasetLayerAttachments]): Fox[Option[DatasetLayerAttachments]] =
+  private def addPathsToAttachments(attachmentsOpt: Option[DatasetLayerAttachments],
+                                    layerPath: URI): Fox[Option[DatasetLayerAttachments]] =
     attachmentsOpt match {
       case None              => Fox.successful(None)
       case Some(attachments) => Fox.successful(Some(attachments.copy())) // TODO

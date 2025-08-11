@@ -84,11 +84,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String,
+  def createPreliminaryDataset(newDatasetId: ObjectId,
+                               datasetName: String,
                                organizationId: String,
                                dataStore: DataStore,
-                               requireUniqueName: Boolean): Fox[Dataset] = {
-    val newDatasetId = ObjectId.generate
+                               requireUniqueName: Boolean): Fox[Dataset] =
     for {
       isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
         GlobalAccessContext)
@@ -98,7 +98,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                                 notYetUploadedStatus)
       newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
     } yield newDataset
-  }
 
   def createVirtualDataset(datasetName: String,
                            organizationId: String,

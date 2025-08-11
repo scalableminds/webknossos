@@ -112,6 +112,10 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
+
+    object Datasets {
+      val uploadPrefix: String = get[String]("webKnossos.Datasets.uploadPrefix")
+    }
     val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
   }
 

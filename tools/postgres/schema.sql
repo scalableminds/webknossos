@@ -224,6 +224,7 @@ CREATE TABLE webknossos.dataStores(
   isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
+  allowsManualUpload BOOLEAN NOT NULL DEFAULT TRUE,
   onlyAllowedOrganization TEXT,
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT FALSE
 );

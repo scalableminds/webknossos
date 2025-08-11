@@ -43,6 +43,7 @@ import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
 
+import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -659,10 +660,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      isVirtual = dataset.isVirtual
-      _ <- if (isVirtual) {
+      dataSource <- fullDataSourceFor(dataset)
+      pathIsLocal = (path: String) => new URI(path).getScheme == "file" || new URI(path).getScheme == null
+      anyLocalLayers = dataSource.toUsable.exists(
+        _.dataLayers.exists(
+          _.allExplicitPaths.exists(pathIsLocal)
+        ))
+      onlyInDB = dataset.isVirtual && !anyLocalLayers
+      _ <- if (onlyInDB) {
         // At this point, we should also free space in S3 once implemented.
+        // Right now, we can just mark the dataset as deleted in the database.
         datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
       } else {
         for {

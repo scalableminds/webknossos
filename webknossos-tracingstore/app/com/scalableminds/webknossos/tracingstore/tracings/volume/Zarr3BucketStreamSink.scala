@@ -21,7 +21,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 
@@ -61,11 +60,11 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
         }
       case _ => None
     } ++ mags.map { mag =>
-      NamedFunctionStream.fromString(zarrHeaderFilePath(defaultLayerName, mag), Json.prettyPrint(Json.toJson(header)))
+      NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
     } ++ Seq(
-      NamedFunctionStream.fromString(
+      NamedFunctionStream.fromJsonSerializable(
         GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
-        Json.prettyPrint(Json.toJson(createVolumeDataSource(voxelSize)))
+        createVolumeDataSource(voxelSize)
       ))
   }
 

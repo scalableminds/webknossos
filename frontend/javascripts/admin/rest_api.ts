@@ -151,7 +151,11 @@ export async function loginUser(formValues: {
 }
 
 export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout");
+  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+}
+
+export async function logoutUserEverywhere(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {

@@ -957,6 +957,13 @@ class AuthenticationController @Inject()(
     (errors, fN, lN)
   }
 
+  def logoutEverywhere: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- userDAO.logOutEverywhereByMultiUserId(request.identity._multiUser)
+      userIds <- userDAO.findIdsByMultiUserId(request.identity._multiUser)
+      _ = userIds.map(userService.removeUserFromCache)
+    } yield Ok
+  }
 }
 
 case class InviteParameters(

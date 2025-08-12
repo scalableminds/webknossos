@@ -618,7 +618,7 @@ function JobCreditCostInformation({
     </>
   );
 }
-type SplitMergerEvaluationSettings = {
+export type SplitMergerEvaluationSettings = {
   useSparseTracing?: boolean;
   maxEdgeLength?: number;
   sparseTubeThresholdInNm?: number;
@@ -1025,6 +1025,7 @@ function StartJobForm(props: StartJobFormProps) {
 
 export function NucleiDetectionForm() {
   const dataset = useWkSelector((state) => state.dataset);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -1046,7 +1047,13 @@ export function NucleiDetectionForm() {
         if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
           return;
         }
-        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+        const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
+        startNucleiInferralJob(
+          dataset.id,
+          colorLayer.name,
+          newDatasetName,
+          layerConfiguration.isInverted,
+        );
       }}
       description={
         <>
@@ -1073,6 +1080,7 @@ export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
 
@@ -1109,12 +1117,15 @@ export function NeuronSegmentationForm() {
           return;
         }
 
+        const datasetLayerConfiguration = datasetConfiguration.layers[colorLayer.name];
+
         if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
             dataset.id,
             colorLayer.name,
             bbox,
             newDatasetName,
+            datasetLayerConfiguration.isInverted,
             doSplitMergerEvaluation,
           );
         }
@@ -1148,12 +1159,10 @@ export function NeuronSegmentationForm() {
           colorLayer.name,
           bbox,
           newDatasetName,
+          datasetLayerConfiguration.isInverted,
           doSplitMergerEvaluation,
           annotationId,
-          splitMergerEvaluationSettings.useSparseTracing,
-          splitMergerEvaluationSettings.maxEdgeLength,
-          splitMergerEvaluationSettings.sparseTubeThresholdInNm,
-          splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
+          splitMergerEvaluationSettings,
         );
       }}
       description={
@@ -1228,6 +1237,7 @@ export function MitochondriaSegmentationForm() {
 
 function CustomAiModelInferenceForm() {
   const dataset = useWkSelector((state) => state.dataset);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
@@ -1266,6 +1276,8 @@ function CustomAiModelInferenceForm() {
         const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
 
         const maybeAnnotationId = isViewMode ? {} : { annotationId };
+
+        const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
         return runNeuronInferenceWithAiModelJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
@@ -1274,6 +1286,7 @@ function CustomAiModelInferenceForm() {
           organizationId: dataset.owningOrganization,
           colorLayerName: colorLayer.name,
           boundingBox,
+          invertColorLayer: layerConfiguration.isInverted,
           newDatasetName: newDatasetName,
         });
       }}

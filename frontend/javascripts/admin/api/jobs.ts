@@ -11,6 +11,7 @@ import type {
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/starting_job_modals";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
@@ -191,7 +192,7 @@ export function startNucleiInferralJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
-  invertColorLayer?: boolean,
+  invertColorLayer: boolean,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
@@ -210,13 +211,10 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  invertColorLayer: boolean,
   doSplitMergerEvaluation: boolean,
   annotationId?: string,
-  useSparseTracing?: boolean,
-  evalMaxEdgeLength?: number,
-  evalSparseTubeThresholdNm?: number,
-  evalMinMergerPathLengthNm?: number,
-  invertColorLayer?: boolean,
+  splitMergerEvaluationSettings?: SplitMergerEvaluationSettings,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
@@ -224,27 +222,31 @@ export function startNeuronInferralJob(
     newDatasetName,
     doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
   });
-  if (doSplitMergerEvaluation) {
+  if (doSplitMergerEvaluation && splitMergerEvaluationSettings != null) {
     if (!annotationId) {
       throw new Error("annotationId is required when doSplitMergerEvaluation is true");
     }
+    const {
+      useSparseTracing,
+      maxEdgeLength,
+      sparseTubeThresholdInNm,
+      minimumMergerPathLengthInNm,
+    } = splitMergerEvaluationSettings;
     urlParams.append("annotationId", `${annotationId}`);
     if (useSparseTracing != null) {
       urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
     }
-    if (evalMaxEdgeLength != null) {
-      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
+    if (maxEdgeLength != null) {
+      urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
     }
-    if (evalSparseTubeThresholdNm != null) {
-      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
+    if (sparseTubeThresholdInNm != null) {
+      urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
     }
-    if (evalMinMergerPathLengthNm != null) {
-      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    if (minimumMergerPathLengthInNm != null) {
+      urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
     }
   }
-  if (invertColorLayer != null) {
-    urlParams.append("invertColorLayer", `${invertColorLayer}`);
-  }
+  urlParams.append("invertColorLayer", `${invertColorLayer}`);
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });

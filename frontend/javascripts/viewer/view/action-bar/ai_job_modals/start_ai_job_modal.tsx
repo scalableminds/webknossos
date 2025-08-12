@@ -3,10 +3,10 @@ import { useWkSelector } from "libs/react_hooks";
 import _ from "lodash";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
-import { TrainAiModelFromAnnotationTab } from "./tabs/train_ai_model_tab";
 import type { StartAIJobModalState } from "./constants";
 import { AlignmentTab } from "./tabs/alignment_tab";
 import { RunAiModelTab } from "./tabs/run_ai_model_tab";
+import { TrainAiModelFromAnnotationTab } from "./tabs/train_ai_model_tab";
 
 export type StartAIJobModalProps = {
   aIJobModalState: StartAIJobModalState;

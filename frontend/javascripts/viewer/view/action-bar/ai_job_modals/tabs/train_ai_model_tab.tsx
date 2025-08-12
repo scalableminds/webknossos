@@ -1,10 +1,10 @@
+import { Alert, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
 import { TrainAiModelForm } from "../forms/train_ai_model_form";
-import { Alert, Row } from "antd";
 
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
   const annotation = useWkSelector((state) => state.annotation);

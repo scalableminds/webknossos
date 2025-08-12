@@ -17,13 +17,13 @@ import {
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import type { StoreAnnotation } from "viewer/store";
+import { AnnotationsCsvInput } from "../components/annotations_csv_input";
 import { CollapsibleWorkflowYamlEditor } from "../components/collapsible_workflow_yaml_editor";
 import {
   type AnnotationInfoForAITrainingJob,
   checkAnnotationsForErrorsAndWarnings,
   checkBoundingBoxesForErrorsAndWarnings,
 } from "../utils";
-import { AnnotationsCsvInput } from "../components/annotations_csv_input";
 
 enum AiModelCategory {
   EM_NEURONS = "em_neurons",

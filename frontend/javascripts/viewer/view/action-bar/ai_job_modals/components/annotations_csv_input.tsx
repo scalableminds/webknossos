@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
@@ -8,6 +7,7 @@ import {
 import { Button, Form, Input } from "antd";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { useState } from "react";
 import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";

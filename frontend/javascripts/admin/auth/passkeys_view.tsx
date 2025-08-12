@@ -9,7 +9,7 @@ import { Button, Input, Modal, Table } from "antd";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
 
-function ChangePasswordView() {
+function PasskeysView() {
   /// Passkeys
   const [isPasskeyNameModalOpen, setIsPasskeyNameModalOpen] = useState(false);
   const [newPasskeyName, setNewPasskeyName] = useState("");
@@ -103,4 +103,4 @@ function ChangePasswordView() {
   );
 }
 
-export default ChangePasswordView;
+export default PasskeysView;

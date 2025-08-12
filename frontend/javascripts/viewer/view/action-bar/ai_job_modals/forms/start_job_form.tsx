@@ -18,7 +18,7 @@ import {
 } from "viewer/model/actions/organization_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
-import { CollapsibleWorkflowYamlEditor } from "../../../jobs/train_ai_model";
+import { CollapsibleWorkflowYamlEditor } from "../components/collapsible_workflow_yaml_editor";
 import { BoundingBoxSelectionFormItem } from "../components/bounding_box_selection_form_item";
 import { JobCreditCostInformation } from "../components/job_credit_cost_information";
 import { ShouldUseTreesFormItem } from "../components/should_use_trees_form_item";

@@ -19,6 +19,9 @@ image.create.failed=Failed to create image
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 auth.token.noUser=Could not determine user for access token
+auth.passkeys.disabled=Passkeys disabled.
+auth.passkeys.requiresHttps=Passkeys are only supported with HTTPS.
+auth.passkeys.unauthorized=Passkey Authentication Failed.
 auth.register.needInvite=Registration without invite is disabled for this WEBKNOSSOS instance.
 
 team.created=Team was created successfully

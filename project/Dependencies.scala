@@ -103,7 +103,14 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.5"
+    "org.postgresql" % "postgresql" % "42.7.5",
+    /// WebAuthn for passkey authentication. import com.webauthn4j
+    "com.webauthn4j" % "webauthn4j-core" % "0.29.5.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
+  val dependencyOverrides: Seq[ModuleID] = Seq(
+    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
+    // version to newest version supported by Play.
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
+  )
 }

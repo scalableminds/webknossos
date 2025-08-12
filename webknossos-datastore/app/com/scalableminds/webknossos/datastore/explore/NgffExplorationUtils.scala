@@ -184,7 +184,7 @@ trait NgffExplorationUtils extends FoxImplicits {
 
   protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
 
-  private def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
+  private def createAdditionalAxis(name: String, index: Int, bounds: Seq[Int]): Box[AdditionalAxis] =
     for {
       normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
       _ <- Box(Option(bounds.length == 2).collect { case true => () })
@@ -203,7 +203,7 @@ trait NgffExplorationUtils extends FoxImplicits {
           .filter(axis => !defaultAxes.contains(axis.name))
           .zipWithIndex
           .map(axisAndIndex =>
-            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2).toInt)).toFox))
+            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Seq(0, shape(axisAndIndex._2).toInt)).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
       _ <- Fox.fromBool(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes

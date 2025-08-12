@@ -18,7 +18,7 @@ POST        /volume/save                                                        
 POST        /volume/:tracingId/initialData                                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(annotationId: ObjectId, tracingId: String, minMag: Option[Int], maxMag: Option[Int])
 POST        /volume/:tracingId/initialDataMultiple                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(annotationId: ObjectId, tracingId: String)
 GET         /volume/:tracingId                                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, annotationId: ObjectId, version: Option[Long])
-GET         /volume/:tracingId/allDataZip                                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataZip(tracingId: String, annotationId: Option[ObjectId], version: Option[Long], volumeDataZipFormat: String, voxelSize: Option[String], voxelSizeUnit: Option[String])
+GET         /volume/:tracingId/allDataZip                                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataZip(tracingId: String, annotationId: Option[ObjectId], version: Option[Long], volumeDataZipFormat: String, voxelSizeFactor: Option[String], voxelSizeUnit: Option[String])
 POST        /volume/:tracingId/data                                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String, annotationId: ObjectId)
 POST        /volume/:tracingId/adHocMesh                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestAdHocMesh(tracingId: String)
 POST        /volume/:tracingId/fullMesh.stl                                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.loadFullMeshStl(tracingId: String)
@@ -38,6 +38,7 @@ POST        /mapping/:tracingId/agglomeratesForSegments                         
 POST        /mapping/:tracingId/agglomerateGraphMinCut                              @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphMinCut(tracingId: String)
 POST        /mapping/:tracingId/agglomerateGraphNeighbors                           @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateGraphNeighbors(tracingId: String)
 GET         /mapping/:tracingId/agglomerateSkeleton/:agglomerateId                  @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.agglomerateSkeleton(tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/editedEdgesZip                                      @com.scalableminds.webknossos.tracingstore.controllers.EditableMappingController.editedEdgesZip(tracingId: String, version: Option[Long])
 
 # Zarr endpoints for volume annotations
 # Zarr version 2

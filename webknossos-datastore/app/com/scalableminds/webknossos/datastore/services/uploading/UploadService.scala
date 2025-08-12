@@ -18,11 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, Directory
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebknossosClient,
-  DataSourceRepository,
-  DataSourceService
-}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -109,8 +105,7 @@ object CancelUploadInformation {
   implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
 }
 
-class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
-                              dataSourceService: DataSourceService,
+class UploadService @Inject()(dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
                               remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
@@ -366,7 +361,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.organizationId)
-      _ <- dataSourceRepository.updateDataSource(dataSource)
+      _ <- remoteWebknossosClient.reportDataSource(dataSource)
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
     } yield (dataSourceId, datasetSizeBytes)
   }
@@ -453,6 +448,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Empty =>
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
@@ -460,9 +456,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         logger.warn(s"Error while $label: $msg, $e")
         deleteOnDisk(dataSourceId.organizationId,
                      dataSourceId.directoryName,
+                     None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
-        dataSourceRepository.removeDataSource(dataSourceId)
+        remoteWebknossosClient.deleteDataSource(dataSourceId)
         for {
           _ <- result.toFox ?~> f"Error while $label"
         } yield ()
@@ -506,9 +503,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers,
-                                                expectExisting = true,
-                                                preventNewPaths = false) ?~> "Could not write combined properties file"
+        _ <- dataSourceService.updateDataSourceOnDisk(
+          dataSourceWithLinkedLayers,
+          expectExisting = true,
+          preventNewPaths = false) ?~> "Could not write combined properties file"
       } yield ()
     }
 
@@ -693,7 +691,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- dataSourceRepository.removeDataSource(dataSourceId)
+      _ <- remoteWebknossosClient.deleteDataSource(dataSourceId)
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =

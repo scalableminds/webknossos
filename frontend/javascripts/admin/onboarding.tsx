@@ -413,7 +413,11 @@ function OnboardingView() {
   const [datasetIdToImport, setDatasetIdToImport] = useState<string | null | undefined>(null);
 
   const navigate = useNavigate();
-  const { data: datastores } = useQuery(["datastores"], getDatastores, { initialData: [] });
+  const { data: datastores } = useQuery({
+    queryKey: ["datastores"],
+    queryFn: getDatastores,
+    initialData: [],
+  });
 
   useEffect(() => {
     // There is no need to do any onboarding in case the user is already logged in.

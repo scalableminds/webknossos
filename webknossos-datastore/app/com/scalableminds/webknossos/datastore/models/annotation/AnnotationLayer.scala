@@ -72,7 +72,9 @@ object AnnotationLayerStatistics {
 case class FetchedAnnotationLayer(tracingId: String,
                                   name: String,
                                   tracing: Either[SkeletonTracing, VolumeTracing],
-                                  volumeDataOpt: Option[Array[Byte]] = None) {
+                                  volumeDataOpt: Option[Array[Byte]] = None,
+                                  editedMappingEdgesOpt: Option[Array[Byte]] = None,
+                                  baseMappingNameOpt: Option[String] = None) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
 
@@ -81,13 +83,21 @@ case class FetchedAnnotationLayer(tracingId: String,
     val nameLabel = s"_$name"
     s"data$indexLabel$nameLabel.zip"
   }
+
+  def editedMappingEdgesZipName(index: Int, isSingle: Boolean): String = {
+    val indexLabel = if (isSingle) "" else s"_$index"
+    val nameLabel = s"_$name"
+    s"editedMappingEdges$indexLabel$nameLabel.zip"
+  }
 }
 
 object FetchedAnnotationLayer {
   def fromAnnotationLayer[T <: GeneratedMessage](
       annotationLayer: AnnotationLayer,
       tracing: Either[SkeletonTracing, VolumeTracing],
-      volumeDataOpt: Option[Array[Byte]] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      volumeDataOpt: Option[Array[Byte]] = None,
+      editedEdgesDataOpt: Option[Array[Byte]] = None,
+      baseMappingNameOpt: Option[String] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
       _ <- Fox.fromBool(
         (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> "annotation.download.fetch.typeMismatch"
@@ -96,7 +106,9 @@ object FetchedAnnotationLayer {
         annotationLayer.tracingId,
         annotationLayer.name,
         tracing,
-        volumeDataOpt
+        volumeDataOpt,
+        editedEdgesDataOpt,
+        baseMappingNameOpt
       )
     }
 

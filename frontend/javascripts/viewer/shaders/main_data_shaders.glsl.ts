@@ -71,6 +71,7 @@ uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
 uniform vec3 allMagnifications[<%= magnificationsCount %>];
 uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
 uniform bool isFlycamRotated;
+uniform bool doAllLayersHaveTransforms;
 uniform mat4 inverseFlycamRotationMatrix;
 
 uniform highp usampler2D lookup_texture;
@@ -483,8 +484,9 @@ void main() {
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   // Early return shader as optimized vertex positioning at bucket borders currently does not work while rotations are active.
+  // The same goes when all layers of the dataset are transformed.
   // This shouldn't really impact the performance as isFlycamRotated is a uniform.
-  if(isFlycamRotated || !<%= isOrthogonal %>) {
+  if(isFlycamRotated || !<%= isOrthogonal %> || doAllLayersHaveTransforms) {
     return;
   }
   // Remember the original z position, since it can subtly diverge in the

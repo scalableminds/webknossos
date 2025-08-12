@@ -3,11 +3,25 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
+import com.webauthn4j.data.client.Origin
+import com.webauthn4j.data.client.challenge.Challenge
+import com.webauthn4j.data.{
+  AuthenticationParameters,
+  PublicKeyCredentialParameters,
+  PublicKeyCredentialType,
+  RegistrationParameters
+}
+import com.webauthn4j.server.ServerProperty
+import com.webauthn4j.WebAuthnManager
+import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -29,8 +43,150 @@ import utils.WkConf
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.UUID
 import javax.inject.Inject
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
+  *
+  * Omitted:
+  * - `attestation` and `attestationFormat`, because attestation is not implemented.
+  * - `extensions` no extensions in use.
+  */
+case class WebAuthnPublicKeyCredentialCreationOptions(
+    authenticatorSelection: WebAuthnCreationOptionsAuthenticatorSelection,
+    attestation: String = "none",
+    challenge: String,
+    excludeCredentials: Array[WebAuthnCreationOptionsExcludeCredentials],
+    pubKeyCredParams: Array[WebAuthnCreationOptionsPubKeyParam],
+    timeout: Int, // timeout in milliseconds
+    rp: WebAuthnCreationOptionsRelyingParty,
+    user: WebAuthnCreationOptionsUser
+)
+object WebAuthnPublicKeyCredentialCreationOptions {
+  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialCreationOptions] =
+    Json.format[WebAuthnPublicKeyCredentialCreationOptions]
+}
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#authenticatorselection
+  *
+  * Omitted:
+  * - `authenticatorAttachment` no forced authenticator.
+  * - `userVerifiaction` not implemented on our side.
+  * - `hints` no restrictions.
+  */
+case class WebAuthnCreationOptionsAuthenticatorSelection(
+    requireResidentKey: Boolean = true,
+    residentKey: String = "required",
+    userVerification: String = "preferred"
+)
+object WebAuthnCreationOptionsAuthenticatorSelection {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsAuthenticatorSelection] =
+    Json.format[WebAuthnCreationOptionsAuthenticatorSelection]
+}
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#excludecredentials
+  *
+  * Omitted:
+  * - `transports` not restricted by us.
+  */
+case class WebAuthnCreationOptionsExcludeCredentials(
+    id: String,
+    `type`: String = "public-key" // must be set to "public-key"
+)
+object WebAuthnCreationOptionsExcludeCredentials {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsExcludeCredentials] =
+    Json.format[WebAuthnCreationOptionsExcludeCredentials]
+}
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#pubkeycredparams
+  */
+case class WebAuthnCreationOptionsPubKeyParam(
+    alg: Int,
+    `type`: String = "public-key" // must be set to "public-key"
+)
+object WebAuthnCreationOptionsPubKeyParam {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsPubKeyParam] = Json.format[WebAuthnCreationOptionsPubKeyParam]
+}
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
+  */
+case class WebAuthnCreationOptionsRelyingParty(
+    id: String, // Should be set to the hostname
+    name: String
+)
+object WebAuthnCreationOptionsRelyingParty {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsRelyingParty] =
+    Json.format[WebAuthnCreationOptionsRelyingParty]
+}
+
+case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
+  def getValue() = data
+}
+
+/**
+  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
+  */
+case class WebAuthnCreationOptionsUser(
+    displayName: String,
+    id: String,
+    name: String
+)
+object WebAuthnCreationOptionsUser {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsUser] = Json.format[WebAuthnCreationOptionsUser]
+}
+
+/**
+  *  Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions
+  *
+  *  Omitted:
+  *  - allowCredentials: Not necessary, because we use client discoverable credentials
+  *  - extensions: Not used
+  */
+case class WebAuthnPublicKeyCredentialRequestOptions(
+    challenge: String,
+    timeout: Option[Long] = None, // In milliseconds
+    rpId: Option[String] = None, // Relying party ID
+    userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
+    hints: Option[Seq[String]] = None // UI hints for the user-agent
+)
+object WebAuthnPublicKeyCredentialRequestOptions {
+  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialRequestOptions] =
+    Json.format[WebAuthnPublicKeyCredentialRequestOptions]
+}
+
+/**
+  * Custom carrier object. Contains name of the key to register and a key instance of PublicKeyCredentialType
+  * (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+  */
+case class WebAuthnRegistration(name: String, key: JsValue)
+object WebAuthnRegistration {
+  implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
+}
+
+/**
+  * Wrapper of PublicKeyCredential (https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential).
+  */
+case class WebAuthnAuthentication(key: JsValue)
+object WebAuthnAuthentication {
+  implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
+}
+
+/**
+  * Custom object for WebAuthnCredential's id and name.
+  */
+case class WebAuthnKeyDescriptor(id: ObjectId, name: String)
+object WebAuthnKeyDescriptor {
+  implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
+}
 
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
@@ -52,6 +208,9 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
+    webAuthnCredentialDAO: WebAuthnCredentialDAO,
+    temporaryAssertionStore: TemporaryStore[String, WebAuthnChallenge],
+    temporaryRegistrationStore: TemporaryStore[String, WebAuthnChallenge],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -60,11 +219,26 @@ class AuthenticationController @Inject()(
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
+  private val secureRandom = new SecureRandom()
+
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
+
+  private lazy val origin = new Origin(conf.Http.uri)
+  private lazy val usesHttps = conf.Http.uri.startsWith("https://")
+  private lazy val webAuthnPubKeyParams = Array(
+    // COSE Algorithm: EdDSA
+    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"),
+    // COSE Algorithm: ES256
+    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"),
+    // COSE Algorithm: RS256
+    WebAuthnCreationOptionsPubKeyParam(-257, "public-key"),
+  )
+  private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
+  private val webauthnTimeout = 2 minutes
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
@@ -83,9 +257,8 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
-                organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
-                  GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                _ <- Fox.fromBool(inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled) ?~> "auth.register.needInvite"
+                organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext)
                 _ <- organizationService
                   .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -142,6 +315,26 @@ class AuthenticationController @Inject()(
     }
   }
 
+  private def authenticateInner(loginInfo: LoginInfo)(implicit header: RequestHeader): Future[Result] =
+    for {
+      result <- userService.retrieve(loginInfo).flatMap {
+        case Some(user) if !user.isDeactivated =>
+          for {
+            authenticator <- combinedAuthenticatorService.create(loginInfo)
+            value <- combinedAuthenticatorService.init(authenticator)
+            result <- combinedAuthenticatorService.embed(value, Ok)
+            _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
+              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
+            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+            _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+            _ = logger.info(f"User ${user._id} authenticated.")
+          } yield result
+        case None =>
+          Future.successful(BadRequest(Messages("error.noUser")))
+        case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+      }
+    } yield result
+
   def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm
       .bindFromRequest()
@@ -155,24 +348,8 @@ class AuthenticationController @Inject()(
           idF
             .map(id => Credentials(id, signInData.password))
             .flatMap(credentials => credentialsProvider.authenticate(credentials))
-            .flatMap {
-              loginInfo =>
-                userService.retrieve(loginInfo).flatMap {
-                  case Some(user) if !user.isDeactivated =>
-                    for {
-                      authenticator <- combinedAuthenticatorService.create(loginInfo)
-                      value <- combinedAuthenticatorService.init(authenticator)
-                      result <- combinedAuthenticatorService.embed(value, Ok)
-                      _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(emailVerificationService
-                        .assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec))
-                      _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
-                      _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
-                      _ = logger.info(f"User ${user._id} authenticated.")
-                    } yield result
-                  case None =>
-                    Future.successful(BadRequest(Messages("error.noUser")))
-                  case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
-                }
+            .flatMap { loginInfo =>
+              authenticateInner(loginInfo)
             }
             .recover {
               case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
@@ -185,7 +362,7 @@ class AuthenticationController @Inject()(
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
+      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> "user.notAuthorised" ~> FORBIDDEN
       targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
       result <- Fox.fromFuture(switchToUser(targetUser._id))
     } yield result
@@ -405,6 +582,174 @@ class AuthenticationController @Inject()(
     }
   }
 
+  def webauthnAuthStart(): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+      _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+      sessionId = UUID.randomUUID().toString
+      cookie = Cookie(name = "webauthn-session",
+                      value = sessionId,
+                      maxAge = Some(webauthnTimeout.toSeconds.toInt),
+                      httpOnly = true,
+                      secure = true,
+                      sameSite = Some(Cookie.SameSite.Strict))
+      challenge = new Array[Byte](32)
+      _ = secureRandom.nextBytes(challenge)
+      assertion = WebAuthnPublicKeyCredentialRequestOptions(
+        challenge = Base64.encodeBase64URLSafeString(challenge),
+        timeout = Some(webauthnTimeout.toMillis.toInt),
+        rpId = Some(origin.getHost),
+        userVerification = Some("preferred"),
+        hints = None
+      )
+      _ = temporaryAssertionStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
+    } yield Ok(Json.toJson(assertion)).withCookies(cookie)
+  }
+
+  def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
+    implicit request =>
+      for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        cookie <- request.cookies.get("webauthn-session").toFox
+        sessionId = cookie.value
+        challenge <- temporaryAssertionStore
+          .pop(sessionId)
+          .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
+        authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
+          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        credentialId = authData.getCredentialId
+        multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
+          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        multiUser <- multiUserDAO.findOneById(multiUserId)(GlobalAccessContext) ??~>
+          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~>
+          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+
+        params = new AuthenticationParameters(
+          serverProperty,
+          credential.credentialRecord,
+          null,
+          false, // User verification is not required put preferred.
+          false // User presence is not required.
+        )
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        oldSignCount = credential.credentialRecord.getCounter
+        newSignCount = authData.getAuthenticatorData.getSignCount
+        _ = credential.credentialRecord.setCounter(newSignCount)
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+
+        // Sign count is 0 if not used by the authenticator.
+        _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
+          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        userId <- multiUser._lastLoggedInIdentity.toFox
+        loginInfo = LoginInfo("credentials", userId.toString)
+        result <- Fox.fromFuture(authenticateInner(loginInfo))
+      } yield result
+  }
+
+  def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+      _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+      email <- userService.emailFor(request.identity)
+      user = WebAuthnCreationOptionsUser(
+        displayName = request.identity.name,
+        id = Base64.encodeBase64URLSafeString(request.identity._multiUser.toString.getBytes),
+        name = email
+      )
+      credentials <- webAuthnCredentialDAO
+        .findAllForUser(request.identity._multiUser) ?~> "Failed to fetch Passkeys" ~> INTERNAL_SERVER_ERROR
+      excludeCredentials = credentials
+        .map(
+          c =>
+            WebAuthnCreationOptionsExcludeCredentials(
+              id = Base64.encodeBase64URLSafeString(c.credentialRecord.getAttestedCredentialData.getCredentialId)
+          ))
+        .toArray
+      challenge = new Array[Byte](32)
+      _ = secureRandom.nextBytes(challenge)
+      encodedChallenge = Base64.encodeBase64URLSafeString(challenge)
+      sessionId = UUID.randomUUID().toString
+      cookie = Cookie("webauthn-registration",
+                      sessionId,
+                      maxAge = Some(webauthnTimeout.toSeconds.toInt),
+                      httpOnly = true,
+                      secure = true,
+                      sameSite = Some(Cookie.SameSite.Strict))
+      _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(webauthnTimeout))
+      options = WebAuthnPublicKeyCredentialCreationOptions(
+        authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(),
+        challenge = encodedChallenge,
+        excludeCredentials = excludeCredentials,
+        pubKeyCredParams = webAuthnPubKeyParams,
+        timeout = webauthnTimeout.toMillis.toInt,
+        rp = WebAuthnCreationOptionsRelyingParty(
+          id = origin.getHost,
+          name = origin.getHost,
+        ),
+        user = user,
+      )
+    } yield Ok(Json.toJson(options)).withCookies(cookie)
+  }
+
+  def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
+    sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
+      for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
+        cookie <- request.cookies.get("webauthn-registration").toFox
+        sessionId = cookie.value
+        challenge <- temporaryRegistrationStore
+          .pop(sessionId)
+          .toFox ?~> "Timeout during registration. Please try again." ~> UNAUTHORIZED
+        serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+        publicKeyParams = webAuthnPubKeyParams.map(k =>
+          new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))
+        registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
+        _ <- tryo(webAuthnManager.verify(registrationData, registrationParams)).toFox
+        attestationObject = registrationData.getAttestationObject
+        credentialRecord = new WebAuthnCredentialRecord(
+          attestationObject,
+          null, // clientData - Client data is not collected.
+          null, // clientExtensions - Client extensions are ignored.
+          null // transports - All transports are allowed.
+        )
+        _ = registrationData
+        credential = WebAuthnCredential(
+          _id = ObjectId.generate,
+          _multiUser = request.identity._multiUser,
+          name = request.body.name,
+          credentialRecord = credentialRecord,
+          isDeleted = false
+        )
+        _ <- webAuthnCredentialDAO.insertOne(credential) ?~> "Failed to add Passkey" ~> INTERNAL_SERVER_ERROR
+      } yield Ok(Json.obj("message" -> "Key registered successfully"))
+    }
+
+  def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        keys <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
+        reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
+      } yield Ok(Json.toJson(reducedKeys))
+    }
+  }
+
+  def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
+        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser) ?~> "Passkey not found" ~> NOT_FOUND
+      } yield Ok(Json.obj())
+    }
+  }
+
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
   def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -443,8 +788,7 @@ class AuthenticationController @Inject()(
           loginUser(loginInfo)
         case Empty =>
           for {
-            organization: Organization <- organizationService.findOneByInviteByIdOrDefault(None, None)(
-              GlobalAccessContext)
+            organization: Organization <- organizationService.findOneByInviteOrDefault(None)(GlobalAccessContext)
             user <- createUser(
               organization,
               openIdConnectUserInfo.email,

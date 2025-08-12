@@ -211,7 +211,7 @@ trait VolumeTracingBucketHelper
           WebknossosDataRequest(
             position = Vec3Int(bucketPosition.topLeft.mag1X, bucketPosition.topLeft.mag1Y, bucketPosition.topLeft.mag1Z),
             mag = bucketPosition.mag,
-            cubeSize = volumeLayer.lengthOfUnderlyingCubes(bucketPosition.mag),
+            cubeSize = DataLayer.bucketLength,
             fourBit = None,
             applyAgglomerate = volumeLayer.tracing.mappingName,
             version = None,
@@ -292,7 +292,7 @@ trait VolumeTracingBucketHelper
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
-      cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
+      cubeSize = DataLayer.bucketLength,
       fourBit = None,
       applyAgglomerate = layer.tracing.mappingName,
       version = None,

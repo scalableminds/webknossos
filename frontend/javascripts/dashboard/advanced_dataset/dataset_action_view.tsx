@@ -163,7 +163,7 @@ function DatasetActionView(props: Props) {
       return;
     }
 
-    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
+    await deleteDatasetOnDisk(dataset.dataStore.url, dataset.id);
 
     Toast.success(
       messages["dataset.delete_success"]({

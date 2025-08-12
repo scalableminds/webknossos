@@ -33,6 +33,7 @@ import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import type { MenuProps } from "rc-menu";
 import type React from "react";
@@ -312,13 +313,14 @@ function DatasetView({
 
 export function DatasetRefreshButton({ context }: { context: DatasetCollectionContextValue }) {
   const showLoadingIndicator = context.isLoading || context.isChecking;
+  const organizationId = useWkSelector((state) => state.activeOrganization?.id);
 
   return (
     <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
       <Dropdown.Button
-        menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
+        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
         style={{ marginRight: 5 }}
         onClick={() => context.fetchDatasets()}
         disabled={context.isChecking}

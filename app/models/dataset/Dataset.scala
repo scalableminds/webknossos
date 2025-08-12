@@ -62,6 +62,7 @@ case class Dataset(_id: ObjectId,
                    directoryName: String,
                    isPublic: Boolean,
                    isUsable: Boolean,
+                   isVirtual: Boolean,
                    name: String,
                    voxelSize: Option[VoxelSize],
                    sharingToken: Option[String],
@@ -145,6 +146,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.directoryname,
         r.ispublic,
         r.isusable,
+        r.isvirtual,
         r.name,
         voxelSize,
         r.sharingtoken,
@@ -382,7 +384,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       case None => q"TRUE"
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
-        SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+        if (queryTokens.length == 1 && queryTokens.headOption.exists(ObjectId.fromStringSync(_).isDefined)) {
+          // User searched for an objectId, compare it against dataset id
+          val queriedId: String = queryTokens.headOption.getOrElse("")
+          q"_id = $queriedId"
+        } else {
+          SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+        }
     }
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
@@ -611,7 +619,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      _id, _dataStore, _organization, _publication,
                      _uploader, _folder,
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
-                     description, directoryName, isPublic, isUsable,
+                     description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags,
                      created, isDeleted
@@ -620,7 +628,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
                      ${d._uploader}, ${d._folder},
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
-                     ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable},
+                     ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
                      ${d.created}, ${d.isDeleted}
@@ -652,11 +660,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
+                           organizationId: Option[String],
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
+    val inSelectedOrga = organizationId.map(id => q"_organization = $id").getOrElse(q"TRUE")
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"TRUE"
-      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
+      if (existingDatasetIds.isEmpty) q"NOT isVirtual AND $inSelectedOrga"
+      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual AND $inSelectedOrga"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
@@ -762,25 +772,17 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       layer.magsOpt match {
         case Some(mags) =>
           mags.map(mag => {
-            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, axisOrder, channelIndex, credentialId)
-                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.axisOrder
+            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
+                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder
               .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
           })
         case None =>
-          layer.wkwResolutionsOpt match {
-            case Some(resolutions) =>
-              resolutions.map(wkwResolution => {
-                q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, cubeLength)
-                 VALUES ($datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
-              })
-            case None =>
-              layer.resolutions.distinct.map { mag: Vec3Int =>
-                {
-                  q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+          layer.resolutions.distinct.map { mag: Vec3Int =>
+            {
+              q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
                     VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
-                }
-              }
+            }
           }
       }
 
@@ -867,8 +869,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
     for {
-      // We assume non-WKW Datasets here (WKW Resolutions are not handled)
-      rows <- run(q"""SELECT * FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
+      rows <- run(
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
+           FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
       mags <- Fox.combined(rows.map(parseMagLocator))
     } yield rows.map(r => r.datalayername).zip(mags)
 
@@ -1179,7 +1182,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
-    AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
+    AdditionalAxis(row.name, Seq(row.lowerbound, row.upperbound), row.index)
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {

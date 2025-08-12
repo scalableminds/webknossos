@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
@@ -29,11 +30,27 @@ object DatasetLayerAttachments {
 object LayerAttachmentDataformat extends ExtendedEnumeration {
   type LayerAttachmentDataformat = Value
   val hdf5, json, zarr3, neuroglancerPrecomputed = Value
+
+  def suffixFor(attachmentType: LayerAttachmentDataformat): String = attachmentType match {
+    case LayerAttachmentDataformat.hdf5                    => ".hdf5"
+    case LayerAttachmentDataformat.json                    => ".json"
+    case LayerAttachmentDataformat.zarr3                   => ""
+    case LayerAttachmentDataformat.neuroglancerPrecomputed => ""
+  }
 }
 
 object LayerAttachmentType extends ExtendedEnumeration {
   type LayerAttachmentType = Value
   val mesh, agglomerate, segmentIndex, connectome, cumsum = Value
+
+  def defaultDirectoryNameFor(attachmentType: LayerAttachmentType): String = attachmentType match {
+    case LayerAttachmentType.mesh         => MeshFileInfo.directoryName
+    case LayerAttachmentType.agglomerate  => AgglomerateFileInfo.directoryName
+    case LayerAttachmentType.segmentIndex => SegmentIndexFileInfo.directoryName
+    case LayerAttachmentType.connectome   => ConnectomeFileInfo.directoryName
+    case LayerAttachmentType.cumsum       => CumsumFileInfo.directoryName
+  }
+
 }
 
 case class LayerAttachment(name: String,

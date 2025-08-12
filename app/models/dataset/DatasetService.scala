@@ -64,7 +64,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
-  private val notYetUploadedStatus = "Not yet fully uploaded."
+  val notYetUploadedStatus = "Not yet fully uploaded." // TODO make private again
   private val inactiveStatusList =
     List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 

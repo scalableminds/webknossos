@@ -95,6 +95,7 @@ GET           /datasets/:datasetName/isValidNewName                             
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload()
+POST          /datasets/finishManualUpload                                                      controllers.DatasetController.finishManualUpload(datasetId: ObjectId)
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

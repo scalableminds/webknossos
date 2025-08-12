@@ -658,6 +658,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- datasetLayerDAO.updateLayers(id, source)
     } yield ()
 
+  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET
+                     isUsable = $isUsable,
+                     status = ${newStatus}
+                   WHERE _id = $id""".asUpdate)
+    } yield ()
+
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            organizationId: Option[String],

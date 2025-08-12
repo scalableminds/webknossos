@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentLi
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingIOService,
   EditableMappingService,
   MinCutParameters,
   NeighborsParameters
@@ -26,7 +27,8 @@ class EditableMappingController @Inject()(
     annotationService: TSAnnotationService,
     remoteWebknossosClient: TSRemoteWebknossosClient,
     accessTokenService: TracingStoreAccessTokenService,
-    editableMappingService: EditableMappingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    editableMappingService: EditableMappingService,
+    editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
@@ -144,4 +146,25 @@ class EditableMappingController @Inject()(
         } yield Ok(agglomerateSkeletonBytes)
       }
     }
+
+  def editedEdgesZip(tracingId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
+          _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
+          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
+          editedEdges: Seq[(Long, Long, Boolean)] <- editableMappingService.getEditedEdges(annotationId,
+                                                                                           tracingId,
+                                                                                           version,
+                                                                                           remoteFallbackLayer)
+          editedMappingEdgesZippedTempFilePath <- editableMappingIOService.editedMappingEdgesToZippedZarrTempFile(
+            editedEdges,
+            tracingId)
+
+        } yield Ok.sendPath(editedMappingEdgesZippedTempFilePath)
+      }
+    }
+
 }

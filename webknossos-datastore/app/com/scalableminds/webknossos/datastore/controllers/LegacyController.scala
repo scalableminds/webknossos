@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.{
@@ -13,18 +12,9 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
-import com.scalableminds.webknossos.datastore.services.mesh.{
-  AdHocMeshService,
-  AdHocMeshServiceHolder,
-  DSFullMeshService,
-  FullMeshRequest
-}
+import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  BinaryDataServiceHolder,
   DSRemoteWebknossosClient,
-  DataSourceRepository,
   DataSourceService,
   DataStoreAccessTokenService,
   DatasetCache,
@@ -36,16 +26,11 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, Result}
 import scala.concurrent.ExecutionContext
 
 class LegacyController @Inject()(
-    dataSourceRepository: DataSourceRepository,
     accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    mappingService: MappingService,
-    config: DataStoreConfig,
-    adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    fullMeshService: DSFullMeshService,
     binaryDataController: BinaryDataController,
     zarrStreamingController: ZarrStreamingController,
+    meshController: DSMeshController,
     dataSourceController: DataSourceController,
     dataSourceService: DataSourceService,
     datasetCache: DatasetCache
@@ -57,11 +42,6 @@ class LegacyController @Inject()(
   // BINARY DATA ROUTES
 
   override def allowRemoteOrigin: Boolean = true
-
-  val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
-    (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
-  val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   def requestViaWebknossosV9(
       organizationId: String,
@@ -443,12 +423,9 @@ class LegacyController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName) ~> NOT_FOUND
-          data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, request.body) ?~> "mesh.file.loadChunk.failed"
-
-        } yield Ok(data)
+          datasetId <- remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName)
+          result <- Fox.fromFuture(meshController.loadFullMeshStl(datasetId, dataLayerName)(request))
+        } yield result
       }
     }
 
@@ -465,10 +442,10 @@ class LegacyController @Inject()(
       dataSource match {
         case GenericDataSource(_, _, _, _) =>
           for {
-            _ <- dataSourceRepository.updateDataSource(dataSource)
+            _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))
         case UnusableDataSource(_, status, _, _) =>
-          Fox.failure(s"Dataset not found in DB or in directory: ${status}, cannot reload.") ~> NOT_FOUND
+          Fox.failure(s"Dataset not found in DB or in directory: $status, cannot reload.") ~> NOT_FOUND
       }
     }
 

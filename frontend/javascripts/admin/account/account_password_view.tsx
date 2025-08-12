@@ -154,7 +154,7 @@ function AccountPasswordView() {
   }
 
   function handleResetPassword() {
-    setResetPasswordVisible(true);
+    setResetPasswordVisible(!isResetPasswordVisible);
   }
 
   const { passkeysEnabled } = features();

@@ -764,6 +764,7 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
+  readonly registerToDefaultOrgaEnabled?: boolean;
 };
 export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;

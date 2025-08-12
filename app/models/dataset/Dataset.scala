@@ -384,7 +384,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       case None => q"TRUE"
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
-        SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+        if (queryTokens.length == 1 && queryTokens.headOption.exists(ObjectId.fromStringSync(_).isDefined)) {
+          // User searched for an objectId, compare it against dataset id
+          val queriedId: String = queryTokens.headOption.getOrElse("")
+          q"_id = $queriedId"
+        } else {
+          SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+        }
     }
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
@@ -654,11 +660,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
+                           organizationId: Option[String],
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
+    val inSelectedOrga = organizationId.map(id => q"_organization = $id").getOrElse(q"TRUE")
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"NOT isVirtual"
-      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual"
+      if (existingDatasetIds.isEmpty) q"NOT isVirtual AND $inSelectedOrga"
+      else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual AND $inSelectedOrga"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
@@ -1174,7 +1182,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayerAdditionalaxesRow): AdditionalAxis =
-    AdditionalAxis(row.name, Array(row.lowerbound, row.upperbound), row.index)
+    AdditionalAxis(row.name, Seq(row.lowerbound, row.upperbound), row.index)
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {

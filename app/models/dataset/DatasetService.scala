@@ -291,8 +291,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     } else Fox.successful(None)
 
-  def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
-    datasetDAO.deactivateUnreported(reportedDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
+  def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
+                                      dataStore: DataStore,
+                                      organizationId: Option[String]): Fox[Unit] =
+    datasetDAO.deactivateUnreported(reportedDatasetIds,
+                                    dataStore.name,
+                                    organizationId,
+                                    unreportedStatus,
+                                    inactiveStatusList)
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 

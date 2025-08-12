@@ -5,7 +5,6 @@ import java.nio.file._
 import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._

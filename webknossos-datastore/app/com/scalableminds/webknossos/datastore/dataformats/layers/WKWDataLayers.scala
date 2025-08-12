@@ -1,13 +1,10 @@
 package com.scalableminds.webknossos.datastore.dataformats.layers
 
-import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, OFormat}
-import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int,
                          cubeLength: Int,
@@ -19,18 +16,10 @@ case class WKWResolution(resolution: Vec3Int,
 }
 object WKWResolution extends MagFormatHelper {
   implicit val jsonFormat: OFormat[WKWResolution] = Json.format[WKWResolution]
-
-  def defaultCubeSize = 1024
 }
 
 trait WKWLayer extends DataLayerWithMagLocators {
-
   val dataFormat: DataFormat.Value = DataFormat.wkw
-
-  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                              dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 }
 
 case class WKWDataLayer(

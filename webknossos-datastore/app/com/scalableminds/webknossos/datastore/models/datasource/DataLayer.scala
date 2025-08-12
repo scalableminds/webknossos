@@ -2,7 +2,12 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.{
+  BucketProvider,
+  DatasetArrayBucketProvider,
+  MagLocator,
+  MappingProvider
+}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -407,6 +412,15 @@ object DataLayer {
 }
 
 trait DataLayerWithMagLocators extends DataLayer {
+
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
+    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+
+  def resolutions: List[Vec3Int] = mags.map(_.mag)
+
+  def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
 
   def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
              defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,

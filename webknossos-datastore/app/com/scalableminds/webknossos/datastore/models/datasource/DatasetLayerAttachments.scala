@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}

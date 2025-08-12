@@ -1117,7 +1117,7 @@ export function NeuronSegmentationForm() {
           return;
         }
 
-        const datasetLayerConfiguration = datasetConfiguration.layers[colorLayer.name];
+        const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
 
         if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
@@ -1125,7 +1125,7 @@ export function NeuronSegmentationForm() {
             colorLayer.name,
             bbox,
             newDatasetName,
-            datasetLayerConfiguration.isInverted,
+            layerConfiguration.isInverted,
             doSplitMergerEvaluation,
           );
         }
@@ -1159,7 +1159,7 @@ export function NeuronSegmentationForm() {
           colorLayer.name,
           bbox,
           newDatasetName,
-          datasetLayerConfiguration.isInverted,
+          layerConfiguration.isInverted,
           doSplitMergerEvaluation,
           annotationId,
           splitMergerEvaluationSettings,

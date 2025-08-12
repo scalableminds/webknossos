@@ -197,10 +197,8 @@ export function startNucleiInferralJob(
   const urlParams = new URLSearchParams({
     layerName,
     newDatasetName,
+    invertColorLayer: invertColorLayer.toString(),
   });
-  if (invertColorLayer != null) {
-    urlParams.append("invertColorLayer", `${invertColorLayer}`);
-  }
   return Request.receiveJSON(`/api/jobs/run/inferNuclei/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });
@@ -221,32 +219,34 @@ export function startNeuronInferralJob(
     bbox: bbox.join(","),
     newDatasetName,
     doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
+    invertColorLayer: invertColorLayer.toString(),
   });
-  if (doSplitMergerEvaluation && splitMergerEvaluationSettings != null) {
+  if (doSplitMergerEvaluation) {
     if (!annotationId) {
       throw new Error("annotationId is required when doSplitMergerEvaluation is true");
     }
-    const {
-      useSparseTracing,
-      maxEdgeLength,
-      sparseTubeThresholdInNm,
-      minimumMergerPathLengthInNm,
-    } = splitMergerEvaluationSettings;
     urlParams.append("annotationId", `${annotationId}`);
-    if (useSparseTracing != null) {
-      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
-    }
-    if (maxEdgeLength != null) {
-      urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
-    }
-    if (sparseTubeThresholdInNm != null) {
-      urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
-    }
-    if (minimumMergerPathLengthInNm != null) {
-      urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
+    if (splitMergerEvaluationSettings != null) {
+      const {
+        useSparseTracing,
+        maxEdgeLength,
+        sparseTubeThresholdInNm,
+        minimumMergerPathLengthInNm,
+      } = splitMergerEvaluationSettings;
+      if (useSparseTracing != null) {
+        urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+      }
+      if (maxEdgeLength != null) {
+        urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
+      }
+      if (sparseTubeThresholdInNm != null) {
+        urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
+      }
+      if (minimumMergerPathLengthInNm != null) {
+        urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
+      }
     }
   }
-  urlParams.append("invertColorLayer", `${invertColorLayer}`);
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });
@@ -395,7 +395,7 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
-  invertColorLayer?: boolean;
+  invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
 

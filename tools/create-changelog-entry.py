@@ -42,7 +42,7 @@ def get_pr_number_from_gh():
             "⚠️  GitHub CLI (`gh`) not found. You can install it from https://cli.github.com/"
         )
     except subprocess.CalledProcessError as e:
-        if "Bad credentials" in e.stderr:
+        if "HTTP 401" in e.stderr or "Bad credentials" in e.stderr:
             print("⚠️  You are not authenticated with GitHub (Run 'gh auth login'). No pull request found.")
         else:
             print("⚠️  No pull request found for the current branch.")

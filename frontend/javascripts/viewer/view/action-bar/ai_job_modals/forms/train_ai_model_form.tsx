@@ -1,7 +1,6 @@
 import { AiModelCategory, runInstanceModelTraining, runNeuronTraining } from "admin/rest_api";
 import {
   Alert,
-  AutoComplete,
   Button,
   Col,
   Form,
@@ -18,7 +17,7 @@ import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -36,7 +35,6 @@ import {
   checkAnnotationsForErrorsAndWarnings,
   checkBoundingBoxesForErrorsAndWarnings,
 } from "../utils";
-import { RuleObject } from "antd/es/form";
 
 const AiModelNameFormItem = () => (
   <Row gutter={8}>
@@ -97,19 +95,7 @@ const AiModelCommentFormItem = () => (
 const AiInferenceOptionsFormItems = ({
   selectedModelCategory,
 }: { selectedModelCategory: AiModelCategory }) => {
-  const presets = [
-    { label: "Nuclei (1000nm)", value: 1000.0 },
-    { label: "Vesicle (10nm)", value: 10.0 },
-  ];
-
-  const isNumberValidator = useCallback(
-    (_: RuleObject, value: any) =>
-      !isNaN(value) && value > 0
-        ? Promise.reject(new Error("Please enter a positive number"))
-        : Promise.resolve(),
-    [],
-  );
-
+  // TODO: It would be great to have several presets to choose from. The Antd <AutoComplete> component did not work well for this with antd v5.22 or 5.27
   return selectedModelCategory === AiModelCategory.EM_NUCLEI ? (
     <Col span={6}>
       <Form.Item
@@ -117,18 +103,12 @@ const AiInferenceOptionsFormItems = ({
         name={["max_distance_nm"]}
         label={<div style={{ minHeight: 24 }}>Max Lenght of Objects</div>}
         tooltip={
-          'The maximum cross-section length or distance ("diameter") for each identified object in nm.'
+          'The maximum cross-section length or distance ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
         }
         initialValue={1000.0}
-        rules={[
-          { required: true, message: "Please enter a positive number" },
-          {
-            validator: isNumberValidator,
-          },
-        ]}
-        valuePropName="value"
+        required
       >
-        <AutoComplete options={presets} />
+        <InputNumber min={0.1} suffix="nm" placeholder="Enter max distance in nm" />
       </Form.Item>
     </Col>
   ) : null;

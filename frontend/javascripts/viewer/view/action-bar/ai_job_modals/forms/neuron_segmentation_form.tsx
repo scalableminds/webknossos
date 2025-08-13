@@ -114,8 +114,10 @@ export function NeuronSegmentationForm() {
         <>
           <Space direction="vertical" size="middle">
             <Row>
-              This job will automatically detect and segment all neurons in this dataset. The AI
-              will create a copy of this dataset containing the new neuron segmentation.
+              This pre-trained AI model will automatically detect and segment all neurons in this
+              dataset. It is optimized for analyzing EM tissue, e.g. from FIB-SEM, MSEM,
+              Serial-Section SEM etc. Webknossos will create a copy of this dataset and add the
+              resulting neuron segmentation to it.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <ExperimentalInferenceAlert />

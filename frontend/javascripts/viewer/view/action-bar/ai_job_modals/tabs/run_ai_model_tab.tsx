@@ -34,8 +34,8 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
         >
           <div className="flex-item">
             {showCustomAiModels
-              ? "Choose one of your trained models from the list below."
-              : "Choose a processing job for your dataset:"}
+              ? "Choose one of your custom trained models from the list below."
+              : "Choose a pretrained AI model to process your dataset."}
           </div>
           {isSuperUser && (
             <div className="flex-item" style={{ flexGrow: 0 }}>

@@ -43,7 +43,7 @@ object RunNeuronModelTrainingParameters {
 case class RunInstanceModelTrainingParameters(trainingAnnotations: List[TrainingAnnotationSpecification],
                                  name: String,
                                  aiModelCategory: Option[AiModelCategory],
-                                 max_distance_nm: Option[String],
+                                 max_distance_nm: Option[Double],
                                  comment: Option[String],
                                  workflowYaml: Option[String])
 

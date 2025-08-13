@@ -351,6 +351,7 @@ export function startAlignSectionsJob(
   });
 }
 
+// This enum needs to be kept in sync with the backend/database
 export enum AiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",

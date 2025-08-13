@@ -1,17 +1,24 @@
+import { AiModelCategory, runInstanceModelTraining, runNeuronTraining } from "admin/rest_api";
 import {
-  AiModelCategory,
-  runAiModelTraining,
-  runInstanceModelTraining,
-  runNeuronTraining,
-} from "admin/rest_api";
-import { Alert, Button, Col, Form, type FormInstance, Input, Row, Select, Tooltip } from "antd";
+  Alert,
+  AutoComplete,
+  Button,
+  Col,
+  Form,
+  type FormInstance,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Tooltip,
+} from "antd";
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import { MagSelectionFormItem } from "components/mag_selection";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -29,6 +36,7 @@ import {
   checkAnnotationsForErrorsAndWarnings,
   checkBoundingBoxesForErrorsAndWarnings,
 } from "../utils";
+import { RuleObject } from "antd/es/form";
 
 const AiModelNameFormItem = () => (
   <Row gutter={8}>
@@ -61,10 +69,17 @@ const AiModelCategoryFormItem = () => (
         message: "Please select a model category.",
       },
     ]}
+    tooltip={
+      "The model category determines the type of object that is segmented. Neuron models are suitable for segmenting neurons in EM tissue. The other model category is suitable for segmenting any non-neuron object, e.g. neuclei, vesicles, etc. The workflows are optimized for EM data, e.g. from FIB-SEM, MSEM, Serial-Section SEM etc"
+    }
   >
     <Select>
-      <Select.Option value={AiModelCategory.EM_NEURONS}>EM Neurons</Select.Option>
-      <Select.Option value={AiModelCategory.EM_NUCLEI}>EM Nuclei</Select.Option>
+      <Select.Option value={AiModelCategory.EM_NEURONS}>
+        EM Instance Segmentation for Neurons
+      </Select.Option>
+      <Select.Option value={AiModelCategory.EM_NUCLEI}>
+        EM Instance Segmentation for Nuclei, Vesicles, and other structures.
+      </Select.Option>
     </Select>
   </Form.Item>
 );
@@ -82,30 +97,41 @@ const AiModelCommentFormItem = () => (
 const AiInferenceOptionsFormItems = ({
   selectedModelCategory,
 }: { selectedModelCategory: AiModelCategory }) => {
+  const presets = [
+    { label: "Nuclei (1000nm)", value: 1000.0 },
+    { label: "Vesicle (10nm)", value: 10.0 },
+  ];
+
+  const isNumberValidator = useCallback(
+    (_: RuleObject, value: any) =>
+      !isNaN(value) && value > 0
+        ? Promise.reject(new Error("Please enter a positive number"))
+        : Promise.resolve(),
+    [],
+  );
+
   return selectedModelCategory === AiModelCategory.EM_NUCLEI ? (
     <Col span={6}>
       <Form.Item
         hasFeedback
         name={["max_distance_nm"]}
-        label={<div style={{ minHeight: 24 }}>Max Distance (nm)</div>}
-        initialValue={1000}
-        required
+        label={<div style={{ minHeight: 24 }}>Max Lenght of Objects</div>}
+        tooltip={
+          'The maximum cross-section length or distance ("diameter") for each identified object in nm.'
+        }
+        initialValue={1000.0}
+        rules={[
+          { required: true, message: "Please enter a positive number" },
+          {
+            validator: isNumberValidator,
+          },
+        ]}
+        valuePropName="value"
       >
-        <Input />
+        <AutoComplete options={presets} />
       </Form.Item>
     </Col>
   ) : null;
-
-  /* <Col span={6}>
-        <Form.Item
-          hasFeedback
-          name={["seed_generator_distance_threshold"]}
-          label={<div style={{ minHeight: 24 }}>Seed Generator Distance Threshold (nm)</div>}
-          initialValue={1000}
-        >
-          <Input />
-        </Form.Item> 
-      </Col>*/
 };
 
 type TrainingAnnotation = {

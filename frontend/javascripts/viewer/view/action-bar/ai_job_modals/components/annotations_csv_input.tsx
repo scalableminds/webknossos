@@ -5,9 +5,10 @@ import {
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
 import { Button, Form, Input } from "antd";
+import type { RuleObject } from "antd/es/form";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
@@ -20,7 +21,7 @@ export function AnnotationsCsvInput({
   onAdd,
 }: { onAdd: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void }) {
   const [value, setValue] = useState("");
-  const onClickAdd = async () => {
+  const onClickAdd = useCallback(async () => {
     const annotationIdsForTraining = [];
     const unfinishedTasks = [];
 
@@ -114,7 +115,18 @@ export function AnnotationsCsvInput({
       );
     }
     onAdd(newAnnotationsWithDatasets);
-  };
+  }, [value, onAdd]);
+
+  const validator = useCallback((_rule: RuleObject, value: string) => {
+    const valid = value.split("\n").every((line) => !line.includes("#") && !line.includes(","));
+
+    return valid
+      ? Promise.resolve()
+      : Promise.reject(
+          new Error("Each line should only contain an annotation ID or URL (without # or ,)"),
+        );
+  }, []);
+
   return (
     <div>
       <Form.Item
@@ -122,23 +134,7 @@ export function AnnotationsCsvInput({
         label="Annotations or Tasks CSV"
         hasFeedback
         initialValue={value}
-        rules={[
-          () => ({
-            validator: (_rule, value) => {
-              const valid = (value as string)
-                .split("\n")
-                .every((line) => !line.includes("#") && !line.includes(","));
-
-              return valid
-                ? Promise.resolve()
-                : Promise.reject(
-                    new Error(
-                      "Each line should only contain an annotation ID or URL (without # or ,)",
-                    ),
-                  );
-            },
-          }),
-        ]}
+        rules={[{ validator }]}
       >
         <TextArea
           className="input-monospace"

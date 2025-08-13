@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
-import { Store } from "viewer/singletons";
+
+import { useWkSelector } from "libs/react_hooks";
 import { jobNameToImagePath } from "../constants";
 import { AlignSectionsForm } from "../forms/align_sections_form";
 import { CustomAiModelInferenceForm } from "../forms/custom_ai_model_inference_form";
@@ -16,7 +17,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
     margin: "auto",
     width: 220,
   };
-  const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const [showCustomAiModels, setShowCustomAiModels] = useState(false);
   const dispatch = useDispatch();
 

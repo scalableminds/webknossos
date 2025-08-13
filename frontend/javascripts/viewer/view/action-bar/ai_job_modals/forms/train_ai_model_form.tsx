@@ -1,4 +1,9 @@
-import { runNeuronTraining } from "admin/rest_api";
+import {
+  AiModelCategory,
+  runAiModelTraining,
+  runInstanceModelTraining,
+  runNeuronTraining,
+} from "admin/rest_api";
 import { Alert, Button, Col, Form, type FormInstance, Input, Row, Select, Tooltip } from "antd";
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import { MagSelectionFormItem } from "components/mag_selection";
@@ -6,7 +11,7 @@ import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
-import React, { useRef } from "react";
+import { useRef, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -24,11 +29,6 @@ import {
   checkAnnotationsForErrorsAndWarnings,
   checkBoundingBoxesForErrorsAndWarnings,
 } from "../utils";
-
-enum AiModelCategory {
-  EM_NEURONS = "em_neurons",
-  EM_NUCLEI = "em_nuclei",
-}
 
 const AiModelNameFormItem = () => (
   <Row gutter={8}>
@@ -79,6 +79,35 @@ const AiModelCommentFormItem = () => (
   </Row>
 );
 
+const AiInferenceOptionsFormItems = ({
+  selectedModelCategory,
+}: { selectedModelCategory: AiModelCategory }) => {
+  return selectedModelCategory === AiModelCategory.EM_NUCLEI ? (
+    <Col span={6}>
+      <Form.Item
+        hasFeedback
+        name={["max_distance_nm"]}
+        label={<div style={{ minHeight: 24 }}>Max Distance (nm)</div>}
+        initialValue={1000}
+        required
+      >
+        <Input />
+      </Form.Item>
+    </Col>
+  ) : null;
+
+  /* <Col span={6}>
+        <Form.Item
+          hasFeedback
+          name={["seed_generator_distance_threshold"]}
+          label={<div style={{ minHeight: 24 }}>Seed Generator Distance Threshold (nm)</div>}
+          initialValue={1000}
+        >
+          <Input />
+        </Form.Item> 
+      </Col>*/
+};
+
 type TrainingAnnotation = {
   annotationId: string;
   imageDataLayer: string;
@@ -126,12 +155,13 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   const magInfoForLayer: Array<MagInfo> = Form.useWatch(() => {
     return watcherFunctionRef.current();
   }, form);
-  const trainingAnnotationsInfo = Form.useWatch("trainingAnnotations", form) as Array<{
-    annotationId: string;
-    mag: Vector3;
-  }>;
+  const trainingAnnotationsInfo = Form.useWatch(
+    "trainingAnnotations",
+    form,
+  ) as TrainingAnnotation[];
 
-  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+  const [useCustomWorkflow, setUseCustomWorkflow] = useState(false);
+  const selectedModelCategory = Form.useWatch("modelCategory", form);
 
   const getIntersectingMagList = (
     annotationId: string,
@@ -176,13 +206,26 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
       await ensureSavedState();
     }
 
-    await runNeuronTraining({
+    const commonJobArgmuments = {
       trainingAnnotations: getTrainingAnnotations(values),
       name: values.modelName,
-      aiModelCategory: values.modelCategory,
       workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
       comment: values.comment,
-    });
+    };
+
+    if (values.modelCategory === AiModelCategory.EM_NUCLEI) {
+      await runInstanceModelTraining({
+        aiModelCategory: AiModelCategory.EM_NUCLEI,
+
+        max_distance_nm: values.max_distance_nm,
+        ...commonJobArgmuments,
+      });
+    } else {
+      await runNeuronTraining({
+        aiModelCategory: AiModelCategory.EM_NEURONS,
+        ...commonJobArgmuments,
+      });
+    }
     Toast.success("The training has successfully started.");
     onClose();
   };
@@ -226,6 +269,7 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   const hasWarnings = hasBBoxWarnings;
   const errors = [...annotationErrors, ...bboxErrors];
   const warnings = bboxWarnings;
+
   return (
     <Form
       onFinish={(values) => onFinish(form, useCustomWorkflow, values)}
@@ -325,7 +369,7 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
           </Row>
         );
       })}
-
+      <AiInferenceOptionsFormItems selectedModelCategory={selectedModelCategory} />
       <AiModelCommentFormItem />
       <CollapsibleWorkflowYamlEditor
         isActive={useCustomWorkflow}

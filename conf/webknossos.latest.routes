@@ -276,7 +276,8 @@ POST          /jobs/:id/attachDatasetToInference                                
 GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: ObjectId)
 
 # AI Models
-POST          /aiModels/runNeuronTraining                                                       controllers.AiModelController.runNeuronTraining
+POST          /aiModels/runNeuronModelTraining                                                  controllers.AiModelController.runNeuronTraining
+POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining 
 POST          /aiModels/inferences/runCustomNeuronInference                                     controllers.AiModelController.runCustomNeuronInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences

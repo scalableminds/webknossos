@@ -351,7 +351,10 @@ export function startAlignSectionsJob(
   });
 }
 
-type AiModelCategory = "em_neurons" | "em_nuclei";
+export enum AiModelCategory {
+  EM_NEURONS = "em_neurons",
+  EM_NUCLEI = "em_nuclei",
+}
 
 type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
@@ -360,16 +363,32 @@ type AiModelTrainingAnnotationSpecification = {
   mag: Vector3;
 };
 
-type RunTrainingParameters = {
-  trainingAnnotations: Array<AiModelTrainingAnnotationSpecification>;
+type RunNeuronModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
+  aiModelCategory: AiModelCategory.EM_NEURONS;
   comment?: string;
-  aiModelCategory?: AiModelCategory;
   workflowYaml?: string;
 };
 
-export function runNeuronTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
+export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronModelTraining", {
+    method: "POST",
+    data: JSON.stringify(params),
+  });
+}
+
+type RunInstanceModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
+  name: string;
+  aiModelCategory: AiModelCategory.EM_NUCLEI;
+  max_distance_nm: number;
+  comment?: string;
+  workflowYaml?: string;
+};
+
+export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runInstanceModelTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });

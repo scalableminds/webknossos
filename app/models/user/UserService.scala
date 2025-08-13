@@ -217,7 +217,7 @@ class UserService @Inject()(conf: WkConf,
     } yield updated
   }
 
-  private def removeUserFromCache(userId: ObjectId): Unit =
+  def removeUserFromCache(userId: ObjectId): Unit =
     userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def getPasswordInfo(passwordOpt: Option[String]): PasswordInfo =

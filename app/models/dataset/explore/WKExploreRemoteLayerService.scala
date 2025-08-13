@@ -114,7 +114,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       organizationId = user._organization
       _ <- datasetService.assertValidDatasetName(datasetName)
       _ <- datasetService.createVirtualDataset(
-        dataSource.id.directoryName,
+        datasetName,
         organizationId,
         dataStore,
         dataSource,

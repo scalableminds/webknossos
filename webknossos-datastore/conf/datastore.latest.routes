@@ -112,6 +112,7 @@ GET           /datasets/:datasetId/readInboxDataSource                          
 PUT           /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(datasetId: ObjectId)
 DELETE        /datasets/:datasetId/deleteOnDisk                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/exploreRemote                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
+POST          /datasets/validatePaths                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.validatePaths()
 
 DELETE        /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 

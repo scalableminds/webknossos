@@ -39,6 +39,7 @@ import models.team._
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Empty, EmptyBox, Full}
+import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -656,6 +657,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           case None => Fox.successful((magInfo, List()))
       })
     } yield magInfosAndLinkedMags
+
+  def validatePaths(paths: Seq[String], dataStore: DataStore): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      client = new WKRemoteDataStoreClient(dataStore, rpc)
+      pathValidationResults <- client.validatePaths(paths)
+      _ <- Fox.serialCombined(pathValidationResults)({
+        case PathValidationResult(_, true)     => Fox.successful(())
+        case PathValidationResult(path, false) => Fox.failure(s"Path validation failed for path: $path")
+      })
+    } yield ()
 
   def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

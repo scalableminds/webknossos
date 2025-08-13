@@ -395,7 +395,7 @@ export function runInstanceModelTraining(params: RunInstanceModelTrainingParamet
   });
 }
 
-type RunInferenceParameters = {
+export type BaseModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -404,12 +404,23 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
-  seed_generator_distance_threshold_nm?: number;
   // maskAnnotationLayerName?: string | null
 };
+type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
 
-export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
+type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+  seed_generator_distance_threshold_nm?: number;
+};
+
+export function runNeuronInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
+    method: "POST",
+    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
+  });
+}
+
+export function runNucleiInferenceWithAiModelJob(params: RunInstanceModelInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNucleiInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });

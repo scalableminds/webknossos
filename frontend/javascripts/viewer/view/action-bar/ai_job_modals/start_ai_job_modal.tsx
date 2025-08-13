@@ -1,8 +1,8 @@
 import { Modal, Tabs } from "antd";
-import { useDispatch } from "react-redux";
 import { useWkSelector } from "libs/react_hooks";
 import _ from "lodash";
 import { useCallback, useMemo } from "react";
+import { useDispatch } from "react-redux";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { StartAIJobModalState } from "./constants";
 import { AlignmentTab } from "./tabs/alignment_tab";

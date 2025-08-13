@@ -1,3 +1,4 @@
+import type { APIAiModelCategory } from "admin/api/jobs";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type { BoundingBoxProto } from "types/bounding_box";
@@ -26,7 +27,6 @@ import type {
   SegmentGroup,
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
-import type { APIAiModelCategory } from "admin/api/jobs";
 
 // Re-export
 export type { BoundingBoxProto } from "types/bounding_box";

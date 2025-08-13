@@ -39,6 +39,7 @@ import models.team._
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Empty, EmptyBox, Full}
+import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -115,7 +116,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from))
+      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from),
+                                           id = DataSourceId(datasetName, organizationId))
       dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
@@ -154,7 +156,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
-      organization <- organizationDAO.findOne(dataSource.id.organizationId)
+      organization <- organizationDAO.findOne(dataSource.id.organizationId) ?~> "organization.notFound"
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         datasetId,
@@ -655,6 +657,31 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           case None => Fox.successful((magInfo, List()))
       })
     } yield magInfosAndLinkedMags
+
+  def validatePaths(paths: Seq[String], dataStore: DataStore): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      client = new WKRemoteDataStoreClient(dataStore, rpc)
+      pathValidationResults <- client.validatePaths(paths)
+      _ <- Fox.serialCombined(pathValidationResults)({
+        case PathValidationResult(_, true)     => Fox.successful(())
+        case PathValidationResult(path, false) => Fox.failure(s"Path validation failed for path: $path")
+      })
+    } yield ()
+
+  def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- if (dataset.isVirtual) {
+        // At this point, we should also free space in S3 once implemented.
+        // Right now, we can just mark the dataset as deleted in the database.
+        datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
+      } else {
+        for {
+          datastoreClient <- clientFor(dataset)
+          _ <- datastoreClient.deleteOnDisk(dataset._id)
+        } yield ()
+      } ?~> "dataset.delete.failed"
+    } yield ()
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

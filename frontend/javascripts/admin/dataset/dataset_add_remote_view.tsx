@@ -146,11 +146,11 @@ function DatasetAddRemoteView(props: Props) {
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
+        const dataSourceJson = JSON.parse(dataSourceJsonStr);
         const { newDatasetId } = await storeRemoteDataset(
-          datastoreToUse.url,
+          datastoreToUse.name,
           datasetName,
-          activeUser.organization,
-          dataSourceJsonStr,
+          dataSourceJson,
           targetFolderId,
         );
         onAdded(newDatasetId, datasetName);

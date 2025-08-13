@@ -26,6 +26,7 @@ import type {
   SegmentGroup,
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
+import type { APIAiModelCategory } from "admin/api/jobs";
 
 // Re-export
 export type { BoundingBoxProto } from "types/bounding_box";
@@ -835,6 +836,7 @@ export type AiModel = {
   readonly comment: string;
   readonly created: number;
   readonly trainingJob: APIJob | null;
+  readonly category: APIAiModelCategory;
 };
 
 // Tracing related datatypes

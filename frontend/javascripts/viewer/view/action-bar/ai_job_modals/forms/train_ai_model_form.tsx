@@ -1,4 +1,4 @@
-import { AiModelCategory, runInstanceModelTraining, runNeuronTraining } from "admin/rest_api";
+import { APIAiModelCategory, runInstanceModelTraining, runNeuronTraining } from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -72,10 +72,10 @@ const AiModelCategoryFormItem = () => (
     }
   >
     <Select>
-      <Select.Option value={AiModelCategory.EM_NEURONS}>
+      <Select.Option value={APIAiModelCategory.EM_NEURONS}>
         EM Instance Segmentation for Neurons
       </Select.Option>
-      <Select.Option value={AiModelCategory.EM_NUCLEI}>
+      <Select.Option value={APIAiModelCategory.EM_NUCLEI}>
         EM Instance Segmentation for Nuclei, Vesicles, and other structures.
       </Select.Option>
     </Select>
@@ -94,9 +94,9 @@ const AiModelCommentFormItem = () => (
 
 const AiInferenceOptionsFormItems = ({
   selectedModelCategory,
-}: { selectedModelCategory: AiModelCategory }) => {
+}: { selectedModelCategory: APIAiModelCategory }) => {
   // TODO: It would be great to have several presets to choose from. The Antd <AutoComplete> component did not work well for this with antd v5.22 or 5.27
-  return selectedModelCategory === AiModelCategory.EM_NUCLEI ? (
+  return selectedModelCategory === APIAiModelCategory.EM_NUCLEI ? (
     <Col span={6}>
       <Form.Item
         hasFeedback
@@ -219,16 +219,16 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
       comment: values.comment,
     };
 
-    if (values.modelCategory === AiModelCategory.EM_NUCLEI) {
+    if (values.modelCategory === APIAiModelCategory.EM_NUCLEI) {
       await runInstanceModelTraining({
-        aiModelCategory: AiModelCategory.EM_NUCLEI,
+        aiModelCategory: APIAiModelCategory.EM_NUCLEI,
 
         max_distance_nm: values.max_distance_nm,
         ...commonJobArgmuments,
       });
     } else {
       await runNeuronTraining({
-        aiModelCategory: AiModelCategory.EM_NEURONS,
+        aiModelCategory: APIAiModelCategory.EM_NEURONS,
         ...commonJobArgmuments,
       });
     }
@@ -245,7 +245,7 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   }
 
   const defaultValues = {
-    modelCategory: AiModelCategory.EM_NEURONS,
+    modelCategory: APIAiModelCategory.EM_NEURONS,
   };
 
   const userBoundingBoxes = annotationInfos.flatMap(({ userBoundingBoxes, annotation }) => {

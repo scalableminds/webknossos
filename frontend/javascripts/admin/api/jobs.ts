@@ -352,7 +352,7 @@ export function startAlignSectionsJob(
 }
 
 // This enum needs to be kept in sync with the backend/database
-export enum AiModelCategory {
+export enum APIAiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",
 }
@@ -367,7 +367,7 @@ type AiModelTrainingAnnotationSpecification = {
 type RunNeuronModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: AiModelCategory.EM_NEURONS;
+  aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
 };
@@ -382,7 +382,7 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: AiModelCategory.EM_NUCLEI;
+  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
   max_distance_nm: number;
   comment?: string;
   workflowYaml?: string;
@@ -404,6 +404,7 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
+  seed_generator_distance_threshold_nm?: number;
   // maskAnnotationLayerName?: string | null
 };
 

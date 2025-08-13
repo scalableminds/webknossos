@@ -852,7 +852,7 @@ export function TeamTags({
   const teams = dataset.allowedTeamsCumulative;
   const permittedTeams = [...teams];
   if (dataset.isPublic) {
-    permittedTeams.push({ name: "public", id: "", organization: "" });
+    permittedTeams.push({ name: "public", id: "", organization: "", isOrganizationTeam: false });
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {

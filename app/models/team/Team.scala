@@ -48,7 +48,8 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> team._id.toString,
         "name" -> team.name,
-        "organization" -> organization._id
+        "organization" -> organization._id,
+        "isOrganizationTeam" -> team.isOrganizationTeam
       )
     }
 

@@ -162,6 +162,7 @@ export type APITracingStore = {
 };
 export type APITeam = {
   readonly id: string;
+  readonly isOrganizationTeam: boolean;
   readonly name: string;
   readonly organization: string;
 };

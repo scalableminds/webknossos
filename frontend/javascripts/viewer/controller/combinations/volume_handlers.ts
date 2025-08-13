@@ -47,36 +47,49 @@ export function handlePickCell(pos: Point2) {
     storeState.flycam.additionalCoordinates || [],
   );
 }
-export const getSegmentIdForPosition = memoizeOne(
-  (globalPos: Vector3) => {
-    // This function will return the currently loaded segment ID for a given position.
-    // If the corresponding bucket is not loaded at the moment, the return value will be 0.
-    // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
-    const layer = Model.getVisibleSegmentationLayer();
-    const { additionalCoordinates } = Store.getState().flycam;
 
-    if (!layer) {
-      return 0;
-    }
-    const posInLayerSpace = globalToLayerTransformedPosition(
-      globalPos,
-      layer.name,
-      "segmentation",
-      Store.getState(),
-    );
+const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
+  // This function will return the currently loaded segment ID for a given position.
+  // If the corresponding bucket is not loaded at the moment, the return value will be 0.
+  // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
+  const layer = Model.getVisibleSegmentationLayer();
+  const { additionalCoordinates } = Store.getState().flycam;
 
-    const segmentationCube = layer.cube;
-    const segmentationLayerName = layer.name;
-    const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      posInLayerSpace,
-    );
-    return segmentationCube.getMappedDataValue(
-      posInLayerSpace,
-      additionalCoordinates,
-      renderedZoomStepForCameraPosition,
-    );
-  },
+  if (!layer) {
+    return 0;
+  }
+  const posInLayerSpace = globalToLayerTransformedPosition(
+    globalPos,
+    layer.name,
+    "segmentation",
+    Store.getState(),
+  );
+
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    posInLayerSpace,
+  );
+
+  return mapped
+    ? segmentationCube.getMappedDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        renderedZoomStepForCameraPosition,
+      )
+    : segmentationCube.getDataValue(
+        posInLayerSpace,
+        additionalCoordinates,
+        null,
+        renderedZoomStepForCameraPosition,
+      );
+};
+export const getSegmentIdForPosition = memoizeOne(_getSegmentIdForPosition(true), ([a], [b]) =>
+  V3.isEqual(a, b),
+);
+export const getUnmappedSegmentIdForPosition = memoizeOne(
+  _getSegmentIdForPosition(false),
   ([a], [b]) => V3.isEqual(a, b),
 );
 export async function getSegmentIdForPositionAsync(globalPos: Vector3) {

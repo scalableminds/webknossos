@@ -288,7 +288,7 @@ class AiModelController @Inject()(
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
-        jobCommand = JobCommand.infer_nuclei
+        jobCommand = JobCommand.infer_neurons
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,

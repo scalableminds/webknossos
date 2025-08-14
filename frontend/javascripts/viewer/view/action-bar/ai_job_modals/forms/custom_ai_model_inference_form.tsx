@@ -2,8 +2,8 @@ import {
   APIAiModelCategory,
   type BaseModelInferenceParameters,
   getAiModels,
-  runNeuronInferenceWithAiModelJob,
-  runNucleiInferenceWithAiModelJob,
+  runInstanceModelInferenceWithAiModelJob,
+  runNeuronModelInferenceWithAiModelJob,
 } from "admin/rest_api";
 import { Form, type FormInstance, InputNumber, Row, Select, Space } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
@@ -66,14 +66,12 @@ export function CustomAiModelInferenceForm() {
     };
 
     if (isInstanceModelSelected) {
-      return runNucleiInferenceWithAiModelJob({
+      return runInstanceModelInferenceWithAiModelJob({
         ...commonInferenceArgs,
-        seed_generator_distance_threshold_nm: form.getFieldValue(
-          "seed_generator_distance_threshold_nm",
-        ),
+        seedGeneratorDistanceThreshold: form.getFieldValue("seedGeneratorDistanceThreshold"),
       });
     }
-    return runNeuronInferenceWithAiModelJob(commonInferenceArgs);
+    return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
   };
 
   const handleOnSelect = useCallback(
@@ -117,7 +115,7 @@ export function CustomAiModelInferenceForm() {
           </Form.Item>
           {isInstanceModelSelected ? (
             <Form.Item
-              name="seed_generator_distance_threshold_nm"
+              name="seedGeneratorDistanceThreshold"
               label="Seed generator distance threshold (nm)"
               tooltip="Controls the minimum distance in nanometers between generated seeds."
               rules={[{ required: true, message: "Please enter positive number" }]}

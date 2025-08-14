@@ -185,9 +185,10 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
 
 const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
   const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <Button type="link" onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+    <a onClick={onChangeSharedOrganizations}>
+      <TeamOutlined className="icon-margin-right" />
       Manage Access
-    </Button>
+    </a>
   ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
@@ -203,16 +204,15 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
         /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
-        <Row style={{ marginLeft: 16 }}>
-          <FileTextOutlined
-            className="icon-margin-right"
-            style={{ color: "var(--ant-color-primary)" }}
-          />
-          <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+        <Row>
+          <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
+            <FileTextOutlined className="icon-margin-right" />
+            Voxelytics Report
+          </Link>
         </Row>
       ) : null}
       {trainingAnnotations != null ? (
-        <Row style={{ marginLeft: 16, display: "inline-block" }}>
+        <Row>
           <EyeOutlined
             className="icon-margin-right"
             style={{ color: "var(--ant-color-primary)" }}

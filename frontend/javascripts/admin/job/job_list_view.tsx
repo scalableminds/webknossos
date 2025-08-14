@@ -277,11 +277,17 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL || APIJobType.DEPRECATED_TRAIN_MODEL) {
-      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+    } else if (
+      job.type === APIJobType.TRAIN_NEURON_MODEL ||
+      job.type === APIJobType.TRAIN_INSTANCE_MODEL ||
+      APIJobType.DEPRECATED_TRAIN_MODEL
+    ) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
+      const modelName =
+        job.type === APIJobType.TRAIN_NEURON_MODEL ? "neuron model" : "instance model";
       return (
         <span>
-          {`Train neuron model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );

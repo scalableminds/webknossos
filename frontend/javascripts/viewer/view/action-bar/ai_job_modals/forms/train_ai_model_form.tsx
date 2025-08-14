@@ -100,7 +100,7 @@ const AiInferenceOptionsFormItems = ({
     <Col span={6}>
       <Form.Item
         hasFeedback
-        name={["max_distance_nm"]}
+        name={["maxDistanceNm"]}
         label={<div style={{ minHeight: 24 }}>Max Lenght of Objects</div>}
         tooltip={
           'The maximum cross-section length or distance ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
@@ -223,7 +223,7 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
       await runInstanceModelTraining({
         aiModelCategory: APIAiModelCategory.EM_NUCLEI,
 
-        max_distance_nm: values.max_distance_nm,
+        maxDistanceNm: values.maxDistanceNm,
         ...commonJobArgmuments,
       });
     } else {

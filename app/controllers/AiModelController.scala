@@ -43,7 +43,7 @@ object RunNeuronModelTrainingParameters {
 case class RunInstanceModelTrainingParameters(trainingAnnotations: List[TrainingAnnotationSpecification],
                                  name: String,
                                  aiModelCategory: Option[AiModelCategory],
-                                 max_distance_nm: Option[Double],
+                                 maxDistanceNm: Option[Double],
                                  comment: Option[String],
                                  workflowYaml: Option[String])
 
@@ -59,7 +59,9 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   boundingBox: String,
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String],
-                                  workflowYaml: Option[String])
+                                  workflowYaml: Option[String],
+                                  seedGeneratorDistanceThreshold: Option[Double]
+                                  )
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -207,7 +209,7 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "max_distance_nm" -> request.body.max_distance_nm
+          "max_distance_nm" -> request.body.maxDistanceNm
         )
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
@@ -231,7 +233,7 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
   }
 
-  def runCustomNeuronInference: Action[RunInferenceParameters] =
+  def runCustomInstanceModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
@@ -243,7 +245,7 @@ class AiModelController @Inject()(
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
-        jobCommand = JobCommand.infer_neurons
+        jobCommand = JobCommand.infer_instances
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
@@ -254,7 +256,8 @@ class AiModelController @Inject()(
           "model_id" -> request.body.aiModelId,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
+          "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
         )
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(
@@ -272,6 +275,48 @@ class AiModelController @Inject()(
         newAiModelJs <- aiInferenceService.publicWrites(newAiInference, request.identity)
       } yield Ok(newAiModelJs)
     }
+
+  def runCustomNeuronInference: Action[RunInferenceParameters] =
+    sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId)
+        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
+        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
+        _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
+        jobCommand = JobCommand.infer_nuclei
+        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        commandArgs = Json.obj(
+          "dataset_id" -> dataset._id,
+          "organization_id" -> organization._id,
+          "dataset_name" -> dataset.name,
+          "layer_name" -> request.body.colorLayerName,
+          "bbox" -> boundingBox.toLiteral,
+          "model_id" -> request.body.aiModelId,
+          "dataset_directory_name" -> request.body.datasetDirectoryName,
+          "new_dataset_name" -> request.body.newDatasetName,
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml)
+        newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
+        newAiInference = AiInference(
+          _id = ObjectId.generate,
+          _organization = request.identity._organization,
+          _aiModel = request.body.aiModelId,
+          _newDataset = None,
+          _annotation = request.body.annotationId,
+          boundingBox = boundingBox,
+          _inferenceJob = newInferenceJob._id,
+          newSegmentationLayerName = "segmentation",
+          maskAnnotationLayerName = request.body.maskAnnotationLayerName
+        )
+        _ <- aiInferenceDAO.insertOne(newAiInference)
+        newAiModelJs <- aiInferenceService.publicWrites(newAiInference, request.identity)
+      } yield Ok(newAiModelJs)
+    }
+
 
   def updateAiModelInfo(aiModelId: ObjectId): Action[UpdateAiModelParameters] =
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>

@@ -280,7 +280,7 @@ function JobListView() {
     } else if (
       job.type === APIJobType.TRAIN_NEURON_MODEL ||
       job.type === APIJobType.TRAIN_INSTANCE_MODEL ||
-      APIJobType.DEPRECATED_TRAIN_MODEL
+      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
     ) {
       const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
       const modelName =

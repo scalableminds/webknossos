@@ -34,8 +34,14 @@ async function build(env = {}) {
   // Determine output directory for bundles.
   // In watch mode, it's a temp dir. In production, it's the public bundle dir.
   const buildOutDir = isWatch
-    ? fs.mkdtempSync(path.join(os.tmpdir(), "esbuild-dev"))
+    ? path.join(os.tmpdir(), "webknossos-esbuild-dev")
     : outputPath;
+
+  if (isWatch) {
+    // Ensure a clean, stable directory for development builds
+    fs.rmSync(buildOutDir, { recursive: true, force: true });
+    fs.mkdirSync(buildOutDir, { recursive: true });
+  }
 
   const plugins = [
     polyfillNode(),

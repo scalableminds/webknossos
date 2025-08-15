@@ -1,3 +1,4 @@
+import type { APIAiModelCategory } from "admin/api/jobs";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type { BoundingBoxProto } from "types/bounding_box";
@@ -787,6 +788,7 @@ export enum APIJobType {
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
+  TRAIN_INSTANCE_MODEL = "train_instance_model",
   INFER_MITOCHONDRIA = "infer_mitochondria",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
@@ -836,6 +838,7 @@ export type AiModel = {
   readonly comment: string;
   readonly created: number;
   readonly trainingJob: APIJob | null;
+  readonly category: APIAiModelCategory;
 };
 
 // Tracing related datatypes

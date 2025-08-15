@@ -41,7 +41,8 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
+import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";

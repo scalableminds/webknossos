@@ -15,10 +15,6 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/viewer/model/accessors/skeletontracing_accessor.ts",
   ],
   [
-    "frontend/javascripts/viewer/view/action-bar/download_modal_view.tsx",
-    "frontend/javascripts/viewer/view/action-bar/starting_job_modals.tsx",
-  ],
-  [
     "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
     "frontend/javascripts/admin/organization/organization_cards.tsx",
   ],

@@ -38,14 +38,13 @@ package object datasource {
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: VoxelSize,
-                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
+                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+                                                    statusOpt: Option[String] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
     val voxelSizeOpt: Option[VoxelSize] = Some(scale)
-
-    val statusOpt: Option[String] = None
 
     def getDataLayer(name: String): Option[T] =
       dataLayers.find(_.name == name)

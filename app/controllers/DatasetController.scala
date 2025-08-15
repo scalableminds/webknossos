@@ -5,9 +5,19 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataLayerLike,
+  DatasetLayerAttachments,
+  ElementClass,
+  GenericDataSource,
+  LayerAttachment,
+  LayerAttachmentDataformat,
+  LayerAttachmentType
+}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -20,7 +30,20 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import com.scalableminds.util.tools.{Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -29,6 +52,8 @@ import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
+import java.net.URI
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,6 +70,23 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
+
+case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
+
+object LinkedLayerIdentifier {
+  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
+}
+
+case class ReserveManualUploadRequest(
+    datasetName: String,
+    layersToLink: Seq[LinkedLayerIdentifier],
+    dataSource: GenericDataSource[DataLayerLike],
+    folderId: Option[ObjectId]
+)
+
+object ReserveManualUploadRequest {
+  implicit val jsonFormat: OFormat[ReserveManualUploadRequest] = Json.format[ReserveManualUploadRequest]
 }
 
 object SAMInteractionType extends ExtendedEnumeration {
@@ -497,5 +539,171 @@ class DatasetController @Inject()(userService: UserService,
         (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
+
+  def reserveManualUpload(): Action[ReserveManualUploadRequest] =
+    sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
+      for {
+        newDatasetId <- Fox.successful(ObjectId.generate)
+        newDirectoryName = generateDirectoryName(request.body.datasetName, newDatasetId)
+        dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
+                                                    request.identity._organization,
+                                                    newDatasetId)
+        dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
+        dataStore <- findReferencedDataStore(request.body.layersToLink)
+        // TODO requireUniqueName?
+        // TODO give unique directoryName
+        dataset <- datasetService.createPreliminaryDataset(
+          newDatasetId,
+          request.body.datasetName,
+          newDirectoryName,
+          request.identity._organization,
+          dataStore
+        )
+        organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- datasetDAO.updateFolder(newDatasetId, request.body.folderId.getOrElse(organization._rootFolder))(
+          GlobalAccessContext)
+        _ <- datasetService.addUploader(dataset, request.identity._id)(GlobalAccessContext)
+        _ <- datasetService.updateDataSources(dataStore, List(dataSourceWithLayersToLink))
+        // Store dataSourceWithLayersToLink (keep isUsable=false and status)
+      } yield Ok(Json.obj("id" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
+    }
+
+  def finishManualUpload(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId)
+        _ <- Fox.fromBool(dataset.status == datasetService.notYetUploadedStatus) ?~> s"Dataset is not in uploading state, got ${dataset.status}."
+        _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
+        _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
+      } yield Ok
+    }
+
+  private def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
+    TextUtils.normalizeStrong(datasetName) match {
+      case Some(prefix) => s"$prefix-$datasetId"
+      case None         => datasetId.toString
+    }
+
+  private def findReferencedDataStore(layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[DataStore] = {
+    val datasetIds = layersToLink.map(_.datasetId).toSet
+    for {
+      datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
+      referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore)
+      // TODO isVirtual is not enough. only require for datasets with local data. Maybe as follow-up?
+      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
+      dataStore <- referencedDatastoreNames.headOption match {
+        case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
+        case None                     => dataStoreDAO.findOneWithManualUploadsAllowed
+      }
+      _ <- Fox.fromBool(dataStore.allowsManualUpload) ?~> "dataStore.manualUploadNotAllowed"
+    } yield dataStore
+  }
+
+  private lazy val manualUploadPrefixBox: Box[URI] = for {
+    fromConfig <- tryo(new URI(conf.WebKnossos.Datasets.manualUploadPrefix))
+    result <- if (fromConfig.getScheme == null)
+      // assume local path, either absolute or relative to working dir
+      tryo(new URI(s"file://${Path.of(conf.WebKnossos.Datasets.manualUploadPrefix).toAbsolutePath.toString}"))
+    else
+      Full(fromConfig)
+  } yield result
+
+  private def addPathsToDatasource(dataSource: GenericDataSource[DataLayerLike],
+                                   organizationId: String,
+                                   datasetId: ObjectId): Fox[GenericDataSource[DataLayerLike]] =
+    for {
+      manualUploadPrefix <- manualUploadPrefixBox.toFox
+      datasetPath = manualUploadPrefix.resolve(organizationId).resolve(datasetId.toString)
+      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
+    } yield dataSource.copy(dataLayers = layersWithPaths)
+
+  private def addPathsToLayer(dataLayer: DataLayerLike, dataSourcePath: URI): Fox[DataLayerLike] =
+    for {
+      layerPath <- tryo(dataSourcePath.resolve(dataLayer.name)).toFox
+      mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
+      magsWithPaths = mags.map(mag => addPathToMag(mag, layerPath))
+      attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments, layerPath)
+      layerUpdated <- dataLayer match {
+        case l: N5DataLayer          => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: N5SegmentationLayer  => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: PrecomputedDataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: PrecomputedSegmentationLayer =>
+          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: Zarr3DataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: Zarr3SegmentationLayer =>
+          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: ZarrDataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: ZarrSegmentationLayer =>
+          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: WKWDataLayer         => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: WKWSegmentationLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case _                       => Fox.failure("Unknown layer type in reserveManualUpload")
+      }
+    } yield layerUpdated
+
+  private def addPathToMag(mag: MagLocator, layerPath: URI): MagLocator =
+    mag.copy(path = Some(layerPath.resolve(mag.mag.toMagLiteral()).toString))
+
+  private def addPathsToAttachments(attachmentsOpt: Option[DatasetLayerAttachments],
+                                    layerPath: URI): Fox[Option[DatasetLayerAttachments]] =
+    attachmentsOpt match {
+      case None => Fox.successful(None)
+      case Some(attachments) =>
+        Fox.successful(
+          Some(
+            attachments.copy(
+              meshes = attachments.meshes.map(attachment =>
+                addPathToAttachment(attachment, LayerAttachmentType.mesh, layerPath)),
+              agglomerates = attachments.agglomerates.map(attachment =>
+                addPathToAttachment(attachment, LayerAttachmentType.agglomerate, layerPath)),
+              segmentIndex = attachments.segmentIndex.map(attachment =>
+                addPathToAttachment(attachment, LayerAttachmentType.segmentIndex, layerPath)),
+              connectomes = attachments.connectomes.map(attachment =>
+                addPathToAttachment(attachment, LayerAttachmentType.connectome, layerPath)),
+              cumsum = attachments.cumsum.map(attachment =>
+                addPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)),
+            )))
+    }
+
+  private def addPathToAttachment(attachment: LayerAttachment,
+                                  attachmentType: LayerAttachmentType,
+                                  layerPath: URI): LayerAttachment = {
+    val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
+    val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
+    val path = layerPath.resolve(defaultDirName).resolve(attachment.name + suffix)
+    attachment.copy(path = path)
+  }
+
+  private def addLayersToLink(dataSource: GenericDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[GenericDataSource[DataLayerLike]] =
+    for {
+      linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
+    } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
+
+  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(
+      implicit ctx: DBAccessContext): Fox[DataLayerLike] =
+    for {
+      dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
+      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.notFound"
+      usable <- dataSource.toUsable.toFox ?~> "dataSource.notUsable"
+      layer: DataLayerLike <- usable.dataLayers
+        .find(_.name == layerToLink.layerName)
+        .toFox ?~> "dataset.layerToLink.layerNotFound"
+      newName = layerToLink.newLayerName.getOrElse(layer.name)
+      layerRenamed: DataLayer <- layer match {
+        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
+        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
+        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
+        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
+        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
+        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
+        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
+        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
+        case _                               => Fox.failure("Unknown layer type for link")
+      }
+    } yield layerRenamed
 
 }

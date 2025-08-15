@@ -28,14 +28,16 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "publicUrl").read[String] and
       (__ \ "key").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromForm _)
+      (__ \ "allowsUpload").readNullable[Boolean] and
+      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromForm _)
 
   private val dataStorePublicReads: Reads[DataStore] =
     ((__ \ "name").read[String] and
       (__ \ "url").read[String] and
       (__ \ "publicUrl").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
+      (__ \ "allowsUpload").readNullable[Boolean] and
+      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromUpdateForm _) // TODO adapt frontend?
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

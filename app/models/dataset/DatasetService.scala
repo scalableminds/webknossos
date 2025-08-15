@@ -64,7 +64,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
-  private val notYetUploadedStatus = "Not yet fully uploaded."
+  val notYetUploadedStatus = "Not yet fully uploaded." // TODO make private again
   private val inactiveStatusList =
     List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
@@ -84,20 +84,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String,
+  def createPreliminaryDataset(newDatasetId: ObjectId,
+                               datasetName: String,
+                               datasetDirectoryName: String,
                                organizationId: String,
-                               dataStore: DataStore,
-                               requireUniqueName: Boolean): Fox[Dataset] = {
-    val newDatasetId = ObjectId.generate
-    for {
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
-        GlobalAccessContext)
-      _ <- Fox.fromBool(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
-      datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
-      unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
-                                                notYetUploadedStatus)
-      newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
-    } yield newDataset
+                               dataStore: DataStore): Fox[Dataset] = {
+    val unreportedDatasource =
+      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), notYetUploadedStatus)
+    createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
   }
 
   def createVirtualDataset(datasetName: String,

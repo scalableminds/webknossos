@@ -1,9 +1,11 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.{Box, Full}
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
@@ -13,7 +15,7 @@ import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault {
+class FileSystemDataVault extends DataVault with FoxImplicits{
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
@@ -90,6 +92,12 @@ class FileSystemDataVault extends DataVault {
           .take(maxItems)
       } else List.empty
     } yield listing
+
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      localPath <- vaultPathToLocalPath(path)
+      usedStorageBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
+    } yield usedStorageBytes
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri

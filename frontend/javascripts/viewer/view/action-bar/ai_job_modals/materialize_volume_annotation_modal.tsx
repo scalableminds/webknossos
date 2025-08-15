@@ -2,6 +2,7 @@ import { startMaterializingVolumeAnnotationJob } from "admin/rest_api";
 import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { useCallback } from "react";
 import type { APIDataLayer } from "types/api_types";
 import { APIJobType } from "types/api_types";
 import {
@@ -10,7 +11,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { jobNameToImagePath } from "./constants";
-import { StartJobForm } from "./forms/start_job_form";
+import { type JobApiCallArgsType, StartJobForm } from "./forms/start_job_form";
 
 type Props = {
   handleClose: () => void;
@@ -80,6 +81,42 @@ export function MaterializeVolumeAnnotationModal({
       </>
     ) : null;
 
+  const jobApiCall = useCallback(
+    async ({
+      newDatasetName,
+      selectedLayer: segmentationLayer,
+      selectedBoundingBox,
+    }: JobApiCallArgsType) => {
+      // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
+      // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
+      // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
+      // 2. There is a segmentation layer without a fallback layer. volumeLayerName will be null and baseSegmentationName
+      // will reference the segmentation layer. The job will use the segmentation layer without any merging.
+      // 3. There is a volume annotation without a fallback layer. volumeLayerName will be null
+      // and baseSegmentationName will reference the volume layer. The job will use the volume annotation without any merging.
+      const volumeLayerName =
+        "fallbackLayer" in segmentationLayer && segmentationLayer.fallbackLayer != null
+          ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
+          : null;
+      const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+      const bbox = selectedBoundingBox?.boundingBox
+        ? computeArrayFromBoundingBox(selectedBoundingBox.boundingBox)
+        : undefined;
+      return startMaterializingVolumeAnnotationJob(
+        dataset.id,
+        baseSegmentationName,
+        volumeLayerName,
+        newDatasetName,
+        tracing.annotationId,
+        tracing.annotationType,
+        isMergerModeEnabled,
+        includesEditableMapping,
+        bbox,
+      );
+    },
+    [dataset.id, tracing, isMergerModeEnabled, includesEditableMapping],
+  );
+
   return (
     <Modal
       onCancel={handleClose}
@@ -96,38 +133,7 @@ export function MaterializeVolumeAnnotationModal({
         chooseSegmentationLayer
         isBoundingBoxConfigurable={includesEditableMapping}
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({
-          newDatasetName,
-          selectedLayer: segmentationLayer,
-          selectedBoundingBox,
-        }) => {
-          // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
-          // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
-          // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
-          // 2. There is a segmentation layer without a fallback layer. volumeLayerName will be null and baseSegmentationName
-          // will reference the segmentation layer. The job will use the segmentation layer without any merging.
-          // 3. There is a volume annotation without a fallback layer. volumeLayerName will be null
-          // and baseSegmentationName will reference the volume layer. The job will use the volume annotation without any merging.
-          const volumeLayerName =
-            "fallbackLayer" in segmentationLayer && segmentationLayer.fallbackLayer != null
-              ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
-              : null;
-          const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
-          const bbox = selectedBoundingBox?.boundingBox
-            ? computeArrayFromBoundingBox(selectedBoundingBox.boundingBox)
-            : undefined;
-          return startMaterializingVolumeAnnotationJob(
-            dataset.id,
-            baseSegmentationName,
-            volumeLayerName,
-            newDatasetName,
-            tracing.annotationId,
-            tracing.annotationType,
-            isMergerModeEnabled,
-            includesEditableMapping,
-            bbox,
-          );
-        }}
+        jobApiCall={jobApiCall}
         description={
           <div>
             {description}

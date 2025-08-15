@@ -1,5 +1,6 @@
 import { Alert, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import { useCallback } from "react";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
@@ -10,14 +11,17 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);
 
-  const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
-    const segmentationLayer = getSegmentationLayerByHumanReadableName(
-      dataset,
-      annotation,
-      layerName,
-    );
-    return getMagInfo(segmentationLayer.resolutions);
-  };
+  const getMagsForSegmentationLayer = useCallback(
+    (_annotationId: string, layerName: string) => {
+      const segmentationLayer = getSegmentationLayerByHumanReadableName(
+        dataset,
+        annotation,
+        layerName,
+      );
+      return getMagInfo(segmentationLayer.resolutions);
+    },
+    [dataset, annotation],
+  );
   const userBoundingBoxes = getSomeTracing(annotation).userBoundingBoxes;
 
   return (

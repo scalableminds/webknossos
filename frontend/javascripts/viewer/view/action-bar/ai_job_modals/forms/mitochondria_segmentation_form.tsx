@@ -3,41 +3,56 @@ import { Row, Space } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
-import { StartJobForm } from "./start_job_form";
+import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
 export function MitochondriaSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { mitochondriaInferralCostPerGVx } = features();
   const dispatch = useDispatch();
+
+  const handleClose = useCallback(
+    () => dispatch(setAIJobModalStateAction("invisible")),
+    [dispatch],
+  );
+  const jobApiCall = useCallback(
+    async ({
+      newDatasetName,
+      selectedLayer: colorLayer,
+      selectedBoundingBox,
+    }: JobApiCallArgsType) => {
+      if (!selectedBoundingBox) {
+        return;
+      }
+      const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+      const mag = getBestFittingMagComparedToTrainingDS(
+        colorLayer,
+        dataset.dataSource.scale,
+        APIJobType.INFER_MITOCHONDRIA,
+      );
+      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
+        return;
+      }
+      return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
+    },
+    [dataset],
+  );
+
   return (
     <StartJobForm
-      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={handleClose}
       jobName={APIJobType.INFER_MITOCHONDRIA}
       buttonLabel="Start AI mitochondria segmentation"
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
       isBoundingBoxConfigurable
       jobCreditCostPerGVx={mitochondriaInferralCostPerGVx}
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
-          return;
-        }
-        const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        const mag = getBestFittingMagComparedToTrainingDS(
-          colorLayer,
-          dataset.dataSource.scale,
-          APIJobType.INFER_MITOCHONDRIA,
-        );
-        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
-          return;
-        }
-        return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
-      }}
+      jobApiCall={jobApiCall}
       description={
         <>
           <Space direction="vertical" size="middle">

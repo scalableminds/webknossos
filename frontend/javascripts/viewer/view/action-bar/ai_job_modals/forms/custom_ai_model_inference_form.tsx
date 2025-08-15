@@ -38,41 +38,44 @@ export function CustomAiModelInferenceForm() {
     "Could not load model list.",
   );
 
-  const jobApiCallback = async (
-    {
-      newDatasetName,
-      selectedLayer: colorLayer,
-      selectedBoundingBox,
-      useCustomWorkflow,
-    }: JobApiCallArgsType,
-    form: FormInstance,
-  ) => {
-    if (!selectedBoundingBox) {
-      return;
-    }
+  const jobApiCallback = useCallback(
+    async (
+      {
+        newDatasetName,
+        selectedLayer: colorLayer,
+        selectedBoundingBox,
+        useCustomWorkflow,
+      }: JobApiCallArgsType,
+      form: FormInstance,
+    ) => {
+      if (!selectedBoundingBox) {
+        return;
+      }
 
-    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-    const maybeAnnotationId = isViewMode ? {} : { annotationId };
+      const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+      const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
-    const commonInferenceArgs: BaseModelInferenceParameters = {
-      ...maybeAnnotationId,
-      aiModelId: form.getFieldValue("aiModel"),
-      workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
-      datasetDirectoryName: dataset.directoryName,
-      organizationId: dataset.owningOrganization,
-      colorLayerName: colorLayer.name,
-      boundingBox,
-      newDatasetName: newDatasetName,
-    };
+      const commonInferenceArgs: BaseModelInferenceParameters = {
+        ...maybeAnnotationId,
+        aiModelId: form.getFieldValue("aiModel"),
+        workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
+        datasetDirectoryName: dataset.directoryName,
+        organizationId: dataset.owningOrganization,
+        colorLayerName: colorLayer.name,
+        boundingBox,
+        newDatasetName: newDatasetName,
+      };
 
-    if (isInstanceModelSelected) {
-      return runInstanceModelInferenceWithAiModelJob({
-        ...commonInferenceArgs,
-        seedGeneratorDistanceThreshold: form.getFieldValue("seedGeneratorDistanceThreshold"),
-      });
-    }
-    return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
-  };
+      if (isInstanceModelSelected) {
+        return runInstanceModelInferenceWithAiModelJob({
+          ...commonInferenceArgs,
+          seedGeneratorDistanceThreshold: form.getFieldValue("seedGeneratorDistanceThreshold"),
+        });
+      }
+      return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
+    },
+    [dataset, isViewMode, annotationId, isInstanceModelSelected],
+  );
 
   const handleOnSelect = useCallback(
     (selectedModelId: string) => {
@@ -83,9 +86,14 @@ export function CustomAiModelInferenceForm() {
     [aiModels],
   );
 
+  const handleClose = useCallback(
+    () => dispatch(setAIJobModalStateAction("invisible")),
+    [dispatch],
+  );
+
   return (
     <StartJobForm
-      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={handleClose}
       jobName={APIJobType.INFER_NEURONS}
       buttonLabel="Start inference with custom AI model"
       title="AI Inference"
@@ -117,7 +125,7 @@ export function CustomAiModelInferenceForm() {
             <Form.Item
               name="seedGeneratorDistanceThreshold"
               label="Seed generator distance threshold (nm)"
-              tooltip="Controls the minimum distance in nanometers between generated seeds."
+              tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
               rules={[{ required: true, message: "Please enter positive number" }]}
               initialValue={1000.0}
             >

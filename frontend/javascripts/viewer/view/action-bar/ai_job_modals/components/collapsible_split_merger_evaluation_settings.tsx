@@ -1,4 +1,5 @@
 import { Checkbox, Col, Collapse, Form, InputNumber, Row } from "antd";
+import { useCallback } from "react";
 
 export type SplitMergerEvaluationSettings = {
   useSparseTracing?: boolean;
@@ -11,10 +12,12 @@ export function CollapsibleSplitMergerEvaluationSettings({
   isActive = false,
   setActive,
 }: { isActive: boolean; setActive: (active: boolean) => void }) {
+  const handleCollapseChange = useCallback(() => setActive(!isActive), [isActive, setActive]);
+
   return (
     <Collapse
       style={{ marginBottom: 8 }}
-      onChange={() => setActive(!isActive)}
+      onChange={handleCollapseChange}
       expandIcon={() => <Checkbox checked={isActive} />}
       items={[
         {

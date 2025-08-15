@@ -1,40 +1,55 @@
 import { startNucleiInferralJob } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
-import { StartJobForm } from "./start_job_form";
+import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
 const { ThinSpace } = Unicode;
 
 export function NucleiDetectionForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const dispatch = useDispatch();
+
+  const handleClose = useCallback(
+    () => dispatch(setAIJobModalStateAction("invisible")),
+    [dispatch],
+  );
+  const jobApiCall = useCallback(
+    async ({
+      newDatasetName,
+      selectedLayer: colorLayer,
+      selectedBoundingBox,
+    }: JobApiCallArgsType) => {
+      if (!selectedBoundingBox) {
+        return;
+      }
+      const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+      const mag = getBestFittingMagComparedToTrainingDS(
+        colorLayer,
+        dataset.dataSource.scale,
+        APIJobType.INFER_NUCLEI,
+      );
+      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
+        return;
+      }
+      startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+    },
+    [dataset],
+  );
+
   return (
     <StartJobForm
-      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={handleClose}
       buttonLabel="Start AI nuclei detection"
       jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
-          return;
-        }
-        const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        const mag = getBestFittingMagComparedToTrainingDS(
-          colorLayer,
-          dataset.dataSource.scale,
-          APIJobType.INFER_NUCLEI,
-        );
-        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
-          return;
-        }
-        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
-      }}
+      jobApiCall={jobApiCall}
       description={
         <>
           <p>

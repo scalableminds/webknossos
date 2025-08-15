@@ -15,9 +15,7 @@ export function useCurrentlySelectedBoundingBox(
   const [currentlySelectedBoundingBox, setCurrentlySelectedBoundingBox] = useState<
     UserBoundingBox | undefined
   >(undefined);
-  // userBoundingBoxes, defaultBBForLayers, layers are different objects with each calls,
-  // but they shouldn't be able to change while the modal is open
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above
+
   useEffect(() => {
     const currentSelectedLayer = layers.find((layer) => layer.name === currentlySelectedLayerName);
     const indexOfLayer = currentSelectedLayer ? layers.indexOf(currentSelectedLayer) : -1;
@@ -27,6 +25,13 @@ export function useCurrentlySelectedBoundingBox(
         ? defaultBBForLayers[indexOfLayer]
         : undefined;
     setCurrentlySelectedBoundingBox(newCurrentlySelectedBoundingBox);
-  }, [selectedBoundingBoxId, currentlySelectedLayerName, isBoundingBoxConfigurable]);
+  }, [
+    selectedBoundingBoxId,
+    currentlySelectedLayerName,
+    isBoundingBoxConfigurable,
+    layers,
+    userBoundingBoxes,
+    defaultBBForLayers,
+  ]);
   return currentlySelectedBoundingBox;
 }

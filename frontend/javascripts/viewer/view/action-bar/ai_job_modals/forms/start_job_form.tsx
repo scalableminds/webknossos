@@ -6,7 +6,7 @@ import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APIJob, APIJobType } from "types/api_types";
 import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
@@ -109,79 +109,95 @@ export function StartJobForm(props: StartJobFormProps) {
     }
   }, [jobCreditCostInfo, dispatch, organizationCredits]);
 
-  const startJob = async ({
-    layerName,
-    boundingBoxId,
-    name: newDatasetName,
-    useAnnotation,
-  }: {
-    layerName: string;
-    boundingBoxId: number;
-    name: string;
-    useAnnotation: boolean;
-  }) => {
-    const selectedLayer = layers.find((layer) => layer.name === layerName);
-    if (selectedLayer?.elementClass === "uint24") {
-      const errorMessage =
-        "AI analysis jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.";
-      Toast.error(errorMessage);
-      console.error(errorMessage);
-      return;
-    }
-    const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === boundingBoxId);
-    if (
-      selectedLayer == null ||
-      newDatasetName == null ||
-      (isBoundingBoxConfigurable && selectedBoundingBox == null)
-    ) {
-      return;
-    }
-
-    try {
-      await Model.ensureSavedState();
-      const jobArgs: JobApiCallArgsType = {
-        newDatasetName,
-        selectedLayer,
-        selectedBoundingBox,
-        annotationId: useAnnotation ? annotation.annotationId : undefined,
-        useCustomWorkflow,
-      };
-      const apiJob = await jobApiCall(jobArgs, form);
-
-      if (!apiJob) {
+  const startJob = useCallback(
+    async ({
+      layerName,
+      boundingBoxId,
+      name: newDatasetName,
+      useAnnotation,
+    }: {
+      layerName: string;
+      boundingBoxId: number;
+      name: string;
+      useAnnotation: boolean;
+    }) => {
+      const selectedLayer = layers.find((layer) => layer.name === layerName);
+      if (selectedLayer?.elementClass === "uint24") {
+        const errorMessage =
+          "AI analysis jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.";
+        Toast.error(errorMessage);
+        console.error(errorMessage);
         return;
       }
-      if (jobCreditCostPerGVx != null && activeUser?.organization) {
-        // As the job did cost credits, refetch the organization to have a correct credit balance.
-        try {
-          const updatedOrganization = await getOrganization(activeUser?.organization);
-          dispatch(setActiveOrganizationAction(updatedOrganization));
-        } catch (error) {
-          Toast.error(
-            "There was an error while reloading the available credits. Consider reloading the page.",
-          );
-          console.error("Failed to refresh organization credits.", error);
-        }
+      const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === boundingBoxId);
+      if (
+        selectedLayer == null ||
+        newDatasetName == null ||
+        (isBoundingBoxConfigurable && selectedBoundingBox == null)
+      ) {
+        return;
       }
 
-      Toast.info(
-        <>
-          The {jobName} job has been started. See the{" "}
-          <a target="_blank" href="/jobs" rel="noopener noreferrer">
-            Processing Jobs
-          </a>{" "}
-          view under Administration for details on the progress of this job.
-        </>,
-      );
-      handleClose();
-    } catch (error) {
-      Toast.error(
-        `The ${jobName} job could not be started. Please contact an administrator or look in the console for more details.`,
-      );
-      console.error(error);
-      handleClose();
-    }
-  };
+      try {
+        await Model.ensureSavedState();
+        const jobArgs: JobApiCallArgsType = {
+          newDatasetName,
+          selectedLayer,
+          selectedBoundingBox,
+          annotationId: useAnnotation ? annotation.annotationId : undefined,
+          useCustomWorkflow,
+        };
+        const apiJob = await jobApiCall(jobArgs, form);
+
+        if (!apiJob) {
+          return;
+        }
+        if (jobCreditCostPerGVx != null && activeUser?.organization) {
+          // As the job did cost credits, refetch the organization to have a correct credit balance.
+          try {
+            const updatedOrganization = await getOrganization(activeUser?.organization);
+            dispatch(setActiveOrganizationAction(updatedOrganization));
+          } catch (error) {
+            Toast.error(
+              "There was an error while reloading the available credits. Consider reloading the page.",
+            );
+            console.error("Failed to refresh organization credits.", error);
+          }
+        }
+
+        Toast.info(
+          <>
+            The {jobName} job has been started. See the{" "}
+            <a target="_blank" href="/jobs" rel="noopener noreferrer">
+              Processing Jobs
+            </a>{" "}
+            view under Administration for details on the progress of this job.
+          </>,
+        );
+        handleClose();
+      } catch (error) {
+        Toast.error(
+          `The ${jobName} job could not be started. Please contact an administrator or look in the console for more details.`,
+        );
+        console.error(error);
+        handleClose();
+      }
+    },
+    [
+      layers,
+      userBoundingBoxes,
+      isBoundingBoxConfigurable,
+      annotation.annotationId,
+      useCustomWorkflow,
+      jobApiCall,
+      form,
+      jobCreditCostPerGVx,
+      activeUser,
+      dispatch,
+      jobName,
+      handleClose,
+    ],
+  );
 
   let initialLayerName = layers.length === 1 ? layers[0].name : null;
   if (fixedSelectedLayer) {

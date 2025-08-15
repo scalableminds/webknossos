@@ -1,10 +1,5 @@
-import { formatVoxels } from "libs/format_utils";
 import Toast from "libs/toast";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromBoundingBoxObject,
-  rgbToHex,
-} from "libs/utils";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import _ from "lodash";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
 import { APIJobType } from "types/api_types";
@@ -25,33 +20,6 @@ export const getMinimumDSSize = (jobType: ModalJobTypes) => {
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
   }
 };
-
-export function renderUserBoundingBox(
-  bbox: UserBoundingBox | null | undefined,
-  showVolume: boolean,
-) {
-  if (!bbox) {
-    return null;
-  }
-
-  const upscaledColor = bbox.color.map((colorPart) => colorPart * 255) as any as Vector3;
-  const colorAsHexString = rgbToHex(upscaledColor);
-  const volumeInVx = new BoundingBox(bbox.boundingBox).getVolume();
-  return (
-    <>
-      <div
-        className="color-display-wrapper"
-        style={{
-          backgroundColor: colorAsHexString,
-          marginTop: -2,
-          marginRight: 6,
-        }}
-      />
-      {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")}
-      {showVolume ? `, ${formatVoxels(volumeInVx)}` : ""})
-    </>
-  );
-}
 
 export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingBox[] {
   return layers.map((layer, index) => {

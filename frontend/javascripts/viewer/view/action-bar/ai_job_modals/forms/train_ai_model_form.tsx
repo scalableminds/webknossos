@@ -1,23 +1,12 @@
 import { APIAiModelCategory, runInstanceModelTraining, runNeuronTraining } from "admin/rest_api";
-import {
-  Alert,
-  Button,
-  Col,
-  Form,
-  type FormInstance,
-  Input,
-  InputNumber,
-  Row,
-  Select,
-  Tooltip,
-} from "antd";
+import { Alert, Button, Col, Form, Input, InputNumber, Row, Select, Tooltip } from "antd";
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import { MagSelectionFormItem } from "components/mag_selection";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -101,7 +90,7 @@ const AiInferenceOptionsFormItems = ({
       <Form.Item
         hasFeedback
         name={["maxDistanceNm"]}
-        label={<div style={{ minHeight: 24 }}>Max Lenght of Objects</div>}
+        label={<div style={{ minHeight: 24 }}>Max Length of Objects</div>}
         tooltip={
           'The maximum cross-section length or distance ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
         }
@@ -121,6 +110,23 @@ type TrainingAnnotation = {
   mag: Vector3;
 };
 
+const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+  const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+};
+
+const getTrainingAnnotations = (values: any) => {
+  return values.trainingAnnotations.map((trainingAnnotation: TrainingAnnotation) => {
+    const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
+    return {
+      annotationId,
+      colorLayerName: imageDataLayer,
+      segmentationLayerName: layerName,
+      mag,
+    };
+  });
+};
+
 export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | StoreAnnotation>({
   getMagsForSegmentationLayer,
   onClose,
@@ -135,6 +141,27 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   onAddAnnotationsInfos?: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void;
 }) {
   const [form] = Form.useForm();
+
+  const getIntersectingMagList = useCallback(
+    (
+      annotationId: string,
+      dataset: APIDataset,
+      groundTruthLayerName: string,
+      imageDataLayerName: string,
+    ) => {
+      const colorLayers = getColorLayers(dataset);
+      const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+      const groundTruthLayerMags = getMagsForSegmentationLayer(
+        annotationId,
+        groundTruthLayerName,
+      ).getMagList();
+
+      return groundTruthLayerMags?.filter((groundTruthMag) =>
+        dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+      );
+    },
+    [getMagsForSegmentationLayer],
+  );
 
   const watcherFunctionRef = useRef(() => {
     return [new MagInfo([])];
@@ -169,72 +196,40 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   const [useCustomWorkflow, setUseCustomWorkflow] = useState(false);
   const selectedModelCategory = Form.useWatch("modelCategory", form);
 
-  const getIntersectingMagList = (
-    annotationId: string,
-    dataset: APIDataset,
-    groundTruthLayerName: string,
-    imageDataLayerName: string,
-  ) => {
-    const colorLayers = getColorLayers(dataset);
-    const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
-    const groundTruthLayerMags = getMagsForSegmentationLayer(
-      annotationId,
-      groundTruthLayerName,
-    ).getMagList();
+  const onFinish = useCallback(
+    async (values: any) => {
+      await form.validateFields();
 
-    return groundTruthLayerMags?.filter((groundTruthMag) =>
-      dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
-    );
-  };
+      // Outside of an annotation, no saving needs to happen.
+      if (ensureSavedState != null) {
+        await ensureSavedState();
+      }
 
-  const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
-    const colorLayer = colorLayers.find((layer) => layer.name === layerName);
-    return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
-  };
-
-  const getTrainingAnnotations = (values: any) => {
-    return values.trainingAnnotations.map((trainingAnnotation: TrainingAnnotation) => {
-      const { annotationId, imageDataLayer, layerName, mag } = trainingAnnotation;
-      return {
-        annotationId,
-        colorLayerName: imageDataLayer,
-        segmentationLayerName: layerName,
-        mag,
+      const commonJobArgmuments = {
+        trainingAnnotations: getTrainingAnnotations(values),
+        name: values.modelName,
+        workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
+        comment: values.comment,
       };
-    });
-  };
 
-  const onFinish = async (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => {
-    form.validateFields();
+      if (values.modelCategory === APIAiModelCategory.EM_NUCLEI) {
+        await runInstanceModelTraining({
+          aiModelCategory: APIAiModelCategory.EM_NUCLEI,
 
-    // Outside of an annotation, no saving needs to happen.
-    if (ensureSavedState != null) {
-      await ensureSavedState();
-    }
-
-    const commonJobArgmuments = {
-      trainingAnnotations: getTrainingAnnotations(values),
-      name: values.modelName,
-      workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
-      comment: values.comment,
-    };
-
-    if (values.modelCategory === APIAiModelCategory.EM_NUCLEI) {
-      await runInstanceModelTraining({
-        aiModelCategory: APIAiModelCategory.EM_NUCLEI,
-
-        maxDistanceNm: values.maxDistanceNm,
-        ...commonJobArgmuments,
-      });
-    } else {
-      await runNeuronTraining({
-        aiModelCategory: APIAiModelCategory.EM_NEURONS,
-        ...commonJobArgmuments,
-      });
-    }
-    Toast.success("The training has successfully started.");
-    onClose();
-  };
+          maxDistanceNm: values.maxDistanceNm,
+          ...commonJobArgmuments,
+        });
+      } else {
+        await runNeuronTraining({
+          aiModelCategory: APIAiModelCategory.EM_NEURONS,
+          ...commonJobArgmuments,
+        });
+      }
+      Toast.success("The training has successfully started.");
+      onClose();
+    },
+    [ensureSavedState, form, useCustomWorkflow, onClose],
+  );
 
   if (annotationInfos.length === 0 && onAddAnnotationsInfos != null) {
     return (
@@ -277,12 +272,7 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
   const warnings = bboxWarnings;
 
   return (
-    <Form
-      onFinish={(values) => onFinish(form, useCustomWorkflow, values)}
-      form={form}
-      initialValues={defaultValues}
-      layout="vertical"
-    >
+    <Form onFinish={onFinish} form={form} initialValues={defaultValues} layout="vertical">
       <AiModelNameFormItem />
       <AiModelCategoryFormItem />
 

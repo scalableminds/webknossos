@@ -37,7 +37,7 @@ export function NucleiDetectionForm() {
       if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
         return;
       }
-      startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+      return startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
     },
     [dataset],
   );

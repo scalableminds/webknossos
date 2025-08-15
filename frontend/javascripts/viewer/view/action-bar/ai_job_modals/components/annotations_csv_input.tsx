@@ -31,7 +31,10 @@ export function AnnotationsCsvInput({
       .filter((line) => line !== "");
     for (const taskOrAnnotationIdOrUrl of lines) {
       if (taskOrAnnotationIdOrUrl.includes("/")) {
-        annotationIdsForTraining.push(taskOrAnnotationIdOrUrl.split("/").at(-1) as string);
+        const lastSegment = taskOrAnnotationIdOrUrl.split("/").at(-1);
+        if (lastSegment) {
+          annotationIdsForTraining.push(lastSegment);
+        }
       } else {
         let isTask = true;
         try {
@@ -39,7 +42,7 @@ export function AnnotationsCsvInput({
             showErrorToast: false,
           });
           const finishedAnnotations = annotations.filter(({ state }) => state === "Finished");
-          if (annotations.length > 0) {
+          if (finishedAnnotations.length > 0) {
             annotationIdsForTraining.push(...finishedAnnotations.map(({ id }) => id));
           } else {
             unfinishedTasks.push(taskOrAnnotationIdOrUrl);

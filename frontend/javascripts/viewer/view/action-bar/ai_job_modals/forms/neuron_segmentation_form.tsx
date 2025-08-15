@@ -51,10 +51,7 @@ export function NeuronSegmentationForm() {
       const splitMergerEvaluationSettings = form.getFieldValue(
         "splitMergerEvaluationSettings",
       ) as SplitMergerEvaluationSettings;
-      if (
-        !selectedBoundingBox ||
-        (doSplitMergerEvaluation && splitMergerEvaluationSettings == null)
-      ) {
+      if (!selectedBoundingBox || (doSplitMergerEvaluation && !splitMergerEvaluationSettings)) {
         return;
       }
 
@@ -103,10 +100,10 @@ export function NeuronSegmentationForm() {
         newDatasetName,
         doSplitMergerEvaluation,
         annotationId,
-        splitMergerEvaluationSettings.useSparseTracing,
-        splitMergerEvaluationSettings.maxEdgeLength,
-        splitMergerEvaluationSettings.sparseTubeThresholdInNm,
-        splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
+        splitMergerEvaluationSettings?.useSparseTracing,
+        splitMergerEvaluationSettings?.maxEdgeLength,
+        splitMergerEvaluationSettings?.sparseTubeThresholdInNm,
+        splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
       );
     },
     [dataset, doSplitMergerEvaluation, userBoundingBoxCount, taskBoundingBoxes, skeletonAnnotation],

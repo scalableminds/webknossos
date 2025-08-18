@@ -1256,27 +1256,29 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+type StoreRemoteDatasetArgs = {
+  dataStoreName: string;
+  dataSource: APIDataSource;
+  folderId?: string | null;
+};
+
 export async function storeRemoteDataset(
-  datastoreUrl: string,
+  dataStoreName: string,
   datasetName: string,
-  organizationId: string,
-  datasource: string,
+  dataSource: APIDataSource,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    if (folderId) {
-      params.set("folderId", folderId);
-    }
+  const payload: StoreRemoteDatasetArgs = {
+    dataSource,
+    dataStoreName: dataStoreName,
+  };
+  if (folderId) {
+    payload["folderId"] = folderId;
+  }
 
-    return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
-      {
-        method: "POST",
-        data: datasource,
-      },
-    );
+  return Request.sendJSONReceiveJSON(`/api/datasets/addVirtualDataset/${datasetName}`, {
+    method: "POST",
+    data: payload,
   });
 }
 
@@ -1343,13 +1345,10 @@ export async function triggerDatasetClearCache(
   });
 }
 
-export async function deleteDatasetOnDisk(datastoreHost: string, datasetId: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/datasets/${datasetId}/deleteOnDisk?token=${token}`, {
-      host: datastoreHost,
-      method: "DELETE",
-    }),
-  );
+export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+    method: "DELETE",
+  });
 }
 
 export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {

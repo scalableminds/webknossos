@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
@@ -139,18 +138,19 @@ class ZarrStreamingController @Inject()(
         dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
+        zarrSource = UsableDataSource(dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
   }
 
-  private def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): ZarrLayer = {
+  private def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): StaticLayer = {
     val dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
     layer match {
       case s: SegmentationLayer =>
         val rank = s.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
-        ZarrSegmentationLayer(
+        StaticSegmentationLayer(
           s.name,
+          dataFormat,
           s.boundingBox,
           s.elementClass,
           mags = s.sortedMags.map(
@@ -163,18 +163,16 @@ class ZarrStreamingController @Inject()(
                          None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
-          numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = s.defaultViewConfiguration,
           adminViewConfiguration = s.adminViewConfiguration,
           coordinateTransformations = s.coordinateTransformations,
-          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes),
-          dataFormat = dataFormat
+          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes)
         )
       case d: DataLayer =>
         val rank = d.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
-        ZarrDataLayer(
+        StaticColorLayer(
           d.name,
-          d.category,
+          dataFormat,
           d.boundingBox,
           d.elementClass,
           mags = d.sortedMags.map(
@@ -185,12 +183,10 @@ class ZarrStreamingController @Inject()(
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,
                          None)),
-          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,
           coordinateTransformations = d.coordinateTransformations,
-          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes),
-          dataFormat = dataFormat
+          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes)
         )
     }
   }
@@ -213,7 +209,7 @@ class ZarrStreamingController @Inject()(
                                                                annotationSource.tracingStoreUrl,
                                                                zarrVersion)(relevantTokenContext))
         allLayer = dataSourceLayers ++ annotationLayers
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
+        zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
 

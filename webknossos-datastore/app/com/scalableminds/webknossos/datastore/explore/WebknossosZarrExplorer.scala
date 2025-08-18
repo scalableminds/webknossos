@@ -3,19 +3,13 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  StaticColorLayer,
   StaticLayer,
-  DataSource,
+  StaticSegmentationLayer,
   UsableDataSource
 }
 
@@ -29,25 +23,19 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-      dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
+      dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
-        case l: Zarr3SegmentationLayer =>
+        case l: StaticSegmentationLayer =>
           for {
             mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
-        case l: Zarr3DataLayer =>
+        case l: StaticColorLayer =>
           for {
             mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
-        case l: ZarrSegmentationLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(mags = mags)
-        case l: ZarrDataLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(mags = mags)
-        case layer => Fox.failure(s"Only remote Zarr2 or Zarr3 layers are supported, got ${layer.getClass}.")
+        case layer =>
+          Fox.failure(
+            s"Encountered unsupported layer class ${layer.getClass} when exploring remote webknossos dataset.")
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale

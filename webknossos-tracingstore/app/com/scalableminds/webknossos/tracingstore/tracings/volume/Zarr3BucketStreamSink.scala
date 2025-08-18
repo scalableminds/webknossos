@@ -4,7 +4,6 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
@@ -16,8 +15,9 @@ import com.scalableminds.webknossos.datastore.datareaders.{
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
-  DataLayer,
+  DataFormat,
   DataSourceId,
+  StaticSegmentationLayer,
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
@@ -68,7 +68,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       ))
   }
 
-  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource[DataLayer] = {
+  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {
     val magLocators = layer.tracing.mags.map { mag =>
       MagLocator(mag = vec3IntToProto(mag),
                  axisOrder = Some(AxisOrder.cAdditionalxyz(rank)),
@@ -77,8 +77,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     UsableDataSource(
       id = DataSourceId("", ""),
       dataLayers = List(
-        Zarr3SegmentationLayer(
+        StaticSegmentationLayer(
           defaultLayerName,
+          DataFormat.zarr3,
           layer.boundingBox,
           layer.elementClass,
           magLocators.toList,

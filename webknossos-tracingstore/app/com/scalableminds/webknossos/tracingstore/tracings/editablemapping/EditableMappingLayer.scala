@@ -6,14 +6,13 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   CoordinateTransformation,
-  DataFormat,
   DataLayer,
   DataSourceId,
   DataLayerAttachments,
@@ -82,9 +81,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
                                 annotationService: TSAnnotationService,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
-  override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
-
-  override def dataFormat: DataFormat.Value = DataFormat.wkw
 
   override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
 

@@ -7,12 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayer,
-  StaticLayer,
-  DataSourceId,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
@@ -32,7 +27,7 @@ object ExploreRemoteDatasetRequest {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]
 }
 
-case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource[DataLayer]], report: String)
+case class ExploreRemoteDatasetResponse(dataSource: Option[UsableDataSource], report: String)
 
 object ExploreRemoteDatasetResponse {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetResponse] = Json.format[ExploreRemoteDatasetResponse]
@@ -58,7 +53,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
   def exploreRemoteDatasource(parameters: List[ExploreRemoteLayerParameters], reportMutable: ListBuffer[String])(
       implicit ec: ExecutionContext,
       tc: TokenContext,
-      mp: MessagesProvider): Fox[UsableDataSource[DataLayer]] =
+      mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       exploredLayersNested <- Fox.serialCombined(parameters)(
         parameters =>
@@ -71,7 +66,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- Fox.fromBool(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
-      dataSource = GenericDataSource[DataLayer](
+      dataSource = UsableDataSource(
         DataSourceId("", ""), // Frontend will prompt user for a good name
         layers,
         voxelSize

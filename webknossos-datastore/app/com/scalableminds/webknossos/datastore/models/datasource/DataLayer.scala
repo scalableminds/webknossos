@@ -20,9 +20,12 @@ trait DataLayer {
   def boundingBox: BoundingBox
   def resolutions: List[Vec3Int]
   def elementClass: ElementClass.Value
-  def bytesPerElement: Int
 
-  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+
+  def bucketProviderCacheKey: String
 
   // This is the default from the DataSource JSON.
   def defaultViewConfiguration: Option[LayerViewConfiguration]
@@ -52,11 +55,10 @@ trait DataLayer {
   def doesContainBucket(bucket: BucketPosition): Boolean =
     boundingBox.intersects(bucket.toMag1BoundingBox)
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+  lazy val bytesPerElement: Int =
+    ElementClass.bytesPerElement(elementClass)
 
-  def bucketProviderCacheKey: String
+  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
 }
 
 object DataLayer {
@@ -75,9 +77,6 @@ trait StaticLayer extends DataLayer {
 
   def bucketProviderCacheKey: String = this.name
 
-  lazy val bytesPerElement: Int =
-    ElementClass.bytesPerElement(elementClass)
-
   def mags: List[MagLocator]
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
@@ -91,6 +90,31 @@ trait StaticLayer extends DataLayer {
         l.copy(attachments = l.attachments.map(_.merge(attachments)).orElse(Some(attachments)))
       case l: StaticColorLayer =>
         l.copy(attachments = l.attachments.map(_.merge(attachments)).orElse(Some(attachments)))
+    }
+
+  def mapped(
+      boundingBoxMapping: BoundingBox => BoundingBox = b => b,
+      defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+      magMapping: MagLocator => MagLocator = m => m,
+      name: String = this.name,
+      coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
+    this match {
+      case l: StaticColorLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: StaticSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
     }
 }
 
@@ -112,6 +136,7 @@ object StaticLayer {
         case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category
+        // TODO numChannels?
       )
   }
 

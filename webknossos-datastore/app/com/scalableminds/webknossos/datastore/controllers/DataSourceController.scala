@@ -18,8 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters
 }
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, InboxDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
@@ -361,8 +360,8 @@ class DataSourceController @Inject()(
     }
   }
 
-  def update(datasetId: ObjectId): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
+  def update(datasetId: ObjectId): Action[UsableDataSource] =
+    Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
@@ -660,7 +659,7 @@ class DataSourceController @Inject()(
         val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
           new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)
         for {
-          dataSourceBox: Box[UsableDataSource[DataLayer]] <- exploreRemoteLayerService
+          dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
             .futureBox
           // Remove report of recursive exploration in case of exploring the local file system to avoid information exposure.
@@ -703,7 +702,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =
+  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
     for {
       inboxDataSourceInDB <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
       dataSourceId = inboxDataSourceInDB.id

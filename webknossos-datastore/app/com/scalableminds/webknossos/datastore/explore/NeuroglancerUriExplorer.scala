@@ -85,7 +85,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)
-      layersWithViewConfigs = layers.map(l => l.copy(defaultViewConfiguration = Some(configuration)))
+      layersWithViewConfigs = layers.map(l => l.mapped(defaultViewConfigurationMapping = _ => Some(configuration)))
     } yield layersWithViewConfigs.zip(value.map(_._2))
 
 }

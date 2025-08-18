@@ -10,8 +10,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, UsableDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -458,7 +457,8 @@ class LegacyController @Inject()(
             case Some(datasetId) =>
               // Dataset is present in DB
               for {
-                dataSourceOpt: Option[DataSource] <- Fox.fromFuture(datasetCache.getById(datasetId).toFutureOption)
+                dataSourceOpt: Option[UsableDataSource] <- Fox.fromFuture(
+                  datasetCache.getById(datasetId).toFutureOption)
                 // The dataset may be unusable (in which case dataSourceOpt will be None)
                 r <- dataSourceOpt match {
                   case Some(_) =>

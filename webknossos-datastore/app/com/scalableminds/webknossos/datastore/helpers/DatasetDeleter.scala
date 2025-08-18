@@ -1,12 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  StaticLayer,
-  DataSource,
-  DataSourceId,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -136,7 +131,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
         .resolve(dataSourceId.directoryName)
         .resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       if (Files.exists(propertiesPath)) {
-        JsonHelper.parseFromFileAs[DataSource](propertiesPath, dataBaseDir) match {
+        JsonHelper.parseFromFileAs[UsableDataSource](propertiesPath, dataBaseDir) match {
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
               case dl: StaticLayer =>

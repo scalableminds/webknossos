@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -76,17 +76,17 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 }
 
 case class VolumeTracingLayer(
-                               name: String,
-                               annotationId: ObjectId,
-                               volumeTracingService: VolumeTracingService,
-                               temporaryTracingService: TemporaryTracingService,
-                               isTemporaryTracing: Boolean = false,
-                               includeFallbackDataIfAvailable: Boolean = false,
-                               tracing: VolumeTracing,
-                               tokenContext: TokenContext,
-                               additionalAxes: Option[Seq[AdditionalAxis]],
-                               attachments: Option[DataLayerAttachments] = None,
-                               volumeDataStore: FossilDBClient,
+    name: String,
+    annotationId: ObjectId,
+    volumeTracingService: VolumeTracingService,
+    temporaryTracingService: TemporaryTracingService,
+    isTemporaryTracing: Boolean = false,
+    includeFallbackDataIfAvailable: Boolean = false,
+    tracing: VolumeTracing,
+    tokenContext: TokenContext,
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    attachments: Option[DataLayerAttachments] = None,
+    volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits
@@ -99,7 +99,6 @@ case class VolumeTracingLayer(
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
-  override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
   private lazy val volumeMags: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
 

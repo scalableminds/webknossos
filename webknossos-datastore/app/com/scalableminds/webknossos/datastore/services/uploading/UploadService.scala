@@ -6,7 +6,6 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
-import com.scalableminds.webknossos.datastore.dataformats.layers._
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
@@ -425,13 +424,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           .map(layerDir =>
             for {
               _ <- addLayerAndMagDirIfMissing(layerDir).toFox
-              explored: DataSourceWithMagLocators <- exploreLocalLayerService
-                .exploreLocal(path, dataSourceId, layerDir.getFileName.toString)
+              explored: UsableDataSource <- exploreLocalLayerService.exploreLocal(path,
+                                                                                  dataSourceId,
+                                                                                  layerDir.getFileName.toString)
             } yield explored)
           .toList)
       combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
       firstExploredDatasource <- dataSources.headOption.toFox
-      dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, firstExploredDatasource.scale)
+      dataSource = UsableDataSource(dataSourceId, combinedLayers, firstExploredDatasource.scale)
       path <- Fox.runIf(combinedLayers.nonEmpty)(
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
@@ -508,25 +508,17 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield ()
     }
 
-  private def layerFromIdentifier(layerIdentifier: LegacyLinkedLayerIdentifier): Fox[DataLayer] = {
+  private def layerFromIdentifier(layerIdentifier: LegacyLinkedLayerIdentifier): Fox[StaticLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
     val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
     for {
       usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
-      layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
+      layer: StaticLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
       newName = layerIdentifier.newLayerName.getOrElse(layerIdentifier.layerName)
-      layerRenamed: DataLayer <- layer match {
-        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
-        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
-        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
-        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
-        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
-        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
-        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
-        case _                               => Fox.failure("Unknown layer type for link")
+      layerRenamed: StaticLayer <- layer match {
+        case l: StaticColorLayer        => Fox.successful(l.copy(name = newName))
+        case l: StaticSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case _                          => Fox.failure("Unknown layer type for link")
       }
     } yield layerRenamed
   }

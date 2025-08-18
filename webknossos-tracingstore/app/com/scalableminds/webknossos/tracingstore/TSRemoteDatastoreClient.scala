@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryImplicits,
   SegmentIndexData
 }
+import com.scalableminds.webknossos.datastore.models.datasource.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer
@@ -147,7 +147,7 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
       dataStoreUri <- dataStoreUriWithCache(datasetId)
-      result <- rpc(s"$dataStoreUri/data/datasets/${datasetId}/readInboxDataSource").withTokenFromContext
+      result <- rpc(s"$dataStoreUri/data/datasets/$datasetId/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
@@ -158,6 +158,6 @@ class TSRemoteDatastoreClient @Inject()(
     } yield s"$datastoreUri/data/datasets/${remoteLayer.datasetId}/layers/${remoteLayer.layerName}"
 
   private def dataStoreUriWithCache(datasetId: ObjectId): Fox[String] =
-    dataStoreUriCache.getOrLoad(datasetId, keyTuple => remoteWebknossosClient.getDataStoreUriForDataset(datasetId))
+    dataStoreUriCache.getOrLoad(datasetId, _ => remoteWebknossosClient.getDataStoreUriForDataset(datasetId))
 
 }

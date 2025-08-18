@@ -647,7 +647,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     );
     return;
   }
-  const agglomerateId = preparation.mapSegmentId(partitions[1][0]);
+  const agglomerateId = partitions.agglomerateId;
   const volumeTracingId = preparation.volumeTracing.tracingId;
   const { agglomerateFileMag: mag, activeMapping } = preparation;
   const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
@@ -700,6 +700,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   yield* put(resetMultiCutToolPartitionsAction());
 
   console.log("start updating the mapping after a min-cut");
+  const additionalUnmappedSegmentsToReRequest = [...partitions[1], ...partitions[2]];
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -707,6 +708,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     activeMapping,
     agglomerateId,
     volumeTracingId,
+    additionalUnmappedSegmentsToReRequest,
   );
 
   console.log("dispatch setMappingAction in proofreading saga");
@@ -1461,8 +1463,13 @@ function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   volumeTracingId: string,
+  additionalSegmentsToRequest: number[] = [],
 ) {
-  const splitSegmentIds = getSegmentIdsThatMapToAgglomerate(activeMapping, sourceAgglomerateId);
+  const segmentIdsFromLocalMapping = getSegmentIdsThatMapToAgglomerate(
+    activeMapping,
+    sourceAgglomerateId,
+  );
+  const splitSegmentIds = _.union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping

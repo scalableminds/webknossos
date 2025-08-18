@@ -6,7 +6,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayer,
   DataSourceId,
   InboxDataSource,
   StaticLayer,
@@ -348,7 +347,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(Instant.zero)
     }
 
-  def allLayersFor(dataset: Dataset): Fox[List[DataLayer]] =
+  def allLayersFor(dataset: Dataset): Fox[List[StaticLayer]] =
     for {
       dataSource <- dataSourceFor(dataset)
       datasetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())

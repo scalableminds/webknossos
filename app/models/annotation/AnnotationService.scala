@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.annotation._
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   ElementClass,
-  DataSourceLike => DataSource,
-  SegmentationLayerLike => SegmentationLayer
+  StaticSegmentationLayer,
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
@@ -119,11 +119,11 @@ class AnnotationService @Inject()(
     }).flatten
 
   private def createVolumeTracing(
-      dataSource: DataSource,
+      dataSource: UsableDataSource,
       datasetOrganizationId: String,
       datasetId: ObjectId,
       datasetDataStore: DataStore,
-      fallbackLayer: Option[SegmentationLayer],
+      fallbackLayer: Option[StaticSegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
       startRotation: Option[Vec3Double] = None,
@@ -175,19 +175,19 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
-    def getAutoFallbackLayerName(dataSource: DataSource): Option[String] =
+    def getAutoFallbackLayerName(dataSource: UsableDataSource): Option[String] =
       dataSource.dataLayers.find {
-        case _: SegmentationLayer => true
-        case _                    => false
+        case _: StaticSegmentationLayer => true
+        case _                          => false
       }.map(_.name)
 
-    def getFallbackLayer(dataSource: DataSource, fallbackLayerName: String): Fox[SegmentationLayer] =
+    def getFallbackLayer(dataSource: UsableDataSource, fallbackLayerName: String): Fox[StaticSegmentationLayer] =
       for {
         fallbackLayer <- dataSource.dataLayers
           .filter(dl => dl.name == fallbackLayerName)
           .flatMap {
-            case layer: SegmentationLayer => Some(layer)
-            case _                        => None
+            case layer: StaticSegmentationLayer => Some(layer)
+            case _                              => None
           }
           .headOption
           .toFox
@@ -427,8 +427,8 @@ class AnnotationService @Inject()(
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
-          case layer: SegmentationLayer => Some(layer)
-          case _                        => None
+          case layer: StaticSegmentationLayer => Some(layer)
+          case _                              => None
         }.headOption
       } else None
       _ <- Fox.fromBool(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"

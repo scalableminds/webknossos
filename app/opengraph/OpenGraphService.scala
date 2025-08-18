@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, DataLayerLike}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, StaticLayer}
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
@@ -175,7 +175,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
     }
 
   private def thumbnailUri(dataset: Dataset,
-                           layerOpt: Option[DataLayerLike],
+                           layerOpt: Option[StaticLayer],
                            organization: Organization,
                            token: Option[String]): Option[String] =
     layerOpt.map { layer =>

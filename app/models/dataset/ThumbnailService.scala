@@ -7,7 +7,7 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
 import com.scalableminds.util.tools.Full
@@ -95,9 +95,9 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     } yield image
 
   private def selectParameters(viewConfiguration: DatasetViewConfiguration,
-                               usableDataSource: UsableDataSource[DataLayerLike],
+                               usableDataSource: UsableDataSource,
                                layerName: String,
-                               layer: DataLayerLike,
+                               layer: StaticLayer,
                                targetMagWidth: Int,
                                targetMagHeigt: Int,
                                mappingName: Option[String])
@@ -152,7 +152,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
       mappingName <- mapping("name").validate[String].asOpt
     } yield mappingName
 
-  private def magForZoom(dataLayer: DataLayerLike, zoom: Double): Vec3Int =
+  private def magForZoom(dataLayer: StaticLayer, zoom: Double): Vec3Int =
     dataLayer.resolutions.minBy(r => Math.abs(r.maxDim - zoom))
 
 }

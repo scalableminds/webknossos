@@ -9,14 +9,15 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayer,
-  DataLayerLike,
   DataLayerAttachments,
   ElementClass,
-  UsableDataSource,
   LayerAttachment,
   LayerAttachmentDataformat,
-  LayerAttachmentType
+  LayerAttachmentType,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
 }
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -31,20 +32,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
-import com.scalableminds.webknossos.datastore.models.datasource.DataSource
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -80,12 +68,12 @@ object LinkedLayerIdentifier {
 }
 
 case class ReserveManualUploadRequest(
-                                       datasetName: String,
-                                       layersToLink: Seq[LinkedLayerIdentifier],
-                                       dataSource: UsableDataSource[DataLayerLike],
-                                       folderId: Option[ObjectId],
-                                       initialTeamIds: Seq[String] = Seq.empty, // TODO use
-                                       requireUniqueName: Boolean = false // TODO use
+    datasetName: String,
+    layersToLink: Seq[LinkedLayerIdentifier],
+    dataSource: UsableDataSource,
+    folderId: Option[ObjectId],
+    initialTeamIds: Seq[String] = Seq.empty, // TODO use
+    requireUniqueName: Boolean = false // TODO use
 )
 
 object ReserveManualUploadRequest {
@@ -116,7 +104,7 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String], dataStoreName: String)
+case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[String], dataStoreName: String)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -648,36 +636,26 @@ class DatasetController @Inject()(userService: UserService,
       Full(fromConfig)
   } yield result
 
-  private def addPathsToDatasource(dataSource: UsableDataSource[DataLayerLike],
+  private def addPathsToDatasource(dataSource: UsableDataSource,
                                    organizationId: String,
-                                   datasetId: ObjectId): Fox[UsableDataSource[DataLayerLike]] =
+                                   datasetId: ObjectId): Fox[UsableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox
       datasetPath = manualUploadPrefix.resolve(organizationId).resolve(datasetId.toString)
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
 
-  private def addPathsToLayer(dataLayer: DataLayerLike, dataSourcePath: URI): Fox[DataLayerLike] =
+  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: URI): Fox[StaticLayer] =
     for {
       layerPath <- tryo(dataSourcePath.resolve(dataLayer.name)).toFox
       mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
       magsWithPaths = mags.map(mag => addPathToMag(mag, layerPath))
       attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments, layerPath)
       layerUpdated <- dataLayer match {
-        case l: N5DataLayer          => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: N5SegmentationLayer  => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: PrecomputedDataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: PrecomputedSegmentationLayer =>
+        case l: StaticColorLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
+        case l: StaticSegmentationLayer =>
           Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: Zarr3DataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: Zarr3SegmentationLayer =>
-          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: ZarrDataLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: ZarrSegmentationLayer =>
-          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: WKWDataLayer         => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: WKWSegmentationLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case _                       => Fox.failure("Unknown layer type in reserveManualUpload")
+        case _ => Fox.failure("Unknown layer type in reserveManualUpload")
       }
     } yield layerUpdated
 
@@ -714,34 +692,25 @@ class DatasetController @Inject()(userService: UserService,
     attachment.copy(path = path)
   }
 
-  private def addLayersToLink(dataSource: UsableDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext): Fox[UsableDataSource[DataLayerLike]] =
+  private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
     } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
 
-  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(
-      implicit ctx: DBAccessContext): Fox[DataLayerLike] =
+  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.notFound"
       usable <- dataSource.toUsable.toFox ?~> "dataSource.notUsable"
-      layer: DataLayerLike <- usable.dataLayers
+      layer: StaticLayer <- usable.dataLayers
         .find(_.name == layerToLink.layerName)
         .toFox ?~> "dataset.layerToLink.layerNotFound"
       newName = layerToLink.newLayerName.getOrElse(layer.name)
-      layerRenamed: DataLayer <- layer match {
-        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
-        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
-        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
-        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
-        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
-        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
-        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
-        case _                               => Fox.failure("Unknown layer type for link")
+      layerRenamed: StaticLayer <- layer match {
+        case l: StaticColorLayer        => Fox.successful(l.copy(name = newName))
+        case l: StaticSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case _                          => Fox.failure("Unknown layer type for link")
       }
     } yield layerRenamed
 

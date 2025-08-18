@@ -28,7 +28,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 
 import scala.concurrent.ExecutionContext
 
@@ -67,7 +67,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParametersList: List[TaskParameters],
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
       params =>
@@ -82,7 +82,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParameters: TaskParameters,
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
@@ -164,7 +164,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
       magRestrictions: MagRestrictions,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
@@ -475,7 +475,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       requestedTaskBox: Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
       tracingStoreClient: WKRemoteTracingStoreClient,
       taskType: TaskType,
-      dataSource: DataSourceLike): Fox[Unit] =
+      dataSource: UsableDataSource): Fox[Unit] =
     requestedTaskBox.map { tuple =>
       (tuple._1, tuple._3)
     } match {

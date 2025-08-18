@@ -168,7 +168,7 @@ class AnnotationIOController @Inject()(
                                        volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
-                                       dataSource: DataSourceLike,
+                                       dataSource: UsableDataSource,
                                        datasetId: ObjectId): Fox[List[AnnotationLayer]] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List())
@@ -305,7 +305,7 @@ class AnnotationIOController @Inject()(
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
                                                  dataset: Dataset,
-                                                 dataSource: DataSourceLike): Fox[List[List[UploadedVolumeLayer]]] =
+                                                 dataSource: UsableDataSource): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
@@ -324,16 +324,14 @@ class AnnotationIOController @Inject()(
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](
-                                                                  volumeTracing: VolumeTracing,
-                                                                  dataSource: UsableDataSource[T],
-                                                                  dataset: Dataset,
-                                                                  organizationId: String,
-                                                                  remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
+  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing,
+                                             dataSource: UsableDataSource,
+                                             dataset: Dataset,
+                                             organizationId: String,
+                                             remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
-      case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
-      case _                                                                                   => None
+      case layer: StaticSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+      case _                                                                                 => None
     }.headOption
     val bbox =
       if (volumeTracing.boundingBox.isEmpty)

@@ -640,11 +640,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updateDataSourceByDatasetId(id: ObjectId,
                                   dataStoreName: String,
                                   inboxSourceHash: Int,
-                                  source: InboxDataSource,
+                                  newDataSource: InboxDataSource,
                                   isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(source.id.organizationId)
-      defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
+      organization <- organizationDAO.findOne(newDataSource.id.organizationId)
+      defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
       _ <- run(q"""UPDATE webknossos.datasets
                    SET
                      _dataStore = $dataStoreName,
@@ -652,11 +652,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash = $inboxSourceHash,
                      defaultViewConfiguration = $defaultViewConfiguration,
                      isUsable = $isUsable,
-                     voxelSizeFactor = ${source.voxelSizeOpt.map(_.factor)},
-                     voxelSizeUnit = ${source.voxelSizeOpt.map(_.unit)},
-                     status = ${source.statusOpt.getOrElse("").take(1024)}
+                     voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
+                     voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
+                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}
                    WHERE _id = $id""".asUpdate)
-      _ <- datasetLayerDAO.updateLayers(id, source)
+      _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()
 
   def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(

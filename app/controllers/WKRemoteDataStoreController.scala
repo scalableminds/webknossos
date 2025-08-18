@@ -7,8 +7,7 @@ import com.scalableminds.util.tools.{Fox, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, InboxDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LegacyLinkedLayerIdentifier,
@@ -335,20 +334,22 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
+  def updateDataSource(name: String,
+                       key: String,
+                       datasetId: ObjectId,
+                       allowNewPaths: Boolean): Action[UsableDataSource] =
+    Action.async(validateJson[UsableDataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          abstractDataSource = request.body.copy(dataLayers = request.body.dataLayers.map(AbstractDataLayer.from))
           oldDataSource <- datasetService.fullDataSourceFor(dataset)
           oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
           newPaths = request.body.allExplicitPaths
           _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
           _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
                                                       name,
-                                                      abstractDataSource.hashCode(),
-                                                      abstractDataSource,
+                                                      request.body.hashCode(),
+                                                      request.body,
                                                       isUsable = true)(GlobalAccessContext)
         } yield Ok
       }

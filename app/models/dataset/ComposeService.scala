@@ -38,7 +38,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     extends FoxImplicits {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(
-      implicit ctx: DBAccessContext): Fox[(DataSource, ObjectId)] =
+      implicit ctx: DBAccessContext): Fox[(UsableDataSource, ObjectId)] =
     for {
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
@@ -52,7 +52,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     } yield (dataSource, dataset._id)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
-      implicit ctx: DBAccessContext): Fox[DataLayer] =
+      implicit ctx: DBAccessContext): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
       dataSource <- datasetService.fullDataSourceFor(dataset)
@@ -63,7 +63,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      editedLayer: DataLayer <- layer match {
+      editedLayer: StaticLayer <- layer match {
         case l: StaticLayer =>
           Fox.successful(
             l.mapped(name = composeLayer.newName,
@@ -86,10 +86,10 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     }
 
   private def createDatasource(composeRequest: ComposeRequest, datasetDirectoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[DataSource] =
+      implicit ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_))
-      dataSource = GenericDataSource(
+      dataSource = UsableDataSource(
         DataSourceId(datasetDirectoryName, organizationId),
         layers,
         composeRequest.voxelSize,

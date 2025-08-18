@@ -12,23 +12,23 @@ import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
   AdditionalAxis,
-  Category,
   CoordinateTransformation,
   CoordinateTransformationType,
   DataFormat,
+  DataLayer,
   DataSourceId,
   ElementClass,
+  InboxDataSource,
   LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType,
-  ThinPlateSplineCorrespondences,
-  DataLayerLike => DataLayer,
-  DatasetLayerAttachments => AttachmentWrapper
+  LayerCategory,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer,
+  ThinPlateSplineCorrespondences
 }
 import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
@@ -45,6 +45,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments => AttachmentWrapper}
 
 import java.net.URI
 import scala.concurrent.ExecutionContext
@@ -770,12 +771,21 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
     } yield mag
 
-  def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
+  def findMagsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
     for {
       rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
         .map(_.toList)
       mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
     } yield mags
+
+  def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
+    for {
+      rows <- run(
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
+       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName"""
+          .as[DatasetMagsRow])
+      magLocators <- Fox.combined(rows.map(parseMagLocator))
+    } yield magLocators
 
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
@@ -895,14 +905,14 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
                                 datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[DataLayer] = {
-    val result: Fox[Fox[DataLayer]] = for {
-      category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
+  private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[StaticLayer] = {
+    val result: Fox[Fox[StaticLayer]] = for {
+      category <- LayerCategory.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse bounding box"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
+      magLocators <- datasetMagsDAO.findMagLocatorsForLayer(datasetId, row.name) ?~> "Could not find magLocators for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -914,43 +924,38 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
       attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       attachmentsOpt = if (attachments.isEmpty) None else Some(attachments)
-
-      dataFormat = row.dataformat.flatMap(df => DataFormat.fromString(df))
+      dataFormat <- row.dataformat.flatMap(df => DataFormat.fromString(df)).toFox
     } yield {
       category match {
-        case Category.segmentation =>
+        case LayerCategory.segmentation =>
           val mappingsAsSet = row.mappings.map(parseArrayLiteral(_).toSet)
           Fox.successful(
-            AbstractSegmentationLayer(
-              row.name,
-              category,
-              boundingBox,
-              mags.sortBy(_.maxDim),
-              elementClass,
-              row.largestsegmentid,
-              mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
-              defaultViewConfigurationOpt,
-              adminViewConfigurationOpt,
-              coordinateTransformationsOpt,
-              additionalAxesOpt,
-              numChannels = row.numchannels,
+            StaticSegmentationLayer(
+              name = row.name,
               dataFormat = dataFormat,
-              attachments = attachmentsOpt
+              boundingBox = boundingBox,
+              elementClass = elementClass,
+              mags = magLocators.sortBy(_.mag.maxDim),
+              defaultViewConfiguration = defaultViewConfigurationOpt,
+              adminViewConfiguration = adminViewConfigurationOpt,
+              coordinateTransformations = coordinateTransformationsOpt,
+              additionalAxes = additionalAxesOpt,
+              attachments = attachmentsOpt,
+              largestSegmentId = row.largestsegmentid,
+              mappings = mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m))
             ))
-        case Category.color =>
+        case LayerCategory.color =>
           Fox.successful(
-            AbstractDataLayer(
-              row.name,
-              category,
-              boundingBox,
-              mags.sortBy(_.maxDim),
-              elementClass,
-              defaultViewConfigurationOpt,
-              adminViewConfigurationOpt,
-              coordinateTransformationsOpt,
-              additionalAxesOpt,
-              numChannels = row.numchannels,
+            StaticColorLayer(
+              name = row.name,
               dataFormat = dataFormat,
+              boundingBox = boundingBox,
+              elementClass = elementClass,
+              mags = magLocators.sortBy(_.mag.maxDim),
+              defaultViewConfiguration = defaultViewConfigurationOpt,
+              adminViewConfiguration = adminViewConfigurationOpt,
+              coordinateTransformations = coordinateTransformationsOpt,
+              additionalAxes = additionalAxesOpt,
               attachments = attachmentsOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
@@ -959,7 +964,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
     result.flatten
   }
 
-  def findAllForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
+  def findAllForDataset(datasetId: ObjectId): Fox[List[StaticLayer]] =
     for {
       rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
                           defaultViewConfiguration, adminViewConfiguration, numChannels, dataFormat
@@ -969,9 +974,9 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       rowsParsed <- Fox.combined(rows.toList.map(parseRow(_, datasetId)))
     } yield rowsParsed
 
-  private def insertLayerQuery(datasetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
+  private def insertLayerQuery(datasetId: ObjectId, layer: StaticLayer): SqlAction[Int, NoStream, Effect] =
     layer match {
-      case s: AbstractSegmentationLayer =>
+      case s: StaticSegmentationLayer =>
         val mappings = s.mappings.getOrElse(Set()).toList
         q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${s.name}, ${s.category}, ${s.elementClass},
@@ -990,7 +995,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               adminViewConfiguration = ${s.adminViewConfiguration.map(Json.toJson(_))},
               numChannels = ${s.numChannels},
               dataFormat = ${s.dataFormat} """.asUpdate
-      case d: AbstractDataLayer =>
+      case d: StaticColorLayer =>
         q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${d.name}, ${d.category}, ${d.elementClass},
                     ${d.boundingBox},
@@ -1010,7 +1015,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
     }
 
   def updateLayers(datasetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
-    def getSpecificClearQuery(dataLayers: List[DataLayer]) =
+    def getSpecificClearQuery(dataLayers: List[StaticLayer]) =
       q"""DELETE FROM webknossos.dataset_layers
           WHERE _dataset = $datasetId
           AND name NOT IN ${SqlToken.tupleFromList(dataLayers.map(_.name))}""".asUpdate

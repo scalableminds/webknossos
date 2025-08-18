@@ -4,12 +4,16 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{Zarr3DataLayer, Zarr3Layer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.Category
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
+}
 
 import scala.concurrent.ExecutionContext
 
@@ -18,7 +22,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
   override def name: String = "Zarr v3 Array"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(Zarr3Layer, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)
@@ -35,9 +39,14 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
                               Some(guessedAxisOrder),
                               None,
                               credentialId)
-      layer: Zarr3Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        Zarr3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
-      } else Zarr3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
+      layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+        StaticSegmentationLayer(name,
+                                DataFormat.zarr3,
+                                boundingBox,
+                                elementClass,
+                                List(magLocator),
+                                largestSegmentId = None)
+      } else StaticColorLayer(name, DataFormat.zarr3, boundingBox, elementClass, List(magLocator))
     } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

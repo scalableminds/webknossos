@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
@@ -47,7 +46,7 @@ class DataSourceService @Inject()(
 
   val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
 
-  private val propertiesFileName = Path.of(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+  private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
@@ -216,7 +215,7 @@ class DataSourceService @Inject()(
       .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
-  private def validateDataSource(dataSource: DataSource, organizationDir: Path): Box[Unit] = {
+  private def validateDataSource(dataSource: UsableDataSource, organizationDir: Path): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
     // Check that when mags are sorted by max dimension, all dimensions are sorted.
@@ -273,7 +272,9 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSourceOnDisk(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
+  def updateDataSourceOnDisk(dataSource: UsableDataSource,
+                             expectExisting: Boolean,
+                             preventNewPaths: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {
@@ -287,7 +288,7 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: DataSource): Fox[Unit] = {
+  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: UsableDataSource): Fox[Unit] = {
     val propertiesPath = dataSourcePath.resolve(propertiesFileName)
     if (Files.exists(propertiesPath)) {
       Fox
@@ -346,7 +347,7 @@ class DataSourceService @Inject()(
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {
-      JsonHelper.parseFromFileAs[DataSource](propertiesFile, path) match {
+      JsonHelper.parseFromFileAs[UsableDataSource](propertiesFile, path) match {
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) {
             val dataSourceWithAttachments = dataSource.copy(
@@ -365,11 +366,11 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
+  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: UsableDataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
       dataLayer.withAttachments(
-        DatasetLayerAttachments(
+        DataLayerAttachments(
           MeshFileInfo.scanForMeshFiles(dataLayerPath),
           AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),

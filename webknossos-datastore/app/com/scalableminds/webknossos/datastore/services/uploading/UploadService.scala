@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENA
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
@@ -650,7 +650,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
     for {
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
-      excludeFromPrefix = Category.values.map(_.toString).toList
+      excludeFromPrefix = LayerCategory.values.map(_.toString).toList
       firstFile = shallowFileList.headOption
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {

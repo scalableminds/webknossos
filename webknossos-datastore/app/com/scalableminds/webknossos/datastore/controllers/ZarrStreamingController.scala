@@ -478,7 +478,7 @@ class ZarrStreamingController @Inject()(
           Ok(views.html.datastoreZarrDatasourceDir(
             "Datastore",
             s"$datasetId",
-            List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
+            List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
           ))
       }
     }
@@ -494,9 +494,9 @@ class ZarrStreamingController @Inject()(
           .filter(!annotationLayerNames.contains(_))
         layerNames = annotationLayerNames ++ dataSourceLayerNames
         additionalEntries = if (zarrVersion == 2)
-          List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
         else
-          List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+          List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       } yield
         Ok(
           views.html.datastoreZarrDatasourceDir(

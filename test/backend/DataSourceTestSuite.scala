@@ -8,9 +8,9 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataSourceId,
-  DatasetLayerAttachments,
+  DataLayerAttachments,
   ElementClass,
-  GenericDataSource,
+  UsableDataSource,
   LayerAttachment,
   LayerAttachmentDataformat
 }
@@ -24,7 +24,7 @@ class DataSourceTestSuite extends PlaySpec {
     // The hashCode of a datasource is used by wk to decide if a newly scanned datasource differs from the one in the database.
     // This would break if the hashCode would become non-deterministic, for example if Arrays are used instead of Seq.
     "have deterministic hashCode" in {
-      val dataSource = GenericDataSource(
+      val dataSource = UsableDataSource(
         id = DataSourceId("dummyOrga", "dummyDirectoryName"),
         List(
           Zarr3SegmentationLayer(
@@ -39,14 +39,14 @@ class DataSourceTestSuite extends PlaySpec {
             coordinateTransformations = None,
             numChannels = Some(1),
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
-            attachments = Some(DatasetLayerAttachments(
+            attachments = Some(DataLayerAttachments(
               meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))
           )
         ),
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)
       )
 
-      val dataSourceCopyPastedFromAbove = GenericDataSource(
+      val dataSourceCopyPastedFromAbove = UsableDataSource(
         id = DataSourceId("dummyOrga", "dummyDirectoryName"),
         List(
           Zarr3SegmentationLayer(
@@ -61,7 +61,7 @@ class DataSourceTestSuite extends PlaySpec {
             coordinateTransformations = None,
             numChannels = Some(1),
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
-            attachments = Some(DatasetLayerAttachments(
+            attachments = Some(DataLayerAttachments(
               meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))
           )
         ),

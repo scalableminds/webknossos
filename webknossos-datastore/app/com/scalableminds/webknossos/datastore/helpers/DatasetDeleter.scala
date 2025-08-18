@@ -2,10 +2,10 @@ package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerWithMagLocators,
+  StaticLayer,
   DataSource,
   DataSourceId,
-  GenericDataSource
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
@@ -134,12 +134,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
       val propertiesPath = dataBaseDir
         .resolve(dataSourceId.organizationId)
         .resolve(dataSourceId.directoryName)
-        .resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+        .resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       if (Files.exists(propertiesPath)) {
         JsonHelper.parseFromFileAs[DataSource](propertiesPath, dataBaseDir) match {
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
-              case dl: DataLayerWithMagLocators =>
+              case dl: StaticLayer =>
                 if (dl.mags.forall(_.path.exists(_.startsWith(s"${DataVaultService.schemeFile}://")))) {
                   // Setting path to None means using resolution of layer/mag directories to access data
                   dl.mapped(magMapping = _.copy(path = None))

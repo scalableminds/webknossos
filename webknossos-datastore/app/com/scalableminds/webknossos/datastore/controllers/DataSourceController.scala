@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
@@ -660,7 +660,7 @@ class DataSourceController @Inject()(
         val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
           new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)
         for {
-          dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
+          dataSourceBox: Box[UsableDataSource[DataLayer]] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
             .futureBox
           // Remove report of recursive exploration in case of exploring the local file system to avoid information exposure.

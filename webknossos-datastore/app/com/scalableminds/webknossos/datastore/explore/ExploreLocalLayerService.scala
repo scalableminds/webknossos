@@ -6,11 +6,11 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerWithMagLocators,
+  StaticLayer,
   DataSource,
   DataSourceId,
   DataSourceWithMagLocators,
-  GenericDataSource
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
@@ -122,14 +122,14 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       )(layerPath, dataSourceId, "")
     } yield explored
 
-  private def selectLastDirectory(l: DataLayerWithMagLocators) =
+  private def selectLastDirectory(l: StaticLayer) =
     l.mapped(magMapping = m => m.copy(path = m.path.map(_.split("/").last)))
 
-  private def selectLastTwoDirectories(l: DataLayerWithMagLocators) =
+  private def selectLastTwoDirectories(l: StaticLayer) =
     l.mapped(magMapping = m => m.copy(path = m.path.map(_.split("/").takeRight(2).mkString("/"))))
 
   private def exploreLocalLayer(
-      makeLayersRelative: List[DataLayerWithMagLocators] => List[DataLayerWithMagLocators],
+      makeLayersRelative: List[StaticLayer] => List[StaticLayer],
       explorer: RemoteLayerExplorer)(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
@@ -150,6 +150,6 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
   def writeLocalDatasourceProperties(dataSource: DataSource, path: Path)(implicit ec: ExecutionContext): Fox[Path] =
     tryo {
       val properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
-      Files.write(path.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
+      Files.write(path.resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     }.toFox
 }

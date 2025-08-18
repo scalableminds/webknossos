@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, DataLayerLike}
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
@@ -144,7 +144,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
         case _ => Fox.failure("Could not find dataset")
       }
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
-      layerOpt = layers.find(_.category == Category.color)
+      layerOpt = layers.find(_.category == LayerCategory.color)
       organization <- organizationDAO.findOne(dataset._organization)
     } yield
       OpenGraphTags(
@@ -164,7 +164,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
           dataset: Dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
-          layerOpt = layers.find(_.category == Category.color)
+          layerOpt = layers.find(_.category == LayerCategory.color)
         } yield
           OpenGraphTags(
             Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),

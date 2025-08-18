@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataFormat,
   DataLayer,
   DataSourceId,
-  DatasetLayerAttachments,
+  DataLayerAttachments,
   ElementClass,
   SegmentationLayer
 }
@@ -104,7 +104,7 @@ case class EditableMappingLayer(name: String, // set to tracing id
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
 
-  override def attachments: Option[DatasetLayerAttachments] = None
+  override def attachments: Option[DataLayerAttachments] = None
 
   def version: Long = tracing.version
 

@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json._
@@ -21,7 +21,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   override def name: String = "Neuroglancer URI Explorer"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
@@ -35,7 +35,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def exploreNeuroglancerLayer(layerSpec: JsValue)(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- JsonHelper.as[JsObject](layerSpec).toFox
@@ -51,7 +51,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield layerWithViewConfiguration
 
   private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
@@ -80,12 +80,12 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   }
 
   private def assignViewConfiguration(
-      value: List[(DataLayerWithMagLocators, VoxelSize)],
-      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      value: List[(StaticLayer, VoxelSize)],
+      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)
-      layersWithViewConfigs = layers.map(l => l.mapped(defaultViewConfigurationMapping = _ => Some(configuration)))
+      layersWithViewConfigs = layers.map(l => l.copy(defaultViewConfiguration = Some(configuration)))
     } yield layersWithViewConfigs.zip(value.map(_._2))
 
 }

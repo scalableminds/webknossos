@@ -1,63 +1,56 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
-package object inbox {
+trait InboxDataSource {
 
-  trait GenericInboxDataSource[+T <: DataLayerLike] {
+  def id: DataSourceId
+  def withUpdatedId(newId: DataSourceId): InboxDataSource
 
-    def id: DataSourceId
-    def withUpdatedId(newId: DataSourceId): GenericInboxDataSource[T]
+  def toUsable: Option[UsableDataSource]
 
-    def toUsable: Option[GenericDataSource[T]]
+  def isUsable: Boolean = toUsable.isDefined
 
-    def isUsable: Boolean = toUsable.isDefined
+  def voxelSizeOpt: Option[VoxelSize]
 
-    def voxelSizeOpt: Option[VoxelSize]
+  def statusOpt: Option[String]
 
-    def statusOpt: Option[String]
+  def defaultViewConfiguration: Option[DatasetViewConfiguration]
+}
 
-    def defaultViewConfiguration: Option[DatasetViewConfiguration]
-  }
+object InboxDataSource {
+  implicit def inboxDataSourceFormat: Format[InboxDataSource] =
+    new Format[InboxDataSource] {
+      def reads(json: JsValue): JsResult[InboxDataSource] =
+        UsableDataSource.dataSourceFormat.reads(json).orElse(UnusableDataSource.unusableDataSourceFormat.reads(json))
 
-  object GenericInboxDataSource {
-    implicit def inboxDataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericInboxDataSource[T]] =
-      new Format[GenericInboxDataSource[T]] {
-        def reads(json: JsValue): JsResult[GenericInboxDataSource[T]] =
-          GenericDataSource.dataSourceFormat.reads(json).orElse(UnusableDataSource.unusableDataSourceFormat.reads(json))
+      def writes(ds: InboxDataSource): JsValue =
+        ds match {
+          case ds: UsableDataSource  => UsableDataSource.dataSourceFormat.writes(ds)
+          case ds: UnusableDataSource => UnusableDataSource.unusableDataSourceFormat.writes(ds)
+        }
+    }
+}
 
-        def writes(ds: GenericInboxDataSource[T]): JsValue =
-          ds match {
-            case ds: GenericDataSource[T]  => GenericDataSource.dataSourceFormat.writes(ds)
-            case ds: UnusableDataSource[T] => UnusableDataSource.unusableDataSourceFormat.writes(ds)
-          }
-      }
-  }
+case class UnusableDataSource(id: DataSourceId,
+                              status: String,
+                              scale: Option[VoxelSize] = None,
+                              existingDataSourceProperties: Option[JsValue] = None)
+    extends InboxDataSource {
+  val toUsable: Option[UsableDataSource] = None
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
-                                                     status: String,
-                                                     scale: Option[VoxelSize] = None,
-                                                     existingDataSourceProperties: Option[JsValue] = None)
-      extends GenericInboxDataSource[T] {
-    val toUsable: Option[GenericDataSource[T]] = None
+  val voxelSizeOpt: Option[VoxelSize] = scale
 
-    val voxelSizeOpt: Option[VoxelSize] = scale
+  val statusOpt: Option[String] = Some(status)
 
-    val statusOpt: Option[String] = Some(status)
+  val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
 
-    val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
+  def withUpdatedId(newId: DataSourceId): UnusableDataSource = copy(id = newId)
+}
 
-    def withUpdatedId(newId: DataSourceId): UnusableDataSource[T] = copy(id = newId)
-  }
-
-  object UnusableDataSource {
-    implicit def unusableDataSourceFormat[T <: DataLayerLike]: Format[UnusableDataSource[T]] =
-      Json.format[UnusableDataSource[T]]
-  }
-
-  type InboxDataSource = GenericInboxDataSource[DataLayer]
-  type InboxDataSourceLike = GenericInboxDataSource[DataLayerLike]
-  type UnusableInboxDataSource = UnusableDataSource[DataLayer]
+object UnusableDataSource {
+  implicit def unusableDataSourceFormat: Format[UnusableDataSource] =
+    Json.format[UnusableDataSource]
 }

@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataLayer,
   DataSourceId,
-  GenericDataSource
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
 
@@ -63,18 +63,18 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
     } ++ Seq(
       NamedFunctionStream.fromJsonSerializable(
-        GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+        UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
         createVolumeDataSource(voxelSize)
       ))
   }
 
-  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
+  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource[DataLayer] = {
     val magLocators = layer.tracing.mags.map { mag =>
       MagLocator(mag = vec3IntToProto(mag),
                  axisOrder = Some(AxisOrder.cAdditionalxyz(rank)),
                  path = Some(s"./$defaultLayerName/${mag.toMagLiteral(allowScalar = true)}"))
     }
-    GenericDataSource(
+    UsableDataSource(
       id = DataSourceId("", ""),
       dataLayers = List(
         Zarr3SegmentationLayer(

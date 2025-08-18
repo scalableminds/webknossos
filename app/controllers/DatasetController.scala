@@ -11,9 +11,9 @@ import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataLayerLike,
-  DatasetLayerAttachments,
+  DataLayerAttachments,
   ElementClass,
-  GenericDataSource,
+  UsableDataSource,
   LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType
@@ -80,12 +80,12 @@ object LinkedLayerIdentifier {
 }
 
 case class ReserveManualUploadRequest(
-    datasetName: String,
-    layersToLink: Seq[LinkedLayerIdentifier],
-    dataSource: GenericDataSource[DataLayerLike],
-    folderId: Option[ObjectId],
-    initialTeamIds: Seq[String] = Seq.empty, // TODO use
-    requireUniqueName: Boolean = false // TODO use
+                                       datasetName: String,
+                                       layersToLink: Seq[LinkedLayerIdentifier],
+                                       dataSource: UsableDataSource[DataLayerLike],
+                                       folderId: Option[ObjectId],
+                                       initialTeamIds: Seq[String] = Seq.empty, // TODO use
+                                       requireUniqueName: Boolean = false // TODO use
 )
 
 object ReserveManualUploadRequest {
@@ -648,9 +648,9 @@ class DatasetController @Inject()(userService: UserService,
       Full(fromConfig)
   } yield result
 
-  private def addPathsToDatasource(dataSource: GenericDataSource[DataLayerLike],
+  private def addPathsToDatasource(dataSource: UsableDataSource[DataLayerLike],
                                    organizationId: String,
-                                   datasetId: ObjectId): Fox[GenericDataSource[DataLayerLike]] =
+                                   datasetId: ObjectId): Fox[UsableDataSource[DataLayerLike]] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox
       datasetPath = manualUploadPrefix.resolve(organizationId).resolve(datasetId.toString)
@@ -684,8 +684,8 @@ class DatasetController @Inject()(userService: UserService,
   private def addPathToMag(mag: MagLocator, layerPath: URI): MagLocator =
     mag.copy(path = Some(layerPath.resolve(mag.mag.toMagLiteral()).toString))
 
-  private def addPathsToAttachments(attachmentsOpt: Option[DatasetLayerAttachments],
-                                    layerPath: URI): Fox[Option[DatasetLayerAttachments]] =
+  private def addPathsToAttachments(attachmentsOpt: Option[DataLayerAttachments],
+                                    layerPath: URI): Fox[Option[DataLayerAttachments]] =
     attachmentsOpt match {
       case None => Fox.successful(None)
       case Some(attachments) =>
@@ -714,8 +714,8 @@ class DatasetController @Inject()(userService: UserService,
     attachment.copy(path = path)
   }
 
-  private def addLayersToLink(dataSource: GenericDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext): Fox[GenericDataSource[DataLayerLike]] =
+  private def addLayersToLink(dataSource: UsableDataSource[DataLayerLike], layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ctx: DBAccessContext): Fox[UsableDataSource[DataLayerLike]] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
     } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)

@@ -10,7 +10,7 @@ import play.api.libs.json.{Format, Json}
 import java.net.URI
 import java.nio.file.{Files, Path}
 
-case class DatasetLayerAttachments(
+case class DataLayerAttachments(
     meshes: Seq[LayerAttachment] = Seq.empty,
     agglomerates: Seq[LayerAttachment] = Seq.empty,
     segmentIndex: Option[LayerAttachment] = None,
@@ -19,11 +19,21 @@ case class DatasetLayerAttachments(
 ) {
   def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
   def isEmpty: Boolean = allAttachments.isEmpty
+
+  def merge(other: DataLayerAttachments): DataLayerAttachments =
+    DataLayerAttachments(
+      meshes = if (this.meshes.isEmpty) other.meshes else this.meshes,
+      agglomerates = if (this.agglomerates.isEmpty) other.agglomerates else this.agglomerates,
+      segmentIndex = this.segmentIndex.orElse(other.segmentIndex),
+      connectomes = if (this.connectomes.isEmpty) other.connectomes else this.connectomes,
+      cumsum = this.cumsum.orElse(other.cumsum)
+    )
+
 }
 
-object DatasetLayerAttachments {
-  implicit val jsonFormat: Format[DatasetLayerAttachments] =
-    Json.using[Json.WithDefaultValues].format[DatasetLayerAttachments]
+object DataLayerAttachments {
+  implicit val jsonFormat: Format[DataLayerAttachments] =
+    Json.using[Json.WithDefaultValues].format[DataLayerAttachments]
 }
 
 object LayerAttachmentDataformat extends ExtendedEnumeration {

@@ -325,11 +325,11 @@ class AnnotationIOController @Inject()(
     } yield allAdapted
 
   private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](
-      volumeTracing: VolumeTracing,
-      dataSource: GenericDataSource[T],
-      dataset: Dataset,
-      organizationId: String,
-      remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
+                                                                  volumeTracing: VolumeTracing,
+                                                                  dataSource: UsableDataSource[T],
+                                                                  dataset: Dataset,
+                                                                  organizationId: String,
+                                                                  remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
       case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)

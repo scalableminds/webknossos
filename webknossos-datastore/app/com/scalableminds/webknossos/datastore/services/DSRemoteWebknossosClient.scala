@@ -13,8 +13,11 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike, InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  UsableDataSource,
+  InboxDataSource
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveAdditionalInformation,
@@ -81,7 +84,7 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
-  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
+  def reportDataSource(dataSource: InboxDataSource): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .putJson(dataSource)
@@ -109,7 +112,7 @@ class DSRemoteWebknossosClient @Inject()(
       uploadedDatasetId <- JsonHelper.as[String](uploadedDatasetIdJson \ "id").toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
-  def reportDataSources(dataSources: List[InboxDataSourceLike], organizationId: Option[String]): Fox[_] =
+  def reportDataSources(dataSources: List[InboxDataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("organizationId", organizationId)
@@ -136,7 +139,7 @@ class DSRemoteWebknossosClient @Inject()(
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
-  def updateDataSource(dataSource: DataSource, datasetId: ObjectId, allowNewPaths: Boolean = false)(
+  def updateDataSource(dataSource: UsableDataSource, datasetId: ObjectId, allowNewPaths: Boolean = false)(
       implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryString("key" -> dataStoreKey)

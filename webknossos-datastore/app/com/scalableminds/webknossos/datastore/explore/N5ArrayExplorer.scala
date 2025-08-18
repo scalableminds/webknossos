@@ -4,12 +4,17 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.Category
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  LayerCategory,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
+}
 
 import scala.concurrent.ExecutionContext
 
@@ -18,7 +23,7 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer with
   override def name: String = "N5 Array"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
       name = guessNameFromPath(remotePath)
@@ -34,9 +39,14 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer with
                               Some(guessedAxisOrder),
                               None,
                               credentialId)
-      layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        N5SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
-      } else N5DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
+      layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+        StaticSegmentationLayer(name,
+                                DataFormat.n5,
+                                boundingBox,
+                                elementClass,
+                                List(magLocator),
+                                largestSegmentId = None)
+      } else StaticColorLayer(name, DataFormat.n5, boundingBox, elementClass, List(magLocator))
     } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

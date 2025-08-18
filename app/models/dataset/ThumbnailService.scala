@@ -7,7 +7,7 @@ import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, UsableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
 import com.scalableminds.util.tools.Full
@@ -95,7 +95,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     } yield image
 
   private def selectParameters(viewConfiguration: DatasetViewConfiguration,
-                               usableDataSource: GenericDataSource[DataLayerLike],
+                               usableDataSource: UsableDataSource[DataLayerLike],
                                layerName: String,
                                layer: DataLayerLike,
                                targetMagWidth: Int,

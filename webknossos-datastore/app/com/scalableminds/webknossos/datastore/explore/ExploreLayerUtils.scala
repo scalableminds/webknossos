@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataLayerWithMagLocators
+  StaticLayer
 }
 
 import scala.concurrent.ExecutionContext
@@ -18,9 +18,9 @@ import scala.util.Try
 
 trait ExploreLayerUtils extends FoxImplicits {
 
-  def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
-                              preferredVoxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] =
+  def adaptLayersAndVoxelSize(
+      layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
+      preferredVoxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] =
     for {
       (rescaledLayers, voxelSize) <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
@@ -29,7 +29,7 @@ trait ExploreLayerUtils extends FoxImplicits {
                                                                                  voxelSize)
     } yield (layersWithCoordinateTransformations, voxelSize)
 
-  def makeLayerNamesUnique(layers: List[DataLayerWithMagLocators]): List[DataLayerWithMagLocators] = {
+  def makeLayerNamesUnique(layers: List[StaticLayer]): List[StaticLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
     layers.map { layer =>
       var nameCandidate = layer.name
@@ -46,9 +46,9 @@ trait ExploreLayerUtils extends FoxImplicits {
     }
   }
 
-  private def addCoordinateTransformationsToLayers(layers: List[DataLayerWithMagLocators],
+  private def addCoordinateTransformationsToLayers(layers: List[StaticLayer],
                                                    preferredVoxelSize: Option[VoxelSize],
-                                                   voxelSize: VoxelSize): List[DataLayerWithMagLocators] =
+                                                   voxelSize: VoxelSize): List[StaticLayer] =
     layers.map(l => {
       val generatedCoordinateTransformation = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
       val existingCoordinateTransformations = l.coordinateTransformations
@@ -121,9 +121,9 @@ trait ExploreLayerUtils extends FoxImplicits {
         }
     }
 
-  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
+  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
                                              preferredVoxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] = {
+      implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] = {
     val allVoxelSizes = layersWithVoxelSizes.flatMap {
       case (layer, voxelSize) =>
         layer.resolutions.map(mag => voxelSize * mag.toVec3Double)

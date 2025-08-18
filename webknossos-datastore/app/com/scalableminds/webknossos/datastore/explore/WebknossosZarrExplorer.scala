@@ -14,9 +14,9 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerWithMagLocators,
+  StaticLayer,
   DataSource,
-  GenericDataSource
+  UsableDataSource
 }
 
 import scala.concurrent.ExecutionContext
@@ -26,9 +26,9 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   override def name: String = "WEBKNOSSOS-based Zarr"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+      dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: Zarr3SegmentationLayer =>

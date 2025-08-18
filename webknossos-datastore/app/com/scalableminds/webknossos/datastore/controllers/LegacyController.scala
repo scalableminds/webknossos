@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.{
@@ -440,7 +440,7 @@ class LegacyController @Inject()(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
         organizationId)
       dataSource match {
-        case GenericDataSource(_, _, _, _, _) =>
+        case UsableDataSource(_, _, _, _, _) =>
           for {
             _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))

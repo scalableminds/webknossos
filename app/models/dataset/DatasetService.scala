@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataFormat,
   DataSource,
   DataSourceId,
-  GenericDataSource,
+  UsableDataSource,
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC

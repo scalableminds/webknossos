@@ -64,7 +64,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
           case None    => Some(composeLayer.transformations.toList)
       }
       editedLayer: DataLayer <- layer match {
-        case l: DataLayerWithMagLocators =>
+        case l: StaticLayer =>
           Fox.successful(
             l.mapped(name = composeLayer.newName,
                      coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)))

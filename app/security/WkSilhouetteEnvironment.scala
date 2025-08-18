@@ -6,9 +6,12 @@ import play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
 import play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
 import play.silhouette.impl.util.DefaultFingerprintGenerator
 import models.user.{User, UserService}
+import play.api.libs.json.JsResult
+import play.api.libs.json.JsResult.Exception
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf
 
+import java.lang
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -32,7 +35,14 @@ class WkSilhouetteEnvironment @Inject()(
     None,
     conf.Silhouette.CookieAuthenticator.secureCookie,
     conf.Silhouette.CookieAuthenticator.httpOnlyCookie,
-    Some(Cookie.SameSite.Lax),
+    conf.Silhouette.CookieAuthenticator.sameSite match {
+      case "Strict" => Some(Cookie.SameSite.Strict)
+      case "Lax"    => Some(Cookie.SameSite.Lax)
+      case "None"   => None
+      case _ =>
+        throw new RuntimeException(
+          s"Invalid config setting silhouette.cookieAuthenticator.sameSite. Must be Strict, Lax, or None. Got ${conf.Silhouette.CookieAuthenticator.sameSite}")
+    },
     conf.Silhouette.CookieAuthenticator.useFingerprinting,
     Some(conf.Silhouette.CookieAuthenticator.cookieMaxAge.toMillis millis),
     None,

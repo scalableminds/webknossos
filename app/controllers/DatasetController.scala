@@ -83,7 +83,9 @@ case class ReserveManualUploadRequest(
     datasetName: String,
     layersToLink: Seq[LinkedLayerIdentifier],
     dataSource: GenericDataSource[DataLayerLike],
-    folderId: Option[ObjectId]
+    folderId: Option[ObjectId],
+    initialTeamIds: Seq[String] = Seq.empty, // TODO use
+    requireUniqueName: Boolean = false // TODO use
 )
 
 object ReserveManualUploadRequest {
@@ -602,7 +604,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetService.addUploader(dataset, request.identity._id)(GlobalAccessContext)
         _ <- datasetService.updateDataSources(dataStore, List(dataSourceWithLayersToLink))
         // Store dataSourceWithLayersToLink (keep isUsable=false and status)
-      } yield Ok(Json.obj("id" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
+      } yield Ok(Json.obj("newDatasetId" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
   def finishManualUpload(datasetId: ObjectId): Action[AnyContent] =

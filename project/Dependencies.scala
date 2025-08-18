@@ -55,9 +55,9 @@ object Dependencies {
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
-    "software.amazon.awssdk" % "s3" % "2.31.50",
+    "software.amazon.awssdk" % "s3" % "2.32.24",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.32.24",
+    "com.google.cloud" % "google-cloud-storage" % "2.55.0",
     // Blosc compression. import org.blosc
     "org.lasersonlab" % "jblosc" % "1.0.1",
     // Zstd compression. import org.apache.commons.compress

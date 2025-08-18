@@ -10,7 +10,7 @@ import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, 
 import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int,
-                         cubeLength: Int,
+                         cubeLength: Option[Int] = None,
                          path: Option[String] = None,
                          credentialId: Option[String] = None) {
   def toMagLocator: MagLocator =

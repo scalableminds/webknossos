@@ -102,22 +102,21 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def createVirtualDataset(datasetName: String,
-                           organizationId: String,
                            dataStore: DataStore,
                            dataSource: DataSource,
                            folderId: Option[String],
                            user: User): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, user._organization)(
         GlobalAccessContext)
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
-      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from),
-                                           id = DataSourceId(datasetName, organizationId))
+                                           id = DataSourceId(datasetName, user._organization))
       dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)

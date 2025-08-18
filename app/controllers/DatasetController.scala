@@ -172,7 +172,6 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
         dataset <- datasetService.createVirtualDataset(
           name,
-          user._organization,
           dataStore,
           request.body.dataSource,
           request.body.folderId,

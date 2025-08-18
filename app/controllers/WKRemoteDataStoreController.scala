@@ -308,7 +308,6 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           dataset <- datasetService.createVirtualDataset(
             directoryName,
-            organizationId,
             dataStore,
             request.body.dataSource,
             request.body.folderId,

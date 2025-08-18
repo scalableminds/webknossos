@@ -135,7 +135,8 @@ object StaticLayer {
         case l: StaticColorLayer        => StaticColorLayer.jsonFormat.writes(l)
         case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
-        "category" -> layer.category
+        "category" -> layer.category,
+        "resolutions" -> layer.resolutions // TODO remove again, adapt clients, introduce new api version?
         // TODO numChannels?
       )
   }
@@ -164,7 +165,44 @@ case class StaticColorLayer(name: String,
   def category: LayerCategory.Value = LayerCategory.color
 }
 object StaticColorLayer {
-  implicit val jsonFormat: OFormat[StaticColorLayer] = Json.format[StaticColorLayer]
+  implicit val jsonFormat: Format[StaticColorLayer] = new Format[StaticColorLayer] {
+    def reads(json: JsValue): JsResult[StaticColorLayer] =
+      for {
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WkwResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
+        }
+        dataFormat <- (json \ "dataFormat").validate[DataFormat.Value]
+        name <- (json \ "name").validate[String]
+        boundingBox <- (json \ "boundingBox").validate[BoundingBox]
+        elementClass <- (json \ "elementClass").validate[ElementClass.Value]
+        defaultViewConfiguration <- (json \ "defaultViewConfiguration").validateOpt[LayerViewConfiguration]
+        adminViewConfiguration <- (json \ "adminViewConfiguration").validateOpt[LayerViewConfiguration]
+        coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
+        additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
+        attachments <- (json \ "attachments").validateOpt[DataLayerAttachments]
+      } yield {
+        StaticColorLayer(
+          name,
+          dataFormat,
+          boundingBox,
+          elementClass,
+          mags,
+          defaultViewConfiguration,
+          adminViewConfiguration,
+          coordinateTransformations,
+          additionalAxes,
+          attachments
+        )
+      }
+
+    def writes(layer: StaticColorLayer): JsValue =
+      Json.writes[StaticColorLayer].writes(layer)
+  }
 }
 
 case class StaticSegmentationLayer(name: String,
@@ -183,5 +221,46 @@ case class StaticSegmentationLayer(name: String,
     with SegmentationLayer
 
 object StaticSegmentationLayer {
-  implicit val jsonFormat: OFormat[StaticSegmentationLayer] = Json.format[StaticSegmentationLayer]
+  implicit val jsonFormat: Format[StaticSegmentationLayer] = new Format[StaticSegmentationLayer] {
+    def reads(json: JsValue): JsResult[StaticSegmentationLayer] =
+      for {
+        mags: List[MagLocator] <- (json \ "mags").validate[List[MagLocator]] match {
+          case JsSuccess(value, _) => JsSuccess(value)
+          case JsError(_) =>
+            (json \ "wkwResolutions").validate[List[WkwResolution]] match {
+              case JsSuccess(value, _) => JsSuccess(value.map(_.toMagLocator))
+              case JsError(_)          => JsError("Either 'mags' or 'wkwResolutions' must be provided")
+            }
+        }
+        dataFormat <- (json \ "dataFormat").validate[DataFormat.Value]
+        name <- (json \ "name").validate[String]
+        largestSegmentId <- (json \ "largestSegmentId").validateOpt[Long]
+        mappings <- (json \ "mappings").validateOpt[Set[String]]
+        boundingBox <- (json \ "boundingBox").validate[BoundingBox]
+        elementClass <- (json \ "elementClass").validate[ElementClass.Value]
+        defaultViewConfiguration <- (json \ "defaultViewConfiguration").validateOpt[LayerViewConfiguration]
+        adminViewConfiguration <- (json \ "adminViewConfiguration").validateOpt[LayerViewConfiguration]
+        coordinateTransformations <- (json \ "coordinateTransformations").validateOpt[List[CoordinateTransformation]]
+        additionalAxes <- (json \ "additionalAxes").validateOpt[Seq[AdditionalAxis]]
+        attachments <- (json \ "attachments").validateOpt[DataLayerAttachments]
+      } yield {
+        StaticSegmentationLayer(
+          name,
+          dataFormat,
+          boundingBox,
+          elementClass,
+          mags,
+          defaultViewConfiguration,
+          adminViewConfiguration,
+          coordinateTransformations,
+          additionalAxes,
+          attachments,
+          largestSegmentId,
+          mappings
+        )
+      }
+
+    def writes(layer: StaticSegmentationLayer): JsValue =
+      Json.writes[StaticSegmentationLayer].writes(layer)
+  }
 }

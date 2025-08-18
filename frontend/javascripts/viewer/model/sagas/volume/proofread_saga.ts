@@ -700,7 +700,12 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   yield* put(resetMultiCutToolPartitionsAction());
 
   console.log("start updating the mapping after a min-cut");
-  const additionalUnmappedSegmentsToReRequest = [...partitions[1], ...partitions[2]];
+  const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
+  // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
+  const additionalUnmappedSegmentsToReRequest = _.union(unmappedSegmentsOfPartitions, [
+    edgesToRemove[0].segmentId1,
+    edgesToRemove[0].segmentId2,
+  ]);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -1486,16 +1491,24 @@ function* splitAgglomerateInMapping(
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-      // @ts-ignore get() is expected to accept the type that segmentId has
+      // @ts-ignore get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         return [segmentId, mappedId];
       }
       return [segmentId, agglomerateId];
     }),
-  ) as Mapping;
+  );
+  // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.
+  for (const unmappedId of additionalSegmentsToRequest) {
+    // @ts-ignore get() is expected to accept the type that unmappedId has,
+    const mappedId = mappingAfterSplit.get(unmappedId);
+    if (mappedId) {
+      splitMapping.set(unmappedId, mappedId);
+    }
+  }
 
-  return splitMapping;
+  return splitMapping as Mapping;
 }
 
 function mergeAgglomeratesInMapping(

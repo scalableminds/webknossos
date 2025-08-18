@@ -203,6 +203,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val cookiePath: String = get[String]("silhouette.cookieAuthenticator.cookiePath")
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val sameSite: String = get[String]("silhouette.cookieAuthenticator.sameSite")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
       val authenticatorExpiry: FiniteDuration =
         get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")

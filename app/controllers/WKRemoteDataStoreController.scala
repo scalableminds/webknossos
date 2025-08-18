@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLink
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -237,6 +237,9 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  /**
+    * Called by the datastore after a dataset has been deleted on disk.
+    */
   def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -255,17 +258,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok
       }
   }
-
-  def deleteVirtualDataset(name: String, key: String): Action[ObjectId] =
-    Action.async(validateJson[ObjectId]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(request.body)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
-          _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
-        } yield Ok
-      }
-    }
 
   def findDatasetId(name: String,
                     key: String,
@@ -327,7 +319,6 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           dataset <- datasetService.createVirtualDataset(
             directoryName,
-            organizationId,
             dataStore,
             request.body.dataSource,
             request.body.folderId,

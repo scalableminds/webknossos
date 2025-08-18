@@ -161,7 +161,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   private def pathIsDataSourceLocal(pathLiteral: String): Boolean =
     pathIsLocal(pathLiteral) && {
-      val path = Path.of(pathLiteral)
+      val path = Path.of(new URI(pathLiteral).getPath)
       val workingDir = Path.of(".").toAbsolutePath.normalize
       val inWorkingDir = workingDir.resolve(path).toAbsolutePath.normalize
       !path.isAbsolute && inWorkingDir.startsWith(workingDir)

@@ -6,12 +6,9 @@ import play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
 import play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
 import play.silhouette.impl.util.DefaultFingerprintGenerator
 import models.user.{User, UserService}
-import play.api.libs.json.JsResult
-import play.api.libs.json.JsResult.Exception
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf
 
-import java.lang
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

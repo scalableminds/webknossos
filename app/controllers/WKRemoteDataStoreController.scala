@@ -137,8 +137,19 @@ class WKRemoteDataStoreController @Inject()(
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.getOrganizationId) ~> NOT_FOUND
-      dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
-        AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
+      datasetBox <- datasetDAO
+        .findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+          AuthorizedAccessContext(requestingUser))
+        .shiftBox
+      dataset <- datasetBox match {
+        case Full(ds) => Fox.successful(ds)
+        case _ =>
+          ObjectId
+            .fromString(layerIdentifier.dataSetName)
+            .flatMap(interpretedAsId => datasetDAO.findOne(interpretedAsId)(AuthorizedAccessContext(requestingUser))) ?~> Messages(
+            "dataset.notFound",
+            layerIdentifier.dataSetName)
+      }
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
     } yield layerIdentifier.copy(datasetDirectoryName = Some(dataset.directoryName))

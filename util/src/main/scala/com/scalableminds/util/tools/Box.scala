@@ -38,7 +38,7 @@ object Box extends Tryo {
   implicit class ListOfBoxes[T](val theListOfBoxes: List[Box[T]]) extends AnyVal {
 
     /**
-      * Convert a `List` of `Box`es into a single `Box` containting a `List[T]`,
+      * Convert a `List` of `Box`es into a single `Box` containing a `List[T]`,
       * where `T` is the parameterized type of the `Box`es.
       *
       * This method is useful for those cases where you have a lot of operations

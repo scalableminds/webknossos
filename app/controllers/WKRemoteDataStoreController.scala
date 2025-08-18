@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLink
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LegacyLinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -144,8 +144,19 @@ class WKRemoteDataStoreController @Inject()(
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
         layerIdentifier.getOrganizationId) ~> NOT_FOUND
-      dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
-        AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
+      datasetBox <- datasetDAO
+        .findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+          AuthorizedAccessContext(requestingUser))
+        .shiftBox
+      dataset <- datasetBox match {
+        case Full(ds) => Fox.successful(ds)
+        case _ =>
+          ObjectId
+            .fromString(layerIdentifier.dataSetName)
+            .flatMap(interpretedAsId => datasetDAO.findOne(interpretedAsId)(AuthorizedAccessContext(requestingUser))) ?~> Messages(
+            "dataset.notFound",
+            layerIdentifier.dataSetName)
+      }
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
     } yield layerIdentifier.copy(datasetDirectoryName = Some(dataset.directoryName))
@@ -233,6 +244,9 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  /**
+    * Called by the datastore after a dataset has been deleted on disk.
+    */
   def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -251,17 +265,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok
       }
   }
-
-  def deleteVirtualDataset(name: String, key: String): Action[ObjectId] =
-    Action.async(validateJson[ObjectId]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(request.body)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.delete.notVirtual" ~> FORBIDDEN
-          _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
-        } yield Ok
-      }
-    }
 
   def findDatasetId(name: String,
                     key: String,
@@ -323,7 +326,6 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           dataset <- datasetService.createVirtualDataset(
             directoryName,
-            organizationId,
             dataStore,
             request.body.dataSource,
             request.body.folderId,

@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, OFormat}
 
 case class WKWResolution(resolution: Vec3Int,
-                         cubeLength: Int,
+                         cubeLength: Option[Int] = None,
                          path: Option[String] = None,
                          credentialId: Option[String] = None) {
   def toMagLocator: MagLocator =

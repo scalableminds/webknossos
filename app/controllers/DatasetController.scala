@@ -44,6 +44,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   ZarrSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
+import com.scalableminds.webknossos.datastore.models.datasource.DataSource
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -111,6 +112,12 @@ case class SegmentAnythingMaskParameters(
 
 object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
+}
+
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String], dataStoreName: String)
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
 class DatasetController @Inject()(userService: UserService,
@@ -193,6 +200,27 @@ class DatasetController @Inject()(userService: UserService,
                                                                        request.identity,
                                                                        folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
+    }
+
+  def addVirtualDataset(name: String): Action[DataSourceRegistrationInfo] =
+    sil.SecuredAction.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+      for {
+        dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> Messages(
+          "datastore.notFound",
+          request.body.dataStoreName) ~> NOT_FOUND
+        user = request.identity
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
+        _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
+        dataset <- datasetService.createVirtualDataset(
+          name,
+          dataStore,
+          request.body.dataSource,
+          request.body.folderId,
+          user
+        )
+      } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
   // List all accessible datasets (list of json objects, one per dataset)
@@ -533,6 +561,17 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ~> FORBIDDEN
+        _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
+      } yield Ok
+    }
+
   def compose(): Action[ComposeRequest] =
     sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
       for {
@@ -550,8 +589,6 @@ class DatasetController @Inject()(userService: UserService,
                                                     newDatasetId)
         dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
         dataStore <- findReferencedDataStore(request.body.layersToLink)
-        // TODO requireUniqueName?
-        // TODO give unique directoryName
         dataset <- datasetService.createPreliminaryDataset(
           newDatasetId,
           request.body.datasetName,

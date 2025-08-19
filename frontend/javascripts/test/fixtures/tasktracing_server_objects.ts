@@ -179,6 +179,7 @@ export const annotation: APIAnnotation = {
     {
       id: "teamId-5b1e45f9a00000a000abc2c3",
       name: "Connectomics department",
+      isOrganizationTeam: true,
       organization: "Connectomics department",
     },
   ],

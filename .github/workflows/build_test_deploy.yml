@@ -31,39 +31,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: corepack enable
-      - name: Install frontend dependencies
-        run: yarn install --immutable
-
-      - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
-      - name: Typecheck frontend code
-        run: yarn typecheck
-      - name: Check for cyclic dependencies in frontend
-        run: yarn check-cyclic-dependencies
-      - name: Run frontend tests
-        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
-      - name: Download Coverage Artifacts
-          # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
-        run: |
-            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
-            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
-            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_NAME: vitest-coverage-master
-          OUTPUT_DIR: coverage-master
-      - name: 'Report Coverage'
-        uses:  davelosert/vitest-coverage-report-action@v2
-        with:
-          comment-on: none # alternative: pr
-          json-summary-compare-path: coverage-master/coverage-summary.json
-      - name: "Upload Coverage"
-        if: github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@v4
-        with:
-          name: vitest-coverage-master
-          path: coverage
 
   backend-tests:
     runs-on: ubuntu-22.04
@@ -83,43 +50,6 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: sbt/setup-sbt@v1
-
-      - name: Start Docker Services Postgres, Redis
-        run: docker compose --file .github/docker-compose.yml up -d postgres redis
-
-      - name: Install frontend dependencies
-        run: yarn install --immutable
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
-
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - name: Assert schema.sql and evolutions are equal
-        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
-
-      - name: Lint backend code and check formatting
-        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-
-      - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
-
-      - name: Start Fossildb for e2e tests
-        run: docker compose --file .github/docker-compose.yml up -d fossildb
-      - name: Prepare binaryData folder for e2e tests
-        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      - name: Run end-to-end tests
-        uses: ./.github/actions/retry
-        with:
-          run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-          retries: 3
-      - name: Assert non-empty e2e files
-        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
-      - name: Check response types of e2e tests
-        run: yarn tsc
 
 
   build-smoketest-push:

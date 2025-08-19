@@ -56,9 +56,21 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
             "width": 100,
           },
           "category": "segmentation",
+          "dataFormat": "wkw",
           "elementClass": "uint32",
           "largestSegmentId": 176,
+          "mags": [
+            {
+              "mag": [
+                1,
+                1,
+                1,
+              ],
+              "path": "file:///home/f/scm/code/webknossos/binaryData/Organization_X/test-dataset/segmentation/1/",
+            },
+          ],
           "name": "segmentation",
+          "numChannels": 1,
           "resolutions": [
             [
               1,

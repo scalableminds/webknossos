@@ -83,7 +83,7 @@ trait StaticLayer extends DataLayer {
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
+  def numChannels: Int = if (elementClass == ElementClass.uint24) 3 else 1
 
   def withAttachments(attachments: DataLayerAttachments): StaticLayer =
     this match {
@@ -132,14 +132,15 @@ object StaticLayer {
       } yield layer
 
     override def writes(layer: StaticLayer): JsValue =
-      (layer match {
-        case l: StaticColorLayer        => StaticColorLayer.jsonFormat.writes(l)
-        case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
-      }).as[JsObject] ++ Json.obj(
-        "category" -> layer.category,
-        "resolutions" -> layer.resolutions, // TODO remove again, adapt clients, introduce new api version?
-        "numChannels" -> layer.numChannels
-      )
+      Json.obj("category" -> layer.category) ++
+        (layer match {
+          case l: StaticColorLayer        => StaticColorLayer.jsonFormat.writes(l)
+          case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
+        }).as[JsObject] ++
+        Json.obj(
+          "resolutions" -> layer.resolutions, // TODO remove again, adapt clients, introduce new api version?
+          "numChannels" -> layer.numChannels
+        )
   }
 
 }

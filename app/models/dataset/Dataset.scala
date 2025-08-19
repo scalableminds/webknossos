@@ -18,9 +18,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformationType,
   DataFormat,
   DataLayer,
-  DataSourceId,
-  ElementClass,
   DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  ElementClass,
   LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType,
@@ -28,7 +29,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer,
-  ThinPlateSplineCorrespondences
+  ThinPlateSplineCorrespondences,
+  DataLayerAttachments => AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
@@ -45,7 +47,6 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments => AttachmentWrapper}
 
 import java.net.URI
 import scala.concurrent.ExecutionContext
@@ -106,10 +107,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   protected def idColumn(x: Datasets): Rep[String] = x._Id
 
   protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
-
-  val unreportedStatus: String = "No longer available on datastore."
-  val deletedByUserStatus: String = "Deleted by user."
-  private val unreportedStatusList = List(unreportedStatus, deletedByUserStatus)
 
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
@@ -337,7 +334,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            isUnreported = unreportedStatusList.contains(row._10),
+            isUnreported = DataSourceStatus.unreportedStatusList.contains(row._10),
             colorLayerNames = parseArrayLiteral(row._12),
             segmentationLayerNames = parseArrayLiteral(row._13)
         ))
@@ -396,8 +393,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = $unreportedStatus OR status = $deletedByUserStatus"
-      case Some(false) => q"status != $unreportedStatus AND status != $deletedByUserStatus"
+      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
+      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
       case None        => q"TRUE"
     }
 
@@ -673,13 +670,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            organizationId: Option[String],
-                           unreportedStatus: String,
-                           inactiveStatusList: List[String]): Fox[Unit] = {
+                           unreportedStatus: String): Fox[Unit] = {
     val inSelectedOrga = organizationId.map(id => q"_organization = $id").getOrElse(q"TRUE")
     val inclusionPredicate =
       if (existingDatasetIds.isEmpty) q"NOT isVirtual AND $inSelectedOrga"
       else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual AND $inSelectedOrga"
-    val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
+    val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
          WHERE _dataset IN (
@@ -719,7 +715,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"UPDATE webknossos.datasets SET status = $deletedByUserStatus, isUsable = false WHERE _id = $datasetId".asUpdate
+        q"UPDATE webknossos.datasets SET status = ${DataSourceStatus.deletedByUser}, isUsable = false WHERE _id = $datasetId".asUpdate
       else
         q"DELETE FROM webknossos.datasets WHERE _id = $datasetId".asUpdate
 

@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
+  DataSourceStatus,
   StaticLayer,
   UnusableDataSource,
   UsableDataSource
@@ -46,10 +47,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = datasetDAO.unreportedStatus
-  val notYetUploadedStatus = "Not yet fully uploaded." // TODO make private again. different status for manualUpload?
-  private val inactiveStatusList =
-    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
@@ -73,7 +70,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                organizationId: String,
                                dataStore: DataStore): Fox[Dataset] = {
     val unreportedDatasource =
-      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, notYetUploadedStatus)
+      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, DataSourceStatus.notYetUploaded)
     createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
   }
 
@@ -109,7 +106,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       organizationIdOpt = Some(organizationId),
       isActiveOpt = Some(false),
       includeSubfolders = true,
-      statusOpt = Some(notYetUploadedStatus),
+      statusOpt = Some(DataSourceStatus.notYetUploaded),
       // Only list pending uploads since the two last weeks.
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
@@ -273,11 +270,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,
                                       organizationId: Option[String]): Fox[Unit] =
-    datasetDAO.deactivateUnreported(reportedDatasetIds,
-                                    dataStore.name,
-                                    organizationId,
-                                    unreportedStatus,
-                                    inactiveStatusList)
+    datasetDAO.deactivateUnreported(reportedDatasetIds, dataStore.name, organizationId, DataSourceStatus.unreported)
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -366,7 +359,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(false)
     }
 
-  def isUnreported(dataset: Dataset): Boolean = dataset.status == unreportedStatus
+  def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 
   def addInitialTeams(dataset: Dataset, teams: List[String], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

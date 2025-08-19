@@ -42,7 +42,7 @@ object DataSource {
 }
 
 case class UnusableDataSource(id: DataSourceId,
-                              dataLayers: Option[List[StaticLayer]] = None,
+                              dataLayers: Option[Seq[StaticLayer]] = None,
                               status: String,
                               scale: Option[VoxelSize] = None,
                               existingDataSourceProperties: Option[JsValue] = None)

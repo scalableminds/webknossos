@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerAttachments,
   DataSourceId,
+  DataSourceStatus,
   ElementClass,
   LayerAttachment,
   LayerAttachmentDataformat,
@@ -18,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer,
+  UnusableDataSource,
   UsableDataSource
 }
 import mail.{MailchimpClient, MailchimpTag}
@@ -71,7 +73,7 @@ object LinkedLayerIdentifier {
 case class ReserveManualUploadRequest(
     datasetName: String,
     layersToLink: Seq[LinkedLayerIdentifier],
-    dataSource: UsableDataSource,
+    dataSource: UnusableDataSource,
     folderId: Option[ObjectId],
     initialTeamIds: Seq[String] = Seq.empty, // TODO use
     requireUniqueName: Boolean = false // TODO use
@@ -582,7 +584,8 @@ class DatasetController @Inject()(userService: UserService,
           dataStore,
           newDatasetId,
           request.body.datasetName,
-          dataSourceWithLayersToLink.copy(id = DataSourceId(newDirectoryName, request.identity._organization)),
+          dataSourceWithLayersToLink.copy(id = DataSourceId(newDirectoryName, request.identity._organization),
+                                          status = DataSourceStatus.notYetManuallyUploaded),
           None,
           isVirtual = true
         )
@@ -597,7 +600,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId)
-        _ <- Fox.fromBool(dataset.status == datasetService.notYetUploadedStatus) ?~> s"Dataset is not in uploading state, got ${dataset.status}."
+        _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetManuallyUploaded) ?~> s"Dataset is not in manually uploading state, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
       } yield Ok
@@ -628,14 +631,15 @@ class DatasetController @Inject()(userService: UserService,
       Full(fromConfig)
   } yield result
 
-  private def addPathsToDatasource(dataSource: UsableDataSource,
+  private def addPathsToDatasource(dataSource: UnusableDataSource,
                                    organizationId: String,
-                                   datasetId: ObjectId): Fox[UsableDataSource] =
+                                   datasetId: ObjectId): Fox[UnusableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox
       datasetPath = manualUploadPrefix.resolve(organizationId).resolve(datasetId.toString)
-      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
-    } yield dataSource.copy(dataLayers = layersWithPaths)
+      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers.getOrElse(Seq.empty))(layer =>
+        addPathsToLayer(layer, datasetPath))
+    } yield dataSource.copy(dataLayers = Some(layersWithPaths))
 
   private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: URI): Fox[StaticLayer] =
     for {
@@ -684,12 +688,12 @@ class DatasetController @Inject()(userService: UserService,
     attachment.copy(path = path)
   }
 
-  private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
+  private def addLayersToLink(dataSource: UnusableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
       implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[UsableDataSource] =
+      mp: MessagesProvider): Fox[UnusableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-    } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
+    } yield dataSource.copy(dataLayers = Some(dataSource.dataLayers.getOrElse(Seq.empty) ++ linkedLayers))
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
                                                                      mp: MessagesProvider): Fox[StaticLayer] =

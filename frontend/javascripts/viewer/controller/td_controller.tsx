@@ -245,6 +245,7 @@ class TDController extends React.PureComponent<Props> {
         const isMultiCutToolActive = state.userConfiguration.isMultiSplitActive;
         if (event.shiftKey) {
           if (
+            ctrlOrMetaPressed &&
             isMultiCutToolActive &&
             intersection.unmappedSegmentId != null &&
             intersection.meshId != null

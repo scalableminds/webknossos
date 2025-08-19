@@ -40,6 +40,8 @@ case class UsableDataSource(id: DataSourceId,
   def withUpdatedId(newId: DataSourceId): UsableDataSource = copy(id = newId)
 
   def allExplicitPaths: Seq[String] = dataLayers.flatMap(_.allExplicitPaths)
+
+  def withoutCredentials: UsableDataSource = this.copy(dataLayers = this.dataLayers.map(_.withoutCredentials()))
 }
 
 object UsableDataSource {

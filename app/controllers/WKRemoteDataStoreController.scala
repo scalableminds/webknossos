@@ -301,7 +301,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-          dataSource <- datasetService.fullDataSourceFor(dataset)
+          dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
 
@@ -342,7 +342,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          oldDataSource <- datasetService.fullDataSourceFor(dataset)
+          oldDataSource <- datasetService.dataSourceFor(dataset)
           oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
           newPaths = request.body.allExplicitPaths
           _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST

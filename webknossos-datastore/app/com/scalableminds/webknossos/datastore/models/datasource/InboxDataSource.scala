@@ -18,6 +18,8 @@ trait InboxDataSource {
   def statusOpt: Option[String]
 
   def defaultViewConfiguration: Option[DatasetViewConfiguration]
+
+  def withoutCredentials: InboxDataSource
 }
 
 object InboxDataSource {
@@ -28,7 +30,7 @@ object InboxDataSource {
 
       def writes(ds: InboxDataSource): JsValue =
         ds match {
-          case ds: UsableDataSource  => UsableDataSource.dataSourceFormat.writes(ds)
+          case ds: UsableDataSource   => UsableDataSource.dataSourceFormat.writes(ds)
           case ds: UnusableDataSource => UnusableDataSource.unusableDataSourceFormat.writes(ds)
         }
     }
@@ -48,6 +50,8 @@ case class UnusableDataSource(id: DataSourceId,
   val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
 
   def withUpdatedId(newId: DataSourceId): UnusableDataSource = copy(id = newId)
+
+  def withoutCredentials: UnusableDataSource = this
 }
 
 object UnusableDataSource {

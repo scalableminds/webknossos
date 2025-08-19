@@ -787,9 +787,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
 
-  def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[StaticLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: StaticLayer =>
       layer.magsOpt match {
         case Some(mags) =>
           mags.map(mag => {

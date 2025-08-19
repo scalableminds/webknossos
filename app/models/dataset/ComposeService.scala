@@ -55,7 +55,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       implicit ctx: DBAccessContext): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
-      dataSource <- datasetService.fullDataSourceFor(dataset)
+      dataSource <- datasetService.dataSourceFor(dataset)
       usableDataSource <- dataSource.toUsable.toFox ?~> "Dataset not usable"
       layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>

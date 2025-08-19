@@ -29,6 +29,14 @@ case class DataLayerAttachments(
       cumsum = this.cumsum.orElse(other.cumsum)
     )
 
+  def withoutCredentials(): DataLayerAttachments =
+    DataLayerAttachments(
+      meshes = this.meshes.map(_.copy(credentialId = None)),
+      agglomerates = this.agglomerates.map(_.copy(credentialId = None)),
+      segmentIndex = this.segmentIndex.map(_.copy(credentialId = None)),
+      connectomes = this.connectomes.map(_.copy(credentialId = None)),
+      cumsum = this.cumsum.map(_.copy(credentialId = None))
+    )
 }
 
 object DataLayerAttachments {

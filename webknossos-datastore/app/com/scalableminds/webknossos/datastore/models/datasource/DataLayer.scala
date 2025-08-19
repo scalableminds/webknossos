@@ -79,9 +79,10 @@ trait StaticLayer extends DataLayer {
 
   def mags: List[MagLocator]
 
+  def withoutCredentials(): StaticLayer
+
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  // TODO include in case classes? (or at least serialize?)
   def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
 
   def withAttachments(attachments: DataLayerAttachments): StaticLayer =
@@ -136,8 +137,8 @@ object StaticLayer {
         case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
-        "resolutions" -> layer.resolutions // TODO remove again, adapt clients, introduce new api version?
-        // TODO numChannels?
+        "resolutions" -> layer.resolutions, // TODO remove again, adapt clients, introduce new api version?
+        "numChannels" -> layer.numChannels
       )
   }
 
@@ -163,6 +164,10 @@ case class StaticColorLayer(name: String,
                             attachments: Option[DataLayerAttachments] = None)
     extends StaticLayer {
   def category: LayerCategory.Value = LayerCategory.color
+
+  def withoutCredentials(): StaticColorLayer =
+    this.copy(mags = this.mags.map(_.copy(credentialId = None, credentials = None)),
+              attachments = this.attachments.map(_.withoutCredentials()))
 }
 object StaticColorLayer {
   implicit val jsonFormat: Format[StaticColorLayer] = new Format[StaticColorLayer] {
@@ -218,7 +223,11 @@ case class StaticSegmentationLayer(name: String,
                                    largestSegmentId: Option[Long] = None,
                                    mappings: Option[Set[String]] = None)
     extends StaticLayer
-    with SegmentationLayer
+    with SegmentationLayer {
+  def withoutCredentials(): StaticSegmentationLayer =
+    this.copy(mags = this.mags.map(_.copy(credentialId = None, credentials = None)),
+              attachments = this.attachments.map(_.withoutCredentials()))
+}
 
 object StaticSegmentationLayer {
   implicit val jsonFormat: Format[StaticSegmentationLayer] = new Format[StaticSegmentationLayer] {

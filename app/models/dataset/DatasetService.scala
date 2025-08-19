@@ -90,7 +90,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      dataset <- createDataset(dataStore, newDatasetId, datasetName, dataSource, isVirtual = true)
+      // TODO generate directory name?
+      dataset <- createDataset(dataStore,
+                               newDatasetId,
+                               datasetName,
+                               dataSource.copy(id = DataSourceId(newDatasetId.toString, organization._id)),
+                               isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -302,20 +307,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(UnusableDataSource(dataSourceId, dataset.status, dataset.voxelSize))
     }).flatten
 
-  // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
-  def fullDataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
-    (for {
-      dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
-    } yield {
-      if (dataset.isUsable)
-        for {
-          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
-        } yield UsableDataSource(dataSourceId, dataLayers, scale)
-      else
-        Fox.successful(UnusableDataSource(dataSourceId, dataset.status, dataset.voxelSize))
-    }).flatten
-
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
@@ -483,7 +474,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> dataset._id,
         "name" -> dataset.name,
-        "dataSource" -> dataSource,
+        "dataSource" -> dataSource.withoutCredentials,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,

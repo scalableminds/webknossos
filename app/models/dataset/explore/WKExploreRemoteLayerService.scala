@@ -111,11 +111,9 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
                                     folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      organizationId = user._organization
       _ <- datasetService.assertValidDatasetName(datasetName)
       _ <- datasetService.createVirtualDataset(
-        dataSource.id.directoryName,
-        organizationId,
+        datasetName,
         dataStore,
         dataSource,
         folderId.map(_.toString),

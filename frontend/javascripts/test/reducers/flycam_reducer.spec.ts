@@ -168,7 +168,7 @@ describe("Flycam", () => {
     equalWithEpsilon(getPosition(newState.flycam), [2, 0, -2]);
   });
 
-  it("should move not in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+  it("should move not in ortho mode with dynamicSpaceDirection if action does not explicitly say so", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,
@@ -216,7 +216,7 @@ describe("Flycam", () => {
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, -2]);
   });
 
-  it("should not move by plane in ortho mode with dynamicSpaceDirection if action does not explicity say so", () => {
+  it("should not move by plane in ortho mode with dynamicSpaceDirection if action does not explicitly say so", () => {
     let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
     newState = FlycamReducer(
       newState,

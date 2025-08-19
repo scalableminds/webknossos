@@ -179,7 +179,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       });
 
       form.setFieldsValue({
-        // @ts-ignore Missmatch between APIDataSource and MutableAPIDataset
+        // @ts-ignore Mismatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 
@@ -405,7 +405,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   useEffect(() => {
     // In case of Remote Dataset Upload, we start with a prefilled form containing the DS information
     if (formProp === undefined) {
-      // For all other cases, i.e. editting existing datasets, we fetch the dataset information from the backend
+      // For all other cases, i.e. editing existing datasets, we fetch the dataset information from the backend
       fetchData().then((datasetName) => {
         sendAnalyticsEvent("open_dataset_settings", {
           datasetName: datasetName ?? "Not found dataset",

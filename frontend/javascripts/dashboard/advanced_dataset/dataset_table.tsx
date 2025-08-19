@@ -292,7 +292,7 @@ class DatasetRenderer {
   }
   renderNameColumn(): React.ReactNode {
     const selectedLayerName: string | null =
-      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+      this.data.isActive ? (this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]) : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";

@@ -25,6 +25,8 @@ trait DataSource {
   def defaultViewConfiguration: Option[DatasetViewConfiguration]
 
   def withoutCredentials: DataSource
+
+  def allLayers: List[StaticLayer]
 }
 
 object DataSource {
@@ -42,7 +44,7 @@ object DataSource {
 }
 
 case class UnusableDataSource(id: DataSourceId,
-                              dataLayers: Option[Seq[StaticLayer]] = None,
+                              dataLayers: Option[List[StaticLayer]] = None,
                               status: String,
                               scale: Option[VoxelSize] = None,
                               existingDataSourceProperties: Option[JsValue] = None)
@@ -58,6 +60,8 @@ case class UnusableDataSource(id: DataSourceId,
   def withUpdatedId(newId: DataSourceId): UnusableDataSource = copy(id = newId)
 
   def withoutCredentials: UnusableDataSource = this
+
+  def allLayers: List[StaticLayer] = dataLayers.getOrElse(List.empty)
 }
 
 object UnusableDataSource {
@@ -97,6 +101,8 @@ case class UsableDataSource(id: DataSourceId,
   def allExplicitPaths: Seq[String] = dataLayers.flatMap(_.allExplicitPaths)
 
   def withoutCredentials: UsableDataSource = this.copy(dataLayers = this.dataLayers.map(_.withoutCredentials()))
+
+  def allLayers: List[StaticLayer] = dataLayers
 }
 
 object UsableDataSource {

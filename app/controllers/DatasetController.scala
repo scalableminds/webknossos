@@ -575,6 +575,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
         newDirectoryName = datasetService.generateDirectoryName(request.body.datasetName, newDatasetId)
+        _ <- Fox.fromBool(request.body.dataSource.allLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
         dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
                                                     request.identity._organization,
                                                     newDatasetId)
@@ -693,7 +694,7 @@ class DatasetController @Inject()(userService: UserService,
       mp: MessagesProvider): Fox[UnusableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-    } yield dataSource.copy(dataLayers = Some(dataSource.dataLayers.getOrElse(Seq.empty) ++ linkedLayers))
+    } yield dataSource.copy(dataLayers = Some(dataSource.dataLayers.getOrElse(List.empty) ++ linkedLayers))
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
                                                                      mp: MessagesProvider): Fox[StaticLayer] =

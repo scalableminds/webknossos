@@ -61,8 +61,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
       ctx: DBAccessContext,
       mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-      usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
       layer <- usableDataSource.dataLayers
         .find(_.name == layerName)
         .toFox ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND

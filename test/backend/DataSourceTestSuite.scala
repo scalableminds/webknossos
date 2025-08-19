@@ -2,17 +2,18 @@ package backend
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
-  DataSourceId,
+  DataFormat,
   DataLayerAttachments,
+  DataSourceId,
   ElementClass,
-  UsableDataSource,
   LayerAttachment,
-  LayerAttachmentDataformat
+  LayerAttachmentDataformat,
+  StaticSegmentationLayer,
+  UsableDataSource
 }
 import org.scalatestplus.play.PlaySpec
 
@@ -27,8 +28,9 @@ class DataSourceTestSuite extends PlaySpec {
       val dataSource = UsableDataSource(
         id = DataSourceId("dummyOrga", "dummyDirectoryName"),
         List(
-          Zarr3SegmentationLayer(
+          StaticSegmentationLayer(
             name = "testLayer",
+            dataFormat = DataFormat.zarr3,
             boundingBox = BoundingBox(Vec3Int(1, 2, 3), 10, 20, 30),
             elementClass = ElementClass.uint16,
             mags = List(MagLocator(mag = Vec3Int(2, 2, 1), axisOrder = Some(AxisOrder(0, 1, Some(2))))),
@@ -37,7 +39,6 @@ class DataSourceTestSuite extends PlaySpec {
             defaultViewConfiguration = None,
             adminViewConfiguration = None,
             coordinateTransformations = None,
-            numChannels = Some(1),
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
             attachments = Some(DataLayerAttachments(
               meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))
@@ -49,8 +50,9 @@ class DataSourceTestSuite extends PlaySpec {
       val dataSourceCopyPastedFromAbove = UsableDataSource(
         id = DataSourceId("dummyOrga", "dummyDirectoryName"),
         List(
-          Zarr3SegmentationLayer(
+          StaticSegmentationLayer(
             name = "testLayer",
+            dataFormat = DataFormat.zarr3,
             boundingBox = BoundingBox(Vec3Int(1, 2, 3), 10, 20, 30),
             elementClass = ElementClass.uint16,
             mags = List(MagLocator(mag = Vec3Int(2, 2, 1), axisOrder = Some(AxisOrder(0, 1, Some(2))))),
@@ -59,7 +61,6 @@ class DataSourceTestSuite extends PlaySpec {
             defaultViewConfiguration = None,
             adminViewConfiguration = None,
             coordinateTransformations = None,
-            numChannels = Some(1),
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
             attachments = Some(DataLayerAttachments(
               meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))

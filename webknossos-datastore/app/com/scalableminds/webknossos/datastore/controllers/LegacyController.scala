@@ -443,7 +443,7 @@ class LegacyController @Inject()(
           for {
             _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))
-        case UnusableDataSource(_, status, _, _) =>
+        case UnusableDataSource(_, _, status, _, _) =>
           Fox.failure(s"Dataset not found in DB or in directory: $status, cannot reload.") ~> NOT_FOUND
       }
     }

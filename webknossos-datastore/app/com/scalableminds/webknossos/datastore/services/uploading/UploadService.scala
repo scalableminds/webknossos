@@ -510,9 +510,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def layerFromIdentifier(layerIdentifier: LegacyLinkedLayerIdentifier): Fox[StaticLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
-    val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
+    val dataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
     for {
-      usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
+      usableDataSource <- dataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
       layer: StaticLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
       newName = layerIdentifier.newLayerName.getOrElse(layerIdentifier.layerName)
       layerRenamed: StaticLayer <- layer match {

@@ -121,9 +121,9 @@ trait ExploreLayerUtils extends FoxImplicits {
         }
     }
 
-  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
-                                             preferredVoxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] = {
+  private def rescaleLayersByCommonVoxelSize(
+      layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
+      preferredVoxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] = {
     val allVoxelSizes = layersWithVoxelSizes.flatMap {
       case (layer, voxelSize) =>
         layer.resolutions.map(mag => voxelSize * mag.toVec3Double)

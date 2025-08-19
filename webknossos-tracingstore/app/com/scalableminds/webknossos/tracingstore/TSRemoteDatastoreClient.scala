@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryImplicits,
   SegmentIndexData
 }
-import com.scalableminds.webknossos.datastore.models.datasource.InboxDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.DataSource
 import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
@@ -148,7 +148,7 @@ class TSRemoteDatastoreClient @Inject()(
       datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
       dataStoreUri <- dataStoreUriWithCache(datasetId)
       result <- rpc(s"$dataStoreUri/data/datasets/$datasetId/readInboxDataSource").withTokenFromContext
-        .getWithJsonResponse[InboxDataSource]
+        .getWithJsonResponse[DataSource]
       scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
 

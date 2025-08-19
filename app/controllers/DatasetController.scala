@@ -6,10 +6,11 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerAttachments,
+  DataSourceId,
   ElementClass,
   LayerAttachment,
   LayerAttachmentDataformat,
@@ -345,8 +346,7 @@ class DatasetController @Inject()(userService: UserService,
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
         dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-        usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+        usableDataSource <- datasetService.usableDataSourceFor(dataset)
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
@@ -502,8 +502,7 @@ class DatasetController @Inject()(userService: UserService,
           _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
           _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-          usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+          usableDataSource <- datasetService.usableDataSourceFor(dataset)
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
@@ -573,25 +572,24 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
-        newDirectoryName = generateDirectoryName(request.body.datasetName, newDatasetId)
+        newDirectoryName = datasetService.generateDirectoryName(request.body.datasetName, newDatasetId)
         dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
                                                     request.identity._organization,
                                                     newDatasetId)
         dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
         dataStore <- findReferencedDataStore(request.body.layersToLink)
-        dataset <- datasetService.createPreliminaryDataset(
+        dataset <- datasetService.createDataset(
+          dataStore,
           newDatasetId,
           request.body.datasetName,
-          newDirectoryName,
-          request.identity._organization,
-          dataStore
+          dataSourceWithLayersToLink.copy(id = DataSourceId(newDirectoryName, request.identity._organization)),
+          None,
+          isVirtual = true
         )
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- datasetDAO.updateFolder(newDatasetId, request.body.folderId.getOrElse(organization._rootFolder))(
           GlobalAccessContext)
         _ <- datasetService.addUploader(dataset, request.identity._id)(GlobalAccessContext)
-        _ <- datasetService.updateDataSources(dataStore, List(dataSourceWithLayersToLink))
-        // Store dataSourceWithLayersToLink (keep isUsable=false and status)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
@@ -603,12 +601,6 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
       } yield Ok
-    }
-
-  private def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
-    TextUtils.normalizeStrong(datasetName) match {
-      case Some(prefix) => s"$prefix-$datasetId"
-      case None         => datasetId.toString
     }
 
   private def findReferencedDataStore(layersToLink: Seq[LinkedLayerIdentifier])(
@@ -693,17 +685,18 @@ class DatasetController @Inject()(userService: UserService,
   }
 
   private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext): Fox[UsableDataSource] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
     } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
 
-  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext): Fox[StaticLayer] =
+  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
+                                                                     mp: MessagesProvider): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
-      dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.notFound"
-      usable <- dataSource.toUsable.toFox ?~> "dataSource.notUsable"
-      layer: StaticLayer <- usable.dataLayers
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
+      layer: StaticLayer <- usableDataSource.dataLayers
         .find(_.name == layerToLink.layerName)
         .toFox ?~> "dataset.layerToLink.layerNotFound"
       newName = layerToLink.newLayerName.getOrElse(layer.name)

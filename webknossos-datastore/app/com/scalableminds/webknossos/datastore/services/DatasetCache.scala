@@ -22,8 +22,8 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(i
       id,
       id =>
         for {
-          inboxDataSource <- remoteWebknossosClient.getDataset(id)
-          usableDataSource <- inboxDataSource.toUsable.toFox ?~> s"Data source is not usable: ${inboxDataSource.statusOpt}"
+          dataSource <- remoteWebknossosClient.getDataSource(id)
+          usableDataSource <- dataSource.toUsable.toFox ?~> s"Data source is not usable: ${dataSource.statusOpt}"
         } yield usableDataSource
     )
 

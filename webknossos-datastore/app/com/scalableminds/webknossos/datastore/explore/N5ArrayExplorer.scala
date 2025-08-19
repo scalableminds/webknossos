@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataFormat,
-  LayerCategory,
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer

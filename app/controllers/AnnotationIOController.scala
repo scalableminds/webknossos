@@ -44,7 +44,7 @@ import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, MultipartFormData}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.WkConf
@@ -128,8 +128,7 @@ class AnnotationIOController @Inject()(
                                                        volumeLayersGroupedRaw.flatten,
                                                        datasetIds,
                                                        wkUrl)
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> Messages("dataset.notImported", dataset.name)
-          usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
+          usableDataSource <- datasetService.usableDataSourceFor(dataset)
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
           newAnnotationId = ObjectId.generate
@@ -308,7 +307,6 @@ class AnnotationIOController @Inject()(
                                                  dataSource: UsableDataSource): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
         Fox.serialCombined(volumeLayers) { volumeLayer =>
@@ -316,7 +314,6 @@ class AnnotationIOController @Inject()(
             adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
                                                              dataSource,
                                                              dataset,
-                                                             organization._id,
                                                              remoteDataStoreClient)
             adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
           } yield adaptedAnnotationLayer
@@ -327,7 +324,6 @@ class AnnotationIOController @Inject()(
   private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing,
                                              dataSource: UsableDataSource,
                                              dataset: Dataset,
-                                             organizationId: String,
                                              remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: StaticSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
@@ -411,12 +407,13 @@ class AnnotationIOController @Inject()(
       } yield result
     }
 
-  private def downloadExplorational(annotationId: ObjectId,
-                                    typ: String,
-                                    requestingUser: Option[User],
-                                    version: Option[Long],
-                                    skipVolumeData: Boolean,
-                                    volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
+  private def downloadExplorational(
+      annotationId: ObjectId,
+      typ: String,
+      requestingUser: Option[User],
+      version: Option[Long],
+      skipVolumeData: Boolean,
+      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Result] = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 

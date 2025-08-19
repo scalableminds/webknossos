@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, InboxDataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LegacyLinkedLayerIdentifier,
@@ -205,8 +205,8 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[InboxDataSource]] =
-    Action.async(validateJson[List[InboxDataSource]]) { implicit request =>
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSource]] =
+    Action.async(validateJson[List[DataSource]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val dataSources = request.body
         for {
@@ -225,8 +225,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updateOne(name: String, key: String): Action[InboxDataSource] =
-    Action.async(validateJson[InboxDataSource]) { implicit request =>
+  def updateOne(name: String, key: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           _ <- datasetService.updateDataSources(dataStore, List(request.body))(GlobalAccessContext)

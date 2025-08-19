@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import models.user.User
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -38,7 +39,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     extends FoxImplicits {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(
-      implicit ctx: DBAccessContext): Fox[(UsableDataSource, ObjectId)] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[(UsableDataSource, ObjectId)] =
     for {
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
@@ -51,12 +53,11 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
 
     } yield (dataSource, dataset._id)
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
-      implicit ctx: DBAccessContext): Fox[StaticLayer] =
+  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(implicit ctx: DBAccessContext,
+                                                                          mp: MessagesProvider): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
-      dataSource <- datasetService.dataSourceFor(dataset)
-      usableDataSource <- dataSource.toUsable.toFox ?~> "Dataset not usable"
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
       layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
         cOpt match {
@@ -86,7 +87,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     }
 
   private def createDatasource(composeRequest: ComposeRequest, datasetDirectoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[UsableDataSource] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_))
       dataSource = UsableDataSource(

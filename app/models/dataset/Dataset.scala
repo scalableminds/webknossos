@@ -20,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataSourceId,
   ElementClass,
-  InboxDataSource,
+  DataSource,
   LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType,
@@ -640,7 +640,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def updateDataSourceByDatasetId(id: ObjectId,
                                   dataStoreName: String,
                                   inboxSourceHash: Int,
-                                  newDataSource: InboxDataSource,
+                                  newDataSource: DataSource,
                                   isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
@@ -666,7 +666,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- run(q"""UPDATE webknossos.datasets
                    SET
                      isUsable = $isUsable,
-                     status = ${newStatus}
+                     status = $newStatus
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
@@ -771,13 +771,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
     } yield mag
 
-  def findMagsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
-    for {
-      rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
-        .map(_.toList)
-      mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
-    } yield mags
-
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
     for {
       rows <- run(
@@ -871,7 +864,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos
 
-  def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
+  private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
       mag <- parseMag(row.mag)
       axisOrderParsed = row.axisorder match {
@@ -887,14 +880,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         row.channelindex,
         row.credentialid
       )
-
-  def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
-    for {
-      rows <- run(
-        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
-           FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
-      mags <- Fox.combined(rows.map(parseMagLocator))
-    } yield rows.map(r => r.datalayername).zip(mags)
 
 }
 
@@ -1014,7 +999,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       case _ => throw new Exception("DataLayer type mismatch")
     }
 
-  def updateLayers(datasetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
+  def updateLayers(datasetId: ObjectId, source: DataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[StaticLayer]) =
       q"""DELETE FROM webknossos.dataset_layers
           WHERE _dataset = $datasetId
@@ -1076,13 +1061,13 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
+  private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
       uri <- tryo(new URI(row.path)).toFox
     } yield LayerAttachment(row.name, uri, dataFormat)
 
-  def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
+  private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
     for {
       meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(parseRow)
       agglomerateFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.agglomerate.toString))(

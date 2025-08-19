@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, InboxDataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
@@ -405,7 +405,7 @@ class DataSourceController @Inject()(
       }
     }
 
-  private def clearCachesOfDataSource(dataSource: InboxDataSource, layerName: Option[String]): Unit = {
+  private def clearCachesOfDataSource(dataSource: DataSource, layerName: Option[String]): Unit = {
     val dataSourceId = dataSource.id
     val organizationId = dataSourceId.organizationId
     val datasetDirectoryName = dataSourceId.directoryName
@@ -429,8 +429,8 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
         for {
-          inboxDataSource <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
-          _ = clearCachesOfDataSource(inboxDataSource, layerName)
+          dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+          _ = clearCachesOfDataSource(dataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -704,8 +704,8 @@ class DataSourceController @Inject()(
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
     for {
-      inboxDataSourceInDB <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
-      dataSourceId = inboxDataSourceInDB.id
+      dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+      dataSourceId = dataSourceFromDB.id
       dataSourceFromDir <- Fox.runIf(
         dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
         dataSourceService

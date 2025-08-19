@@ -3,11 +3,11 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
   DataSourceId,
-  InboxDataSource,
   StaticLayer,
   UnusableDataSource,
   UsableDataSource
@@ -19,8 +19,9 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import com.scalableminds.util.tools.{Empty, EmptyBox, Full}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import play.api.http.Status.NOT_FOUND
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -46,7 +47,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   private val unreportedStatus = datasetDAO.unreportedStatus
-  val notYetUploadedStatus = "Not yet fully uploaded." // TODO make private again
+  val notYetUploadedStatus = "Not yet fully uploaded." // TODO make private again. different status for manualUpload?
   private val inactiveStatusList =
     List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
@@ -72,7 +73,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                organizationId: String,
                                dataStore: DataStore): Fox[Dataset] = {
     val unreportedDatasource =
-      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), notYetUploadedStatus)
+      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, notYetUploadedStatus)
     createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
   }
 
@@ -90,11 +91,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      // TODO generate directory name?
+      directoryName = generateDirectoryName(datasetName, newDatasetId)
       dataset <- createDataset(dataStore,
                                newDatasetId,
                                datasetName,
-                               dataSource.copy(id = DataSourceId(newDatasetId.toString, organization._id)),
+                               dataSource.copy(id = DataSourceId(directoryName, organization._id)),
                                isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
@@ -113,11 +114,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
 
-  private def createDataset(
+  // TODO make private again
+  def createDataset(
       dataStore: DataStore,
       datasetId: ObjectId,
       datasetName: String,
-      dataSource: InboxDataSource,
+      dataSource: DataSource,
       publication: Option[ObjectId] = None,
       isVirtual: Boolean = false
   ): Fox[Dataset] = {
@@ -163,12 +165,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
+  def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
+      .serialCombined(groupedByOrga) { orgaTuple: (String, List[DataSource]) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
@@ -193,7 +195,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def updateDataSourceFromDataStore(
       dataStore: DataStore,
-      dataSource: InboxDataSource,
+      dataSource: DataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
@@ -212,7 +214,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  private def updateKnownDataSource(foundDataset: Dataset, dataSource: InboxDataSource, dataStore: DataStore)(
+  private def updateKnownDataSource(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =
     if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataset._id)
@@ -227,10 +229,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
-  private def updateDataSourceDifferentDataStore(
-      foundDataset: Dataset,
-      dataSource: InboxDataSource,
-      dataStore: DataStore)(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+  private def updateDataSourceDifferentDataStore(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
+      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
@@ -255,7 +255,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     }).flatten
 
-  private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
+  private def insertNewDataset(dataSource: DataSource, datasetName: String, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
       createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
     }
@@ -294,7 +294,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def dataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
+  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
+    for {
+      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
+    } yield usableDataSource
+
+  def dataSourceFor(dataset: Dataset): Fox[DataSource] =
     (for {
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
       dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
@@ -304,7 +310,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
         } yield UsableDataSource(dataSourceId, dataLayers, scale)
       else
-        Fox.successful(UnusableDataSource(dataSourceId, dataset.status, dataset.voxelSize))
+        Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
     }).flatten
 
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
@@ -445,6 +451,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         } yield ()
       } ?~> "dataset.delete.failed"
     } yield ()
+
+  def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
+    TextUtils.normalizeStrong(datasetName) match {
+      case Some(prefix) => s"$prefix-$datasetId"
+      case None         => datasetId.toString
+    }
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

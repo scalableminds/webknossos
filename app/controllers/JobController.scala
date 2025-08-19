@@ -333,8 +333,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           datasetBoundingBox <- datasetService
-            .dataSourceFor(dataset)
-            .flatMap(_.toUsable.toFox)
+            .usableDataSourceFor(dataset)
             .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
           command = JobCommand.align_sections
           commandArgs = Json.obj(

@@ -94,7 +94,7 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def reportRealPaths(dataSources: List[InboxDataSource]) =
+  private def reportRealPaths(dataSources: List[DataSource]) =
     for {
       _ <- Fox.successful(())
       magPathBoxes = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
@@ -110,7 +110,7 @@ class DataSourceService @Inject()(
       _ <- remoteWebknossosClient.reportRealPaths(pathInfos)
     } yield ()
 
-  private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = tryo {
+  private def determineMagRealPathsForDataSource(dataSource: DataSource) = tryo {
     val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
     val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
@@ -170,16 +170,16 @@ class DataSourceService @Inject()(
       basePath.resolve(relativePath).normalize().toAbsolutePath
     }
 
-  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource],
+  private def logFoundDatasources(foundInboxSources: Seq[DataSource],
                                   verbose: Boolean,
                                   selectedOrgaLabel: String): Unit = {
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
         .count(!_.isUsable)} inactive"
     val msg = if (verbose) {
-      val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.organizationId)
+      val byTeam: Map[String, Seq[DataSource]] = foundInboxSources.groupBy(_.id.organizationId)
       shortForm + ". " + byTeam.keys.map { team =>
-        val byUsable: Map[Boolean, Seq[InboxDataSource]] = byTeam(team).groupBy(_.isUsable)
+        val byUsable: Map[Boolean, Seq[DataSource]] = byTeam(team).groupBy(_.isUsable)
         team + ": [" + byUsable.keys.map { usable =>
           val label = if (usable) "active: [" else "inactive: ["
           label + byUsable(usable).map { ds =>
@@ -329,7 +329,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanOrganizationDirForDataSources(path: Path): List[InboxDataSource] = {
+  private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path, silent = true) match {
@@ -342,7 +342,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def dataSourceFromDir(path: Path, organizationId: String): InboxDataSource = {
+  def dataSourceFromDir(path: Path, organizationId: String): DataSource = {
     val id = DataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
@@ -355,14 +355,19 @@ class DataSourceService @Inject()(
             )
             dataSourceWithAttachments.copy(id)
           } else
-            UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
+            UnusableDataSource(id,
+                               None,
+                               "Error: Zero layer Dataset",
+                               Some(dataSource.scale),
+                               Some(Json.toJson(dataSource)))
         case e =>
           UnusableDataSource(id,
+                             None,
                              s"Error: Invalid json format in $propertiesFile: $e",
                              existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
-      UnusableDataSource(id, "Not imported yet.")
+      UnusableDataSource(id, None, "Not imported yet.")
     }
   }
 
@@ -379,12 +384,12 @@ class DataSourceService @Inject()(
         ))
     })
 
-  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =
+  def invalidateVaultCache(dataSource: DataSource, dataLayerName: Option[String]): Option[Int] =
     for {
-      genericDataSource <- dataSource.toUsable
+      usableDataSource <- dataSource.toUsable
       dataLayers = dataLayerName match {
-        case Some(ln) => Seq(genericDataSource.getDataLayer(ln))
-        case None     => genericDataSource.dataLayers.map(d => Some(d))
+        case Some(ln) => Seq(usableDataSource.getDataLayer(ln))
+        case None     => usableDataSource.dataLayers.map(d => Some(d))
       }
       removedEntriesList = for {
         dataLayerOpt <- dataLayers

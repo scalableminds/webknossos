@@ -35,9 +35,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
-
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
-
       datasetLayers <- datasetService.allLayersFor(dataset)
       layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset)
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)

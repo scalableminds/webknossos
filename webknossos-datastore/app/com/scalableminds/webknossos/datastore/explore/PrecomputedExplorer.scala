@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   LayerAttachment,
   LayerAttachmentDataformat,
-  LayerCategory,
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer

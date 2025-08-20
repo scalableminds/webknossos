@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Failure, Fox, FoxImplicits, Full, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
   UpdateBucketVolumeAction,
@@ -30,6 +30,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                              remoteWebknossosClient: TSRemoteWebknossosClient,
                                              annotationService: TSAnnotationService)
     extends KeyValueStoreImplicits
+    with FoxImplicits
     with LazyLogging {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
@@ -218,11 +219,27 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     case _                               => false
   }
 
+  private def multiplyList(list: List[UpdateAction]): List[UpdateAction] =
+    (1 to 100000).toList.flatMap { _ =>
+      list
+    }
+
   private def handleUpdateGroup(annotationId: ObjectId, updateActionGroup: UpdateActionGroup)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Unit] =
     for {
-      updateActionsJson <- Fox.successful(Json.toJson(preprocessActionsForStorage(updateActionGroup)))
+      updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
+      updateActionsMultiplied = multiplyList(updateActionsProcessed)
+      updateActionsJsonBox = try {
+        logger.info(s"serializing ${updateActionsMultiplied.length} update actions...")
+        Full(Json.toJson(updateActionsMultiplied).toString())
+      } catch {
+        case e: OutOfMemoryError if e.getMessage.contains("String size") => Failure(e.getMessage)
+      }
+      unpacked <- updateActionsJsonBox.toFox
+      _ = logger.info(
+        s"serializing result is ${unpacked.length} chars long, which is ${unpacked.length.toDouble / (Integer.MAX_VALUE >> 1).toDouble} of maximum")
+      updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, updateActionsJson)
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(

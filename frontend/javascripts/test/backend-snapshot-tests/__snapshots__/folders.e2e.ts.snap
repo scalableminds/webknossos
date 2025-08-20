@@ -5,6 +5,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 1`] = `
   "allowedTeams": [
     {
       "id": "570b9f4b2a7c0e3b008da6ec",
+      "isOrganizationTeam": true,
       "name": "team_X1",
       "organization": "Organization_X",
     },
@@ -12,6 +13,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 1`] = `
   "allowedTeamsCumulative": [
     {
       "id": "570b9f4b2a7c0e3b008da6ec",
+      "isOrganizationTeam": true,
       "name": "team_X1",
       "organization": "Organization_X",
     },
@@ -34,6 +36,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 2`] = `
   "allowedTeams": [
     {
       "id": "570b9f4b2a7c0e3b008da6ec",
+      "isOrganizationTeam": true,
       "name": "team_X1",
       "organization": "Organization_X",
     },
@@ -41,6 +44,7 @@ exports[`Folder API (E2E) > addAllowedTeamToFolder 2`] = `
   "allowedTeamsCumulative": [
     {
       "id": "570b9f4b2a7c0e3b008da6ec",
+      "isOrganizationTeam": true,
       "name": "team_X1",
       "organization": "Organization_X",
     },

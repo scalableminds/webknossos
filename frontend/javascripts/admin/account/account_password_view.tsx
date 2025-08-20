@@ -1,5 +1,5 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
-import { changePassword, logoutUser, logoutUserEverywhere } from "admin/rest_api";
+import { changePassword, logoutUserEverywhere } from "admin/rest_api";
 import { Alert, Button, Col, Form, Input, Modal, Row, Space } from "antd";
 import features from "features";
 import Toast from "libs/toast";
@@ -26,7 +26,7 @@ function AccountPasswordView() {
     changePassword(formValues)
       .then(async () => {
         Toast.success(messages["auth.reset_pw_confirmation"]);
-        await logoutUser();
+        await logoutUserEverywhere();
         Store.dispatch(logoutUserAction());
         navigate("/auth/login");
       })

@@ -1,5 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { logoutUser, updateUser } from "admin/rest_api";
+import { logoutUserEverywhere, updateUser } from "admin/rest_api";
 import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -36,7 +36,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
       .then(async () => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
-        await logoutUser();
+        await logoutUserEverywhere();
         Store.dispatch(logoutUserAction());
         window.location.href = "/auth/login";
       })

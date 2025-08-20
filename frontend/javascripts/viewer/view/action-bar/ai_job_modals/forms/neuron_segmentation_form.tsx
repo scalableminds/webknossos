@@ -125,7 +125,7 @@ export function NeuronSegmentationForm() {
             <Row>
               This pre-trained AI model will automatically detect and segment all neurons in this
               dataset. It is optimized for analyzing EM tissue, e.g. from FIB-SEM, MSEM,
-              Serial-Section SEM etc. Webknossos will create a copy of this dataset and add the
+              Serial-Section SEM etc. WEBKNOSSOS will create a copy of this dataset and add the
               resulting neuron segmentation to it.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>

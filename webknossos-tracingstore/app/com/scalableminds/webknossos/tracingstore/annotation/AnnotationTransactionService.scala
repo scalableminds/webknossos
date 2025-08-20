@@ -222,7 +222,9 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Unit] =
     for {
-      updateActionsJson <- Fox.successful(Json.toJson(preprocessActionsForStorage(updateActionGroup)))
+      updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
+      _ <- Fox.fromBool(updateActionsProcessed.length <= 1000000) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
+      updateActionsJson = Json.toJson(updateActionsProcessed)
       _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, updateActionsJson)
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(

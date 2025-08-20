@@ -36,6 +36,7 @@ import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarch
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { min } from "./iterator_utils";
+import { getSegmentationLayerByName } from "../accessors/dataset_accessor";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -152,6 +153,7 @@ export function serializeToNml(
         "<groups>",
         indent(serializeTreeGroups(tracing.treeGroups, visibleTrees)),
         "</groups>",
+        serializeVolumeLayers(state),
       ),
     ),
     "</things>",
@@ -526,6 +528,37 @@ function serializeTreeGroups(treeGroups: TreeGroup[], trees: Tree[]): string[] {
       serializeTreeGroups(treeGroup.children, trees),
     ),
   );
+}
+
+function serializeVolumeLayers(state: WebknossosState) {
+  const volumeLayersWithActiveMappings = Object.entries(
+    state.temporaryConfiguration.activeMappingByLayer,
+  ).filter(
+    ([_layerName, mappingInfos]) =>
+      mappingInfos.mappingType === "HDF5" && mappingInfos.mappingStatus === "ENABLED",
+  );
+  const volumeTagsUsedToSaveActiveMappings = volumeLayersWithActiveMappings.flatMap(
+    ([layerName, mappingInfos], index) => {
+      //const layer = getLayerByName(state.dataset, layerName, true);
+      const layer = getSegmentationLayerByName(state.dataset, layerName);
+      const additionalProps =
+        "fallbackLayer" in layer && layer.fallbackLayer != null
+          ? { fallbackLayer: layer.fallbackLayer }
+          : {};
+      return serializeTagWithChildren(
+        "volume",
+        {
+          name: layerName,
+          mappingName: mappingInfos.mappingName,
+          id: index,
+          largestSegmentId: layer.largestSegmentId,
+          ...additionalProps,
+        },
+        [serializeTag("segments", {}), serializeTag("groups", {})],
+      );
+    },
+  );
+  return volumeTagsUsedToSaveActiveMappings;
 }
 
 // PARSE NML

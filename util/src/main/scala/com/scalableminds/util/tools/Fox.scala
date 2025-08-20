@@ -179,7 +179,7 @@ object Fox extends FoxImplicits {
     runIf(condition.getOrElse(false))(f)
 
   def runIfNonEmpty[A, B](list: List[A])(f: => B)(implicit ec: ExecutionContext): Fox[Option[B]] =
-    if(list.nonEmpty){
+    if (list.nonEmpty) {
       Fox.successful(Some(f))
     } else {
       Fox.successful(None)

@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.explore.{
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
+  PathSchemes,
   SegmentIndexData,
   SegmentStatisticsParameters
 }
@@ -24,7 +25,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFile
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -656,8 +657,8 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organizationId)) {
         val reportMutable = ListBuffer[String]()
-        val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
-          new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)
+        val hasLocalFilesystemRequest =
+          request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)
         for {
           dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)

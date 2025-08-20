@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
@@ -94,7 +94,7 @@ class FileSystemDataVault extends DataVault {
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
-      _ <- Fox.fromBool(uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file or null"
+      _ <- Fox.fromBool(uri.getScheme == null || uri.getScheme == PathSchemes.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file or null"
       _ <- Fox.fromBool(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Path.of(uri.getPath)
       _ <- Fox.fromBool(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"

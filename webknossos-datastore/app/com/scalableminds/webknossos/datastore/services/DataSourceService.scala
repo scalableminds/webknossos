@@ -10,7 +10,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
@@ -160,7 +160,7 @@ class DataSourceService @Inject()(
       layerPath.getFileName.toString,
       mag
     )
-    (uri, uri.getScheme != null && DataVaultService.isRemoteScheme(uri.getScheme))
+    (uri, uri.getScheme != null && PathSchemes.isRemoteScheme(uri.getScheme))
   }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
@@ -227,7 +227,7 @@ class DataSourceService @Inject()(
 
     def pathOk(pathStr: String): Boolean = {
       val uri = new URI(pathStr)
-      if (DataVaultService.isRemoteScheme(uri.getScheme)) true
+      if (PathSchemes.isRemoteScheme(uri.getScheme)) true
       else {
         val path = organizationDir
           .resolve(dataSource.id.directoryName)

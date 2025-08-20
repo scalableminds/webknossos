@@ -7,12 +7,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
@@ -107,7 +108,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     } yield layersWithVoxelSizes
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
-    if (uri.getScheme == DataVaultService.schemeFile) {
+    if (uri.getScheme == PathSchemes.schemeFile) {
       Fox.fromBool(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())

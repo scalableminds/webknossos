@@ -3,31 +3,14 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.datavault.{
-  DataVault,
-  FileSystemDataVault,
-  GoogleCloudDataVault,
-  HttpsDataVault,
-  S3DataVault,
-  VaultPath
-}
+import com.scalableminds.webknossos.datastore.datavault.{DataVault, FileSystemDataVault, GoogleCloudDataVault, HttpsDataVault, S3DataVault, VaultPath}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 import play.api.libs.ws.WSClient
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
-object DataVaultService {
-  val schemeS3: String = "s3"
-  val schemeHttps: String = "https"
-  val schemeHttp: String = "http"
-  val schemeGS: String = "gs"
-  val schemeFile: String = "file"
-
-  def isRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
-}
 
 class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends LazyLogging {
 
@@ -45,13 +28,13 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
   private def createVault(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[DataVault] = {
     val scheme = remoteSource.uri.getScheme
     try {
-      val fs: DataVault = if (scheme == DataVaultService.schemeGS) {
+      val fs: DataVault = if (scheme == PathSchemes.schemeGS) {
         GoogleCloudDataVault.create(remoteSource)
-      } else if (scheme == DataVaultService.schemeS3) {
+      } else if (scheme == PathSchemes.schemeS3) {
         S3DataVault.create(remoteSource, ws)
-      } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
+      } else if (scheme == PathSchemes.schemeHttps || scheme == PathSchemes.schemeHttp) {
         HttpsDataVault.create(remoteSource, ws, config.Http.uri)
-      } else if (scheme == DataVaultService.schemeFile || scheme == null) {
+      } else if (scheme == PathSchemes.schemeFile || scheme == null) {
         FileSystemDataVault.create
       } else {
         throw new Exception(s"Unknown file system scheme $scheme")

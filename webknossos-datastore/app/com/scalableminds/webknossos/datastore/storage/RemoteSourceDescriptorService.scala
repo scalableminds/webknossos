@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 
 import java.net.URI
 import java.nio.file.Path
@@ -65,9 +66,9 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   def uriFromPathLiteral(pathLiteral: String, localDatasetDir: Path, layerName: String): URI = {
     val uri = new URI(pathLiteral)
-    if (DataVaultService.isRemoteScheme(uri.getScheme)) {
+    if (PathSchemes.isRemoteScheme(uri.getScheme)) {
       uri
-    } else if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {
+    } else if (uri.getScheme == null || uri.getScheme == PathSchemes.schemeFile) {
       val localPath = Path.of(uri.getPath)
       if (localPath.isAbsolute) {
         if (localPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
@@ -111,7 +112,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
     val uri = resolveMagPath(localDatasetDir, localLayerDir, layerName, magLocator)
-    if (DataVaultService.isRemoteScheme(uri.getScheme)) {
+    if (PathSchemes.isRemoteScheme(uri.getScheme)) {
       uri
     } else {
       Path.of(uri.getPath).toAbsolutePath.toUri
@@ -156,7 +157,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
 
   private def pathIsLocal(pathLiteral: String): Boolean = {
     val uri = new URI(pathLiteral)
-    uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile
+    uri.getScheme == null || uri.getScheme == PathSchemes.schemeFile
   }
 
   private def pathIsDataSourceLocal(pathLiteral: String): Boolean =

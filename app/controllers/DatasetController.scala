@@ -35,6 +35,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
@@ -623,28 +624,24 @@ class DatasetController @Inject()(userService: UserService,
     } yield dataStore
   }
 
-  private lazy val manualUploadPrefixBox: Box[URI] = for {
-    fromConfig <- tryo(new URI(conf.WebKnossos.Datasets.manualUploadPrefix))
-    result <- if (fromConfig.getScheme == null)
-      // assume local path, either absolute or relative to working dir
-      tryo(new URI(s"file://${Path.of(conf.WebKnossos.Datasets.manualUploadPrefix).toAbsolutePath.toString}"))
-    else
-      Full(fromConfig)
-  } yield result
+  private lazy val manualUploadPrefixBox: Box[UriPath] = for {
+    fromConfig <- UriPath.fromString(conf.WebKnossos.Datasets.manualUploadPrefix)
+    absolute <- fromConfig.toAbsolute
+  } yield absolute
 
   private def addPathsToDatasource(dataSource: UnusableDataSource,
                                    organizationId: String,
                                    datasetId: ObjectId): Fox[UnusableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox
-      datasetPath = manualUploadPrefix.resolve(organizationId).resolve(datasetId.toString)
+      datasetPath = manualUploadPrefix / organizationId / datasetId.toString
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers.getOrElse(Seq.empty))(layer =>
         addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = Some(layersWithPaths))
 
-  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: URI): Fox[StaticLayer] =
+  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: UriPath): Fox[StaticLayer] =
     for {
-      layerPath <- tryo(dataSourcePath.resolve(dataLayer.name)).toFox
+      layerPath <- Fox.successful(dataSourcePath / dataLayer.name)
       mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
       magsWithPaths = mags.map(mag => addPathToMag(mag, layerPath))
       attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments, layerPath)

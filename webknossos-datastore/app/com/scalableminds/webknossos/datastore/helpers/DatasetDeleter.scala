@@ -3,7 +3,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
@@ -136,7 +135,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
               case dl: StaticLayer =>
-                if (dl.mags.forall(_.path.exists(_.startsWith(s"${DataVaultService.schemeFile}://")))) {
+                if (dl.mags.forall(_.path.exists(_.startsWith(s"${PathSchemes.schemeFile}://")))) {
                   // Setting path to None means using resolution of layer/mag directories to access data
                   dl.mapped(magMapping = _.copy(path = None))
                 } else {

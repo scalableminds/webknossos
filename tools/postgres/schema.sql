@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(138);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(139);
 COMMIT TRANSACTION;
 
 -- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/

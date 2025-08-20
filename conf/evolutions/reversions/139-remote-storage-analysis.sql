@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 138, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 139, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 -- 1. Drop the new organization_usedStorage table
 DROP TABLE IF EXISTS webknossos.organization_usedStorage;
@@ -31,6 +31,6 @@ SET lastStorageScanTime = '1970-01-01T00:00:00.000Z'
 WHERE _id IS NULL;
 
 -- 5. Revert schema version
-UPDATE webknossos.releaseInformation SET schemaVersion = 137;
+UPDATE webknossos.releaseInformation SET schemaVersion = 138;
 
 COMMIT TRANSACTION;

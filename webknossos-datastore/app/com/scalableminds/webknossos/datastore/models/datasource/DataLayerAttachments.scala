@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.webknossos.datastore.helpers.PathSchemes
+import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UriPath}
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -71,21 +71,11 @@ object LayerAttachmentType extends ExtendedEnumeration {
 }
 
 case class LayerAttachment(name: String,
-                           path: URI,
+                           path: UriPath,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
                            credentialId: Option[String] = None) {
   // Warning: throws! Use inside of tryo
-  def localPath: Path = {
-    if (path.getScheme != null && path.getScheme.nonEmpty && path.getScheme != PathSchemes.schemeFile) {
-      throw new Exception(
-        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system.")
-    }
-    if (path.getScheme == null) {
-      Path.of(path.toString)
-    } else {
-      Path.of(path)
-    }
-  }
+  def localPath: Path = path.toLocalPath
 
   def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): URI =
     if (path.getScheme != null) path

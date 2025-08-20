@@ -653,11 +653,11 @@ class DatasetController @Inject()(userService: UserService,
       }
     } yield layerUpdated
 
-  private def addPathToMag(mag: MagLocator, layerPath: URI): MagLocator =
-    mag.copy(path = Some(layerPath.resolve(mag.mag.toMagLiteral()).toString))
+  private def addPathToMag(mag: MagLocator, layerPath: UriPath): MagLocator =
+    mag.copy(path = Some(layerPath / mag.mag.toMagLiteral()))
 
   private def addPathsToAttachments(attachmentsOpt: Option[DataLayerAttachments],
-                                    layerPath: URI): Fox[Option[DataLayerAttachments]] =
+                                    layerPath: UriPath): Fox[Option[DataLayerAttachments]] =
     attachmentsOpt match {
       case None => Fox.successful(None)
       case Some(attachments) =>
@@ -679,10 +679,10 @@ class DatasetController @Inject()(userService: UserService,
 
   private def addPathToAttachment(attachment: LayerAttachment,
                                   attachmentType: LayerAttachmentType,
-                                  layerPath: URI): LayerAttachment = {
+                                  layerPath: UriPath): LayerAttachment = {
     val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
     val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
-    val path = layerPath.resolve(defaultDirName).resolve(attachment.name + suffix)
+    val path = layerPath / defaultDirName / (attachment.name + suffix)
     attachment.copy(path = path)
   }
 

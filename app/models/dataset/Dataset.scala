@@ -4,11 +4,10 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
+import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UriPath}
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -48,7 +47,6 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
-import java.net.URI
 import scala.concurrent.ExecutionContext
 
 case class Dataset(_id: ObjectId,
@@ -855,10 +853,11 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
+      path <- Fox.runOptional(row.path)(UriPath.fromString(_).toFox)
     } yield
       MagLocator(
         mag,
-        row.path,
+        path,
         None,
         axisOrderParsed,
         row.channelindex,
@@ -1048,8 +1047,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      uri <- tryo(new URI(row.path)).toFox
-    } yield LayerAttachment(row.name, uri, dataFormat)
+      path <- UriPath.fromString(row.path).toFox
+    } yield LayerAttachment(row.name, path, dataFormat)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
     for {

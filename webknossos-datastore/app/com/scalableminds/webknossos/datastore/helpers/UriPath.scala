@@ -27,11 +27,30 @@ class UriPath(uri: URI) {
       Full(this)
     }
 
+  def isRelative: Boolean =
+
   private def scheme: Option[String] = Option(uri.getScheme)
 
   def isRemote: Boolean = scheme.exists(PathSchemes.isRemoteScheme)
 
+  // TODO throws. should return Box instead.
+  def toLocalPath: Path = {
+    if (isRemote) {
+      throw new Exception(
+        "Trying to open non-local hdf5 file. Hdf5 files are only supported on the datastore-local file system.")
+    }
+    if (scheme.isDefined) {
+      Path.of(uri.toString)
+    } else {
+      Path.of(uri)
+    }
+  }
+
   override def toString: String = uri.toString
+
+  // TODO json format
+
+  // TODO to and from SQL
 
 }
 

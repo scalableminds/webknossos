@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
@@ -67,7 +67,6 @@ class DataSourceService @Inject()(
         Files.createDirectory(orgaPath)
       }.map(_ => ()).toFox ?~> "Could not create organization directory on datastore server"
     }
-
   }
 
   def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {

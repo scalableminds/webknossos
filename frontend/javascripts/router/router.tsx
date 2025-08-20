@@ -46,8 +46,8 @@ import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
-import AccountPasswordView from "admin/account/account_password_view";
 import AccountProfileView from "admin/account/account_profile_view";
+import AccountSecurityView from "admin/account/account_security_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
@@ -465,7 +465,7 @@ const routes = createRoutesFromElements(
     >
       <Route index element={<Navigate to="profile" />} />
       <Route path="profile" element={<AccountProfileView />} />
-      <Route path="password" element={<AccountPasswordView />} />
+      <Route path="security" element={<AccountSecurityView />} />
       <Route path="token" element={<AccountAuthTokenView />} />
     </Route>
     <Route path="*" element={<PageNotFoundView />} />

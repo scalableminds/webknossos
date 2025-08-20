@@ -16,7 +16,7 @@ import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function AccountPasswordView() {
+function AccountSecurityView() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
@@ -192,7 +192,10 @@ function AccountPasswordView() {
 
   return (
     <div>
-      <SettingsTitle title="Password" description="Manage and update your password" />
+      <SettingsTitle
+        title="Security"
+        description="Manage your password and logins across devices"
+      />
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         {securityItems.map((item) => (
           <Col span={12} key={item.title}>
@@ -223,4 +226,4 @@ function AccountPasswordView() {
   );
 }
 
-export default AccountPasswordView;
+export default AccountSecurityView;

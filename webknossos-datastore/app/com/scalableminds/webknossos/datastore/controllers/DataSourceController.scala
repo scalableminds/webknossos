@@ -360,14 +360,17 @@ class DataSourceController @Inject()(
           updatedDataSource = dataSourceService.applyDataSourceUpdates(existingDataSource, request.body)
           changed = updatedDataSource.hashCode() != existingDataSource.hashCode()
           _ <- if (changed) {
-            logger.info(s"updating datasource, existing: $existingDataSource, updated: $updatedDataSource")
-            if (dataSourceService.existsOnDisk(existingDataSource.id)) {
-              // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
-              // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-              // TODO remove?
-              dataSourceService.updateDataSourceOnDisk(request.body, expectExisting = true)
-            } else
-              dsRemoteWebknossosClient.updateDataSource(request.body, datasetId)
+            logger.info(s"Updating dataSource $datasetId")
+            for {
+              _ <- Fox.runIf(dataSourceService.existsOnDisk(existingDataSource.id)) {
+                // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
+                // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
+                // TODO remove?
+                dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true)
+              }
+              _ <- dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
+              _ = datasetCache.invalidateCache(datasetId)
+            } yield ()
           } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
         } yield Ok
       }

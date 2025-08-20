@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getDataset,
   getDatasetDefaultConfiguration,
-  readDatasetDatasource,
   sendAnalyticsEvent,
   updateDatasetDatasource,
   updateDatasetDefaultConfiguration,
@@ -152,7 +151,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     try {
       setIsLoading(true);
       let fetchedDataset = await getDataset(datasetId);
-      const dataSource = await readDatasetDatasource(fetchedDataset);
+      const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);
 

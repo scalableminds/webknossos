@@ -974,14 +974,6 @@ export async function getDatasets(
   return datasets;
 }
 
-export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.id}/readInboxDataSource?token=${token}`,
-    ),
-  );
-}
-
 export async function updateDatasetDatasource(
   dataStoreUrl: string,
   datasource: APIDataSource,

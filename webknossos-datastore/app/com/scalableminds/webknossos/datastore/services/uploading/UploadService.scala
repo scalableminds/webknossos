@@ -501,10 +501,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSourceOnDisk(
-          dataSourceWithLinkedLayers,
-          expectExisting = true,
-          preventNewPaths = false) ?~> "Could not write combined properties file"
+        _ <- dataSourceService.updateDataSourceOnDisk(dataSourceWithLinkedLayers, expectExisting = true) ?~> "Could not write combined properties file"
       } yield ()
     }
 

@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticColorLayer,
@@ -50,7 +51,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       } yield m.copy(path = magPath, credentialId = credentialId))
 
   private def fixRemoteMagPath(mag: MagLocator, remoteLayerPath: VaultPath, headerFilename: String)(
-      implicit tc: TokenContext): Fox[Option[String]] =
+      implicit tc: TokenContext): Fox[Option[UriPath]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path))
       case None       =>
@@ -59,7 +60,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
         val magHeaderPath = magPath / headerFilename
         for {
           _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"
-        } yield Some(magPath.toUri.toString)
+        } yield Some(magPath.toUriPath)
     }
 
 }

@@ -4,9 +4,10 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.Reads
 
@@ -78,6 +79,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImpl
 
   def toUri: URI =
     uri
+
+  def toUriPath: UriPath = new UriPath(uri)
 
   override def toString: String = uri.toString
 

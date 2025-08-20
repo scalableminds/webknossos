@@ -5,6 +5,7 @@ import com.scalableminds.util.time.Instant
 import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -67,6 +68,8 @@ trait SqlTypeImplicits {
   implicit def byteArrayToSqlValue(v: Array[Byte]): SqlValue = ByteArrayValue(v)
 
   implicit def boundingBoxToSqlValue(v: BoundingBox): SqlValue = BoundingBoxValue(v)
+
+  implicit def uriPathToSqlValue(v: UriPath): SqlValue = UriPathValue(v)
 
   implicit def vec3IntToSqlValue(v: Vec3Int): SqlValue = Vector3Value(v.toVec3Double)
 

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UriPath}
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -77,13 +77,12 @@ case class LayerAttachment(name: String,
   // Warning: throws! Use inside of tryo
   def localPath: Path = path.toLocalPath
 
-  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): URI =
-    if (path.getScheme != null) path
-    else {
-      val datasetDirectory =
-        Path.of(dataBaseDir).toAbsolutePath.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-      new URI(s"file://${datasetDirectory.resolve(Path.of(path.toString))}")
-    }
+  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): UriPath = {
+    // TODO test, clean up
+    val datasetPath = UriPath.fromLocalPath(
+      Path.of(dataBaseDir).toAbsolutePath.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
+    path.resolvedIn(datasetPath)
+  }
 }
 
 object LayerAttachment {
@@ -99,8 +98,11 @@ object LayerAttachment {
         PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(scanExtension))
       paths match {
         case Full(p) =>
-          p.map(path =>
-            LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString), path.toUri, dataFormat))
+          p.map(
+            path =>
+              LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString),
+                              UriPath.fromLocalPath(path),
+                              dataFormat))
         case _ => Seq.empty
       }
     } else {

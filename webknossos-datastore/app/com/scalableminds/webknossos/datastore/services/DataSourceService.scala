@@ -10,7 +10,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes, UriPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -224,18 +224,14 @@ class DataSourceService @Inject()(
     val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
     val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
 
-    def pathOk(pathStr: String): Boolean = {
-      val uri = new URI(pathStr)
-      if (PathSchemes.isRemoteScheme(uri.getScheme)) true
+    def pathOk(path: UriPath): Boolean =
+      if (path.isRemote) true
       else {
-        val path = organizationDir
-          .resolve(dataSource.id.directoryName)
-          .resolve(Path.of(new URI(pathStr).getPath).normalize())
-          .toAbsolutePath
+        val absoluteWithinDataset =
+          organizationDir.resolve(dataSource.id.directoryName).resolve(path.toLocalPath).toAbsolutePath
         val allowedParent = organizationDir.toAbsolutePath
-        if (path.startsWith(allowedParent)) true else false
+        if (absoluteWithinDataset.startsWith(allowedParent)) true else false
       }
-    }
 
     val errors = List(
       Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),

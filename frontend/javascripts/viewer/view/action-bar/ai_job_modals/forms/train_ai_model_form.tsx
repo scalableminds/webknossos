@@ -57,7 +57,7 @@ const AiModelCategoryFormItem = () => (
       },
     ]}
     tooltip={
-      "The model category determines the type of object that is segmented. Neuron models are suitable for segmenting neurons in EM tissue. The other model category is suitable for segmenting any non-neuron object, e.g. neuclei, vesicles, etc. The workflows are optimized for EM data, e.g. from FIB-SEM, MSEM, Serial-Section SEM etc"
+      "The model category determines the type of object that is segmented. Neuron models are suitable for segmenting neurons in EM tissue. The other model category is suitable for segmenting any non-neuron object, e.g. nuclei, vesicles, etc. The workflows are optimized for EM data, e.g. from FIB-SEM, MSEM, Serial-Section SEM etc"
     }
   >
     <Select>

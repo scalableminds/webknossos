@@ -19,13 +19,13 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -35,7 +35,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.libs.Files
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
@@ -43,6 +43,15 @@ import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+
+case class PathValidationResult(
+    path: String,
+    valid: Boolean
+)
+
+object PathValidationResult {
+  implicit val jsonFormat: OFormat[PathValidationResult] = Json.format[PathValidationResult]
+}
 
 class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
@@ -57,6 +66,7 @@ class DataSourceController @Inject()(
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
@@ -367,20 +377,6 @@ class DataSourceController @Inject()(
       }
     }
 
-  // Called by the frontend after the user has set datasetName / FolderId of an explored dataSource
-  // This route adds this data source to the WK database
-  def add(organizationId: String, datasetName: String, folderId: Option[String]): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources) {
-        for {
-          _ <- Fox.successful(())
-          dataSourceId = DataSourceId(datasetName, organizationId)
-          dataSource = request.body.copy(id = dataSourceId)
-          datasetId <- dsRemoteWebknossosClient.registerDataSource(dataSource, dataSourceId, folderId) ?~> "dataset.add.failed"
-        } yield Ok(Json.obj("newDatasetId" -> datasetId))
-      }
-    }
-
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
       UserAccessRequest.administrateDataSources(organizationId)) {
@@ -456,9 +452,11 @@ class DataSourceController @Inject()(
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
               _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
             } yield ()
-          } else {
-            dsRemoteWebknossosClient.deleteVirtualDataset(datasetId)
-          }
+          } else
+            for {
+              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
+              _ = logger.warn(s"Tried to delete dataset ${dataSource.id} that is not on disk.")
+            } yield ()
         } yield Ok
       }
     }
@@ -682,6 +680,19 @@ class DataSourceController @Inject()(
               None
           }
         } yield Ok(Json.toJson(ExploreRemoteDatasetResponse(dataSourceOpt, reportMutable.mkString("\n"))))
+      }
+    }
+
+  def validatePaths(): Action[List[String]] =
+    Action.async(validateJson[List[String]]) { implicit request =>
+      {
+        for {
+          _ <- Fox.successful(())
+          pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)
+          result = request.body.zip(pathsAllowed).map {
+            case (path, isAllowed) => PathValidationResult(path, isAllowed)
+          }
+        } yield Ok(Json.toJson(result))
       }
     }
 

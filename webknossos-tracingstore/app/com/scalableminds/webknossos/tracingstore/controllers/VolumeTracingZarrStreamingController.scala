@@ -352,7 +352,8 @@ class VolumeTracingZarrStreamingController @Inject()(
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
           remoteFallbackLayer,
           List(request)) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
-        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer" ~> NOT_FOUND // return 404 if the request worked but data is empty
+        // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
+        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "Could not retrieve data from fallback layer" ~> INTERNAL_SERVER_ERROR
       } yield fallbackData
     } else Fox.successful(data)
 }

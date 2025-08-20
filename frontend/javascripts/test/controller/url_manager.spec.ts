@@ -192,6 +192,7 @@ describe("UrlManager", () => {
       position: [0, 0, 0] as Vector3,
       additionalCoordinates: [],
       mode,
+      nativelyRenderedLayerName: null,
       zoomStep: 1.3,
       rotation: [0, 0, 180] as Vector3,
     };

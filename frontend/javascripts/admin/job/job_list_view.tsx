@@ -126,7 +126,7 @@ export function JobState({ job }: { job: APIJob }) {
 
   return (
     <Tooltip title={tooltip}>
-      <span className="icon-margin-right">{icon}</span>
+      <span>{icon}</span>
       {jobStateNormalized}
     </Tooltip>
   );
@@ -284,7 +284,9 @@ function JobListView() {
     ) {
       const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
       const modelName =
-        job.type === APIJobType.TRAIN_NEURON_MODEL ? "neuron model" : "instance model";
+        job.type === APIJobType.TRAIN_NEURON_MODEL || job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+          ? "neuron model"
+          : "instance model";
       return (
         <span>
           {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}

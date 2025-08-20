@@ -218,7 +218,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
+        _ <- datasetDAO.updateDataSource(foundDataset._id,
                                                     dataStore.name,
                                                     dataSource.hashCode,
                                                     dataSource,
@@ -238,7 +238,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
+          _ <- datasetDAO.updateDataSource(foundDataset._id,
                                                       dataStore.name,
                                                       dataSource.hashCode,
                                                       dataSource,

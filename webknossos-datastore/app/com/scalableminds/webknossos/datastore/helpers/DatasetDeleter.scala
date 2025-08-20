@@ -17,10 +17,11 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
   def dataBaseDir: Path
 
-  def existsOnDisk(organizationId: String, datasetDirectoryName: String, isInConversion: Boolean = false): Boolean = {
+  def existsOnDisk(dataSourceId: DataSourceId, isInConversion: Boolean = false): Boolean = {
     val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetDirectoryName)
-      else dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
+      if (isInConversion)
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
+      else dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
 
     Files.exists(dataSourcePath)
   }

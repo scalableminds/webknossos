@@ -334,23 +334,13 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updateDataSource(name: String,
-                       key: String,
-                       datasetId: ObjectId,
-                       allowNewPaths: Boolean): Action[UsableDataSource] =
+  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[UsableDataSource] =
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          oldDataSource <- datasetService.dataSourceFor(dataset)
-          oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
-          newPaths = request.body.allExplicitPaths
-          _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
-          _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
-                                                      name,
-                                                      request.body.hashCode(),
-                                                      request.body,
-                                                      isUsable = true)(GlobalAccessContext)
+          _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- datasetDAO.updateDataSource(datasetId, name, request.body.hashCode(), request.body, isUsable = true)(
+            GlobalAccessContext)
         } yield Ok
       }
     }

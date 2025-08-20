@@ -75,14 +75,6 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def readInboxDataSource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-      for {
-        dataSource <- refreshDataSource(datasetId)
-      } yield Ok(Json.toJson(dataSource))
-    }
-  }
-
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId
@@ -364,14 +356,18 @@ class DataSourceController @Inject()(
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-          updatedDataSource = request.body.copy(id = dataSource.id)
-          // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
-          // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-          _ <- if (dataSourceService.existsOnDisk(dataSource.id.organizationId, dataSource.id.directoryName)) {
-            dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true, preventNewPaths = true)
-          } else
-            dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
+          existingDataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+          updatedDataSource = dataSourceService.applyDataSourceUpdates(existingDataSource, request.body)
+          changed = updatedDataSource.hashCode() != existingDataSource.hashCode()
+          _ <- if (changed) {
+            if (dataSourceService.existsOnDisk(existingDataSource.id)) {
+              // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
+              // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
+              // TODO remove?
+              dataSourceService.updateDataSourceOnDisk(request.body, expectExisting = true, preventNewPaths = true)
+            } else
+              dsRemoteWebknossosClient.updateDataSource(request.body, datasetId)
+          } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
         } yield Ok
       }
     }
@@ -442,7 +438,7 @@ class DataSourceController @Inject()(
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- if (dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
+          _ <- if (dataSourceService.existsOnDisk(dataSourceId)) {
             for {
               _ <- dataSourceService.deleteOnDisk(
                 dataSourceId.organizationId,
@@ -706,8 +702,7 @@ class DataSourceController @Inject()(
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
-      dataSourceFromDir <- Fox.runIf(
-        dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
+      dataSourceFromDir <- Fox.runIf(dataSourceService.existsOnDisk(dataSourceId)) {
         dataSourceService
           .dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
@@ -718,7 +713,7 @@ class DataSourceController @Inject()(
       _ <- dataSourceFromDir match {
         case Some(ds) =>
           for {
-            _ <- dsRemoteWebknossosClient.updateDataSource(ds, datasetId, allowNewPaths = true)
+            _ <- dsRemoteWebknossosClient.updateDataSource(ds, datasetId)
             _ = datasetCache.invalidateCache(datasetId)
           } yield ()
         case _ => Fox.successful(())

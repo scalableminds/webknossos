@@ -15,7 +15,7 @@ import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault with FoxImplicits{
+class FileSystemDataVault extends DataVault with FoxImplicits {
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
@@ -96,7 +96,7 @@ class FileSystemDataVault extends DataVault with FoxImplicits{
   override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       localPath <- vaultPathToLocalPath(path)
-      usedStorageBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
+      usedStorageBytes <- tryo(FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
     } yield usedStorageBytes
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {

@@ -22,11 +22,13 @@ import models.dataset.{
 }
 import models.organization.{ArtifactStorageReport, Organization, OrganizationDAO}
 import com.scalableminds.util.tools.{Failure, Full}
+import models.dataset.DatasetDAO
 import com.scalableminds.webknossos.schema.Tables.DatasetLayerAttachmentsRow
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 import utils.sql.SqlEscaping
 
+import java.net.URI
 import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -36,6 +38,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
+                                   datasetDAO: DatasetDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    datasetMagDAO: DatasetMagsDAO,
                                    datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
@@ -98,7 +101,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id,
                                                                                   dataStore.name,
                                                                                   datasetIdOpt)
-      relevantPathsAndUnparsableMags = relevantMagsForStorageReporting.map(resolvePath)
+      relevantPathsAndUnparsableMags = relevantMagsForStorageReporting.map(resolveMagRowPath)
       unparsableMags = relevantPathsAndUnparsableMags.collect { case Right(mag) => mag }.distinctBy(_._dataset)
       relevantMagsWithValidPaths = relevantPathsAndUnparsableMags.collect { case Left(magWithPaths) => magWithPaths }
       relevantMagPaths = relevantPathsAndUnparsableMags.collect { case Left((_, paths)) => paths }.flatten
@@ -108,14 +111,16 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,
                                                                                           dataStore.name,
                                                                                           datasetIdOpt)
-      pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths, relevantAttachments)
-      relevantAttachmentPaths = relevantAttachments.map(_.path)
+      relevantAttachmentsWithResolvedPaths <- Fox.serialCombined(relevantAttachments)(resolveAttachmentPath)
+      pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths,
+                                                              relevantAttachmentsWithResolvedPaths)
+      relevantAttachmentPaths = relevantAttachmentsWithResolvedPaths.map(_.path)
       relevantPaths = relevantMagPaths ++ relevantAttachmentPaths
       reports <- fetchAllStorageReportsForPaths(organization._id, relevantPaths, dataStore)
       storageReports = buildStorageReportsForPathReports(organization._id, reports, pathToArtifactLookupMap)
     } yield storageReports
 
-  private def resolvePath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
+  private def resolveMagRowPath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
     mag.realPath match {
       case Some(realPath) => Left((mag, List(realPath)))
       case None =>
@@ -141,6 +146,21 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
             }
         }
     }
+
+  private def resolveAttachmentPath(attachment: DatasetLayerAttachmentsRow): Fox[DatasetLayerAttachmentsRow] = {
+    val uri = new URI(attachment.path)
+    if (uri.getScheme == null) {
+      // TODO: collect datasetPath/layer and attach to new URI(attachment.path) and make this a string
+      for {
+        // TODOM: optimize this. Not for each attachment a query, instead bulk it.
+        dataset <- datasetDAO.findOne(ObjectId(attachment._Dataset))
+        datasetPath = Paths.get(dataset.directoryName)
+        attachmentPath = datasetPath.resolve(attachment.path)
+      } yield attachment.copy(path = attachmentPath.toString)
+    } else {
+      Fox.successful(attachment)
+    }
+  }
 
   private def buildPathToStorageArtifactMap(
       magsWithValidPaths: List[(DataSourceMagRow, List[String])],
@@ -177,15 +197,15 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       pathToArtifactMap: Map[String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow]])
     : List[ArtifactStorageReport] =
     pathReports.flatMap(pathReport => {
-      pathToArtifactMap(pathReport.path) match {
-        case Left(mag) =>
+      pathToArtifactMap.get(pathReport.path) match {
+        case Some(Left(mag)) =>
           Some(
             ArtifactStorageReport(organizationId,
                                   mag._dataset,
                                   Left(mag._id),
                                   pathReport.path,
                                   pathReport.usedStorageBytes))
-        case Right(attachment) =>
+        case Some(Right(attachment)) =>
           val attachmentId = ObjectId.fromStringSync(attachment._Id)
           attachmentId.flatMap(
             id =>
@@ -195,6 +215,9 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                       Right(id),
                                       pathReport.path,
                                       pathReport.usedStorageBytes)))
+        case None =>
+          logger.warn(s"Could not find artifact for path ${pathReport.path} in pathToArtifactMap")
+          None
 
       }
     })

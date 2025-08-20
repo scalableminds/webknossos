@@ -62,7 +62,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
         uri
     })
 
-    // Check to only measure remote paths that are part of a vault that is configured
+    // Check to only measure remote paths that are part of a vault that is configured.
     val absolutePathsToMeasure = pathsWithAbsoluteURIs.filter(uri =>
       uri.getScheme == DataVaultService.schemeFile || config.Datastore.DataVaults.credentials.exists(vault =>
         isSubpath(new URI(vault.getString("name")), uri)))

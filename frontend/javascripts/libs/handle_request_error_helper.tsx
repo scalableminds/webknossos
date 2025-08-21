@@ -1,5 +1,5 @@
 import { Button } from "antd";
-import type { ServerErrorMessage } from "./handle_http_status";
+import type { ServerErrorMessage } from "types/api_types";
 import Toast, { showToastOnce } from "./toast";
 
 export const handleError = async (
@@ -20,7 +20,7 @@ export const handleError = async (
           <>
             Your session has expired. Please refresh the page
             <br />
-            <Button type="default" onClick={() => window.location.reload()}>
+            <Button type="default" onClick={() => location.reload()}>
               Refresh
             </Button>
           </>,

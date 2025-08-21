@@ -856,9 +856,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
     for {
       rows <- run(
-        q"""SELECT _id, _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
+        q"""SELECT dm._id, dm._dataset, dm.dataLayerName, dm.mag, dm.path, dm.realPath, dm.hasLocalData, ds._organization, ds.directoryName
+            FROM webknossos.dataset_mags dm
+            INNER JOIN webknossos.datasets ds ON dm._dataset = ds._id
             WHERE _dataset = $datasetId
             AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
       magInfos <- rowsToMagInfos(rows)
@@ -867,9 +867,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
     for {
       rows <- run(
-        q"""SELECT  _id, _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
+        q"""SELECT  dm._id, dm._dataset, dm.dataLayerName, dm.mag, dm.path, dm.realPath, dm.hasLocalData, ds._organization, ds.directoryName
+            FROM webknossos.dataset_mags dm
+            INNER JOIN webknossos.datasets ds ON dm._dataset = ds._id
             WHERE realPath = $realPath""".as[DataSourceMagRow])
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos

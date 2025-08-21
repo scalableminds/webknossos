@@ -2327,6 +2327,7 @@ export const createShortLink = _.memoize(
   (longLink: string): Promise<ShortLink> =>
     Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",
+      showErrorToast: false,
       // stringify is necessary because the back-end expects a JSON string
       // (i.e., a string which contains quotes at the beginning and end).
       // The Request module does not add additional string quotes

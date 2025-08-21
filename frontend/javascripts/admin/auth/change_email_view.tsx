@@ -18,7 +18,7 @@ const PASSWORD_FIELD_KEY = "password";
 function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
-  useNavigate();
+  const navigate = useNavigate();
 
   async function changeEmail(newEmail: string, password: string) {
     const newUser = Object.assign({}, activeUser, {
@@ -38,7 +38,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
         Toast.success("Email address changed successfully. You will be logged out.");
         await logoutUserEverywhere();
         Store.dispatch(logoutUserAction());
-        window.location.href = "/auth/login";
+        navigate("/auth/login");
       })
       .catch((error) => {
         const errorMsg = "An unexpected error occurred while changing the email address.";

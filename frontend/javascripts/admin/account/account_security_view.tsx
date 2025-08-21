@@ -183,9 +183,15 @@ function AccountSecurityView() {
   }
 
   async function handleLogout() {
-    await logoutUserEverywhere().then(() => {
-      navigate("/login");
-    });
+    logoutUserEverywhere()
+      .then(() => {
+        Store.dispatch(logoutUserAction());
+        navigate("/login");
+      })
+      .catch((error) => {
+        Toast.error("Failed to log out. See console for more details");
+        console.error("Logout failed:", error);
+      });
   }
 
   const { passkeysEnabled } = features();

@@ -791,6 +791,7 @@ export enum APIJobType {
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
   INFER_MITOCHONDRIA = "infer_mitochondria",
+  INFER_INSTANCES = "infer_instances",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",

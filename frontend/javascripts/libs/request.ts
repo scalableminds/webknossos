@@ -32,10 +32,6 @@ export type RequestOptionsWithData<T> = RequestOptions & {
   data: T;
 };
 
-export type ServerErrorMessage = {
-  error: string;
-};
-
 class Request {
   // IN:  nothing
   // OUT: json

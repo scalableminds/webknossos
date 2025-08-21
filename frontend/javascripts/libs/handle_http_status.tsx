@@ -1,6 +1,9 @@
 import { Button } from "antd";
-import type { ServerErrorMessage } from "./request";
 import Toast, { showToastOnce } from "./toast";
+
+export type ServerErrorMessage = {
+  error: string;
+};
 
 export const handleStatus = (response: Response): Promise<Response> => {
   if (response.status >= 200 && response.status < 400) {

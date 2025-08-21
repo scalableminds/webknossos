@@ -409,13 +409,17 @@ export function* manageUndoStates(): Saga<never> {
           }
         }
       } else if (setSegmentGroups || batchUpdateGroupsAndSegments) {
-        if (setSegmentGroups?.calledFromUndoSaga) {
+        if (
+          setSegmentGroups?.calledFromUndoSaga ||
+          (setSegmentGroups == null && (batchUpdateGroupsAndSegments?.payload?.length || 1) <= 0)
+        ) {
           // Ignore this action as it was dispatched from within this saga.
+          // Or in case the BatchUpdateGroupsAndSegmentsAction does not have a payload and thus is a no-op.
           continue;
         }
         shouldClearRedoState = true;
         const layerName =
-          setSegmentGroups?.layerName || batchUpdateGroupsAndSegments?.payload[0].layerName;
+          setSegmentGroups?.layerName || batchUpdateGroupsAndSegments?.payload?.[0]?.layerName;
         if (layerName == null) {
           throw new Error("Could not find layer name for action.");
         }

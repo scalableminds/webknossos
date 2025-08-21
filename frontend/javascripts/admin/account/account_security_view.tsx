@@ -22,18 +22,17 @@ function AccountSecurityView() {
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
   const [showConfirmLogoutModal, setShowConfirmLogoutModal] = useState(false);
 
-  function onFinish(formValues: Record<string, any>) {
-    changePassword(formValues)
-      .then(async () => {
-        Toast.success(messages["auth.reset_pw_confirmation"]);
-        await logoutUserEverywhere();
-        Store.dispatch(logoutUserAction());
-        navigate("/auth/login");
-      })
-      .catch((error) => {
-        console.error("Password change failed:", error);
-        Toast.error("Failed to change password. Please try again.");
-      });
+  async function onFinish(formValues: Record<string, any>) {
+    try {
+      await changePassword(formValues);
+      Toast.success(messages["auth.reset_pw_confirmation"]);
+      await logoutUserEverywhere();
+      Store.dispatch(logoutUserAction());
+      navigate("/auth/login");
+    } catch (error) {
+      console.error("Password change failed:", error);
+      Toast.error("Failed to change password. Please try again.");
+    }
   }
 
   function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {
@@ -186,7 +185,7 @@ function AccountSecurityView() {
     logoutUserEverywhere()
       .then(() => {
         Store.dispatch(logoutUserAction());
-        navigate("/login");
+        navigate("/auth/login");
       })
       .catch((error) => {
         Toast.error("Failed to log out. See console for more details");

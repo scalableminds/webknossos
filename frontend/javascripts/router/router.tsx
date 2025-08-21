@@ -375,7 +375,8 @@ const routes = createRoutesFromElements(
     {/* Backwards compatibility for old auth token URLs */}
     <Route path="/auth/token" element={<Navigate to="/account/token" />} />
     {/* Backwards compatibility for old password change URLs */}
-    <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
+    <Route path="/auth/changePassword" element={<Navigate to="/account/security" />} />
+    <Route path="/account/password" element={<Navigate to="/account/security" />} />
     <Route path="/login" element={<Navigate to="/auth/login" />} />
 
     <Route path="/invite/:token" element={<AcceptInviteView />} />

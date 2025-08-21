@@ -263,7 +263,7 @@ function JobListView() {
     } else if (job.type === APIJobType.INFER_INSTANCES && linkToDataset != null && job.layerName) {
       return (
         <span>
-          AI instances segmentation for layer <i>{job.layerName}</i> of{" "}
+          AI instance segmentation for layer <i>{job.layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );

@@ -3,8 +3,8 @@ import FastTooltip from "components/fast_tooltip";
 import { usePolledState } from "libs/react_helpers";
 import _ from "lodash";
 import * as React from "react";
-import type { APISegmentationLayer } from "types/api_types";
 import { getUnrenderableLayerInfosForCurrentZoom } from "viewer/model/accessors/flycam_accessor";
+import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import type { SmallerOrHigherInfo } from "viewer/model/helpers/mag_info";
 
 const { useState } = React;
@@ -38,33 +38,13 @@ export default function ViewportStatusIndicator() {
   const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
   usePolledState((state) => {
     const newUnrenderableLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
-    const annotationLayers = state.annotation.annotationLayers;
-    const getSegmentationLayerName = (
-      layer: APISegmentationLayer,
-      tracingId: string | undefined,
-    ) => {
-      if (layer.name !== tracingId) return layer.name;
-      const annotationLayer = annotationLayers.find(
-        (annotationLayer) => annotationLayer.tracingId === layer.tracingId,
-      );
-      if (annotationLayer) {
-        return annotationLayer.name;
-      }
-      return layer.name;
-    };
-    console.log(newUnrenderableLayersWithInfos, annotationLayers);
     const newUnrenderableLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> =
-      newUnrenderableLayersWithInfos.map(({ layer, smallerOrHigherInfo }) =>
-        layer.category === "segmentation"
-          ? {
-              layerName: getSegmentationLayerName(layer, layer.tracingId),
-              smallerOrHigherInfo,
-            }
-          : {
-              layerName: layer.name,
-              smallerOrHigherInfo,
-            },
-      );
+      newUnrenderableLayersWithInfos.map(({ layer, smallerOrHigherInfo }) => {
+        return {
+          layerName: getReadableNameForLayerName(state.dataset, state.annotation, layer.name),
+          smallerOrHigherInfo,
+        };
+      });
 
     if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UnrenderableLayerNamesInfo[]' is... Remove this comment to see the full error message

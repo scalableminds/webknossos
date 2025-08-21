@@ -767,7 +767,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
     } yield mags
 
-  // TODO: Mention in docs & migration guide that postgres now needs to be at least 16+.
   def findAllStorageRelevantMags(organizationId: String,
                                  dataStoreId: String,
                                  datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
@@ -1151,7 +1150,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       storageRelevantAttachments <- run(q"""SELECT *
                                             FROM (
                                               SELECT
-                                                att.*,
+                                                att._id, att._dataset, att.layerName, att.name, att.path, att.type, att.dataFormat,
                                                 ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn
                                               FROM webknossos.dataset_layer_attachments AS att
                                               JOIN webknossos.datasets AS ds ON att._dataset = ds._id

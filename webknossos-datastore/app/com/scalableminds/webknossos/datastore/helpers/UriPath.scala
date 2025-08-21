@@ -16,7 +16,9 @@ class UriPath(uri: URI) {
     if (uri.toString.endsWith("/")) {
       new UriPath(uri.resolve(key))
     } else {
-      new UriPath(new URI(s"${uri.toString}/").resolve(key))
+      val uriWithTrailingSlash = new URI(s"${uri.toString}/")
+      // TODO turns file:///hello into file:/hello. Avoid.
+      new UriPath(uriWithTrailingSlash.resolve(key))
     }
 
   def /(other: UriPath): UriPath =
@@ -36,7 +38,7 @@ class UriPath(uri: URI) {
 
   def isRelative: Boolean = scheme.isEmpty && !uri.getPath.startsWith("/")
 
-  def isAbsolute: Boolean = !isAbsolute
+  def isAbsolute: Boolean = !isRelative
 
   private def scheme: Option[String] = Option(uri.getScheme)
 

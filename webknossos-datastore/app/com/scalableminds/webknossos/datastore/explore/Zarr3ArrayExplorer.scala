@@ -34,7 +34,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
         .boundingBox(guessedAxisOrder)
         .toFox ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       magLocator = MagLocator(Vec3Int.ones,
-                              Some(remotePath.toUri.toString),
+                              Some(remotePath.toUriPath),
                               None,
                               Some(guessedAxisOrder),
                               None,

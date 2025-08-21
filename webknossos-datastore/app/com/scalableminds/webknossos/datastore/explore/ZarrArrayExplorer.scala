@@ -34,7 +34,7 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
       boundingBox <- zarrHeader
         .boundingBox(guessedAxisOrder)
         .toFox ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      magLocator = MagLocator(mag, Some(remotePath.toUri.toString), None, Some(guessedAxisOrder), None, credentialId)
+      magLocator = MagLocator(mag, Some(remotePath.toUriPath), None, Some(guessedAxisOrder), None, credentialId)
       layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
         StaticSegmentationLayer(name,
                                 DataFormat.zarr,

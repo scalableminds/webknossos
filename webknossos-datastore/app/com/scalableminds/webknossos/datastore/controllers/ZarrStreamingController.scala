@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   ZarrHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -28,6 +29,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class ZarrStreamingController @Inject()(
@@ -156,7 +158,7 @@ class ZarrStreamingController @Inject()(
           mags = s.sortedMags.map(
             m =>
               MagLocator(m,
-                         Some(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         Some(UriPath.fromLocalPath(Path.of(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"))),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,
@@ -178,7 +180,7 @@ class ZarrStreamingController @Inject()(
           mags = d.sortedMags.map(
             m =>
               MagLocator(m,
-                         Some(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         Some(UriPath.fromLocalPath(Path.of(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"))),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,

@@ -5,9 +5,10 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
-import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
@@ -111,16 +112,19 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       explored <- exploreLocalLayer(
         layers =>
           layers.map(l =>
-            l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toAbsolutePath.toUri.toString))))),
+            l.mapped(magMapping = m =>
+              m.copy(path = m.path.map(p =>
+                UriPath.fromStringUnsafe(p.toString.stripPrefix(path.toAbsolutePath.toUri.toString)))))),
         new N5ArrayExplorer
       )(layerPath, dataSourceId, "")
     } yield explored
 
   private def selectLastDirectory(l: StaticLayer) =
-    l.mapped(magMapping = m => m.copy(path = m.path.map(_.split("/").last)))
+    l.mapped(magMapping = m => m.copy(path = m.path.map(p => UriPath.fromStringUnsafe(p.toString.split("/").last))))
 
   private def selectLastTwoDirectories(l: StaticLayer) =
-    l.mapped(magMapping = m => m.copy(path = m.path.map(_.split("/").takeRight(2).mkString("/"))))
+    l.mapped(magMapping = m =>
+      m.copy(path = m.path.map(p => UriPath.fromStringUnsafe(p.toString.split("/").takeRight(2).mkString("/")))))
 
   private def exploreLocalLayer(
       makeLayersRelative: List[StaticLayer] => List[StaticLayer],

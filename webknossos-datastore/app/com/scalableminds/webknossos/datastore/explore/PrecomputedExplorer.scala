@@ -86,7 +86,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
       // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
       axisOrder = AxisOrder.xyz(0, 1, 2)
-    } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
+    } yield MagLocator(mag, Some(path.toUriPath), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 
   private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
@@ -99,7 +99,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       } yield
         Seq(
           LayerAttachment(NeuroglancerMesh.meshName,
-                          meshPath.toUri,
+                          meshPath.toUriPath,
                           LayerAttachmentDataformat.neuroglancerPrecomputed,
                           credentialId))
     // If mesh exploration at this path failed, continue but return no meshes.

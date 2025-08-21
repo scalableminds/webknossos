@@ -135,7 +135,8 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
               case dl: StaticLayer =>
-                if (dl.mags.forall(_.path.exists(_.startsWith(s"${PathSchemes.schemeFile}://")))) {
+                // TODO why this if?
+                if (dl.mags.forall(_.path.exists(_.toString.startsWith(s"${PathSchemes.schemeFile}://")))) {
                   // Setting path to None means using resolution of layer/mag directories to access data
                   dl.mapped(magMapping = _.copy(path = None))
                 } else {

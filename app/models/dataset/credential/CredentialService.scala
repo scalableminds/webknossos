@@ -3,7 +3,12 @@ package models.dataset.credential
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.helpers.PathSchemes
-import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, GoogleServiceAccountCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  DataVaultCredential,
+  GoogleServiceAccountCredential,
+  HttpBasicAuthCredential,
+  S3AccessKeyCredential
+}
 import play.api.libs.json.JsValue
 
 import java.net.URI

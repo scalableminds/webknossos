@@ -36,9 +36,13 @@ class UriPath(uri: URI) {
 
   def isRelative: Boolean = scheme.isEmpty && !uri.getPath.startsWith("/")
 
+  def isAbsolute: Boolean = !isAbsolute
+
   private def scheme: Option[String] = Option(uri.getScheme)
 
   def isRemote: Boolean = scheme.exists(PathSchemes.isRemoteScheme)
+
+  def isLocal: Boolean = !isRemote
 
   // TODO throws. should return Box instead.
   def toLocalPath: Path = {
@@ -59,13 +63,15 @@ class UriPath(uri: URI) {
     } else this
 
   override def toString: String = uri.toString
-
   // TODO json format
 
 }
 
 object UriPath {
   def fromString(literal: String): Box[UriPath] = tryo(new URI(literal)).map(new UriPath(_))
+
+  // TODO can we remove this?
+  def fromStringUnsafe(literal: String): UriPath = new UriPath(new URI(literal))
 
   def fromLocalPath(localPath: Path): UriPath = new UriPath(localPath.toUri)
 

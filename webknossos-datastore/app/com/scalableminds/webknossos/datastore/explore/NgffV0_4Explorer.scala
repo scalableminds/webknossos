@@ -121,11 +121,10 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(
-        MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),
-        magPath,
-        elementClass,
-        boundingBox)
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUriPath), None, Some(axisOrder), channelIndex, credentialId),
+                        magPath,
+                        elementClass,
+                        boundingBox)
 
   protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
     for {

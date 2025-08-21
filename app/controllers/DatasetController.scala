@@ -5,7 +5,6 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -45,8 +44,6 @@ import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
 import utils.{MetadataAssertions, WkConf}
 
-import java.net.URI
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.helpers.UriPath
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
-import java.net.URI
 import java.nio.file.{Files, Path}
 
 case class DataLayerAttachments(

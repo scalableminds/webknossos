@@ -3,6 +3,7 @@ package backend
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.helpers.UriPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
@@ -40,8 +41,11 @@ class DataSourceTestSuite extends PlaySpec {
             adminViewConfiguration = None,
             coordinateTransformations = None,
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
-            attachments = Some(DataLayerAttachments(
-              meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))
+            attachments = Some(
+              DataLayerAttachments(
+                meshes = Seq(LayerAttachment("meshfile",
+                                             UriPath.fromStringUnsafe("./meshes/meshfile"),
+                                             LayerAttachmentDataformat.zarr3))))
           )
         ),
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)
@@ -62,8 +66,11 @@ class DataSourceTestSuite extends PlaySpec {
             adminViewConfiguration = None,
             coordinateTransformations = None,
             additionalAxes = Some(Seq(AdditionalAxis("time", bounds = Seq(0, 5), 3))),
-            attachments = Some(DataLayerAttachments(
-              meshes = Seq(LayerAttachment("meshfile", new URI("./meshes/meshfile"), LayerAttachmentDataformat.zarr3))))
+            attachments = Some(
+              DataLayerAttachments(
+                meshes = Seq(LayerAttachment("meshfile",
+                                             UriPath.fromStringUnsafe("./meshes/meshfile"),
+                                             LayerAttachmentDataformat.zarr3))))
           )
         ),
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)

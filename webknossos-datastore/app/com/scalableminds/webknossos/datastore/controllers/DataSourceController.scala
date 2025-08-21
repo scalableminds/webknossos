@@ -17,7 +17,8 @@ import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   PathSchemes,
   SegmentIndexData,
-  SegmentStatisticsParameters
+  SegmentStatisticsParameters,
+  UriPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
@@ -45,7 +46,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 case class PathValidationResult(
-    path: String,
+    path: UriPath,
     valid: Boolean
 )
 
@@ -683,8 +684,8 @@ class DataSourceController @Inject()(
       }
     }
 
-  def validatePaths(): Action[List[String]] =
-    Action.async(validateJson[List[String]]) { implicit request =>
+  def validatePaths(): Action[List[UriPath]] =
+    Action.async(validateJson[List[UriPath]]) { implicit request =>
       {
         for {
           _ <- Fox.successful(())

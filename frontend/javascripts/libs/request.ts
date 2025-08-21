@@ -1,4 +1,4 @@
-import { handleError, handleStatus } from "libs/handle_http_status";
+import handleStatus from "libs/handle_http_status";
 import _ from "lodash";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
@@ -6,6 +6,7 @@ import { createWorker } from "viewer/workers/comlink_wrapper";
 import CompressWorker from "viewer/workers/compress.worker";
 import FetchBufferWorker from "viewer/workers/fetch_buffer.worker";
 import FetchBufferWithHeadersWorker from "viewer/workers/fetch_buffer_with_headers.worker";
+import { handleError } from "./handle_request_error_helper";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);

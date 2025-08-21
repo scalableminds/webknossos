@@ -155,7 +155,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
         // TODOM: optimize this. Not for each attachment a query, instead bulk it.
         dataset <- datasetDAO.findOne(ObjectId(attachment._Dataset))
         datasetPath = Paths.get(dataset.directoryName)
-        attachmentPath = datasetPath.resolve(attachment.path)
+        attachmentPath = datasetPath.resolve(attachment.path).normalize()
       } yield attachment.copy(path = attachmentPath.toString)
     } else {
       Fox.successful(attachment)

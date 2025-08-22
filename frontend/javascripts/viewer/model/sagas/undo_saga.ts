@@ -411,7 +411,8 @@ export function* manageUndoStates(): Saga<never> {
       } else if (setSegmentGroups || batchUpdateGroupsAndSegments) {
         if (
           setSegmentGroups?.calledFromUndoSaga ||
-          (setSegmentGroups == null && (batchUpdateGroupsAndSegments?.payload?.length || 1) <= 0)
+          // In case BatchUpdateGroupsAndSegmentsAction does not have a payload and thus is a no-op ignore the action.
+          (setSegmentGroups == null && (batchUpdateGroupsAndSegments?.payload?.length ?? 0) <= 0)
         ) {
           // Ignore this action as it was dispatched from within this saga.
           // Or in case the BatchUpdateGroupsAndSegmentsAction does not have a payload and thus is a no-op.

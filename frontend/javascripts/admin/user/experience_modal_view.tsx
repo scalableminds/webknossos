@@ -242,7 +242,6 @@ function ExperienceModalView({
       onOk={updateAllUsers}
       okText={"Save"}
       width={multipleUsers ? 800 : 600}
-      maskClosable={false}
     >
       <Table
         size="small"

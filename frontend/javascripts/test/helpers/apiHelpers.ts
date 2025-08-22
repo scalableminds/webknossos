@@ -50,7 +50,8 @@ import {
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
 } from "test/fixtures/hybridtracing_server_objects";
-import type { ServerTracing } from "types/api_types";
+import type { ElementClass, ServerTracing } from "types/api_types";
+import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -79,7 +80,9 @@ vi.mock("libs/request", () => ({
     sendJSONReceiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
-      .mockImplementation(createBucketResponseFunction(Uint16Array, 0)),
+      .mockImplementation(
+        createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 0),
+      ),
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
@@ -219,21 +222,33 @@ type Override = {
 };
 
 export function createBucketResponseFunction(
-  TypedArrayClass: any,
+  dataTypePerLayer: Record<string, ElementClass>,
   fillValue: number,
   delay = 0,
   overrides: Override[] = [],
 ) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
     await sleep(delay);
-    console.log(_url, "was requested. repyling with", TypedArrayClass);
+    const requestedURL = new URL(_url);
+    // Removing first empty part as the pathname always starts with a /.
+    const urlPathParts = requestedURL.pathname.split("/").slice(1);
+    const requestedLayerName = urlPathParts[0] === "data" ? urlPathParts[4] : urlPathParts[2];
+    const layerType = dataTypePerLayer[requestedLayerName];
+    if (!layerType) {
+      throw new Error(
+        `Layer Type for layer with name ${requestedLayerName} was not provided. URL requested: ${_url}, parts: ${urlPathParts.join(", ")}`,
+      );
+    }
+    const [TypedArrayConstructor, channelCount] = getConstructorForElementClass(layerType);
     const bucketCount = payload.data.length;
-    TypedArrayClass = _url.includes("color")
-      ? Uint8Array
-      : _url.includes("segmentation")
-        ? Uint32Array
-        : Uint16Array;
-    const typedArray = new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue);
+    const typedArray = new TypedArrayConstructor(
+      bucketCount * channelCount * Constants.BUCKET_SIZE,
+    );
+    if (typedArray instanceof BigInt64Array || typedArray instanceof BigUint64Array) {
+      typedArray.fill(BigInt(fillValue));
+    } else {
+      (typedArray as Exclude<typeof typedArray, BigInt64Array | BigUint64Array>).fill(fillValue);
+    }
 
     for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
       for (const { position, value } of overrides) {

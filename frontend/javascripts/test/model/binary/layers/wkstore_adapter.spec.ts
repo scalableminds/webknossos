@@ -13,6 +13,7 @@ import Request from "libs/request";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import type { BucketAddress } from "viewer/constants";
 import Store from "viewer/store";
+import Constants from "viewer/constants";
 
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
@@ -96,7 +97,7 @@ describe("wkstore_adapter", () => {
     ] as BucketAddress[];
 
     const fourBitFactor = _fourBit && layer.category === "color" ? 0.5 : 1;
-    const byteCount = fourBitFactor * getByteCountFromLayer(layer) * 32 ** 3;
+    const byteCount = fourBitFactor * getByteCountFromLayer(layer) * Constants.BUCKET_SIZE;
     const bucketData1 = _.range(0, byteCount).map((i) => i % 256);
     const bucketData2 = _.range(0, byteCount).map((i) => (2 * i) % 256);
 
@@ -251,7 +252,7 @@ describe("wkstore_adapter", () => {
   });
 
   it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {
-    const data = new Uint8Array(2);
+    const data = new Uint8Array(Constants.BUCKET_SIZE);
     const bucket1 = new DataBucket(
       "uint8",
       [0, 0, 0, 0],

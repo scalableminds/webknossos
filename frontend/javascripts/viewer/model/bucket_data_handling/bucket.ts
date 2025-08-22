@@ -629,11 +629,7 @@ export class DataBucket {
         `bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`,
       );
       ErrorHandling.notify(error);
-      if (!process.env.IS_TESTING) {
-        // Currently, some tests don't mock the server responses for bucket data correctly.
-        // Therefore, we only throw the error in production.
-        throw error;
-      }
+      throw error;
     }
 
     switch (this.state) {

@@ -23,15 +23,11 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { APITaskType } from "types/api_types";
 
 const { Column } = Table;
 const { Search } = Input;
-
-type Props = {
-  initialSearchValue?: string;
-};
 
 const persistence = new Persistence<{ searchQuery: string }>(
   {
@@ -40,7 +36,10 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "taskTypeList",
 );
 
-function TaskTypeListView({ initialSearchValue }: Props) {
+function TaskTypeListView() {
+  const location = useLocation();
+  const initialSearchValue = location.hash.slice(1);
+
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);

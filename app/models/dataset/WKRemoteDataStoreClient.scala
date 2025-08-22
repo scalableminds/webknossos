@@ -2,28 +2,28 @@ package models.dataset
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
   ExploreRemoteDatasetResponse,
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
-import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
 
-  private lazy val hasSegmentIndexFileCache: AlfuCache[(String, String, String), Boolean] =
+  private lazy val hasSegmentIndexFileCache: AlfuCache[(ObjectId, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
 
   def getDataLayerThumbnail(dataset: Dataset,
@@ -36,8 +36,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(
       s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
-    rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$dataLayerName/thumbnail.jpg")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
@@ -60,16 +59,14 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                    additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
-    rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$layerName/readData")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$layerName/readData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
-    rpc(
-      s"${dataStore.url}/data/datasets/${dataset._organization}/${dataset.directoryName}/layers/$dataLayerName/findData")
+    rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
@@ -82,25 +79,12 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def addDataSource(organizationId: String,
-                    datasetName: String,
-                    dataSource: GenericDataSource[DataLayer],
-                    folderId: Option[ObjectId],
-                    userToken: String): Fox[Unit] =
-    for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
-        .addQueryString("token" -> userToken)
-        .addQueryStringOptional("folderId", folderId.map(_.toString))
-        .postJson(dataSource)
-    } yield ()
-
-  def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(
-      implicit ec: ExecutionContext): Fox[Boolean] = {
-    val cacheKey = (organizationId, datasetName, layerName)
+  def hasSegmentIndexFile(datasetId: ObjectId, layerName: String)(implicit ec: ExecutionContext): Fox[Boolean] = {
+    val cacheKey = (datasetId, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,
       k =>
-        rpc(s"${dataStore.url}/data/datasets/${k._1}/${k._2}/layers/${k._3}/hasSegmentIndex")
+        rpc(s"${dataStore.url}/data/datasets/${k._1}/layers/${k._2}/hasSegmentIndex")
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .silent
           .getWithJsonResponse[Boolean]
@@ -115,9 +99,21 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
         ExploreRemoteDatasetRequest(layerParameters, organizationId))
 
+  def validatePaths(paths: Seq[String]): Fox[List[PathValidationResult]] =
+    rpc(s"${dataStore.url}/data/datasets/validatePaths")
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .postJsonWithJsonResponse[Seq[String], List[PathValidationResult]](paths)
+
   def updateDatasetInDSCache(datasetId: String): Fox[Unit] =
     for {
-      _ <- rpc(s"${dataStore.url}/data/wkDatasets/$datasetId")
+      _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .delete()
+    } yield ()
+
+  def deleteOnDisk(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .delete()
     } yield ()

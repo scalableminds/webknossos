@@ -78,6 +78,7 @@ import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
@@ -324,6 +325,7 @@ export type UserConfiguration = {
   readonly newNodeNewTree: boolean;
   readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
+  readonly applyNodeRotationOnActivation: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
   readonly presetBrushSizes: BrushPresets | null;
@@ -423,6 +425,7 @@ export type Flycam = {
   readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
+  readonly rotation: Vector3;
 };
 export type CameraData = {
   readonly near: number;
@@ -608,7 +611,12 @@ export const combinedReducer = reduceReducers(
 const store = createStore<WebknossosState, Action, unknown, unknown>(
   enableBatching(combinedReducer as any),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
+  applyMiddleware(
+    actionLoggerMiddleware,
+    overwriteActionMiddleware,
+    sagaMiddleware as Middleware,
+    eventEmitterMiddleware,
+  ),
 );
 
 export function startSaga(saga: Saga<any[]>) {

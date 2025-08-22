@@ -1,17 +1,17 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import window, { document, location } from "libs/window";
+import window, { document } from "libs/window";
+import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import type { BlockerFunction } from "react-router-dom";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
@@ -43,7 +43,7 @@ type StateProps = {
   user: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & RouteComponentProps;
+type PropsWithRouter = Props & RouteComponentProps & WithBlockerProps;
 type State = {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
@@ -85,6 +85,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   componentWillUnmount() {
     this._isMounted = false;
     Store.dispatch(setIsInAnnotationViewAction(false));
+    this.props.setBlocking({
+      shouldBlock: false,
+    });
   }
 
   tryFetchingModel() {
@@ -131,40 +134,40 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== location.pathname) {
-        const stateSaved = Model.stateSaved();
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
+      // Navigation blocking can be triggered by two sources:
+      // 1. The browser's native beforeunload event
+      // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-        if (!stateSaved && Store.getState().annotation.restrictions.allowUpdate) {
+      if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+
+        setTimeout(() => {
+          if (!this._isMounted) {
+            return false;
+          }
+
+          Store.dispatch(saveNowAction());
+          // restore the event handler in case a user chose to stay on the page
           // @ts-ignore
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+          window.onbeforeunload = beforeUnload;
+        }, 500);
 
-          setTimeout(() => {
-            if (!this._isMounted) {
-              return;
-            }
-
-            Store.dispatch(saveNowAction());
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["save.leave_page_unfinished"];
-        }
+        // The native event requires a truthy return value to show a generic message
+        // The React Router blocker accepts a boolean
+        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
 
+      // The native event requires an empty return value to not show a message
       return;
     };
 
-    this.props.history.block(beforeUnload);
-    // @ts-ignore
     window.onbeforeunload = beforeUnload;
+    this.props.setBlocking({
+      // @ts-ignore beforeUnload signature is overloaded
+      shouldBlock: beforeUnload,
+    });
+
     UrlManager.startUrlUpdater();
     initializeSceneController();
     this.initKeyboard();
@@ -356,4 +359,4 @@ function mapStateToProps(state: WebknossosState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<PropsWithRouter, any>(Controller));
+export default connector(withBlocker(withRouter<PropsWithRouter>(Controller)));

@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -71,6 +71,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String], dataStoreName: String)
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -89,6 +95,7 @@ class DatasetController @Inject()(userService: UserService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
+                                  composeService: ComposeService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
@@ -145,11 +152,32 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
-        _ <- wkExploreRemoteLayerService.addRemoteDatasource(dataSource,
-                                                             request.body.datasetName,
-                                                             request.identity,
-                                                             folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+        _ <- wkExploreRemoteLayerService.addRemoteDatasourceToDatabase(dataSource,
+                                                                       request.body.datasetName,
+                                                                       request.identity,
+                                                                       folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
+    }
+
+  def addVirtualDataset(name: String): Action[DataSourceRegistrationInfo] =
+    sil.SecuredAction.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
+      for {
+        dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> Messages(
+          "datastore.notFound",
+          request.body.dataStoreName) ~> NOT_FOUND
+        user = request.identity
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
+        _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
+        dataset <- datasetService.createVirtualDataset(
+          name,
+          dataStore,
+          request.body.dataSource,
+          request.body.folderId,
+          user
+        )
+      } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
   // List all accessible datasets (list of json objects, one per dataset)
@@ -488,6 +516,24 @@ class DatasetController @Inject()(userService: UserService,
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }
+    }
+
+  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ~> FORBIDDEN
+        _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
+      } yield Ok
+    }
+
+  def compose(): Action[ComposeRequest] =
+    sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
+      for {
+        (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
+      } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
 }

@@ -9,7 +9,7 @@ const TaskCreateView = () => {
       icon: <ScheduleOutlined />,
       label: "Create Task",
       key: "1",
-      children: <TaskCreateFormView taskId={null} />,
+      children: <TaskCreateFormView />,
     },
     {
       icon: <BarsOutlined />,

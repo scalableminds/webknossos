@@ -181,7 +181,7 @@ function receiveJSONMockImplementation(
 
   if (
     url ===
-    `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`
+    `http://localhost:9000/data/datasets/66f3c82966010034942e9740/layers/color/mappings?token=${TOKEN}`
   ) {
     return Promise.resolve({});
   }

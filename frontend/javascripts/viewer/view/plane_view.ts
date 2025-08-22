@@ -2,7 +2,12 @@ import app from "app";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
-import * as THREE from "three";
+import {
+  DirectionalLight,
+  OrthographicCamera,
+  Vector2 as ThreeVector2,
+  Vector3 as ThreeVector3,
+} from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "viewer/constants";
@@ -33,10 +38,10 @@ const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  camera: THREE.OrthographicCamera,
+  camera: OrthographicCamera,
 ) => {
   // @ts-ignore
-  const dirLight = new THREE.DirectionalLight(0x888888, intensity);
+  const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
   camera.add(dirLight.target);
@@ -52,7 +57,7 @@ const MESH_HOVER_THROTTLING_DELAY = 50;
 let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera>;
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
@@ -60,13 +65,13 @@ class PlaneView {
   constructor() {
     this.running = false;
     const { scene } = getSceneController();
-    // Initialize main THREE.js components
-    const cameras = {} as OrthoViewMap<THREE.OrthographicCamera>;
+    // Initialize main js components
+    const cameras = {} as OrthoViewMap<OrthographicCamera>;
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      cameras[plane] = new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
       scene.add(cameras[plane]);
@@ -78,14 +83,14 @@ class PlaneView {
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
-    this.cameras[OrthoViews.TDView].position.copy(new THREE.Vector3(10, 10, -10));
-    this.cameras[OrthoViews.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
-    this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.TDView].position.copy(new ThreeVector3(10, 10, -10));
+    this.cameras[OrthoViews.PLANE_XY].up = new ThreeVector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_YZ].up = new ThreeVector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_XZ].up = new ThreeVector3(0, 0, -1);
+    this.cameras[OrthoViews.TDView].up = new ThreeVector3(0, 0, -1);
 
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
+      this.cameras[plane].lookAt(new ThreeVector3(0, 0, 0));
     }
 
     this.needsRerender = true;
@@ -104,15 +109,15 @@ class PlaneView {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
     TWEEN.update();
-    const SceneController = getSceneController();
+    const sceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
-      const { renderer, scene } = SceneController;
-      SceneController.update();
+      const { renderer, scene } = sceneController;
+      sceneController.update();
       const storeState = Store.getState();
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
@@ -124,7 +129,7 @@ class PlaneView {
       clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
-        SceneController.updateSceneForCam(plane);
+        sceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
 
         if (width > 0 && height > 0) {
@@ -139,8 +144,8 @@ class PlaneView {
 
   performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
-    const SceneController = getSceneController();
-    const { segmentMeshController } = SceneController;
+    const sceneController = getSceneController();
+    const { segmentMeshController } = sceneController;
     const { meshesLayerLODRootGroup } = segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
@@ -158,7 +163,7 @@ class PlaneView {
     }
 
     // Perform ray casting
-    const mouse = new THREE.Vector2(
+    const mouse = new ThreeVector2(
       (mousePosition[0] / tdViewport.width) * 2 - 1,
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
@@ -230,8 +235,8 @@ class PlaneView {
 
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {
-      const SceneController = getSceneController();
-      const { segmentMeshController } = SceneController;
+      const sceneController = getSceneController();
+      const { segmentMeshController } = sceneController;
       segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
       oldRaycasterHit = null;
     }
@@ -252,7 +257,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<OrthographicCamera> {
     return this.cameras;
   }
 
@@ -275,8 +280,8 @@ class PlaneView {
   }
 
   start(): void {
-    const SceneController = getSceneController();
-    const { segmentMeshController } = SceneController;
+    const sceneController = getSceneController();
+    const { segmentMeshController } = sceneController;
 
     this.unsubscribeFunctions.push(
       app.vent.on("rerender", () => {

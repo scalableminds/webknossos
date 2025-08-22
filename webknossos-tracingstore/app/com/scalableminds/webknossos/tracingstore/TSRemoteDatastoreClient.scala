@@ -36,7 +36,7 @@ class TSRemoteDatastoreClient @Inject()(
     with ProtoGeometryImplicits
     with MissingBucketHeaders {
 
-  private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
+  private lazy val dataStoreUriCache: AlfuCache[ObjectId, String] = AlfuCache()
   private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
@@ -145,23 +145,19 @@ class TSRemoteDatastoreClient @Inject()(
 
   private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[VoxelSize] =
     for {
-      dataSourceId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
-      dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)
-      result <- rpc(
-        s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
+      datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
+      dataStoreUri <- dataStoreUriWithCache(datasetId)
+      result <- rpc(s"$dataStoreUri/data/datasets/${datasetId}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
       scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationId, remoteLayer.datasetDirectoryName)
-    } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationId}/${remoteLayer.datasetDirectoryName}/layers/${remoteLayer.layerName}"
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.datasetId)
+    } yield s"$datastoreUri/data/datasets/${remoteLayer.datasetId}/layers/${remoteLayer.layerName}"
 
-  private def dataStoreUriWithCache(organizationId: String, datasetDirectoryName: String): Fox[String] =
-    dataStoreUriCache.getOrLoad(
-      (organizationId, datasetDirectoryName),
-      keyTuple => remoteWebknossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
+  private def dataStoreUriWithCache(datasetId: ObjectId): Fox[String] =
+    dataStoreUriCache.getOrLoad(datasetId, keyTuple => remoteWebknossosClient.getDataStoreUriForDataset(datasetId))
 
 }

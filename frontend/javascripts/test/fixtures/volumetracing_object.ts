@@ -1,6 +1,7 @@
 import update from "immutability-helper";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 import { combinedReducer } from "viewer/store";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
@@ -108,6 +109,13 @@ const stateWithoutDatasetInitialization = update(defaultState, {
       $set: {
         inputCatcherRect: notEmptyViewportRect,
       },
+    },
+  },
+  flycam: {
+    currentMatrix: {
+      // Apply the default 180 z axis rotation to get correct result in ortho related tests.
+      // This ensures the calculated flycam rotation is [0, 0, 0]. Otherwise it would be  [0, 0, 180].
+      $set: FlycamMatrixWithDefaultRotation,
     },
   },
 });

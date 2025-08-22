@@ -143,6 +143,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
   }
 
   object Datastore {
@@ -201,6 +203,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val cookiePath: String = get[String]("silhouette.cookieAuthenticator.cookiePath")
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val sameSite: String = get[String]("silhouette.cookieAuthenticator.sameSite")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
       val authenticatorExpiry: FiniteDuration =
         get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")

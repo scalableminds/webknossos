@@ -1,22 +1,24 @@
-import { CheckOutlined, DownOutlined } from "@ant-design/icons";
+import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
+import ChangeEmailView from "admin/auth/change_email_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Col, Dropdown, Row } from "antd";
+import { Button, Col, Dropdown, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
+import { useState } from "react";
 import { getSystemColorTheme } from "theme";
 import type { APIUserTheme } from "types/api_types";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsCard } from "./helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
 function AccountProfileView() {
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
-
+  const [isChangeEmailVisible, setChangeEmailVisible] = useState(false);
   if (!activeUser) return null;
 
   const role = Utils.isUserAdmin(activeUser)
@@ -56,29 +58,42 @@ function AccountProfileView() {
     },
   ];
 
-  const profileItems = [
+  const profileItems: SettingsCardProps[] = [
     {
       title: "Name",
-      value: formatUserName(activeUser, activeUser),
+      content: formatUserName(activeUser, activeUser),
     },
     {
       title: "Email",
-      value: activeUser.email,
+      content: isChangeEmailVisible ? (
+        <ChangeEmailView onCancel={() => setChangeEmailVisible(false)} />
+      ) : (
+        activeUser.email
+      ),
+      action: (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<EditOutlined />}
+          size="small"
+          onClick={() => setChangeEmailVisible(!isChangeEmailVisible)}
+        />
+      ),
     },
     {
       title: "Organization",
-      value: activeOrganization?.name || activeUser.organization,
+      content: activeOrganization?.name || activeUser.organization,
     },
     {
       title: "Role",
-      value: role,
-      explanation: (
+      content: role,
+      tooltip: (
         <a href="https://docs.webknossos.org/webknossos/users/access_rights.html">Learn More</a>
       ),
     },
     {
       title: "Theme",
-      value: (
+      content: (
         <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
           {themeItems.find((item) => item.key === selectedTheme)?.label}
         </Dropdown.Button>
@@ -97,8 +112,9 @@ function AccountProfileView() {
           <Col span={12} key={item.title}>
             <SettingsCard
               title={item.title}
-              description={item.value}
-              explanation={item.explanation}
+              content={item.content}
+              tooltip={item.tooltip}
+              action={item.action}
             />
           </Col>
         ))}

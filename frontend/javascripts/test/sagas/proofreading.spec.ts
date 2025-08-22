@@ -292,8 +292,6 @@ describe("Proofreading", () => {
         },
       ]);
 
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
       const mapping1 = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -304,6 +302,9 @@ describe("Proofreading", () => {
       yield call(() => api.tracing.save());
 
       expect(context.receivedDataPerSaveRequest).toEqual([]);
+
+      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
     await task.toPromise();

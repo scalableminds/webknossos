@@ -1,6 +1,6 @@
 import app from "app";
 import _ from "lodash";
-import * as THREE from "three";
+import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -23,8 +23,8 @@ class Cube {
   // current W position. Without the cross sections, the bounding box' wireframe
   // would only be visible when the current position matches the edge positions
   // of the bounding box.
-  crossSections: OrthoViewWithoutTDMap<THREE.Line>;
-  cube: THREE.Line;
+  crossSections: OrthoViewWithoutTDMap<Line>;
+  cube: Line;
   min: Vector3;
   max: Vector3;
   readonly showCrossSections: boolean;
@@ -47,11 +47,11 @@ class Cube {
     this.initialized = false;
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
-    this.cube = new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial());
+    this.cube = new Line(new BufferGeometry(), this.getLineMaterial());
     this.crossSections = {
-      PLANE_XY: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
-      PLANE_XZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
-      PLANE_YZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
+      PLANE_XY: new Line(new BufferGeometry(), this.getLineMaterial()),
+      PLANE_XZ: new Line(new BufferGeometry(), this.getLineMaterial()),
+      PLANE_YZ: new Line(new BufferGeometry(), this.getLineMaterial()),
     };
 
     if (this.min != null && this.max != null) {
@@ -69,15 +69,17 @@ class Cube {
   }
 
   getLineMaterial() {
-    return this.isHighlighted
-      ? new THREE.LineBasicMaterial({
-          color: Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff,
-          linewidth: this.lineWidth,
-        })
-      : new THREE.LineBasicMaterial({
-          color: this.color,
-          linewidth: this.lineWidth,
-        });
+    return new LineBasicMaterial({
+      color: this.getLineColor(),
+      linewidth: this.lineWidth,
+    });
+  }
+
+  getLineColor(): number {
+    if (this.isHighlighted) {
+      return Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff;
+    }
+    return this.color;
   }
 
   setCorners(min: Vector3, max: Vector3) {
@@ -89,7 +91,7 @@ class Cube {
     // box, we subtract Number.EPSILON.
     max = [max[0] - Number.EPSILON, max[1] - Number.EPSILON, max[2] - Number.EPSILON];
 
-    const vec = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    const vec = (x: number, y: number, z: number) => new ThreeVector3(x, y, z);
 
     this.cube.geometry.setFromPoints([
       vec(min[0], min[1], min[2]),
@@ -168,7 +170,7 @@ class Cube {
     }
   }
 
-  getMeshes(): Array<THREE.Line> {
+  getMeshes(): Line[] {
     return [this.cube].concat(_.values(this.crossSections));
   }
 
@@ -179,7 +181,10 @@ class Cube {
 
     this.isHighlighted = highlighted;
     this.getMeshes().forEach((mesh) => {
-      mesh.material = this.getLineMaterial();
+      // @ts-ignore We don't use material arrays
+      const meshMaterial: LineBasicMaterial = mesh.material;
+      meshMaterial.color.setHex(this.getLineColor());
+      meshMaterial.linewidth = this.lineWidth;
     });
     app.vent.emit("rerender");
   }

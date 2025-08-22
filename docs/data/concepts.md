@@ -1,4 +1,3 @@
-
 # High-Level Concepts
 
 ## Datasets, Cubes, and Buckets
@@ -24,7 +23,7 @@ A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which
 
 ## Magnification Steps and Downsampling
 
-To enable zooming within huge datasets in WEBKNOSSOS, dataset layers usually contain multiple magnification steps (also called mags, mipmaps, image pyramids or resolutions).
+To enable zooming within huge datasets in WEBKNOSSOS, dataset layers usually contain multiple magnification steps (also called mags, mipmaps or resolutions).
 `1` is the magnification step with the finest resolution, i.e. the original data.
 `2` is downsampled by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
 Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
@@ -51,7 +50,7 @@ The underlying data type limits the maximum number of IDs:
 
 
 ## Dataset Metadata
-For each dataset, we stored metadata in a `datasource-properties.json` file.
+For each dataset, we store metadata in a `datasource-properties.json` file.
 See below for the [full specification](#dataset-metadata-specification).
 This is an example:
 
@@ -70,12 +69,12 @@ This is an example:
       "height" : 1024,
       "depth" : 1024
     },
-    "wkwResolutions" : [
-        { "resolution": 1, "cubeLength": 1024 },
-        { "resolution": [ 2, 2, 1 ], "cubeLength": 1024 },
-        { "resolution": [ 4, 4, 1 ], "cubeLength": 1024 },
-        { "resolution": [ 8, 8, 1 ], "cubeLength": 1024 },
-        { "resolution": [ 16, 16, 2 ], "cubeLength": 1024 },
+    "mags" : [
+        { "mag": [1, 1, 1], "path": "my_team/great_dataset/color/1" },
+        { "mag": [2, 2, 1], "path": "my_team/great_dataset/color/2" },
+        { "mag": [4, 4, 1], "path": "my_team/great_dataset/color/4" },
+        { "mag": [8, 8, 1], "path": "my_team/great_dataset/color/8" },
+        { "mag": [16, 16, 2], "path": "my_team/great_dataset/color/16" }
       ],
     "elementClass" : "uint8",
     "dataFormat" : "wkw"
@@ -87,13 +86,11 @@ This is an example:
       "height" : 1024,
       "depth" : 1024
     },
-    "wkwResolutions" : [ {
-      "resolution" : 1,
-      "cubeLength" : 1024
-    }, {
-      "resolution" : [ 2, 2, 1 ],
-      "cubeLength" : 1024
-    } ],
+    "mags" : [
+      { "mag" : [1, 1, 1], "path": "my_team/great_dataset/segmentation/1" },
+      { "mag" : [2, 2, 1], "path": "my_team/great_dataset/segmentation/2" }
+    ],
+    "cubeLength": 1024,
     "elementClass" : "uint32",
     "largestSegmentId" : 1000000000,
     "category" : "segmentation",
@@ -103,10 +100,9 @@ This is an example:
 }
 ```
 
-Note that the `resolutions` property within the elements of `wkwResolutions` can be an array of length 3.
-The three components within such a resolution denote the scaling factor for x, y, and z.
-The term "magnifications" is used synonymously for resolutions throughout the UI.
-At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
+Note that the `mag` property within the elements of `mags` is always an array of length 3, denoting the scaling factor for x, y, and z. The `path` property specifies the location of the data for each magnification step.
+The term "magnifications" is used synonymously for mags throughout the UI.
+At the moment, WEBKNOSSOS guarantees correct rendering of data with non-uniform mag factors only if the z-component between two mags changes by a factor of 1 or 2.
 
 Most users do not create these metadata files manually.
 When using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).
@@ -126,9 +122,9 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
   + `dataLayers.category`: Either `color` for raw data or `segmentation` for segmentation layers.
   + `dataLayers.boundingBox`: The position and size of the data that is contained in this layer. `topLeft` holds the `min_x,min_y,min_z` position, `width` is `max_x - min_x`, `height` is `max_y - min_y` and `depth` is `max_z - min_z`.
 
-  + `dataLayers.wkwResolutions`: Holds information about the available magnification steps of the layer.
-    * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g., `1`, `2` or `4`) or a 3-tuple (e.g., `2, 2, 1`) for non-uniform magnifications.
-    * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`.
+  + `dataLayers.mags`: Holds information about the available magnification steps of the layer.
+    * `dataLayers.mags.mag`: A 3-tuple (e.g., `[1, 1, 1]`, `[2, 2, 1]`) for uniform or non-uniform magnifications.
+    * `dataLayers.mags.path`: The path to the directory containing the data for this magnification step.
 
   + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `float` (32-bit) or `double` (64-bit).
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.

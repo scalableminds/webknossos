@@ -4,7 +4,7 @@ import { Button, Col, Row, Spin, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
-import { SettingsCard } from "./helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
 const { Text } = Typography;
@@ -41,10 +41,10 @@ function AccountAuthTokenView() {
     }
   };
 
-  const APIitems = [
+  const APIitems: SettingsCardProps[] = [
     {
       title: "Auth Token",
-      value: (
+      content: (
         <Text code copyable>
           {currentToken}
         </Text>
@@ -52,9 +52,9 @@ function AccountAuthTokenView() {
     },
     {
       title: "Token Revocation",
-      explanation:
+      tooltip:
         "Revoke your token if it has been compromised or if you suspect someone else has gained access to it. This will invalidate all active sessions.",
-      value: (
+      content: (
         <Button icon={<SwapOutlined />} type="primary" ghost onClick={handleRevokeToken}>
           Revoke and Generate New Token
         </Button>
@@ -64,7 +64,7 @@ function AccountAuthTokenView() {
       ? [
           {
             title: "Organization ID",
-            value: (
+            content: (
               <Text code copyable>
                 {activeUser.organization}
               </Text>
@@ -74,7 +74,7 @@ function AccountAuthTokenView() {
       : []),
     {
       title: "API Documentation",
-      value: (
+      content: (
         <a href="https://docs.webknossos.org/webknossos-py/index.html">
           Read the docs <ExportOutlined />
         </a>
@@ -86,17 +86,13 @@ function AccountAuthTokenView() {
     <div>
       <SettingsTitle
         title="API Authorization"
-        description="Access the WEBKNOSSO Python API with your API token"
+        description="Access the WEBKNOSSOS Python API with your API token"
       />
       <Spin size="large" spinning={isLoading}>
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           {APIitems.map((item) => (
             <Col span={12} key={item.title}>
-              <SettingsCard
-                title={item.title}
-                description={item.value}
-                explanation={item.explanation}
-              />
+              <SettingsCard title={item.title} content={item.content} tooltip={item.tooltip} />
             </Col>
           ))}
         </Row>

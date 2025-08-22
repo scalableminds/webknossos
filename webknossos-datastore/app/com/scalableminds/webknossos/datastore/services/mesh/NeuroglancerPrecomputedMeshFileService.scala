@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -23,7 +23,7 @@ object NeuroglancerPrecomputedMeshInfo {
   implicit val jsonFormat: OFormat[NeuroglancerPrecomputedMeshInfo] = Json.format[NeuroglancerPrecomputedMeshInfo]
 }
 
-class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVaultService)(
+class NeuroglancerPrecomputedMeshFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService)(
     implicit ec: ExecutionContext)
     extends FoxImplicits
     with NeuroglancerMeshHelper {
@@ -32,7 +32,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
 
   private def loadRemoteMeshInfo(meshFileKey: MeshFileKey)(implicit tc: TokenContext): Fox[NeuroglancerMesh] =
     for {
-      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
+      vaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
       meshInfoPath = vaultPath / NeuroglancerMesh.FILENAME_INFO
       meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
       _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
@@ -75,7 +75,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
-      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
+      vaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
       meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
@@ -104,7 +104,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
-      vaultPath <- dataVaultService.getVaultPath(meshFileKey.attachment)
+      vaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
       segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
       _ <- Fox.fromBool(meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1) ?~> "All requests must have the same segment id"
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)

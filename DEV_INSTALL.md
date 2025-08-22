@@ -1,22 +1,5 @@
 # Development installation
 
-## Docker
-
-This is only recommended for local testing (not for development). Docker 19.03.0+ and Docker Compose 2.+ are required.
-
-```bash
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
-cd webknossos
-docker compose pull webknossos
-./start-docker.sh
-```
-
-Open your local WEBKNOSSOS instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
-Now, you are ready to use your local WEBKNOSSOS instance.
-
-See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
-
-For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/webknossos/installation.html).
 
 ## Dependencies
 
@@ -37,8 +20,6 @@ For non-localhost deployments, check out the [installation guide in the document
 ## MacOS
 
 ```bash
-# WEBKNOSSOS needs to be run from x86_64 environment (only applicable for arm64-based Macs)
-arch -x86_64 /bin/zsh
 
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -48,13 +29,11 @@ brew install openjdk draco openssl git node postgresql sbt findutils coreutils g
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
-echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
-echo '  export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
-echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
-echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
-echo 'fi' >> ~/.zshrc
+echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/openssl/bin:$PATH"' >> ~/.zshrc
+echo 'export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"' >> ~/.zshrc
+echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl/include"' >> ~/.zshrc
 
 # Start postgres and redis
 brew services start postgresql

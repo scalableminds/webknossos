@@ -12,12 +12,11 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
@@ -42,9 +41,7 @@ type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type PropsWithRouter = Props & RouteComponentProps;
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
@@ -138,7 +135,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         createGroupForEachFile,
       },
     });
-    this.props.history.push(`/annotations/${response.annotation.id}`);
+    this.props.navigate(`/annotations/${response.annotation.id}`);
   };
 
   getValidTabKeys() {
@@ -244,7 +241,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         UserLocalStorage.setItem("lastUsedDashboardTab", activeTabKey);
 
         if (!this.props.isAdminView) {
-          this.props.history.push(`/dashboard/${url}`);
+          this.props.navigate(`/dashboard/${url}`);
         }
       }
 
@@ -311,4 +308,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardView));
+export default connector(withRouter(DashboardView));

@@ -7,7 +7,7 @@ import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { IdentityTransform } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { isMagRestrictionViolated } from "viewer/model/accessors/flycam_accessor";
+import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
@@ -41,6 +41,9 @@ const noSkeletonsExplanation =
 const disabledSkeletonExplanation =
   "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
 
+const rotationActiveDisabledExplanation =
+  "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
+
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
   isInMergerMode: boolean,
@@ -49,9 +52,14 @@ const getExplanationForDisabledVolume = (
   isEditableMappingActive: boolean,
   isSegmentationTracingTransformed: boolean,
   isJSONMappingActive: boolean,
+  isFlycamRotated: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
+  }
+
+  if (isFlycamRotated) {
+    return rotationActiveDisabledExplanation;
   }
 
   if (isZoomInvalidForTracing) {
@@ -83,8 +91,20 @@ const getExplanationForDisabledVolume = (
 const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.AREA_MEASUREMENT.id]: NOT_DISABLED_INFO,
 };
+
+function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
+  return {
+    [AnnotationTool.AREA_MEASUREMENT.id]: isFlycamRotated
+      ? {
+          isDisabled: true,
+          explanation: rotationActiveDisabledExplanation,
+        }
+      : NOT_DISABLED_INFO,
+  };
+}
+
+const getAreaMeasurementToolInfo = memoizeOne(_getAreaMeasurementToolInfo);
 
 function _getSkeletonToolInfo(
   hasSkeleton: boolean,
@@ -125,7 +145,19 @@ function _getSkeletonToolInfo(
 }
 const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);
 
-function _getBoundingBoxToolInfo(hasSkeleton: boolean, areGeometriesTransformed: boolean) {
+function _getBoundingBoxToolInfo(
+  hasSkeleton: boolean,
+  areGeometriesTransformed: boolean,
+  isFlycamRotated: boolean,
+) {
+  if (isFlycamRotated) {
+    return {
+      [AnnotationTool.BOUNDING_BOX.id]: {
+        isDisabled: true,
+        explanation: rotationActiveDisabledExplanation,
+      },
+    };
+  }
   if (areGeometriesTransformed) {
     return {
       [AnnotationTool.BOUNDING_BOX.id]: {
@@ -155,6 +187,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
   isSegmentationTracingTransformed: boolean,
   isVolumeDisabled: boolean,
   isJSONMappingActive: boolean,
+  isFlycamRotated: boolean,
 ) {
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,
@@ -164,6 +197,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     isEditableMappingActive,
     isSegmentationTracingTransformed,
     isJSONMappingActive,
+    isFlycamRotated,
   );
 
   const disabledInfo = {
@@ -293,6 +327,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
   const { activeMappingByLayer } = state.temporaryConfiguration;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
   const hasVolume = state.annotation.volumes.length > 0;
+  const isFlycamRotated = isRotated(state.flycam);
   const hasSkeleton = state.annotation.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
@@ -329,7 +364,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
     false;
 
-  return isVolumeDisabled || isEditableMappingActive
+  return isVolumeDisabled || isEditableMappingActive || isFlycamRotated
     ? // All segmentation-related tools are disabled.
       getDisabledInfoWhenVolumeIsDisabled(
         isSegmentationTracingVisible,
@@ -340,6 +375,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
         isSegmentationTracingTransformed,
         isVolumeDisabled,
         isJSONMappingActive,
+        isFlycamRotated,
       )
     : // Volume tools are not ALL disabled, but some of them might be.
       getVolumeDisabledWhenVolumeIsEnabled(
@@ -360,17 +396,24 @@ const _getDisabledInfoForTools = (
 ): Record<AnnotationToolId, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
+  const isFlycamRotated = isRotated(state.flycam);
   const geometriesTransformed = areGeometriesTransformed(state);
+  const areaMeasurementToolInfo = getAreaMeasurementToolInfo(isFlycamRotated);
   const skeletonToolInfo = getSkeletonToolInfo(
     hasSkeleton,
     geometriesTransformed,
     isSkeletonLayerVisible(annotation),
   );
-  const boundingBoxInfo = getBoundingBoxToolInfo(hasSkeleton, geometriesTransformed);
+  const boundingBoxInfo = getBoundingBoxToolInfo(
+    hasSkeleton,
+    geometriesTransformed,
+    isFlycamRotated,
+  );
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {
     ...ALWAYS_ENABLED_TOOL_INFOS,
+    ...areaMeasurementToolInfo,
     ...skeletonToolInfo,
     ...disabledVolumeInfo,
     ...boundingBoxInfo,

@@ -1915,7 +1915,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 draggable={{
                                   icon: false,
                                   nodeDraggable: () =>
-                                    // Forbid renaming when segments or groups are being renamed,
+                                    // Forbid dragging when segments or groups are being renamed,
                                     // since selecting text within the editable input box would not work
                                     // otherwise (instead, the item would be dragged).
                                     this.state.renamingCounter === 0 && this.props.allowUpdate,

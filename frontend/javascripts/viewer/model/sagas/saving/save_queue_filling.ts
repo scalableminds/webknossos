@@ -31,7 +31,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type { CameraData, Flycam, SkeletonTracing, VolumeTracing } from "viewer/store";
-import { getFlooredPosition, getRotation } from "../../accessors/flycam_accessor";
+import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
 
@@ -177,7 +177,7 @@ export function performDiffAnnotation(
       updateCameraAnnotation(
         getFlooredPosition(flycam),
         flycam.additionalCoordinates,
-        getRotation(flycam),
+        getRotationInDegrees(flycam),
         flycam.zoomStep,
       ),
     );

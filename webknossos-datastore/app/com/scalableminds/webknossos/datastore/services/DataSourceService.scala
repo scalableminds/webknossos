@@ -22,14 +22,13 @@ import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
 import java.net.URI
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
-    dataSourceRepository: DataSourceRepository,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
@@ -46,16 +45,16 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
+  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
 
-  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-  private val logFileName = Paths.get("datasource-properties-backups.log")
+  private val propertiesFileName = Path.of(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+  private val logFileName = Path.of("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
 
   def tick(): Fox[Unit] =
     for {
-      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0)
+      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0, organizationId = None)
       _ = inboxCheckVerboseCounter += 1
       _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
@@ -72,21 +71,24 @@ class DataSourceService @Inject()(
 
   }
 
-  def checkInbox(verbose: Boolean): Fox[Unit] = {
-    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
+  def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
+    val selectedOrgaLabel = organizationId.map(id => s"/$id").getOrElse("")
+    def orgaFilterFn(organizationId: String): Path => Boolean =
+      (path: Path) => path.getFileName.toString == organizationId
+    val selectedOrgaFilter: Path => Boolean = organizationId.map(id => orgaFilterFn(id)).getOrElse((_: Path) => true)
+    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir$selectedOrgaLabel)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir, silent = false) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, silent = false, filters = selectedOrgaFilter) match {
         case Full(organizationDirs) =>
+          if (verbose && organizationId.isEmpty) logEmptyDirs(organizationDirs)
+          val foundInboxSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
+          logFoundDatasources(foundInboxSources, verbose, selectedOrgaLabel)
           for {
-            _ <- Fox.successful(())
-            _ = if (verbose) logEmptyDirs(organizationDirs)
-            foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
-            _ = logFoundDatasources(foundInboxSources, verbose)
-            _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+            _ <- remoteWebknossosClient.reportDataSources(foundInboxSources, organizationId)
             _ <- reportRealPaths(foundInboxSources)
           } yield ()
         case e =>
-          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
           logger.error(errorMsg)
           Fox.failure(errorMsg)
       }
@@ -138,7 +140,7 @@ class DataSourceService @Inject()(
     if (isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
     } else {
-      val magPath = Paths.get(magURI)
+      val magPath = Path.of(magURI.getPath)
       val realPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
       val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
@@ -159,7 +161,7 @@ class DataSourceService @Inject()(
       layerPath.getFileName.toString,
       mag
     )
-    (uri, DataVaultService.isRemoteScheme(uri.getScheme))
+    (uri, uri.getScheme != null && DataVaultService.isRemoteScheme(uri.getScheme))
   }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
@@ -169,9 +171,11 @@ class DataSourceService @Inject()(
       basePath.resolve(relativePath).normalize().toAbsolutePath
     }
 
-  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
+  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource],
+                                  verbose: Boolean,
+                                  selectedOrgaLabel: String): Unit = {
     val shortForm =
-      s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
+      s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
         .count(!_.isUsable)} inactive"
     val msg = if (verbose) {
       val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.organizationId)
@@ -269,7 +273,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] = {
+  def updateDataSourceOnDisk(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {
@@ -277,10 +281,27 @@ class DataSourceService @Inject()(
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting && preventNewPaths)(assertNoNewPaths(dataSourcePath, dataSource)) ?~> "dataSource.update.newExplicitPaths"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
-      _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+  }
+
+  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: DataSource): Fox[Unit] = {
+    val propertiesPath = dataSourcePath.resolve(propertiesFileName)
+    if (Files.exists(propertiesPath)) {
+      Fox
+        .runOptional(newDataSource.toUsable) { newUsableDataSource =>
+          Fox.runOptional(dataSourceFromDir(dataSourcePath, newDataSource.id.organizationId).toUsable) {
+            oldUsableDataSource =>
+              val oldPaths = oldUsableDataSource.allExplicitPaths.toSet
+              Fox.fromBool(newUsableDataSource.allExplicitPaths.forall(oldPaths.contains))
+          }
+        }
+        .map(_ => ())
+    } else {
+      Fox.successful(())
+    }
   }
 
   private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
@@ -307,7 +328,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
+  private def scanOrganizationDirForDataSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path, silent = true) match {

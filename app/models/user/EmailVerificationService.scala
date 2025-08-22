@@ -78,7 +78,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
   ): Fox[Boolean] =
     for {
       multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser) ?~> "user.notFound"
-      endOfGracePeriod: Instant = multiUser.created + conf.WebKnossos.User.EmailVerification.gracePeriod
+      endOfGracePeriod: Instant = multiUser.emailChangeDate + conf.WebKnossos.User.EmailVerification.gracePeriod
       overGracePeriod = endOfGracePeriod.isPast
     } yield !conf.WebKnossos.User.EmailVerification.required || multiUser.isEmailVerified || !overGracePeriod
 }

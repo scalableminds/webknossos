@@ -3,6 +3,7 @@ import type * as React from "react";
 
 import classNames from "classnames";
 import { document } from "libs/window";
+import { useCallback } from "react";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "viewer/constants";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { CommentType } from "viewer/model/types/tree_types";
@@ -54,9 +55,9 @@ function ActiveCommentPopover({
 }
 
 export function Comment({ comment, isActive }: CommentProps) {
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
-  };
+  }, [comment.nodeId]);
 
   const liClassName = classNames("markdown", "markdown-small", "nowrap");
 

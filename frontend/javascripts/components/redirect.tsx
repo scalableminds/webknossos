@@ -1,6 +1,6 @@
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import type React from "react";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 type Props = {
   redirectTo: () => Promise<string>;
@@ -8,7 +8,7 @@ type Props = {
 };
 
 const AsyncRedirect: React.FC<Props> = ({ redirectTo, pushToHistory = true }) => {
-  const history = useHistory();
+  const navigate = useNavigate();
   useEffectOnlyOnce(() => {
     const redirect = async () => {
       const newPath = await redirectTo();
@@ -25,9 +25,9 @@ const AsyncRedirect: React.FC<Props> = ({ redirectTo, pushToHistory = true }) =>
       }
 
       if (pushToHistory) {
-        history.push(newPath);
+        navigate(newPath);
       } else {
-        history.replace(newPath);
+        navigate(newPath, { replace: true });
       }
     };
 

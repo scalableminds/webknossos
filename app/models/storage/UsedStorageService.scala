@@ -150,7 +150,6 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private def resolveAttachmentPath(attachment: DatasetLayerAttachmentsRow): Fox[DatasetLayerAttachmentsRow] = {
     val uri = new URI(attachment.path)
     if (uri.getScheme == null) {
-      // TODO: collect datasetPath/layer and attach to new URI(attachment.path) and make this a string
       for {
         // TODOM: optimize this. Not for each attachment a query, instead bulk it.
         dataset <- datasetDAO.findOne(ObjectId(attachment._Dataset))

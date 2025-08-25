@@ -62,65 +62,51 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
-      uri <- uriForMagLocator(baseDir, datasetId, layerName, magLocator).toFox
+      uri <- resolveMagPath(baseDir, datasetId, layerName, magLocator).toFox
       remoteSource = RemoteSourceDescriptor(UPath.fromStringUnsafe(uri.toString), credentialBox.toOption)
     } yield remoteSource
 
-  // TODO clean up with UPath
-  def uriFromPathLiteral(pathLiteral: String, localDatasetDir: Path, layerName: String): URI = {
-    val uri = new URI(pathLiteral)
-    if (PathSchemes.isRemoteScheme(uri.getScheme)) {
-      uri
-    } else if (uri.getScheme == null || uri.getScheme == PathSchemes.schemeFile) {
-      val localPath = Path.of(uri.getPath)
-      if (localPath.isAbsolute) {
-        if (localPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
-              .exists(whitelistEntry => localPath.toString.startsWith(whitelistEntry)))
-          uri
-        else
-          throw new Exception(
-            s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
-      } else { // relative local path, resolve in dataset dir
-        val pathRelativeToDataset = localDatasetDir.resolve(localPath).normalize
-        val pathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath).normalize
-        if (pathRelativeToDataset.toFile.exists) {
-          pathRelativeToDataset.toUri
-        } else {
-          pathRelativeToLayer.toUri
-        }
-      }
-    } else {
-      throw new Exception(s"Unsupported path: $localDatasetDir")
-    }
-  }
-
-  // TODO clean up with UPaths
-  def resolveMagPath(datasetDir: Path, layerDir: Path, layerName: String, magLocator: MagLocator): URI =
+  def resolveMagPath(localDatasetDir: Path, layerDir: Path, layerName: String, magLocator: MagLocator): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        uriFromPathLiteral(magLocatorPath.toString, datasetDir, layerName)
+        if (magLocatorPath.isRemote) {
+          magLocatorPath
+        } else {
+          if (magLocatorPath.isAbsolute) {
+            if (magLocatorPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
+                  .exists(whitelistEntry => magLocatorPath.toString.startsWith(whitelistEntry)))
+              magLocatorPath
+            else
+              throw new Exception(
+                s"Absolute path $magLocatorPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
+          } else { // relative local path, resolve in dataset dir
+            val pathRelativeToDataset = localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize
+            val pathRelativeToLayer =
+              localDatasetDir.resolve(layerName).resolve(magLocatorPath.toLocalPathUnsafe).normalize
+            if (pathRelativeToDataset.toFile.exists) {
+              UPath.fromLocalPath(pathRelativeToDataset)
+            } else {
+              UPath.fromLocalPath(pathRelativeToLayer)
+            }
+          }
+        }
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
         val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral())
         if (localDirWithScalarMag.toFile.exists) {
-          localDirWithScalarMag.toUri
+          UPath.fromLocalPath(localDirWithScalarMag)
         } else {
-          localDirWithVec3Mag.toUri
+          UPath.fromLocalPath(localDirWithVec3Mag)
         }
     }
 
-  private def uriForMagLocator(baseDir: Path,
-                               dataSourceId: DataSourceId,
-                               layerName: String,
-                               magLocator: MagLocator): Box[URI] = tryo {
+  private def resolveMagPath(baseDir: Path,
+                             dataSourceId: DataSourceId,
+                             layerName: String,
+                             magLocator: MagLocator): Box[UPath] = tryo {
     val localDatasetDir = baseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
-    val uri = resolveMagPath(localDatasetDir, localLayerDir, layerName, magLocator)
-    if (PathSchemes.isRemoteScheme(uri.getScheme)) {
-      uri
-    } else {
-      Path.of(uri.getPath).toAbsolutePath.toUri
-    }
+    resolveMagPath(localDatasetDir, localLayerDir, layerName, magLocator)
   }
 
   private lazy val globalCredentials = {

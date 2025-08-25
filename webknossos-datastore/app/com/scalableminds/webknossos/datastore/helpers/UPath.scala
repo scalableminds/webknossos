@@ -2,15 +2,12 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 
 import java.net.URI
 import java.nio.file.Path
 
 trait UPath {
-  def toRemoteUri: Box[URI] = tryo(toRemoteUriUnsafe)
-
   def toRemoteUriUnsafe: URI
 
   def /(other: String): UPath
@@ -55,12 +52,13 @@ trait UPath {
 
 object UPath {
   def separator: Char = '/'
+  def schemeSeparator: String = "://"
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
   def fromStringUnsafe(literal: String): UPath = {
-    // TODO assert at least one segment?
-    val schemeOpt = literal.split("://").headOption
+    // TODO assert at least one segment? assert only supported schemes?
+    val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
       case None => new LocalUPath(Path.of(literal))
       case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>

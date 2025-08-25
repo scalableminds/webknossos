@@ -10,7 +10,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -20,7 +20,6 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import java.io.{File, FileWriter}
-import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -44,7 +43,7 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
+  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory).toAbsolutePath
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
@@ -134,33 +133,31 @@ class DataSourceService @Inject()(
                              rawLayerPath: Path,
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
-    val (magURI, isRemote) = getMagURI(datasetPath, absoluteLayerPath, mag)
-    if (isRemote) {
-      MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
+    val resolvedMagPath = resolveMagPath(datasetPath, absoluteLayerPath, mag)
+    if (resolvedMagPath.isRemote) {
+      MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
     } else {
-      val magPath = Path.of(magURI.getPath)
+      val magPath = resolvedMagPath.toLocalPathUnsafe
       val realPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-      val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
+      val isDatasetLocal = realPath.startsWith(datasetPath.toAbsolutePath)
       val unresolvedPath =
         rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
       MagPathInfo(dataLayer.name,
                   mag.mag,
-                  unresolvedPath.toUri.toString,
-                  realPath.toUri.toString,
-                  hasLocalData = isLocal)
+                  UPath.fromLocalPath(unresolvedPath),
+                  UPath.fromLocalPath(realPath),
+                  hasLocalData = isDatasetLocal)
     }
   }
 
-  private def getMagURI(datasetPath: Path, layerPath: Path, mag: MagLocator): (URI, Boolean) = {
-    val uri = remoteSourceDescriptorService.resolveMagPath(
+  private def resolveMagPath(datasetPath: Path, layerPath: Path, mag: MagLocator): UPath =
+    remoteSourceDescriptorService.resolveMagPath(
       datasetPath,
       layerPath,
       layerPath.getFileName.toString,
       mag
     )
-    (uri, uri.getScheme != null && PathSchemes.isRemoteScheme(uri.getScheme))
-  }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
     if (relativePath.isAbsolute) {

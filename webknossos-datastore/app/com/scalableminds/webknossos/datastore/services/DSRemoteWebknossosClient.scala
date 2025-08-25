@@ -10,10 +10,10 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, UsableDataSource, DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, UsableDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveAdditionalInformation,
@@ -43,7 +43,7 @@ object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: String, hasLocalData: Boolean)
+case class MagPathInfo(layerName: String, mag: Vec3Int, path: UPath, realPath: UPath, hasLocalData: Boolean)
 
 object MagPathInfo {
   implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]

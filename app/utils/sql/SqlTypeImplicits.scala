@@ -107,6 +107,8 @@ trait SqlTypeImplicits {
 
   implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = boundingBoxToSqlValue(v).toSqlToken
 
+  implicit def uPathToSqlToken(v: UPath): SqlToken = uPathToSqlValue(v).toSqlToken
+
   implicit def vec3IntToSqlToken(v: Vec3Int): SqlToken = vec3IntToSqlValue(v).toSqlToken
 
   implicit def vec3DoubleToSqlToken(v: Vec3Double): SqlToken = vec3DoubleToSqlValue(v).toSqlToken

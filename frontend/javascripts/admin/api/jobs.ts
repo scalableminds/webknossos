@@ -351,7 +351,11 @@ export function startAlignSectionsJob(
   });
 }
 
-type AiModelCategory = "em_neurons" | "em_nuclei";
+// This enum needs to be kept in sync with the backend/database
+export enum APIAiModelCategory {
+  EM_NEURONS = "em_neurons",
+  EM_NUCLEI = "em_nuclei",
+}
 
 type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
@@ -360,22 +364,38 @@ type AiModelTrainingAnnotationSpecification = {
   mag: Vector3;
 };
 
-type RunTrainingParameters = {
-  trainingAnnotations: Array<AiModelTrainingAnnotationSpecification>;
+type RunNeuronModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
+  aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
-  aiModelCategory?: AiModelCategory;
   workflowYaml?: string;
 };
 
-export function runNeuronTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
+export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronModelTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });
 }
 
-type RunInferenceParameters = {
+type RunInstanceModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
+  name: string;
+  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  maxDistanceNm: number;
+  comment?: string;
+  workflowYaml?: string;
+};
+
+export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runInstanceModelTraining", {
+    method: "POST",
+    data: JSON.stringify(params),
+  });
+}
+
+export type BaseModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -386,9 +406,23 @@ type RunInferenceParameters = {
   workflowYaml?: string;
   // maskAnnotationLayerName?: string | null
 };
+type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
 
-export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
+type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+  seedGeneratorDistanceThreshold: number;
+};
+
+export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
+    method: "POST",
+    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
+  });
+}
+
+export function runInstanceModelInferenceWithAiModelJob(
+  params: RunInstanceModelInferenceParameters,
+) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });

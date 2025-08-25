@@ -1,4 +1,8 @@
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  createBucketResponseFunction,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import window from "libs/window";
 import {
@@ -49,7 +53,11 @@ describe("API Volume", () => {
 
   it<WebknossosTestContext>("Data API: labelVoxels should label a list of voxels", async ({
     api,
+    mocks,
   }) => {
+    vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 0),
+    );
     const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
     api.data.labelVoxels(
       [

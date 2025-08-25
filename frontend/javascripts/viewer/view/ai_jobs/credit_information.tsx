@@ -1,15 +1,29 @@
 import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
 import { Button, Card, Col, Row, Spin, Typography } from "antd";
-import { formatCreditsString } from "libs/format_utils";
+import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { useCallback, useMemo } from "react";
+import { APIJobType } from "types/api_types";
+import features from "features";
 
 const { Title, Text } = Typography;
 
 export const CreditInformation: React.FC = () => {
+  const jobTypeToCreditCostPerGVx: Record<APIJobType, number> = useMemo(
+    () => ({
+      [APIJobType.INFER_NUCLEI]: features().neuronInferralCostPerGVx,
+      [APIJobType.INFER_NEURONS]: features().neuronInferralCostPerGVx,
+      [APIJobType.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
+      [APIJobType.INFER_INSTANCES]: features().neuronInferralCostPerGVx,
+    }),
+    [],
+  );
+
   const { selectedModel, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
     useRunAiModelJobContext();
   const organizationCredits = useWkSelector(
@@ -27,6 +41,14 @@ export const CreditInformation: React.FC = () => {
     undefined,
     [selectedBoundingBox, selectedJobType],
   );
+
+  const getBoundingBoxinVoxels = useCallback((): string => {
+    if (selectedBoundingBox) {
+      const bbVolumeInVx = new BoundingBox(selectedBoundingBox.boundingBox).getVolume();
+      return formatVoxels(bbVolumeInVx);
+    }
+    return "-";
+  }, [selectedBoundingBox]);
 
   const costInCredits = jobCreditCostInfo?.costInCredits;
 
@@ -54,10 +76,18 @@ export const CreditInformation: React.FC = () => {
       </Row>
       <Row justify="space-between">
         <Col>
-          <Text>Dataset Size (Est.):</Text>
+          <Text>Dataset Size:</Text>
         </Col>
         <Col>
-          <Text strong>{selectedBoundingBox ? "Selected" : "-"}</Text>
+          <Text strong>{getBoundingBoxinVoxels()}</Text>
+        </Col>
+      </Row>
+      <Row justify="space-between">
+        <Col>
+          <Text>Credits per Gigavoxel:</Text>
+        </Col>
+        <Col>
+          <Text strong>{selectedJobType ? jobTypeToCreditCostPerGVx[selectedJobType] : "-"}</Text>
         </Col>
       </Row>
       <hr style={{ margin: "24px 0" }} />
@@ -69,7 +99,7 @@ export const CreditInformation: React.FC = () => {
           {jobCreditCostInfo === undefined && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "FREE"}</Text>
+            <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "-"}</Text>
           )}
         </Col>
       </Row>
@@ -78,7 +108,7 @@ export const CreditInformation: React.FC = () => {
         block
         size="large"
         style={{ marginTop: "24px" }}
-        disabled={!selectedModel || !selectedBoundingBox}
+        disabled={!selectedModel || !selectedBoundingBox || !jobCreditCostInfo?.hasEnoughCredits}
         onClick={handleStartAnalysis}
       >
         Start Analysis

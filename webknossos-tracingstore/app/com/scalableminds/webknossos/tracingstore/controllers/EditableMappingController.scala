@@ -129,6 +129,26 @@ class EditableMappingController @Inject()(
       }
     }
 
+  def agglomerateGraph(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+          for {
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId, version)
+            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
+            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
+            agglomerateGraph <- editableMappingService.getAgglomerateGraphForIdWithFallback(editableMappingInfo,
+                                                                                            tracingId,
+                                                                                            tracing.version,
+                                                                                            agglomerateId,
+                                                                                            remoteFallbackLayer)
+          } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
+        }
+      }
+    }
+
   def agglomerateSkeleton(tracingId: String, agglomerateId: Long): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {

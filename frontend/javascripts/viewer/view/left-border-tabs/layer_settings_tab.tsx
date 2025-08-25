@@ -488,8 +488,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
       okText: `Yes, delete annotation layer “${readableAnnotationLayerName}”`,
       cancelText: "Cancel",
-      maskClosable: true,
-      closable: true,
       okButtonProps: {
         danger: true,
         block: true,

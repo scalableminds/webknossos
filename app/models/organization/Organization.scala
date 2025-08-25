@@ -200,7 +200,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
           q"""
           INSERT INTO webknossos.organization_usedStorage (
             _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
-          ) -- TODO: test why no s3 test dataset is included
+          )
           VALUES (${organizationId}, ${r._datasetId}, NULL, ${attachmentId}, ${r.path}, ${r.usedStorageBytes}, NOW())
           ON CONFLICT ON CONSTRAINT unique_layer_attachment
           DO UPDATE SET

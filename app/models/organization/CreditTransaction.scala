@@ -264,8 +264,8 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   private def revokeExpiredCreditsForOrganizationQuery(organizationId: ObjectId): DBIO[List[CreditTransaction]] =
     for {
-      transactionsWithExpiredCredits <- q"""SELECT *
-            FROM webknossos.credit_transactions
+      transactionsWithExpiredCredits <- q"""SELECT $columns
+            FROM $existingCollectionName
             WHERE _organization = $organizationId
               AND expiration_date <= NOW()
               AND credit_state = ${CreditState.Pending}

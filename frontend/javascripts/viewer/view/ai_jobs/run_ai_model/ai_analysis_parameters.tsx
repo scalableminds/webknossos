@@ -1,11 +1,12 @@
-import { Card, Col, Input, Row, Select, Typography } from "antd";
+import { SettingOutlined } from "@ant-design/icons";
+import { Card, Col, Input, Row, Select, Space, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 export const AiAnalysisParameters: React.FC = () => {
   const {
@@ -20,7 +21,14 @@ export const AiAnalysisParameters: React.FC = () => {
   const colorLayers = getColorLayers(dataset);
 
   return (
-    <Card title="Analysis Parameters">
+    <Card
+      title={
+        <Space align="center">
+          <SettingOutlined style={{ color: "#1890ff" }} />
+          Analysis Parameters
+        </Space>
+      }
+    >
       <Row gutter={24}>
         <Col span={12}>
           <div style={{ marginBottom: "16px" }}>

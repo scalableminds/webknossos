@@ -1,7 +1,7 @@
 import { Drawer, Tabs } from "antd";
+import { AiImageAlignment } from "./alignment/ai_image_alignment_job";
 import { AiImageSegmentation } from "./run_ai_model/ai_image_segmentation_job";
 import { AiModelTraining } from "./train_ai_model/ai_model_training_job";
-import { AiImageAlignment } from "./alignment/ai_image_alignment_job";
 
 const { TabPane } = Tabs;
 

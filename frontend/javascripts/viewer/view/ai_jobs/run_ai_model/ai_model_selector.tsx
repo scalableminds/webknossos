@@ -1,7 +1,9 @@
+import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
+import { useMemo, useState } from "react";
 import { APIJobType, type AiModel } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
@@ -46,6 +48,7 @@ const mapCategoryToJobType = (category: APIAiModelCategory): APIJobType => {
 
 export const AiModelSelector: React.FC = () => {
   const { selectedModel, setSelectedModel, setSelectedJobType } = useRunAiModelJobContext();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [customModels, isLoading] = useGuardedFetch(
     async function () {
@@ -72,16 +75,45 @@ export const AiModelSelector: React.FC = () => {
     setSelectedJobType(jobType as APIJobType);
   };
 
-  return (
-    <Card title="Select AI Model">
-      <div style={{ marginBottom: "24px" }}>
-        <Input.Search placeholder="Search models..." style={{ width: 300 }} />
-      </div>
+  const filterModels = (models: (AiModel | (Partial<AiModel> & { jobType?: APIJobType }))[]) => {
+    if (!searchTerm) {
+      return models;
+    }
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return models.filter(
+      (model) =>
+        model.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (model.comment && model.comment.toLowerCase().includes(lowerCaseSearchTerm)),
+    );
+  };
 
+  const filteredPreTrainedModels = useMemo(() => filterModels(preTrainedModels), [searchTerm]);
+  const filteredCustomModels = useMemo(
+    () => filterModels(customModels),
+    [searchTerm, customModels],
+  );
+
+  return (
+    <Card
+      title={
+        <Space align="center">
+          <ExperimentOutlined style={{ color: "#1890ff" }} />
+          Select AI Model
+        </Space>
+      }
+      extra={
+        <Input.Search
+          placeholder="Search models..."
+          style={{ width: 300 }}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchTerm}
+        />
+      }
+    >
       <Title level={5}>Pre-trained Models</Title>
       <List
         itemLayout="horizontal"
-        dataSource={preTrainedModels}
+        dataSource={filteredPreTrainedModels}
         renderItem={(item) => (
           <List.Item
             style={{
@@ -118,7 +150,7 @@ export const AiModelSelector: React.FC = () => {
       ) : (
         <List
           itemLayout="horizontal"
-          dataSource={customModels}
+          dataSource={filteredCustomModels}
           renderItem={(item) => (
             <List.Item
               style={{

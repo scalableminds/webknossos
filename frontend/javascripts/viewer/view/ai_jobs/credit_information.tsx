@@ -1,20 +1,21 @@
+import { CreditCardOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
-import { Button, Card, Col, Row, Spin, Typography } from "antd";
+import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
+import features from "features";
 import { formatCreditsString, formatVoxels } from "libs/format_utils";
-import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { useCallback, useMemo } from "react";
 import { APIJobType } from "types/api_types";
-import features from "features";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
 export const CreditInformation: React.FC = () => {
-  const jobTypeToCreditCostPerGVx: Record<APIJobType, number> = useMemo(
+  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobType, number>> = useMemo(
     () => ({
       [APIJobType.INFER_NUCLEI]: features().neuronInferralCostPerGVx,
       [APIJobType.INFER_NEURONS]: features().neuronInferralCostPerGVx,
@@ -30,17 +31,19 @@ export const CreditInformation: React.FC = () => {
     (state) => state.activeOrganization?.creditBalance || "0",
   );
 
-  const jobCreditCostInfo = useFetch<JobCreditCostInfo | undefined>(
-    async () =>
-      selectedBoundingBox && selectedJobType
-        ? await getJobCreditCost(
-            selectedJobType,
-            computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
-          )
-        : undefined,
-    undefined,
-    [selectedBoundingBox, selectedJobType],
-  );
+  const { data: jobCreditCostInfo, isFetching } = useQuery<JobCreditCostInfo>({
+    queryKey: [
+      "jobCreditCost",
+      selectedJobType ?? "no-type",
+      selectedBoundingBox?.boundingBox ?? "no-bb",
+    ],
+    queryFn: async () =>
+      await getJobCreditCost(
+        selectedJobType!,
+        computeArrayFromBoundingBox(selectedBoundingBox!.boundingBox),
+      ),
+    enabled: Boolean(selectedBoundingBox && selectedJobType),
+  });
 
   const getBoundingBoxinVoxels = useCallback((): string => {
     if (selectedBoundingBox) {
@@ -53,7 +56,14 @@ export const CreditInformation: React.FC = () => {
   const costInCredits = jobCreditCostInfo?.costInCredits;
 
   return (
-    <Card title="Credit Information">
+    <Card
+      title={
+        <Space align="center">
+          <CreditCardOutlined style={{ color: "#ddbc00" }} />
+          Credit Information
+        </Space>
+      }
+    >
       <Row justify="space-between" align="middle">
         <Col>
           <Text>Available Credits</Text>
@@ -96,7 +106,7 @@ export const CreditInformation: React.FC = () => {
           <Text>Total Cost:</Text>
         </Col>
         <Col>
-          {jobCreditCostInfo === undefined && selectedBoundingBox && selectedModel ? (
+          {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
             <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "-"}</Text>

@@ -62,7 +62,7 @@ function* initializeMappingAndTool(context: WebknossosTestContext, tracingId: st
 function mockInitialBucketAndAgglomerateData(context: WebknossosTestContext) {
   const { mocks } = context;
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-    createBucketResponseFunction(Uint16Array, 1, 5, [
+    createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 1, 5, [
       { position: [0, 0, 0], value: 1337 },
       { position: [1, 1, 1], value: 1 },
       { position: [2, 2, 2], value: 2 },

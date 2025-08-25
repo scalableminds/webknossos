@@ -617,7 +617,7 @@ function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
       return calculateMaybeGlobalPos(state, {
         x,
         y,
-      });
+      })?.rounded;
     }
 
     return undefined;

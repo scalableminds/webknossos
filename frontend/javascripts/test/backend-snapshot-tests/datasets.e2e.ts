@@ -96,30 +96,63 @@ describe("Dataset API (E2E)", () => {
   //   expect(true).toBe(true);
   // });
 
-  it("Zarr streaming", async () => {
-    const zarrAttributesResponse = await fetch(
-      "/data/zarr/Organization_X/test-dataset/segmentation/.zattrs",
-      {
-        headers: new Headers(),
-      },
+  it("Public dataset access", async () => {
+    const datasetCompactList = await api.getDatasets();
+    // Get dataset details (which includes isPublic flag). With this call we also validate that the private dataset
+    // we query can be accessed with the current user token (we later access it without a token and expect it to fail).
+    const datasets = await Promise.all(
+      datasetCompactList.map((dataset) => api.getDataset(dataset.id)),
     );
+
+    const publicDatasetId = datasets.find((d) => d.isPublic)?.id;
+    const privateDatasetId = datasets.find((d) => !d.isPublic)?.id;
+    if (!publicDatasetId || !privateDatasetId) {
+      throw new Error("Did not find public or private dataset");
+    }
+
+    setUserAuthToken("invalidToken");
+    const publicDataset = await api.getDataset(publicDatasetId);
+    expect(publicDataset).toBeDefined();
+    expect(publicDataset.isPublic).toBe(true);
+    // Accessing private dataset without token should fail
+    try {
+      await api.getDataset(privateDatasetId);
+      expect.fail("Accessing private dataset without token should fail");
+    } catch (error) {
+      expect(error).toBeDefined();
+    }
+    setUserAuthToken(tokenUserA);
+  });
+
+  async function getTestDatasetId(datasetName: string = "test-dataset"): Promise<string> {
+    let datasets = await api.getActiveDatasetsOfMyOrganization();
+    const dataset = datasets.find((d) => d.name === datasetName);
+    if (!dataset) {
+      throw new Error(`Dataset with name ${datasetName} not found`);
+    }
+    return dataset.id;
+  }
+
+  it("Zarr streaming", async () => {
+    const datasetId = await getTestDatasetId();
+    const zarrAttributesResponse = await fetch(`/data/zarr/${datasetId}/segmentation/.zattrs`, {
+      headers: new Headers(),
+    });
     const zarrAttributes = await zarrAttributesResponse.text();
     expect(zarrAttributes).toMatchSnapshot();
 
-    const rawDataResponse = await fetch(
-      "/data/zarr/Organization_X/test-dataset/segmentation/1/0.1.1.0",
-      {
-        headers: new Headers(),
-      },
-    );
+    const rawDataResponse = await fetch(`/data/zarr/${datasetId}/segmentation/1/0.1.1.0`, {
+      headers: new Headers(),
+    });
     const bytes = await rawDataResponse.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
     expect(base64).toMatchSnapshot();
   });
 
   it("Zarr 3 streaming", async () => {
+    const datasetId = await getTestDatasetId();
     const zarrJsonResp = await fetch(
-      "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/zarr.json",
+      `/data/zarr3_experimental/${datasetId}/segmentation/zarr.json`,
       {
         headers: new Headers(),
       },
@@ -128,7 +161,7 @@ describe("Dataset API (E2E)", () => {
     expect(zarrJson).toMatchSnapshot();
 
     const rawDataResponse = await fetch(
-      "/data/zarr3_experimental/Organization_X/test-dataset/segmentation/1/0.1.1.0",
+      `/data/zarr3_experimental/${datasetId}/segmentation/1/0.1.1.0`,
       {
         headers: new Headers(),
       },
@@ -139,8 +172,9 @@ describe("Dataset API (E2E)", () => {
   });
 
   it("Dataset Paths", async () => {
+    const datasetId = await getTestDatasetId();
     const paths = await fetch(
-      "/api/datastores/localhost/datasources/Organization_X/test-dataset/paths?key=something-secure",
+      `/api/datastores/localhost/datasources/${datasetId}/paths?key=something-secure`,
     );
     const pathsJson = await paths.json();
 

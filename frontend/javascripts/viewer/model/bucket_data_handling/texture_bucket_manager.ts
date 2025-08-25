@@ -4,7 +4,7 @@ import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
-import type * as THREE from "three";
+import type { DataTexture } from "three";
 import type { ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import constants, { type TypedArray } from "viewer/constants";
@@ -259,7 +259,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+  getTextures(): Array<DataTexture | UpdatableTexture> {
     return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
   }
 

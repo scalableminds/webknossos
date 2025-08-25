@@ -18,7 +18,7 @@ describe("Bucket Eviction With Saving", () => {
     await api.tracing.save();
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
-      createBucketResponseFunction(Uint16Array, 0, 0),
+      createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 0, 0),
       async () => {
         expect(hasRootSagaCrashed()).toBe(false);
 

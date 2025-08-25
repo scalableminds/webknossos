@@ -165,7 +165,7 @@ class Zarr3Array(vaultPath: VaultPath,
       header.datasetShape,
       header.outerChunkShape,
       header.chunkShape,
-      chunkIndex.zip(header.chunkShape).map { case (i, s) => i * s }
+      chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
     )
 
   override protected def getShardedChunkPathAndRange(

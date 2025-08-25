@@ -16,6 +16,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
 describe("Proofreading (Poll only)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -73,6 +74,9 @@ describe("Proofreading (Poll only)", () => {
       yield call(() => api.tracing.save());
 
       expect(context.receivedDataPerSaveRequest).toEqual([]);
+
+      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
     await task.toPromise();

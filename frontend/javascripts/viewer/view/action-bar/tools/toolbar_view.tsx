@@ -21,6 +21,7 @@ import ButtonComponent, { ToggleButton } from "viewer/view/components/button_com
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -235,6 +236,8 @@ function ToolSpecificSettings({
 
 function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   const dispatch = useDispatch();
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const { isDisabled, explanation } = disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id];
 
   const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
     dispatch(setToolAction(evt.target.value));
@@ -255,11 +258,13 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
+        disabledTitle={explanation}
         title={
           "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
         }
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.AREA_MEASUREMENT}
+        disabled={isDisabled}
       >
         <img
           src="/assets/images/area-measurement.svg"

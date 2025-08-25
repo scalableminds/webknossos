@@ -74,7 +74,7 @@ export function generateCalculateTpsOffsetFunction(name: string) {
         bending_part += dist * TPS_W_${name}[cpIdx];
       }
 
-      vec3 offset = (linear_part + bending_part) /  voxelSizeFactor;
+      vec3 offset = (linear_part + bending_part) * voxelSizeFactorInverted;
       return offset;
     }
   `;

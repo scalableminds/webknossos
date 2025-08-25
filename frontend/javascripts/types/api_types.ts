@@ -1,3 +1,4 @@
+import type { APIAiModelCategory } from "admin/api/jobs";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type { BoundingBoxProto } from "types/bounding_box";
@@ -118,7 +119,6 @@ export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
   datasetId: string;
-  dataSourceId: APIDataSourceId;
   datasetName: string;
   sourceName: string;
   newName: string;
@@ -163,6 +163,7 @@ export type APITracingStore = {
 };
 export type APITeam = {
   readonly id: string;
+  readonly isOrganizationTeam: boolean;
   readonly name: string;
   readonly organization: string;
 };
@@ -766,6 +767,8 @@ export type APIFeatureToggles = {
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
+  readonly passkeysEnabled: boolean;
+  readonly registerToDefaultOrgaEnabled?: boolean;
 };
 export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
@@ -788,7 +791,9 @@ export enum APIJobType {
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
+  TRAIN_INSTANCE_MODEL = "train_instance_model",
   INFER_MITOCHONDRIA = "infer_mitochondria",
+  INFER_INSTANCES = "infer_instances",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",
@@ -837,6 +842,7 @@ export type AiModel = {
   readonly comment: string;
   readonly created: number;
   readonly trainingJob: APIJob | null;
+  readonly category: APIAiModelCategory;
 };
 
 // Tracing related datatypes

@@ -3,19 +3,19 @@ import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 const FormItem = Form.Item;
 
 function StartResetPasswordView() {
   const [form] = Form.useForm();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const onFinish = (formValues: Record<string, any>) => {
     Request.sendJSONReceiveJSON("/api/auth/startResetPassword", {
       data: formValues,
     }).then(() => {
       Toast.success(messages["auth.reset_email_notification"]);
-      history.push("/");
+      navigate("/");
     });
   };
 

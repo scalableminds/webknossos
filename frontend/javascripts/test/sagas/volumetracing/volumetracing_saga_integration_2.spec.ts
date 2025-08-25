@@ -46,7 +46,7 @@ describe("Volume Tracing", () => {
 
   it<WebknossosTestContext>("Executing a floodfill in mag 1", async ({ api, mocks }) => {
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 0),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -136,7 +136,7 @@ describe("Volume Tracing", () => {
 
   it<WebknossosTestContext>("Executing a floodfill in mag 2", async ({ api, mocks }) => {
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 0),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -223,7 +223,7 @@ describe("Volume Tracing", () => {
     mocks,
   }) => {
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 0),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -299,7 +299,7 @@ describe("Volume Tracing", () => {
     mocks,
   }) => {
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, 0, 0),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 0),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -374,7 +374,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 0),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 0),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -446,7 +446,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -506,7 +506,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -587,7 +587,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders

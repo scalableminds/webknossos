@@ -63,8 +63,8 @@ class Persistence<T extends Record<string, any>> {
       locationState[this.name] == null ||
       !_.isEqual(stateToBePersisted, locationState[this.name])
     ) {
-      // Don't use the history object of react-router here, because
-      // calling history.replace() leads to focus-loss-bugs for input fields
+      // Don't use the navigate object of react-router here, because
+      // calling navigate(..., replace=True) leads to focus-loss-bugs for input fields
       // which are rendered into portals (this is the case for the search box
       // in the dashboard).
 

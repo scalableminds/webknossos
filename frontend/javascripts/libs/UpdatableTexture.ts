@@ -1,4 +1,16 @@
-import * as THREE from "three";
+import {
+  LinearFilter,
+  LinearMipMapLinearFilter,
+  type MagnificationTextureFilter,
+  type Mapping,
+  type MinificationTextureFilter,
+  type PixelFormat,
+  Texture,
+  type TextureDataType,
+  type WebGLRenderer,
+  WebGLUtils,
+  type Wrapping,
+} from "three";
 import type { TypedArray } from "viewer/constants";
 
 /* The UpdatableTexture class exposes a way to partially update a texture.
@@ -17,24 +29,24 @@ import type { TypedArray } from "viewer/constants";
  */
 let originalTexSubImage2D: WebGL2RenderingContext["texSubImage2D"] | null = null;
 
-class UpdatableTexture extends THREE.Texture {
+class UpdatableTexture extends Texture {
   isUpdatableTexture: boolean = true;
-  renderer!: THREE.WebGLRenderer;
+  renderer!: WebGLRenderer;
   gl!: WebGL2RenderingContext;
-  utils!: THREE.WebGLUtils;
+  utils!: WebGLUtils;
   width: number | undefined;
   height: number | undefined;
 
   constructor(
     width: number,
     height: number,
-    format?: THREE.PixelFormat,
-    type?: THREE.TextureDataType,
-    mapping?: THREE.Mapping,
-    wrapS?: THREE.Wrapping,
-    wrapT?: THREE.Wrapping,
-    magFilter?: THREE.MagnificationTextureFilter,
-    minFilter?: THREE.MinificationTextureFilter,
+    format?: PixelFormat,
+    type?: TextureDataType,
+    mapping?: Mapping,
+    wrapS?: Wrapping,
+    wrapT?: Wrapping,
+    magFilter?: MagnificationTextureFilter,
+    minFilter?: MinificationTextureFilter,
     anisotropy?: number,
   ) {
     const imageData = { width, height, data: new Uint32Array(0) };
@@ -52,18 +64,18 @@ class UpdatableTexture extends THREE.Texture {
       anisotropy,
     );
 
-    this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
-    this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
+    this.magFilter = magFilter !== undefined ? magFilter : LinearFilter;
+    this.minFilter = minFilter !== undefined ? minFilter : LinearMipMapLinearFilter;
     this.generateMipmaps = false;
     this.flipY = false;
     this.unpackAlignment = 1;
     this.needsUpdate = true;
   }
 
-  setRenderer(renderer: THREE.WebGLRenderer) {
+  setRenderer(renderer: WebGLRenderer) {
     this.renderer = renderer;
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
-    this.utils = new THREE.WebGLUtils(this.gl, this.renderer.extensions);
+    this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
   }
 
   isInitialized() {

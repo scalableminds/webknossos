@@ -2,13 +2,15 @@ import { PlusOutlined } from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
 import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useEffect, useState } from "react";
-import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
+import { type Key, useEffect, useState } from "react";
+import type { APIPricingPlanStatus } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
-import { SettingsCard } from "../account/helpers/settings_card";
+import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
 import {
   PlanAboutToExceedAlert,
   PlanExceededAlert,
@@ -20,7 +22,10 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 
-export function OrganizationOverviewView({ organization }: { organization: APIOrganization }) {
+export function OrganizationOverviewView() {
+  const organization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
   const [isFetchingData, setIsFetchingData] = useState(true);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
   const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
@@ -114,11 +119,11 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     </Tooltip>
   );
 
-  const orgaStats = [
+  const orgaStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "name",
       title: "Name",
-      value: (
+      content: (
         <Typography.Text
           editable={{
             onChange: setOrganizationName,
@@ -131,13 +136,13 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "owner",
       title: "Owner",
-      value: organization.ownerName,
+      content: organization.ownerName,
     },
     {
       key: "plan",
       title: "Current Plan",
-      value: organization.pricingPlan,
-      explanation: (
+      content: organization.pricingPlan,
+      tooltip: (
         <a href="https://webknossos.org/pricing" target="_blank" rel="noopener noreferrer">
           Compare all plans
         </a>
@@ -146,20 +151,23 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
     {
       key: "users",
       title: "Users",
-      value: `${activeUsersCount} / ${maxUsersCountLabel}`,
+      content: `${activeUsersCount} / ${maxUsersCountLabel}`,
       action: upgradeUsersAction,
     },
     {
       key: "storage",
       title: "Storage",
-      value: `${usedStorageLabel} / ${includedStorageLabel}`,
+      content: `${usedStorageLabel} / ${includedStorageLabel}`,
       action: upgradeStorageAction,
     },
 
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
-      value: organization.creditBalance || "N/A",
+      content:
+        organization.creditBalance != null
+          ? formatCreditsString(organization.creditBalance)
+          : "N/A",
       action: buyMoreCreditsAction,
     },
   ];
@@ -177,9 +185,9 @@ export function OrganizationOverviewView({ organization }: { organization: APIOr
             <Col span={8} key={stat.key}>
               <SettingsCard
                 title={stat.title}
-                description={stat.value}
+                content={stat.content}
                 action={stat.action}
-                explanation={stat.explanation}
+                tooltip={stat.tooltip}
               />
             </Col>
           ))}

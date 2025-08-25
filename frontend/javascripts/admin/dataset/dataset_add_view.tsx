@@ -7,12 +7,9 @@ import features from "features";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import React, { useState } from "react";
-import { connect } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
-import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;
@@ -32,7 +29,7 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 };
 
 function DatasetAddView() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetId, setDatasetId] = useState("");
   const [uploadedDatasetName, setUploadedDatasetName] = useState("");
@@ -64,7 +61,7 @@ function DatasetAddView() {
       datasetId,
       uploadedDatasetName,
       setDatasetId,
-      history,
+      navigate,
     );
   };
 
@@ -261,12 +258,7 @@ function VoxelyticsBanner() {
   );
 }
 
-const mapStateToProps = (state: WebknossosState) => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(DatasetAddView);
+export default DatasetAddView;
 
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,
@@ -274,24 +266,14 @@ const getPostUploadModal = (
   datasetId: string,
   uploadedDatasetName: string,
   setDatasetId: (arg0: string) => void,
-  history: ReturnType<typeof useHistory>,
+  navigate: ReturnType<typeof useNavigate>,
 ) => {
   return (
     <Modal
       open
       closable
       maskClosable={false}
-      className="no-footer-modal"
-      cancelButtonProps={{
-        style: {
-          display: "none",
-        },
-      }}
-      okButtonProps={{
-        style: {
-          display: "none",
-        },
-      }}
+      footer={null}
       onCancel={() => setDatasetId("")}
       onOk={() => setDatasetId("")}
       width={580}
@@ -314,17 +296,17 @@ const getPostUploadModal = (
         >
           {datasetNeedsConversion ? (
             <React.Fragment>
-              <Button type="primary" onClick={() => history.push("/jobs")}>
+              <Button type="primary" onClick={() => navigate("/jobs")}>
                 View the Jobs Queue
               </Button>
-              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              <Button onClick={() => navigate("/dashboard/datasets")}>Go to Dashboard</Button>
             </React.Fragment>
           ) : (
             <React.Fragment>
               <Button
                 type="primary"
                 onClick={() =>
-                  history.push(
+                  navigate(
                     `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
                   )
                 }
@@ -333,18 +315,18 @@ const getPostUploadModal = (
               </Button>
               <Button
                 onClick={() =>
-                  history.push(
+                  navigate(
                     `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
                   )
                 }
               >
                 Go to Dataset Settings
               </Button>
-              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              <Button onClick={() => navigate("/dashboard/datasets")}>Go to Dashboard</Button>
             </React.Fragment>
           )}
         </div>
-      </div>{" "}
+      </div>
     </Modal>
   );
 };

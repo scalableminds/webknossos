@@ -1,14 +1,14 @@
 import type { meshApi } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
-import type * as THREE from "three";
+import type { BufferGeometry } from "three";
 import type { Vector3 } from "viewer/constants";
 
-export type BufferGeometryWithInfo = THREE.BufferGeometry & {
+export type BufferGeometryWithInfo = BufferGeometry & {
   vertexSegmentMapping?: VertexSegmentMapping;
 };
 
-export type UnmergedBufferGeometryWithInfo = THREE.BufferGeometry & {
+export type UnmergedBufferGeometryWithInfo = BufferGeometry & {
   unmappedSegmentId: number;
   vertexSegmentMapping?: VertexSegmentMapping;
 };

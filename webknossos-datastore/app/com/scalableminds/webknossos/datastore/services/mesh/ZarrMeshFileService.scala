@@ -19,7 +19,7 @@ import play.api.libs.json.{JsResult, JsValue, Reads}
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MeshFileAttributes(
     formatVersion: Long,
@@ -178,9 +178,8 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
       m: MessagesProvider): Fox[WebknossosSegmentInfo] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
-      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(meshFileKey,
-                                                                                                segmentIds,
-                                                                                                meshFileAttributes)
+      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- Fox.fromFuture(
+        listMeshChunksForSegmentsNested(meshFileKey, segmentIds, meshFileAttributes))
       _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
@@ -194,10 +193,12 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
                                               segmentIds: Seq[Long],
                                               meshFileAttributes: MeshFileAttributes)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[List[MeshLodInfo]]] =
-    Fox.serialCombined(segmentIds) { segmentId =>
-      listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes)
-    }
+      tc: TokenContext): Future[List[List[MeshLodInfo]]] =
+    for {
+      resultBoxes <- Fox.serialSequence(segmentIds) { segmentId =>
+        listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes)
+      }
+    } yield resultBoxes.flatten
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit ec: ExecutionContext,

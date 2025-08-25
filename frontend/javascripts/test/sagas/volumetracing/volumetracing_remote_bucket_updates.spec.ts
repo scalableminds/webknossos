@@ -32,7 +32,7 @@ describe("Volume Tracing with remote updates", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 5),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 5),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -51,7 +51,7 @@ describe("Volume Tracing with remote updates", () => {
 
       // Already prepare the updated backend response.
       vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-        createBucketResponseFunction(Uint16Array, newCellId, 5),
+        createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, newCellId, 5),
       );
 
       yield tryToIncorporateActions([

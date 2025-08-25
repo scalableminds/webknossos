@@ -40,27 +40,28 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 
 Note that skeleton-specific mouse actions are usually only available when the skeleton tool is active.
 
-| Key Binding                               | Operation                                   |
-| --------------------------------------------- | ------------------------------------------- |
-| Left Mouse Drag or Arrow Keys                 | Move In-Plane                               |
-| ++alt++ + Mouse Move                          | Move In-Plane                               |
-| ++space++                                     | Move Forward                                |
-| Scroll Mousewheel (3D View)                   | Zoom In And Out                             |
-| Right-Click Drag (3D View)                    | Rotate 3D View                              |
-| Left Click                                    | Create New Node                             |
-| Left Click                                    | Select Node (Mark as Active Node) under cursor  |
-| Left Drag                                     | Move node under cursor                      |
-| Right Click (on node)                         | Bring up the context-menu with further actions  |
-| ++shift++ + ++alt++ + Left Click              | Merge Two Nodes and Combine Trees           |
-| ++shift++ + ++ctrl++ / ++cmd++ + Left Click   | Delete Edge / Split Trees                   |
-| ++c++                                         | Create New Tree                             |
-| ++ctrl++ / ++cmd++ + ++period++               | Navigate to the next Node (Mark as Active)  |
-| ++ctrl++ / ++cmd++ + ++comma++                | Navigate to previous Node (Mark as Active)  |
-| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys | Move the Active Node                        |
-| ++del++                                       | Delete Node / Split Trees                   |
-| ++b++                                         | Mark Node as New Branchpoint                |
-| ++j++                                         | Jump To Last Branchpoint                    |
-| ++s++                                         | Center Camera on Active Node                |
+| Key Binding                                                                                                                      | Operation                                         |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Left Mouse Drag or Arrow Keys                                                                                                    | Move In-Plane                                     |
+| ++alt++ + Mouse Move                                                                                                             | Move In-Plane                                     |
+| ++space++                                                                                                                        | Move Forward                                      |
+| ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes                                     |
+| ++ctrl++ / ++cmd++ + ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++ctrl++ / ++cmd++ + ++alt++ + ++left++ / ++right++ | Rotate Planes by 90°                              |
+| Right-Click Drag (3D View)                                                                                                       | Rotate 3D View                                    |
+| Left Click                                                                                                                       | Create New Node                                   |
+| Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor    |
+| Left Drag                                                                                                                        | Move node under cursor                            |
+| Right Click (on node)                                                                                                            | Bring up the context-menu with further actions    |
+| ++shift++ + ++alt++ + Left Click                                                                                                 | Merge Two Nodes and Combine Trees                 |
+| ++shift++ + ++ctrl++ / ++cmd++ + Left Click                                                                                      | Delete Edge / Split Trees                         |
+| ++c++                                                                                                                            | Create New Tree                                   |
+| ++ctrl++ / ++cmd++ + ++period++                                                                                                  | Navigate to the next Node (Mark as Active)        |
+| ++ctrl++ / ++cmd++ + ++comma++                                                                                                   | Navigate to previous Node (Mark as Active)        |
+| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys                                                               | Move the Active Node                              |
+| ++del++                                                                                                                          | Delete Node / Split Trees                         |
+| ++b++                                                                                                                            | Mark Node as New Branchpoint                      |
+| ++j++                                                                                                                            | Jump To Last Branchpoint                          |
+| ++s++                                                                                                                            | Center Camera on Active Node                      |
 
 
 Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:

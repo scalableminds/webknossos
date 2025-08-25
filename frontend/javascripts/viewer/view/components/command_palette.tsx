@@ -5,6 +5,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
+import { useMemo } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -18,8 +19,8 @@ import { Store } from "viewer/singletons";
 import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
-  getTracingViewMenuItems,
-} from "../action-bar/tracing_actions_view";
+  useTracingViewMenuItems,
+} from "../action-bar/use_tracing_view_menu_items";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
@@ -82,15 +83,6 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const theme = getThemeFromUser(activeUser);
-
-  const getMenuActions = (isViewMode: boolean) => {
-    if (!isInTracingView) return [];
-    if (isViewMode) {
-      return viewDatasetMenu;
-    }
-    const menuItems = getTracingViewMenuItems(props, null);
-    return menuItems;
-  };
 
   const getTabsAndSettingsMenuItems = () => {
     if (!isInTracingView) return [];
@@ -212,7 +204,15 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const menuActions = getMenuActions(isViewMode);
+  const tracingMenuItems = useTracingViewMenuItems(props, null);
+
+  const menuActions = useMemo(() => {
+    if (!isInTracingView) return [];
+    if (isViewMode) {
+      return viewDatasetMenu;
+    }
+    return tracingMenuItems;
+  }, [isInTracingView, isViewMode, tracingMenuItems]);
 
   const allCommands = [
     ...getNavigationEntries(),

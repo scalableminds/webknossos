@@ -87,6 +87,7 @@ import {
   setMappingAction,
   setMappingEnabledAction,
   setViewModeAction,
+  updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
@@ -278,7 +279,7 @@ export async function initialize(
 
   const defaultState = determineDefaultState(UrlManager.initialState, userState, serverTracings);
   // Don't override zoom when swapping the task
-  applyState(defaultState, !initialFetch);
+  applyState(defaultState, !initialFetch, dataset);
 
   if (initialFetch) {
     setInitialTool();
@@ -676,8 +677,7 @@ function determineDefaultState(
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
-  const { dataset, datasetConfiguration, temporaryConfiguration } = Store.getState();
-  const { viewMode } = temporaryConfiguration;
+  const { dataset, datasetConfiguration } = Store.getState();
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
   let additionalCoordinates = null;
@@ -716,19 +716,15 @@ function determineDefaultState(
     zoomStep = someTracing.zoomLevel;
   }
 
-  let rotation = undefined;
-  if (viewMode !== "orthogonal") {
-    rotation = datasetConfiguration.rotation;
+  let rotation = datasetConfiguration.rotation;
+  if (userState != null) {
+    rotation = Utils.point3ToVector3(userState.editRotation);
+  } else if (someTracing != null) {
+    rotation = Utils.point3ToVector3(someTracing.editRotation);
+  }
 
-    if (userState != null) {
-      rotation = Utils.point3ToVector3(userState.editRotation);
-    } else if (someTracing != null) {
-      rotation = Utils.point3ToVector3(someTracing.editRotation);
-    }
-
-    if (urlStateRotation != null) {
-      rotation = urlStateRotation;
-    }
+  if (urlStateRotation != null) {
+    rotation = urlStateRotation;
   }
 
   const stateByLayer = urlStateByLayer ?? {};
@@ -784,7 +780,11 @@ function determineDefaultState(
   };
 }
 
-export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
+export function applyState(
+  state: PartialUrlManagerState,
+  ignoreZoom: boolean = false,
+  dataset?: APIDataset,
+) {
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.
@@ -809,6 +809,20 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
 
   if (state.additionalCoordinates != null) {
     Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
+  }
+
+  if ("nativelyRenderedLayerName" in state) {
+    const isNativelyRenderedNamePresent =
+      state.nativelyRenderedLayerName === null ||
+      getIsNativelyRenderedNamePresent(dataset, state.nativelyRenderedLayerName);
+    if (isNativelyRenderedNamePresent) {
+      Store.dispatch(
+        updateDatasetSettingAction(
+          "nativelyRenderedLayerName",
+          state.nativelyRenderedLayerName || null,
+        ),
+      );
+    }
   }
 }
 
@@ -961,6 +975,21 @@ function enforcePricingRestrictionsOnUserConfiguration(
   return userConfiguration;
 }
 
+const getIsNativelyRenderedNamePresent = (
+  dataset: APIDataset | null | undefined,
+  nativelyRenderedLayerName: string | null | undefined,
+  maybeAnnotation?: APIAnnotation | null,
+) => {
+  if (dataset == null) return false;
+  return (
+    dataset.dataSource.dataLayers.some(
+      (layer) =>
+        layer.name === nativelyRenderedLayerName ||
+        (layer.category === "segmentation" && layer.fallbackLayer === nativelyRenderedLayerName),
+    ) || maybeAnnotation?.annotationLayers.some((layer) => layer.name === nativelyRenderedLayerName)
+  );
+};
+
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
   dataset: StoreDataset,
@@ -978,16 +1007,11 @@ function applyAnnotationSpecificViewConfiguration(
     _.cloneDeep(originalDatasetSettings);
 
   if (originalDatasetSettings.nativelyRenderedLayerName) {
-    const isNativelyRenderedNamePresent =
-      dataset.dataSource.dataLayers.some(
-        (layer) =>
-          layer.name === originalDatasetSettings.nativelyRenderedLayerName ||
-          (layer.category === "segmentation" &&
-            layer.fallbackLayer === originalDatasetSettings.nativelyRenderedLayerName),
-      ) ||
-      annotation?.annotationLayers.some(
-        (layer) => layer.name === originalDatasetSettings.nativelyRenderedLayerName,
-      );
+    const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
+      dataset,
+      originalDatasetSettings.nativelyRenderedLayerName,
+      annotation,
+    );
     if (!isNativelyRenderedNamePresent) {
       initialDatasetSettings.nativelyRenderedLayerName = null;
     }

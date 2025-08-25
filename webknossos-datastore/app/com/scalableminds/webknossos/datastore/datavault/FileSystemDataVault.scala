@@ -8,7 +8,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
-import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
@@ -96,7 +96,7 @@ class FileSystemDataVault extends DataVault {
     for {
       _ <- Fox.fromBool(uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file or null"
       _ <- Fox.fromBool(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
-      localPath = Paths.get(uri.getPath)
+      localPath = Path.of(uri.getPath)
       _ <- Fox.fromBool(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
     } yield localPath
   }

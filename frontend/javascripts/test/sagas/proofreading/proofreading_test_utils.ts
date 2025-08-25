@@ -21,7 +21,11 @@ import type {
 import type { NumberLike, SaveQueueEntry } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
-import type { BucketOverride, WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  createBucketResponseFunction,
+  type BucketOverride,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import type { NeighborInfo } from "admin/rest_api";
 
 export function* initializeMappingAndTool(
@@ -318,7 +322,12 @@ export function mockInitialBucketAndAgglomerateData(
   );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-    backendMock.sendJSONReceiveArraybufferWithHeaders,
+    createBucketResponseFunction(
+      { color: "uint8", segmentation: "uint16" },
+      backendMock.fillValue,
+      backendMock.requestDelay,
+      backendMock.overrides,
+    ),
   );
   mocks.getCurrentMappingEntriesFromServer.mockImplementation(
     backendMock.getCurrentMappingEntriesFromServer,

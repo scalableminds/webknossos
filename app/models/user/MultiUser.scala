@@ -26,6 +26,7 @@ case class MultiUser(
     selectedTheme: Theme = Theme.auto,
     created: Instant = Instant.now,
     isEmailVerified: Boolean = false,
+    emailChangeDate: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -57,6 +58,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         theme,
         Instant.fromSql(r.created),
         r.isemailverified,
+        Instant.fromSql(r.emailchangedate),
         r.isdeleted
       )
     }
@@ -91,7 +93,8 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- run(q"""UPDATE webknossos.multiusers
                    SET
                      email = $email,
-                     isEmailVerified = false
+                     isEmailVerified = false,
+                     emailChangeDate = NOW()
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
@@ -135,6 +138,13 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _lastLoggedInIdentity IN
                      (SELECT _id FROM webknossos.users WHERE _organization = $organizationId)""".asUpdate)
     } yield ()
+
+  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MultiUser] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[MultiusersRow])
+      parsed <- parseFirst(r, id)
+    } yield parsed
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {

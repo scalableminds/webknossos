@@ -80,14 +80,16 @@ class TSAnnotationController @Inject()(
 
   def updateActionLog(annotationId: ObjectId,
                       newestVersion: Option[Long] = None,
-                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
+                      oldestVersion: Option[Long] = None,
+                      truncate: Option[Boolean] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           newestMaterializableVersion <- annotationService.currentMaterializableVersion(annotationId)
           updateLog <- annotationService.updateActionLog(annotationId,
                                                          newestVersion.getOrElse(newestMaterializableVersion),
-                                                         oldestVersion.getOrElse(0))
+                                                         oldestVersion.getOrElse(0),
+                                                         truncate.getOrElse(false))
         } yield Ok(updateLog)
       }
     }

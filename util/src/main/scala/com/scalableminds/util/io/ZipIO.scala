@@ -1,7 +1,7 @@
 package com.scalableminds.util.io
 
 import java.io._
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
@@ -178,23 +178,23 @@ object ZipIO extends LazyLogging with FoxImplicits {
 
     val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
-        Paths.get(e.getName).getFileName.toString))
+        Path.of(e.getName).getFileName.toString))
     }.toList
 
     val commonPrefix = if (truncateCommonPrefix) {
-      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
+      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Path.of(e.getName)))
       val strippedPrefix =
         PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
       PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
     } else {
-      Paths.get("")
+      Path.of("")
     }
 
     val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
       results.shiftBox.map {
         case Full(rs) =>
           val input: InputStream = zip.getInputStream(entry)
-          val path = commonPrefix.relativize(Paths.get(entry.getName))
+          val path = commonPrefix.relativize(Path.of(entry.getName))
           val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
             case Full(result) =>
               input.close()
@@ -230,16 +230,16 @@ object ZipIO extends LazyLogging with FoxImplicits {
 
     val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
-        Paths.get(e.getName).getFileName.toString))
+        Path.of(e.getName).getFileName.toString))
     }.toList
 
     val commonPrefix = if (truncateCommonPrefix) {
-      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
+      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Path.of(e.getName)))
       val strippedPrefix =
         PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
       PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
     } else {
-      Paths.get("")
+      Path.of("")
     }
 
     val result = zipEntries.foldLeft[Box[List[A]]](Full(Nil)) { (results, entry) =>
@@ -248,7 +248,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
           var input: InputStream = null
           try {
             input = zip.getInputStream(entry)
-            val path = commonPrefix.relativize(Paths.get(entry.getName))
+            val path = commonPrefix.relativize(Path.of(entry.getName))
             val r = f(path, input) match {
               case Full(result) =>
                 Full(rs :+ result)

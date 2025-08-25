@@ -286,7 +286,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     const actions = segmentIds.map((segmentId) =>
       updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
     );
-    Store.dispatch(batchUpdateGroupsAndSegmentsAction(actions));
+    if (actions.length > 0) {
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(actions));
+    }
   },
 
   updateSegment(
@@ -1340,7 +1342,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
-    if (relevantSegments == null) return;
+    if (relevantSegments == null || relevantSegments.length < 1) return;
 
     const actions = relevantSegments.map((segment) =>
       updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),
@@ -1915,7 +1917,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 draggable={{
                                   icon: false,
                                   nodeDraggable: () =>
-                                    // Forbid renaming when segments or groups are being renamed,
+                                    // Forbid dragging when segments or groups are being renamed,
                                     // since selecting text within the editable input box would not work
                                     // otherwise (instead, the item would be dragged).
                                     this.state.renamingCounter === 0 && this.props.allowUpdate,

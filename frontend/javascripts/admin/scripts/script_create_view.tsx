@@ -1,26 +1,22 @@
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
-import type { WebknossosState } from "viewer/store";
 
 const FormItem = Form.Item;
-type OwnProps = {
-  scriptId?: string | null | undefined;
-};
-type StateProps = {
-  activeUser: APIUser;
-};
-type Props = OwnProps & StateProps;
 
-function ScriptCreateView({ scriptId, activeUser }: Props) {
-  const history = useHistory();
+function ScriptCreateView() {
+  const { scriptId } = useParams();
+
+  const navigate = useNavigate();
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
+
   useEffect(() => {
     fetchData();
     applyDefaults();
@@ -51,7 +47,7 @@ function ScriptCreateView({ scriptId, activeUser }: Props) {
       await createScript(formValues);
     }
 
-    history.push("/scripts");
+    navigate("/scripts");
   };
 
   const titlePrefix = scriptId ? "Update" : "Create";
@@ -127,9 +123,4 @@ function ScriptCreateView({ scriptId, activeUser }: Props) {
   );
 }
 
-const mapStateToProps = (state: WebknossosState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(ScriptCreateView);
+export default ScriptCreateView;

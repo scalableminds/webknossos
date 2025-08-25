@@ -3,7 +3,7 @@ import { castForArrayType, mod } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import * as THREE from "three";
+import { Color } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -98,8 +98,7 @@ export class DataBucket {
   readonly elementClass: ElementClass;
   readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
-  visualizationColor: THREE.Color;
+  visualizationColor: Color | null | undefined;
   // If dirty, the bucket's data was potentially edited and needs to be
   // saved to the server.
   dirty: boolean;
@@ -626,9 +625,11 @@ export class DataBucket {
               channelCount,
             };
       console.warn(`bucket.data for ${this.zoomedAddress} has unexpected length`, debugInfo);
-      ErrorHandling.notify(
-        new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),
+      const error = new Error(
+        `bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`,
       );
+      ErrorHandling.notify(error);
+      throw error;
     }
 
     switch (this.state) {
@@ -738,12 +739,12 @@ export class DataBucket {
     }
 
     const colors = [
-      new THREE.Color(0, 0, 0),
-      new THREE.Color(255, 0, 0),
-      new THREE.Color(0, 255, 0),
-      new THREE.Color(0, 0, 255),
-      new THREE.Color(255, 0, 255),
-      new THREE.Color(255, 255, 0),
+      new Color(0, 0, 0),
+      new Color(1, 0, 0),
+      new Color(0, 1, 0),
+      new Color(0, 0, 1),
+      new Color(1, 0, 1),
+      new Color(1, 1, 0),
     ];
 
     const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
@@ -768,7 +769,7 @@ export class DataBucket {
   }
 
   setVisualizationColor(colorDescriptor: string | number) {
-    const color = new THREE.Color(colorDescriptor);
+    const color = new Color(colorDescriptor);
     this.visualizationColor = color;
 
     if (this.visualizedMesh != null) {

@@ -8,7 +8,7 @@ import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import * as React from "react";
 import { connect, useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
@@ -27,7 +27,7 @@ import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionView from "viewer/view/action-bar/dataset_position_view";
+import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
 import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
@@ -41,7 +41,8 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
+import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
@@ -139,7 +140,7 @@ function AdditionalCoordinatesInputView() {
 }
 
 function CreateAnnotationButton() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const activeUser = useWkSelector((state) => state.activeUser);
   const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
   const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
@@ -174,7 +175,7 @@ function CreateAnnotationButton() {
       fallbackLayerName,
       maybeMappingName,
     );
-    history.push(`/annotations/${annotation.id}${location.hash}`);
+    navigate(`/annotations/${annotation.id}${location.hash}`);
   };
 
   const getFallbackLayerName = (segmentationLayer: APISegmentationLayer | null | undefined) => {
@@ -358,7 +359,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
-          <DatasetPositionView />
+          <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
           <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager

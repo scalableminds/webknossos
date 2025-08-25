@@ -18,7 +18,14 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(i
   )
 
   def getById(id: ObjectId): Fox[DataSource] =
-    cache.getOrLoad(id, id => remoteWebknossosClient.getDataset(id.toString))
+    cache.getOrLoad(
+      id,
+      id =>
+        for {
+          inboxDataSource <- remoteWebknossosClient.getDataset(id)
+          usableDataSource <- inboxDataSource.toUsable.toFox ?~> s"Data source is not usable: ${inboxDataSource.statusOpt}"
+        } yield usableDataSource
+    )
 
   def getWithLayer(id: ObjectId, dataLayerName: String): Fox[(DataSource, DataLayer)] =
     for {
@@ -26,6 +33,6 @@ class DatasetCache @Inject()(remoteWebknossosClient: DSRemoteWebknossosClient)(i
       dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> "Data layer not found"
     } yield (dataSource, dataLayer)
 
-  def invalidateCache(datasetId: String): Unit = cache.remove(ObjectId(datasetId))
+  def invalidateCache(datasetId: ObjectId): Unit = cache.remove(datasetId)
 
 }

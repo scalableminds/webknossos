@@ -8,7 +8,7 @@ import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type * as THREE from "three";
+import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "viewer/constants";
 import {
@@ -173,7 +173,7 @@ export default class LayerRenderingManager {
     }
   }
 
-  getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+  getDataTextures(): Array<DataTexture | UpdatableTexture> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();

@@ -3,7 +3,7 @@ import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import * as THREE from "three";
+import { type Euler, MathUtils, Matrix4, Object3D } from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import type {
@@ -34,6 +34,10 @@ import * as scaleInfo from "viewer/model/scaleinfo";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
+import {
+  eulerAngleToReducerInternalMatrix,
+  reducerInternalMatrixToEulerAngle,
+} from "../helpers/rotation_helpers";
 import {
   type Transform,
   chainTransforms,
@@ -297,16 +301,59 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3((x) => Math.floor(x), _getPosition(flycam));
 }
 
-function _getRotation(flycam: Flycam): Vector3 {
-  const object = new THREE.Object3D();
-  const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
-  object.applyMatrix4(matrix);
-  const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
+// Avoiding object creation with each call.
+const flycamMatrixObject = new Matrix4();
+
+// Returns the current rotation of the flycam in radians as an euler xyz tuple.
+// As the order in which the angles are applied is zyx (see flycam_reducer setRotationReducer),
+// this order must be followed when this euler angle is applied to 3d  rotation computations.
+// But when calculating with
+function _getRotationInRadianFromMatrix(flycamMatrix: Matrix4x4, invertZ: boolean = true): Vector3 {
+  // Somehow z rotation is inverted but the others are not.
+  const zInvertFactor = invertZ ? -1 : 1;
+  const object = new Object3D();
+  flycamMatrixObject.fromArray(flycamMatrix).transpose();
+  object.applyMatrix4(flycamMatrixObject);
   return [
-    mod((180 / Math.PI) * rotation[0], 360),
-    mod((180 / Math.PI) * rotation[1], 360),
-    mod((180 / Math.PI) * rotation[2], 360),
+    mod(object.rotation.x, Math.PI * 2),
+    mod(object.rotation.y, Math.PI * 2),
+    mod((object.rotation.z - Math.PI) * zInvertFactor, Math.PI * 2),
   ];
+}
+
+export const getRotationInRadianFromMatrix = memoizeOne(_getRotationInRadianFromMatrix);
+
+function _getRotationInRadian(flycam: Flycam, invertZ: boolean = true): Vector3 {
+  return getRotationInRadianFromMatrix(flycam.currentMatrix, invertZ);
+}
+
+function _getRotationInDegrees(flycamOrMatrix: Flycam | Matrix4x4): Vector3 {
+  const matrix = Array.isArray(flycamOrMatrix)
+    ? flycamOrMatrix
+    : (flycamOrMatrix as Flycam).currentMatrix;
+  const rotationInRadian = getRotationInRadianFromMatrix(matrix, false);
+  // Modulo operation not needed as already done in getRotationInRadian.
+  return [
+    (180 / Math.PI) * rotationInRadian[0],
+    (180 / Math.PI) * rotationInRadian[1],
+    (180 / Math.PI) * rotationInRadian[2],
+  ];
+}
+
+function _isRotated(flycam: Flycam): boolean {
+  return !V3.equals(getRotationInRadian(flycam), [0, 0, 0]);
+}
+
+function _getFlycamRotationWithAppendedRotation(flycam: Flycam, rotationToAppend: Euler): Vector3 {
+  const flycamRotation = getRotationInRadian(flycam, false);
+
+  // Perform same operations as the flycam reducer does. First default 180° around z.
+  let rotFlycamMatrix = eulerAngleToReducerInternalMatrix(flycamRotation);
+  // Apply rotation
+  rotFlycamMatrix = rotFlycamMatrix.multiply(new Matrix4().makeRotationFromEuler(rotationToAppend));
+  const rotationInRadian = reducerInternalMatrixToEulerAngle(rotFlycamMatrix);
+  const rotationInDegree = map3(MathUtils.radToDeg, rotationInRadian);
+  return rotationInDegree;
 }
 
 function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
@@ -317,7 +364,12 @@ export const getUp = memoizeOne(_getUp);
 export const getLeft = memoizeOne(_getLeft);
 export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
-export const getRotation = memoizeOne(_getRotation);
+export const getRotationInRadian = memoizeOne(_getRotationInRadian);
+export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
+export const getFlycamRotationWithAppendedRotation = memoizeOne(
+  _getFlycamRotationWithAppendedRotation,
+);
+export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {
@@ -494,19 +546,7 @@ export function getPlaneExtentInVoxel(
   const { width, height } = rects[planeID];
   return [width * zoomStep, height * zoomStep];
 }
-export function getRotationOrtho(planeId: OrthoView): Vector3 {
-  switch (planeId) {
-    case OrthoViews.PLANE_YZ:
-      return [0, 270, 0];
 
-    case OrthoViews.PLANE_XZ:
-      return [90, 0, 0];
-
-    case OrthoViews.PLANE_XY:
-    default:
-      return [0, 0, 0];
-  }
-}
 export type Area = {
   left: number;
   top: number;

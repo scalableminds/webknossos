@@ -54,7 +54,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
-        cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
+        cubeSize = DataLayer.bucketLength,
         fourBit = None,
         applyAgglomerate = None,
         version = None,
@@ -87,8 +87,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def dataFormat: DataFormat.Value = DataFormat.wkw
 
   override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
-
-  override def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,

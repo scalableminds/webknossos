@@ -3,9 +3,16 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, TextUtils}
+import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, StaticLayer, UnusableDataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  StaticLayer,
+  UnusableDataSource,
+  UsableDataSource
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
@@ -212,10 +219,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
         _ <- datasetDAO.updateDataSource(foundDataset._id,
-                                                    dataStore.name,
-                                                    dataSource.hashCode,
-                                                    dataSource,
-                                                    dataSource.isUsable)
+                                         dataStore.name,
+                                         dataSource.hashCode,
+                                         dataSource,
+                                         dataSource.isUsable)
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
@@ -232,10 +239,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
           _ <- datasetDAO.updateDataSource(foundDataset._id,
-                                                      dataStore.name,
-                                                      dataSource.hashCode,
-                                                      dataSource,
-                                                      dataSource.isUsable)(GlobalAccessContext)
+                                           dataStore.name,
+                                           dataSource.hashCode,
+                                           dataSource,
+                                           dataSource.isUsable)(GlobalAccessContext)
           _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
@@ -446,6 +453,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
+                   includePaths: Boolean = false,
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
@@ -466,13 +474,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSourceFieldsToRemove = Set(Some("credentialId"),
+                                     Some("credentials"),
+                                     if (includePaths) None else Some("path")).flatten
       usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {
       Json.obj(
         "id" -> dataset._id,
         "name" -> dataset.name,
-        "dataSource" -> dataSource.withoutCredentials,
+        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), dataSourceFieldsToRemove),
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,

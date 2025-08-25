@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, DataSourceId, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FileUtils
+import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.file.{Files, Path}
@@ -146,8 +147,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
             })
             // Write properties back
             tryo(Files.delete(propertiesPath)) match {
-              case Full(_) => JsonHelper.writeToFile(propertiesPath, updatedDataSource).toFox
-              case e       => e.toFox
+              case Full(_) =>
+                JsonHelper
+                  .writeToFile(propertiesPath,
+                               JsonHelper.removeKeyRecursively(Json.toJson(updatedDataSource), Set("resolutions")))
+                  .toFox
+              case e => e.toFox
             }
           case _ => Fox.successful(())
         }

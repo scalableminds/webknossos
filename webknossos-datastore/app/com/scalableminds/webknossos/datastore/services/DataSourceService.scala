@@ -273,7 +273,9 @@ class DataSourceService @Inject()(
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
-      _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
+      _ <- JsonHelper
+        .writeToFile(propertiesFile, JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("resolutions")))
+        .toFox ?~> "Could not update datasource-properties.json"
     } yield ()
   }
 

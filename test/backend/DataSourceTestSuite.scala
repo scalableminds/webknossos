@@ -18,8 +18,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import org.scalatestplus.play.PlaySpec
 
-import java.net.URI
-
 class DataSourceTestSuite extends PlaySpec {
 
   "DataSource" should {

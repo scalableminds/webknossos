@@ -102,7 +102,7 @@ GET           /datasets/:datasetId/layers/:layer/thumbnail                      
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: ObjectId, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
-GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String], includePaths: Option[Boolean])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload()
@@ -288,7 +288,7 @@ GET           /jobs/:id/export                                                  
 
 # AI Models
 POST          /aiModels/runNeuronModelTraining                                                  controllers.AiModelController.runNeuronTraining
-POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining 
+POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining
 POST          /aiModels/inferences/runCustomNeuronModelInference                                controllers.AiModelController.runCustomNeuronInference
 POST          /aiModels/inferences/runCustomInstanceModelInference                              controllers.AiModelController.runCustomInstanceModelInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)

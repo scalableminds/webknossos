@@ -789,7 +789,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
-      datasetJs <- datasetService.publicWrites(dataset, None, None, None)
+      datasetJs <- datasetService.publicWrites(dataset, None)
     } yield
       Json.obj(
         "id" -> annotation._id.id,

@@ -34,7 +34,7 @@ import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
@@ -621,8 +621,8 @@ class DatasetController @Inject()(userService: UserService,
     } yield dataStore
   }
 
-  private lazy val manualUploadPrefixBox: Box[UriPath] = for {
-    fromConfig <- UriPath.fromString(conf.WebKnossos.Datasets.manualUploadPrefix)
+  private lazy val manualUploadPrefixBox: Box[UPath] = for {
+    fromConfig <- UPath.fromString(conf.WebKnossos.Datasets.manualUploadPrefix)
     absolute <- fromConfig.toAbsolute
   } yield absolute
 
@@ -636,7 +636,7 @@ class DatasetController @Inject()(userService: UserService,
         addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = Some(layersWithPaths))
 
-  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: UriPath): Fox[StaticLayer] =
+  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: UPath): Fox[StaticLayer] =
     for {
       layerPath <- Fox.successful(dataSourcePath / dataLayer.name)
       mags <- dataLayer.magsOpt.toFox // TODO can we rely on mags? refactor/change typing?
@@ -650,11 +650,11 @@ class DatasetController @Inject()(userService: UserService,
       }
     } yield layerUpdated
 
-  private def addPathToMag(mag: MagLocator, layerPath: UriPath): MagLocator =
+  private def addPathToMag(mag: MagLocator, layerPath: UPath): MagLocator =
     mag.copy(path = Some(layerPath / mag.mag.toMagLiteral()))
 
   private def addPathsToAttachments(attachmentsOpt: Option[DataLayerAttachments],
-                                    layerPath: UriPath): Fox[Option[DataLayerAttachments]] =
+                                    layerPath: UPath): Fox[Option[DataLayerAttachments]] =
     attachmentsOpt match {
       case None => Fox.successful(None)
       case Some(attachments) =>
@@ -676,7 +676,7 @@ class DatasetController @Inject()(userService: UserService,
 
   private def addPathToAttachment(attachment: LayerAttachment,
                                   attachmentType: LayerAttachmentType,
-                                  layerPath: UriPath): LayerAttachment = {
+                                  layerPath: UPath): LayerAttachment = {
     val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
     val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
     val path = layerPath / defaultDirName / (attachment.name + suffix)

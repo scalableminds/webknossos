@@ -121,7 +121,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUriPath), None, Some(axisOrder), channelIndex, credentialId),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), channelIndex, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

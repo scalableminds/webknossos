@@ -1,9 +1,9 @@
 package backend
 
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.scalatestplus.play.PlaySpec
 
-class UriPathTestSuite extends PlaySpec {
+class UPathTestSuite extends PlaySpec {
   private val literalsToTest = Seq(
     "relative/elsewhere",
     "./relative/elsewehere",
@@ -20,10 +20,10 @@ class UriPathTestSuite extends PlaySpec {
     "file:/somewhere",
   )
 
-  "UriPath" should {
+  "UPath" should {
     "Be constructable from well-formed string" in {
       literalsToTest.foreach { literal =>
-        assert(UriPath.fromString(literal).exists(_.toString == literal))
+        assert(UPath.fromString(literal).exists(_.toString == literal))
       }
     }
 
@@ -31,19 +31,18 @@ class UriPathTestSuite extends PlaySpec {
     /*
     "Not be constructable from malformed string" in {
       malformedLiteralsToTest.foreach { literal =>
-        assert(UriPath.fromString(literal).isEmpty)
+        assert(UPath.fromString(literal).isEmpty)
       }
     }
      */
 
     "resolve strings correctly" in {
       assert(
-        (UriPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "relative/elsewhere/subdirectory")
       assert(
-        (UriPath
-          .fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "relative/elsewhere/subdirectory")
+        (UPath.fromStringUnsafe("relative/elsewhere/") / "subdirectory").toString == "relative/elsewhere/subdirectory")
       assert(
-        (UriPath
+        (UPath
           .fromStringUnsafe("relative/elsewhere/") / "subdirectory/").toString == "relative/elsewhere/subdirectory/")
     }
   }

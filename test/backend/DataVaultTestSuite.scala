@@ -200,7 +200,7 @@ class DataVaultTestSuite extends PlaySpec {
             assert(result.length == 3)
             assert(
               result.exists(
-                _.toUri == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
+                _.toRemoteUriUnsafe == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
           }
 
           "return failure" when {
@@ -233,7 +233,7 @@ class DataVaultTestSuite extends PlaySpec {
 
         "resolve child" in {
           val childPath = somePath / "c"
-          assert(childPath.toUri.toString == s"${someUri.toString}/c")
+          assert(childPath.toRemoteUriUnsafe.toString == s"${someUri.toString}/c")
         }
 
         "get parent" in {
@@ -262,7 +262,7 @@ class DataVaultTestSuite extends PlaySpec {
         val trailingSlashPath = new VaultPath(trailingSlashUri, new MockDataVault)
         "resolve child" in {
           val childPath = trailingSlashPath / "c"
-          assert(childPath.toUri.toString == s"${trailingSlashUri.toString}c")
+          assert(childPath.toRemoteUriUnsafe.toString == s"${trailingSlashUri.toString}c")
         }
 
         "get parent" in {

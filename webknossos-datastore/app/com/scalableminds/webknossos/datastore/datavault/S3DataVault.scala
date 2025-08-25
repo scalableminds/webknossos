@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Full, Failure => BoxFailure}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
@@ -106,7 +107,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
-      objectKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      objectKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
         case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
@@ -118,10 +119,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      prefixKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
-      vaultPaths <- tryo(
-        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
+      vaultPaths <- tryo(s3SubPrefixKeys.map(key =>
+        new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
     } yield vaultPaths
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
@@ -156,7 +157,7 @@ object S3DataVault {
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, remoteSourceDescriptor.uri, ws, ec)
+    new S3DataVault(credential, remoteSourceDescriptor.toUriUnsafe, ws, ec)
   }
 
   private def hostBucketFromUri(uri: URI): Option[String] = {

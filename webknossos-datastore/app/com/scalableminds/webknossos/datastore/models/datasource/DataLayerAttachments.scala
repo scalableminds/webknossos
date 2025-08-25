@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -70,15 +70,15 @@ object LayerAttachmentType extends ExtendedEnumeration {
 }
 
 case class LayerAttachment(name: String,
-                           path: UriPath,
+                           path: UPath,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
                            credentialId: Option[String] = None) {
   // Warning: throws! Use inside of tryo
-  def localPath: Path = path.toLocalPath
+  def localPath: Path = path.toLocalPathUnsafe
 
-  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): UriPath = {
+  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): UPath = {
     // TODO test, clean up
-    val datasetPath = UriPath.fromLocalPath(
+    val datasetPath = UPath.fromLocalPath(
       Path.of(dataBaseDir).toAbsolutePath.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
     path.resolvedIn(datasetPath)
   }
@@ -100,7 +100,7 @@ object LayerAttachment {
           p.map(
             path =>
               LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString),
-                              UriPath.fromLocalPath(path),
+                              UPath.fromLocalPath(path),
                               dataFormat))
         case _ => Seq.empty
       }

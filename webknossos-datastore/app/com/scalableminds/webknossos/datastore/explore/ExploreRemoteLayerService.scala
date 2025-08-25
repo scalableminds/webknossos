@@ -11,13 +11,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, S
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.helpers.PathSchemes
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
-import java.net.URI
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -81,11 +79,12 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       tc: TokenContext,
       mp: MessagesProvider): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      uri <- tryo(new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))).toFox ?~> s"Received invalid URI: $layerUri"
-      _ <- Fox.fromBool(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
-      _ <- assertLocalPathInWhitelist(uri)
+      upath <- UPath
+        .fromString(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))
+        .toFox ?~> s"Received invalid URI: $layerUri"
+      _ <- assertLocalPathInWhitelist(upath)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
-      remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
+      remoteSource = RemoteSourceDescriptor(upath, credentialOpt)
       remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
         List((remotePath, 0)),
@@ -107,10 +106,11 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       )
     } yield layersWithVoxelSizes
 
-  private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
-    if (uri.getScheme == PathSchemes.schemeFile) {
+  private def assertLocalPathInWhitelist(upath: UPath)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (upath.isLocal) {
       Fox.fromBool(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
-        uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
+        upath.toLocalPathUnsafe.toString
+          .startsWith(whitelistEntry))) ?~> s"Absolute path $upath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 3

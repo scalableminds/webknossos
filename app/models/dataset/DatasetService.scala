@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, TextUtils}
-import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UriPath}
+import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, StaticLayer, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
@@ -413,7 +413,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield magInfosAndLinkedMags
 
-  def validatePaths(paths: Seq[UriPath], dataStore: DataStore): Fox[Unit] =
+  def validatePaths(paths: Seq[UPath], dataStore: DataStore): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       client = new WKRemoteDataStoreClient(dataStore, rpc)

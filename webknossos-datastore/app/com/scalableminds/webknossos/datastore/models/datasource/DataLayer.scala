@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -42,7 +42,7 @@ trait DataLayer {
     case _                  => None
   }
 
-  def allExplicitPaths: Seq[UriPath] =
+  def allExplicitPaths: Seq[UPath] =
     magsOpt.map(_.flatMap(_.path)).getOrElse(Seq.empty) ++
       attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
 

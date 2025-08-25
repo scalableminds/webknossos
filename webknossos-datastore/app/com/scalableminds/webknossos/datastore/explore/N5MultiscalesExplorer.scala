@@ -61,7 +61,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUriPath), None, Some(axisOrder), None, credentialId),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), None, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

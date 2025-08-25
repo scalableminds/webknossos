@@ -4,10 +4,10 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.Reads
 
@@ -16,7 +16,7 @@ import java.net.URI
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImplicits {
+class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
@@ -61,40 +61,33 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImpl
   }
 
   def basename: String =
-    uri.toString.split("/").last
+    upath.basename
 
-  def parent: VaultPath = {
-    val newUri =
-      if (uri.getPath.endsWith("/")) uri.resolve("..")
-      else uri.resolve(".")
-    new VaultPath(newUri, dataVault)
-  }
+  def parent: VaultPath =
+    new VaultPath(upath.parent, dataVault)
 
   def /(key: String): VaultPath =
-    if (uri.toString.endsWith("/")) {
-      new VaultPath(uri.resolve(key), dataVault)
-    } else {
-      new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
-    }
+    new VaultPath(upath / key, dataVault)
 
-  def toUri: URI =
-    uri
+  def toRemoteUriUnsafe: URI =
+    upath.toRemoteUriUnsafe
 
-  def toUriPath: UriPath = new UriPath(uri)
+  def toUPath: UPath = upath
 
-  override def toString: String = uri.toString
+  override def toString: String = upath.toString
 
   def summary: String = s"VaultPath: ${this.toString} for ${dataVault.getClass.getSimpleName}"
 
   private def getDataVault: DataVault = dataVault
 
+  // TODO re-test
   override def equals(obj: Any): Boolean = obj match {
-    case other: VaultPath => other.toUri == toUri && other.getDataVault == dataVault
+    case other: VaultPath => other.toUPath == toUPath && other.getDataVault == dataVault
     case _                => false
   }
 
   override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(uri.toString).append(dataVault).toHashCode
+    new HashCodeBuilder(17, 31).append(upath.toString).append(dataVault).toHashCode
 
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {

@@ -3,7 +3,7 @@ package backend
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
@@ -44,7 +44,7 @@ class DataSourceTestSuite extends PlaySpec {
             attachments = Some(
               DataLayerAttachments(
                 meshes = Seq(LayerAttachment("meshfile",
-                                             UriPath.fromStringUnsafe("./meshes/meshfile"),
+                                             UPath.fromStringUnsafe("./meshes/meshfile"),
                                              LayerAttachmentDataformat.zarr3))))
           )
         ),
@@ -69,7 +69,7 @@ class DataSourceTestSuite extends PlaySpec {
             attachments = Some(
               DataLayerAttachments(
                 meshes = Seq(LayerAttachment("meshfile",
-                                             UriPath.fromStringUnsafe("./meshes/meshfile"),
+                                             UPath.fromStringUnsafe("./meshes/meshfile"),
                                              LayerAttachmentDataformat.zarr3))))
           )
         ),

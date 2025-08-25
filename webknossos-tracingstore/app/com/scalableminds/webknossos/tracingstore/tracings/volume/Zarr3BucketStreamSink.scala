@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   IntCompressionSetting,
   StringCompressionSetting
 }
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UriPath}
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataFormat,
@@ -73,7 +73,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       MagLocator(
         mag = vec3IntToProto(mag),
         axisOrder = Some(AxisOrder.cAdditionalxyz(rank)),
-        path = Some(UriPath.fromStringUnsafe(s"./$defaultLayerName/${mag.toMagLiteral(allowScalar = true)}"))
+        path = Some(UPath.fromStringUnsafe(s"./$defaultLayerName/${mag.toMagLiteral(allowScalar = true)}"))
       )
     }
     UsableDataSource(

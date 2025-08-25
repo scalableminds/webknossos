@@ -9,11 +9,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json._
 
 import java.net.URI
 import scala.concurrent.ExecutionContext
 
+// TODO re-test with new toRemoteUriUnsafe
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer
     with FoxImplicits
@@ -24,7 +26,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
-      uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
+      uriFragment <- tryo(remotePath.toRemoteUriUnsafe.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
       spec <- JsonHelper.parseAs[JsObject](uriFragment).toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
       _ <- Fox.fromBool(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
@@ -41,9 +43,9 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       obj <- JsonHelper.as[JsObject](layerSpec).toFox
       source <- JsonHelper.as[JsString](obj \ "source").toFox
       layerType = new URI(source.value).getScheme
-      sourceURI = new URI(source.value.substring(f"$layerType://".length))
       name <- JsonHelper.as[JsString](obj \ "name").toFox
-      remoteSourceDescriptor = RemoteSourceDescriptor(sourceURI, None)
+      upath <- UPath.fromString(source.value.substring(f"$layerType://".length)).toFox
+      remoteSourceDescriptor = RemoteSourceDescriptor(upath, None)
       remotePath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)

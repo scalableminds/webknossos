@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UriPath}
+import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -853,7 +853,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
-      path <- Fox.runOptional(row.path)(UriPath.fromString(_).toFox)
+      path <- Fox.runOptional(row.path)(UPath.fromString(_).toFox)
     } yield
       MagLocator(
         mag,
@@ -1047,7 +1047,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      path <- UriPath.fromString(row.path).toFox
+      path <- UPath.fromString(row.path).toFox
     } yield LayerAttachment(row.name, path, dataFormat)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =

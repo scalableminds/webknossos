@@ -10,7 +10,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes, UriPath}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, PathSchemes, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
@@ -224,11 +224,11 @@ class DataSourceService @Inject()(
     val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
     val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
 
-    def pathOk(path: UriPath): Boolean =
+    def pathOk(path: UPath): Boolean =
       if (path.isRemote) true
       else {
         val absoluteWithinDataset =
-          organizationDir.resolve(dataSource.id.directoryName).resolve(path.toLocalPath).toAbsolutePath
+          organizationDir.resolve(dataSource.id.directoryName).resolve(path.toLocalPathUnsafe).toAbsolutePath
         val allowedParent = organizationDir.toAbsolutePath
         if (absoluteWithinDataset.startsWith(allowedParent)) true else false
       }

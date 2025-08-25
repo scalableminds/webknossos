@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
@@ -44,7 +44,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       magDirectories <- tryo(Files.list(path.resolve(layerDirectory)).iterator().asScala.toList).toFox ?~> s"Could not resolve color directory as child of $path"
       layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
         for {
-          remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
+          remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(UPath.fromLocalPath(dir), None))
           mag <- Vec3Int
             .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
             .toFox ?~> s"invalid mag: ${dir.getFileName}"
@@ -114,17 +114,17 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
           layers.map(l =>
             l.mapped(magMapping = m =>
               m.copy(path = m.path.map(p =>
-                UriPath.fromStringUnsafe(p.toString.stripPrefix(path.toAbsolutePath.toUri.toString)))))),
+                UPath.fromStringUnsafe(p.toString.stripPrefix(path.toAbsolutePath.toUri.toString)))))),
         new N5ArrayExplorer
       )(layerPath, dataSourceId, "")
     } yield explored
 
   private def selectLastDirectory(l: StaticLayer) =
-    l.mapped(magMapping = m => m.copy(path = m.path.map(p => UriPath.fromStringUnsafe(p.toString.split("/").last))))
+    l.mapped(magMapping = m => m.copy(path = m.path.map(p => UPath.fromStringUnsafe(p.toString.split("/").last))))
 
   private def selectLastTwoDirectories(l: StaticLayer) =
     l.mapped(magMapping = m =>
-      m.copy(path = m.path.map(p => UriPath.fromStringUnsafe(p.toString.split("/").takeRight(2).mkString("/")))))
+      m.copy(path = m.path.map(p => UPath.fromStringUnsafe(p.toString.split("/").takeRight(2).mkString("/")))))
 
   private def exploreLocalLayer(
       makeLayersRelative: List[StaticLayer] => List[StaticLayer],
@@ -136,8 +136,8 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         val subdirs = Files.list(path).iterator().asScala.toList
         if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
       } else layerDirectory
-      fullPath <- Fox.successful(path.resolve(layer))
-      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
+      fullPath = path.resolve(layer)
+      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(UPath.fromLocalPath(fullPath), None))
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)(TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)

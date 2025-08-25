@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.helpers.UriPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
@@ -99,7 +99,7 @@ case class UsableDataSource(id: DataSourceId,
 
   def withUpdatedId(newId: DataSourceId): UsableDataSource = copy(id = newId)
 
-  def allExplicitPaths: Seq[UriPath] = dataLayers.flatMap(_.allExplicitPaths)
+  def allExplicitPaths: Seq[UPath] = dataLayers.flatMap(_.allExplicitPaths)
 
   def withoutCredentials: UsableDataSource = this.copy(dataLayers = this.dataLayers.map(_.withoutCredentials()))
 

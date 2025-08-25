@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 
 import java.net.URI
 import java.nio.file.Path

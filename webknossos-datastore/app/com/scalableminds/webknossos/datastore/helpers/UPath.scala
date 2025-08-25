@@ -52,7 +52,7 @@ trait UPath {
 
 object UPath {
   def separator: Char = '/'
-  def schemeSeparator: String = "://"
+  private def schemeSeparator: String = "://"
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
@@ -60,15 +60,19 @@ object UPath {
     // TODO assert at least one segment? assert only supported schemes?
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
-      case None => new LocalUPath(Path.of(literal))
+      case None => fromLocalPath(Path.of(literal))
       case Some(scheme) if scheme.contains(PathSchemes.schemeFile) =>
-        new LocalUPath(Path.of(literal.drop(s"$scheme://".length)))
+        val nioPath = Path.of(literal.drop(s"$scheme://".length))
+        if (!nioPath.isAbsolute)
+          throw new Exception(
+            s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
+        fromLocalPath(nioPath)
       case Some(scheme) =>
         new RemotePath(scheme, segments = literal.drop(s"$scheme://".length).split(separator.toString).toSeq)
     }
   }
 
-  def fromLocalPath(localPath: Path): UPath = new LocalUPath(localPath)
+  def fromLocalPath(localPath: Path): UPath = new LocalUPath(localPath.normalize())
 
   implicit object jsonFormat extends Format[UPath] {
     override def reads(json: JsValue): JsResult[UPath] =
@@ -92,9 +96,12 @@ class LocalUPath(nioPath: Path) extends UPath {
   def toLocalPathUnsafe: Path = nioPath
 
   override def /(other: String): UPath =
-    new LocalUPath(nioPath.resolve(other))
+    UPath.fromLocalPath(nioPath.resolve(other))
 
-  override def toString: String = nioPath.toString
+  override def toString: String = {
+    val prefix = if (isRelative) "./" else PathSchemes.schemeFile + "://"
+    prefix + nioPath.toString
+  }
 
   override def toLocalPath: Box[Path] = Full(nioPath)
 
@@ -102,7 +109,7 @@ class LocalUPath(nioPath: Path) extends UPath {
 
   override def basename: String = nioPath.getFileName.toString
 
-  override def parent: UPath = new LocalUPath(nioPath.getParent)
+  override def parent: UPath = UPath.fromLocalPath(nioPath.getParent)
 
   override def getScheme: Option[String] = None
 

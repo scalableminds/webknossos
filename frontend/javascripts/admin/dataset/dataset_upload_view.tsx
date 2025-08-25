@@ -492,17 +492,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         open={isUploading}
         keyboard={false}
         maskClosable={false}
-        className="no-footer-modal"
-        okButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        cancelButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
+        footer={null}
         onCancel={this.cancelUpload}
       >
         <div

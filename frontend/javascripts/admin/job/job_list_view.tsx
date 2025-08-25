@@ -126,7 +126,7 @@ export function JobState({ job }: { job: APIJob }) {
 
   return (
     <Tooltip title={tooltip}>
-      <span className="icon-margin-right">{icon}</span>
+      <span>{icon}</span>
       {jobStateNormalized}
     </Tooltip>
   );
@@ -235,7 +235,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Neuron inferral for layer {job.layerName} of{" "}
+          AI Neuron inferral for layer <i>{job.layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
@@ -256,14 +256,21 @@ function JobListView() {
     ) {
       return (
         <span>
-          Mitochondria inferral for layer {job.layerName} of{" "}
+          AI Mitochondria inferral for layer <i>{job.layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (job.type === APIJobType.INFER_INSTANCES && linkToDataset != null && job.layerName) {
+      return (
+        <span>
+          AI instance segmentation for layer <i>{job.layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
     } else if (job.type === APIJobType.ALIGN_SECTIONS && linkToDataset != null && job.layerName) {
       return (
         <span>
-          Align sections for layer {job.layerName} of{" "}
+          Align sections for layer <i>{job.layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
@@ -277,11 +284,19 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL || APIJobType.DEPRECATED_TRAIN_MODEL) {
-      const numberOfTrainingAnnotations = job.trainingAnnotations.length;
+    } else if (
+      job.type === APIJobType.TRAIN_NEURON_MODEL ||
+      job.type === APIJobType.TRAIN_INSTANCE_MODEL ||
+      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+    ) {
+      const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
+      const modelName =
+        job.type === APIJobType.TRAIN_NEURON_MODEL || job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+          ? "neuron model"
+          : "instance model";
       return (
         <span>
-          {`Train neuron model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );

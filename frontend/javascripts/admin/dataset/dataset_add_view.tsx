@@ -273,17 +273,7 @@ const getPostUploadModal = (
       open
       closable
       maskClosable={false}
-      className="no-footer-modal"
-      cancelButtonProps={{
-        style: {
-          display: "none",
-        },
-      }}
-      okButtonProps={{
-        style: {
-          display: "none",
-        },
-      }}
+      footer={null}
       onCancel={() => setDatasetId("")}
       onOk={() => setDatasetId("")}
       width={580}
@@ -336,7 +326,7 @@ const getPostUploadModal = (
             </React.Fragment>
           )}
         </div>
-      </div>{" "}
+      </div>
     </Modal>
   );
 };

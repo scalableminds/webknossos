@@ -12,7 +12,7 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/starting_job_modals";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/ai_job_modals/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";

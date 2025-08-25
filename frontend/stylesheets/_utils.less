@@ -49,7 +49,7 @@ td.nowrap * {
   flex-direction: row;
   justify-content: center;
 
-  & > * {
+  &>* {
     margin: 6px;
   }
 
@@ -71,6 +71,7 @@ td.nowrap * {
   display: table;
   content: "";
 }
+
 .clearfix::after {
   // sometimes required by .pull-right
   display: table;
@@ -84,12 +85,6 @@ td.nowrap * {
   height: 10px;
   border-radius: 50%;
   margin-right: 5px;
-}
-
-.no-footer-modal {
-  .ant-modal-footer {
-    display: none;
-  }
 }
 
 .flex-container {
@@ -144,9 +139,11 @@ td.nowrap * {
 .grabbing {
   cursor: grabbing !important;
 }
+
 .grabbing * {
   cursor: grabbing !important;
 }
+
 .is-dragging {
   cursor: grabbing !important;
   user-select: none;

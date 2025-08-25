@@ -16,7 +16,7 @@ it<WebknossosTestContext>("Brushing/Tracing should not crash when a lot of bucke
   const { api, mocks } = context;
   await api.tracing.save();
   vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
-    createBucketResponseFunction(Uint16Array, 0, 0),
+    createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, 0, 0),
   );
   // In earlier versions of webKnossos, buckets could be evicted forcefully when
   // too many were dirty at the same time. This led to a crash in earlier versions.

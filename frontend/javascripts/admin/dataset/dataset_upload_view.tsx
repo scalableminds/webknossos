@@ -988,10 +988,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   }, "Archives cannot be mixed with other files."),
                 },
                 {
-                  validator: syncValidator((files: FileWithPath[]) => {
-                    const fileSize = getFileSize(files);
-                    return getLeftOverStorageBytes(this.props.organization) >= fileSize;
-                  }, `The selected files exceed the available storage of your organization. Please ${isActiveUserAdmin ? "use the organization management page to request more storage" : "ask your administrator to request more storage"}.`),
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const fileSize = getFileSize(files);
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
+                    },
+                    `The selected files exceed the available storage of your organization. Please ${
+                      isActiveUserAdmin
+                        ? "use the organization management page to request more storage"
+                        : "ask your administrator to request more storage"
+                    }.`,
+                  ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
@@ -1016,20 +1023,28 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   }, "WKW files should not be mixed with image files."),
                 },
                 {
-                  validator: syncValidator((files: FileWithPath[]) => {
-                    const { unfinishedUploadToContinue } = this.state;
-                    if (
-                      !unfinishedUploadToContinue ||
-                      unfinishedUploadToContinue.filePaths == null
-                    ) {
-                      return true;
-                    }
-                    const filePaths = files.map((file) => file.path || "");
-                    return (
-                      unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                      _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
-                    );
-                  }, "The selected files do not match the files of the unfinished upload. Please select the same files as before." + (unfinishedUploadToContinue?.filePaths != null ? `The file names are: ${unfinishedUploadToContinue?.filePaths?.join(", ")}.` : "")),
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const { unfinishedUploadToContinue } = this.state;
+                      if (
+                        !unfinishedUploadToContinue ||
+                        unfinishedUploadToContinue.filePaths == null
+                      ) {
+                        return true;
+                      }
+                      const filePaths = files.map((file) => file.path || "");
+                      return (
+                        unfinishedUploadToContinue.filePaths.length === filePaths.length &&
+                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                      );
+                    },
+                    "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
+                      (unfinishedUploadToContinue?.filePaths != null
+                        ? `The file names are: ${unfinishedUploadToContinue?.filePaths?.join(
+                            ", ",
+                          )}.`
+                        : ""),
+                  ),
                 },
               ]}
               valuePropName="fileList"

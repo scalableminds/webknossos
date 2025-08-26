@@ -5,9 +5,10 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
   DataLayerAttachments,
   DataSourceId,
   DataSourceStatus,
@@ -81,6 +82,18 @@ object ReserveManualUploadRequest {
   implicit val jsonFormat: OFormat[ReserveManualUploadRequest] = Json.format[ReserveManualUploadRequest]
 }
 
+case class ReserveManualAttachmentUploadRequest(
+    layerName: String,
+    attachmentName: String,
+    attachmentType: LayerAttachmentType.Value,
+    attachmentDataformat: LayerAttachmentDataformat.Value
+)
+
+object ReserveManualAttachmentUploadRequest {
+  implicit val jsonFormat: OFormat[ReserveManualAttachmentUploadRequest] =
+    Json.format[ReserveManualAttachmentUploadRequest]
+}
+
 object SAMInteractionType extends ExtendedEnumeration {
   type SAMInteractionType = Value
   val BOUNDING_BOX, POINT = Value
@@ -121,6 +134,7 @@ class DatasetController @Inject()(userService: UserService,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
+                                  datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
@@ -572,6 +586,30 @@ class DatasetController @Inject()(userService: UserService,
       for {
         (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
+    }
+
+  def reserveManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
+    sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
+      for {
+        _ <- Fox.successful(())
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- datasetService.usableDataSourceFor(dataset)
+        existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
+          datasetId,
+          request.body.layerName,
+          request.body.attachmentName,
+          request.body.attachmentType)
+        _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> "attachment.name.taken"
+        // TODO assert non-sequence attachment types are still empty
+        // TODO insert with manualUploadIsPending=true
+        manualUploadPrefix <- manualUploadPrefixBox.toFox
+        newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, datasetId)
+        datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName
+        attachmentPath = datasetPath / request.body.layerName / LayerAttachmentType.defaultDirectoryNameFor(
+          request.body.attachmentType) / TextUtils
+          .normalizeStrong(request.body.attachmentName)
+          .getOrElse("") + "-" + ObjectId.generate
+      } yield Ok(Json.toJson(attachmentPath))
     }
 
   def reserveManualUpload(): Action[ReserveManualUploadRequest] =

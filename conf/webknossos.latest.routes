@@ -104,6 +104,7 @@ PUT           /datasets/:datasetId/clearThumbnailCache                          
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String], includePaths: Option[Boolean])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveManualAttachmentUpload                                controllers.DatasetController.reserveManualAttachmentUpload(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload()
 POST          /datasets/finishManualUpload                                                      controllers.DatasetController.finishManualUpload(datasetId: ObjectId)

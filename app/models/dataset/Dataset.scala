@@ -1070,19 +1070,21 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat, manualUploadIsPending
                 FROM webknossos.dataset_layer_attachments
-                WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
+                WHERE _dataset = $datasetId
+                AND layerName = $layerName
+                AND NOT manualUploadIsPending""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
           VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT)""".asUpdate
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT), ${false}""".asUpdate
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT manualUploadIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.attachments match {
         case Some(attachments) =>
@@ -1103,6 +1105,21 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+
+  def countAttachmentsIncludingPending(datasetId: ObjectId,
+                                       layerName: String,
+                                       attachmentName: String,
+                                       attachmentType: LayerAttachmentType.Value): Fox[Int] =
+    for {
+      rows <- run(q"""COUNT(*)
+                      FROM webknossos.dataset_layer_attachments
+                      WHERE _dataset = $datasetId
+                      AND layerName = $layerName
+                      AND name = $attachmentName
+                      AND attachmentType = $attachmentType
+                      """.as[Int])
+      first <- rows.headOption.toFox
+    } yield first
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -23,7 +23,7 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
-    Path.of(config.Datastore.baseDirectory).toAbsolutePath,
+    config.Datastore.baseDirectory,
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
     Some(chunkCacheService.sharedChunkContentsCache),

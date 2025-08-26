@@ -67,10 +67,8 @@ case class LayerAttachment(name: String,
   // Warning: throws! Use inside of tryo
   def localPath: Path = path.toLocalPathUnsafe
 
-  def resolvedPath(dataBaseDir: String, dataSourceId: DataSourceId): UPath = {
-    // TODO test, clean up
-    val datasetPath = UPath.fromLocalPath(
-      Path.of(dataBaseDir).toAbsolutePath.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
+  def resolvedPath(dataBaseDir: Path, dataSourceId: DataSourceId): UPath = {
+    val datasetPath = UPath.fromLocalPath(dataBaseDir) / dataSourceId.organizationId / dataSourceId.directoryName
     path.resolvedIn(datasetPath)
   }
 }

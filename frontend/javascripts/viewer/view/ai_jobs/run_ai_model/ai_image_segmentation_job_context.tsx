@@ -11,9 +11,11 @@ import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { APIJobType, type AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
+import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 
 interface RunAiModelJobContextType {
@@ -40,6 +42,8 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
+
+  const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -76,8 +80,8 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
     try {
-      if ("isOwnedByUsersOrganization" in selectedModel) {
-        // Custom model
+      if ("traininJob" in selectedModel) {
+        // Custom models
         const commonInferenceArgs = {
           ...maybeAnnotationId,
           aiModelId: selectedModel.id as string,
@@ -97,7 +101,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           await runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
         }
       } else {
-        // Pre-trained model
+        // Pre-trained models
         switch (selectedJobType) {
           case APIJobType.INFER_NEURONS:
             await startNeuronInferralJob(
@@ -124,6 +128,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         }
       }
       Toast.success("Analysis started successfully!");
+      dispatch(setAIJobModalStateAction("invisible"));
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start analysis.");

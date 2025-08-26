@@ -171,7 +171,9 @@ export const AiModelSelector: React.FC = () => {
                 title={
                   <Space>
                     <Text strong>{item.name}</Text>
-                    <Tag>CUSTOM</Tag>
+                    <Tag>
+                      {item.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}
+                    </Tag>
                   </Space>
                 }
                 description={item.comment}

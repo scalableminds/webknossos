@@ -29,7 +29,7 @@ describe("Proofreading (Poll only)", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  it.only("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
+  it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 

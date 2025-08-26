@@ -79,7 +79,24 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateAnnotation(state, {
+      // Initialize state needed for rebasing newest server updates.
+      const stateWithAnnotationRebaseInformation = update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationVersion: {
+              $set: action.annotation.version,
+            },
+            annotationDescription: {
+              $set: action.annotation.description,
+            },
+            activeMappingByLayer: {
+              $set: {},
+            },
+          },
+        },
+      });
+
+      return updateAnnotation(stateWithAnnotationRebaseInformation, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],

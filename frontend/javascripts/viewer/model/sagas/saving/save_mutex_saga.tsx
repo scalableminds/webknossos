@@ -271,7 +271,8 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   while (hasMutex) {
     const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
     if (!canEdit) {
-      // TODOM: Thnk of a better way to handle this.
+      // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
+      // Maybe its ok to crash / enforce a reload in that case.
       console.error("Failed to continuously acquire mutex.");
     }
     yield* call(delay, ACQUIRE_MUTEX_INTERVAL);

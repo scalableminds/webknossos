@@ -8,7 +8,6 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { Annotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = {
@@ -33,9 +32,7 @@ export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVers
 export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
-export type SetAnnotationToPrepareRebasingAction = ReturnType<
-  typeof setAnnotationToPrepareRebasingAction
->;
+export type PrepareRebasingAction = ReturnType<typeof prepareRebasingAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -54,7 +51,7 @@ export type SaveAction =
   | DoneSavingAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
-  | SetAnnotationToPrepareRebasingAction;
+  | PrepareRebasingAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -194,8 +191,7 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
     blockedByUser,
   }) as const;
 
-export const setAnnotationToPrepareRebasingAction = (annotation: Annotation) =>
+export const prepareRebasingAction = () =>
   ({
-    type: "SET_ANNOTATION_TO_PREPARE_REBASING_ACTION",
-    annotation,
+    type: "PREPARE_REBASING",
   }) as const;

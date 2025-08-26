@@ -10,7 +10,7 @@ import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_a
 import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
-  setAnnotationToPrepareRebasingAction,
+  prepareRebasingAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -190,7 +190,6 @@ function* watchForSaveConflicts(): Saga<void> {
   while (true) {
     // Have a reference to the annotation to what was last synced to the server.
     // Use this annotation for rebasing the incoming update actions.
-    const annotationServerVersion = yield* select((state) => state.annotation);
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
       sleep: call(sleep, interval),
@@ -205,15 +204,16 @@ function* watchForSaveConflicts(): Saga<void> {
     // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
     // Then incorporate the actions from backend and then those from the user again. then resolve.
     debugger;
-    /*const everythingIsDiffedDeferred = new Deferred();
+    const everythingIsDiffedDeferred = new Deferred();
     const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
+      // TODOM: Ensure all tracings were diffed to save queue!!!
       everythingIsDiffedDeferred.resolve(null),
     );
     yield* put(action);
     yield everythingIsDiffedDeferred.promise();
-    yield* put(setAnnotationToPrepareRebasingAction(annotationServerVersion));
+    yield* put(prepareRebasingAction());
     const saveQueueEntriesAfter = yield* select((state) => state.save.queue);
-    ColoredLogger.logBlue("Save Queue Entries after", saveQueueEntriesAfter);*/
+    ColoredLogger.logBlue("Save Queue Entries after", saveQueueEntriesAfter);
 
     try {
       ColoredLogger.logBlue("Starting incorporating Backend updates.");
@@ -307,6 +307,7 @@ export function* tryToIncorporateActions(
         //   Group expansion
         case "updateTreeGroupsExpandedState":
         case "updateSegmentGroupsExpandedState": {
+          // TODOM: --------------------- User specific actions must be reapplied if local actions!!!!!! ------------------------------------------
           break;
         }
         /////////////

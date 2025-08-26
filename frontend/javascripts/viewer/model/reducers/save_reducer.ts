@@ -195,8 +195,47 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_ANNOTATION_TO_PREPARE_REBASING_ACTION": {
-      return updateKey(state, "annotation", action.annotation);
+    case "PREPARE_REBASING": {
+      const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      return update(state, {
+        annotation: {
+          version: {
+            $set: rebaseInfo.annotationVersion,
+          },
+          description: {
+            $set: rebaseInfo.annotationDescription,
+          },
+          skeleton: {
+            $set: rebaseInfo.skeleton,
+          },
+        },
+        temporaryConfiguration: {
+          activeMappingByLayer: {
+            $set: rebaseInfo.activeMappingByLayer,
+          },
+        },
+      });
+    }
+
+    case "DONE_SAVING": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationDescription: {
+              $set: state.annotation.description,
+            },
+            annotationVersion: {
+              $set: state.annotation.version,
+            },
+            activeMappingByLayer: {
+              $set: state.temporaryConfiguration.activeMappingByLayer,
+            },
+            skeleton: {
+              $set: state.annotation.skeleton,
+            },
+          },
+        },
+      });
     }
 
     default:

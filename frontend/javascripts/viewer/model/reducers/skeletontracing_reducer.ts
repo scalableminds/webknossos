@@ -142,6 +142,13 @@ function SkeletonTracingReducer(
           $set: null,
         },
       },
+      save: {
+        rebaseRelevantServerAnnotationState: {
+          skeleton: {
+            $set: skeletonTracing,
+          },
+        },
+      },
     });
   }
 

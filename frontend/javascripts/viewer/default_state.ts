@@ -194,6 +194,12 @@ const defaultState: WebknossosState = {
       totalActionCount: 0,
     },
     mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    rebaseRelevantServerAnnotationState: {
+      annotationDescription: "",
+      annotationVersion: 1,
+      skeleton: undefined,
+      activeMappingByLayer: {},
+    },
   },
   flycam: {
     zoomStep: 1.3,

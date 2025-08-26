@@ -423,12 +423,20 @@ export type AnnotationMutexInformation = {
   readonly hasAnnotationMutex: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
 };
+
+export type RebaseRelevantAnnotationState = {
+  readonly annotationVersion: number;
+  readonly annotationDescription: string;
+  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+  readonly skeleton: SkeletonTracing | null | undefined;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
   readonly mutexState: AnnotationMutexInformation;
+  readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
 };
 export type Flycam = {
   readonly zoomStep: number;

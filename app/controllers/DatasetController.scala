@@ -8,7 +8,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataFormat,
   DataLayerAttachments,
   DataSourceId,
   DataSourceStatus,
@@ -591,25 +590,51 @@ class DatasetController @Inject()(userService: UserService,
   def reserveManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
     sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
       for {
-        _ <- Fox.successful(())
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- datasetService.usableDataSourceFor(dataset)
         existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
           datasetId,
           request.body.layerName,
-          request.body.attachmentName,
+          Some(request.body.attachmentName),
           request.body.attachmentType)
         _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> "attachment.name.taken"
-        // TODO assert non-sequence attachment types are still empty
-        // TODO insert with manualUploadIsPending=true
+        _ <- Fox.runIf(LayerAttachmentType.isSingletonAttachment(request.body.attachmentType)) {
+          for {
+            existingSingletonAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
+              datasetId,
+              request.body.layerName,
+              None,
+              request.body.attachmentType
+            )
+            _ <- Fox.fromBool(existingSingletonAttachmentsCount == 0) ?~> "attachment.singleton.alreadyFilled"
+          } yield ()
+        }
         manualUploadPrefix <- manualUploadPrefixBox.toFox
         newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, datasetId)
         datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName
         attachmentPath = datasetPath / request.body.layerName / LayerAttachmentType.defaultDirectoryNameFor(
-          request.body.attachmentType) / TextUtils
+          request.body.attachmentType) / (TextUtils
           .normalizeStrong(request.body.attachmentName)
-          .getOrElse("") + "-" + ObjectId.generate
+          .getOrElse("") + "-" + ObjectId.generate.toString)
+        _ <- datasetLayerAttachmentsDAO.insertPending(datasetId,
+                                                      request.body.layerName,
+                                                      request.body.attachmentName,
+                                                      request.body.attachmentType,
+                                                      request.body.attachmentDataformat,
+                                                      attachmentPath)
       } yield Ok(Json.toJson(attachmentPath))
+    }
+
+  def finishManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
+    sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
+      for {
+        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- datasetLayerAttachmentsDAO.finishManualUpload(datasetId,
+                                                           request.body.layerName,
+                                                           request.body.attachmentName,
+                                                           request.body.attachmentType)
+        // TODO on disk too if isVirtual=false
+      } yield Ok
     }
 
   def reserveManualUpload(): Action[ReserveManualUploadRequest] =

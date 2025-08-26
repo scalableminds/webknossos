@@ -1078,6 +1078,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
+  // TODO can we get rid of some of the toStrings here?
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
       q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
@@ -1106,20 +1107,49 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
+  def insertPending(datasetId: ObjectId,
+                    layerName: String,
+                    attachmentName: String,
+                    attachmentType: LayerAttachmentType.Value,
+                    attachmentDataformat: LayerAttachmentDataformat.Value,
+                    attachmentPath: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
+            VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true}
+         """.asUpdate)
+    } yield ()
+
   def countAttachmentsIncludingPending(datasetId: ObjectId,
                                        layerName: String,
-                                       attachmentName: String,
-                                       attachmentType: LayerAttachmentType.Value): Fox[Int] =
+                                       attachmentName: Option[String],
+                                       attachmentType: LayerAttachmentType.Value): Fox[Int] = {
+    val namePredicate = attachmentName.map(name => q"NAME = $name").getOrElse(q"TRUE")
     for {
       rows <- run(q"""COUNT(*)
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
-                      AND name = $attachmentName
+                      AND $namePredicate
                       AND attachmentType = $attachmentType
                       """.as[Int])
       first <- rows.headOption.toFox
     } yield first
+  }
+
+  def finishManualUpload(datasetId: ObjectId,
+                         layerName: String,
+                         attachmentName: String,
+                         attachmentType: LayerAttachmentType.Value): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
+            SET manualUploadIsPending = ${false}
+            WHERE _dataset = $datasetId
+                              AND layerName = $layerName
+                              AND name = $attachmentName
+                              AND attachmentType = $attachmentType
+         """.asUpdate)
+    } yield ()
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

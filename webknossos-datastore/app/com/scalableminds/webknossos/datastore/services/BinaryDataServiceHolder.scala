@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService

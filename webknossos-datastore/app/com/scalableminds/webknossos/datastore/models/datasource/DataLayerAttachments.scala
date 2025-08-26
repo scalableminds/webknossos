@@ -58,6 +58,11 @@ object LayerAttachmentType extends ExtendedEnumeration {
     case LayerAttachmentType.cumsum       => CumsumFileInfo.directoryName
   }
 
+  def isSingletonAttachment(attachmentType: LayerAttachmentType): Boolean = attachmentType match {
+    case LayerAttachmentType.segmentIndex | LayerAttachmentType.cumsum => true
+    case _                                                             => false
+  }
+
 }
 
 case class LayerAttachment(name: String,

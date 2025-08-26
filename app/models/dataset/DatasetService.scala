@@ -64,6 +64,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
+  def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
+    for {
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
+      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
+    } yield ()
+
   def createPreliminaryDataset(newDatasetId: ObjectId,
                                datasetName: String,
                                datasetDirectoryName: String,
@@ -81,9 +87,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                            user: User): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, user._organization)(
-        GlobalAccessContext)
-      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
+      isDirectoryNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryNameExistInOrganization(datasetName,
+                                                                                            user._organization)
+      _ <- Fox.fromBool(!isDirectoryNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
@@ -111,7 +117,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
 
-  // TODO make private again
+  // TODO make private again?
   def createDataset(
       dataStore: DataStore,
       datasetId: ObjectId,
@@ -361,16 +367,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 
-  def addInitialTeams(dataset: Dataset, teams: List[String], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataset: Dataset, teamIds: Seq[ObjectId], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
       _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-      _ <- Fox.fromBool(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- Fox.fromBool(teamIds.forall(teamId => userTeams.map(_._id).contains(teamId))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
-      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIdsValidated)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIds)
     } yield ()
 
   def addUploader(dataset: Dataset, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

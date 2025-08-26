@@ -35,16 +35,16 @@ case class ReserveUploadInformation(
     filePaths: Option[List[String]],
     totalFileSizeInBytes: Option[Long],
     layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
-    initialTeams: List[String], // team ids
+    initialTeams: List[ObjectId], // team ids
     folderId: Option[ObjectId],
-    requireUniqueName: Option[Boolean])
+    requireUniqueName: Option[Boolean]) // TODO clean up?
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
 case class ReserveManualUploadInformation(
     datasetName: String,
     organization: String,
-    initialTeamIds: List[String],
+    initialTeamIds: List[ObjectId],
     folderId: Option[ObjectId],
     requireUniqueName: Boolean = false,
 )

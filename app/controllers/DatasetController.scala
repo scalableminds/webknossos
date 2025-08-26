@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -73,8 +73,8 @@ case class ReserveManualUploadRequest(
     layersToLink: Seq[LinkedLayerIdentifier],
     dataSource: UnusableDataSource,
     folderId: Option[ObjectId],
-    initialTeamIds: Seq[String] = Seq.empty, // TODO use
-    requireUniqueName: Boolean = false // TODO use
+    initialTeamIds: Seq[ObjectId] = Seq.empty,
+    requireUniqueName: Boolean = false
 )
 
 object ReserveManualUploadRequest {
@@ -641,6 +641,8 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
+        _ <- Fox.runIf(request.body.requireUniqueName)(
+          datasetService.checkNameAvailable(request.body.datasetName, request.identity._organization))
         newDirectoryName = datasetService.generateDirectoryName(request.body.datasetName, newDatasetId)
         _ <- Fox.fromBool(request.body.dataSource.allLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
         dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
@@ -660,6 +662,8 @@ class DatasetController @Inject()(userService: UserService,
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- datasetDAO.updateFolder(newDatasetId, request.body.folderId.getOrElse(organization._rootFolder))(
           GlobalAccessContext)
+        _ <- datasetService.addInitialTeams(dataset, request.body.initialTeamIds, request.identity)(
+          AuthorizedAccessContext(request.identity))
         _ <- datasetService.addUploader(dataset, request.identity._id)(GlobalAccessContext)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }

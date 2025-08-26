@@ -115,6 +115,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  // TODO remove
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
   def reserveManualUpload(): Action[ReserveManualUploadInformation] =

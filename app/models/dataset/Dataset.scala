@@ -430,15 +430,22 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
     findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
 
-  def doesDatasetDirectoryExistInOrganization(directoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Boolean] =
+  def doesDatasetNameExistInOrganization(datasetName: String, organizationId: String): Fox[Boolean] =
     for {
-      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT EXISTS(SELECT 1
+                   FROM $existingCollectionName
+                   WHERE name = $datasetName
+                   AND _organization = $organizationId
+                   LIMIT 1)""".as[Boolean])
+      exists <- r.headOption.toFox
+    } yield exists
+
+  def doesDatasetDirectoryNameExistInOrganization(directoryName: String, organizationId: String): Fox[Boolean] =
+    for {
       r <- run(q"""SELECT EXISTS(SELECT 1
                    FROM $existingCollectionName
                    WHERE directoryName = $directoryName
                    AND _organization = $organizationId
-                   AND $accessQuery
                    LIMIT 1)""".as[Boolean])
       exists <- r.headOption.toFox
     } yield exists

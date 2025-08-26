@@ -799,10 +799,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             ref={this.formRef}
             initialValues={{
               initialTeams: [],
-              voxelSize: [0, 0, 0],
+              voxelSizeUnit: UnitLong.nm,
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
-              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (

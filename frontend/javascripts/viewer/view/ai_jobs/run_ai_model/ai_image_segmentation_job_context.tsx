@@ -17,6 +17,7 @@ import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
+import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;
@@ -24,11 +25,19 @@ interface RunAiModelJobContextType {
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
   selectedLayerName: string | null;
+  seedGeneratorDistanceThreshold: number;
+  isEvaluationActive: boolean;
+  splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
+  useAnnotation: boolean;
   setSelectedJobType: (jobType: APIJobType) => void;
-  setSelectedModel: (model: AiModel | Partial<AiModel>, jobType: APIJobType) => void;
+  setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayerName: (name: string) => void;
+  setSeedGeneratorDistanceThreshold: (threshold: number) => void;
+  setIsEvaluationActive: (isActive: boolean) => void;
+  setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
+  setUseAnnotation: (use: boolean) => void;
   handleStartAnalysis: () => void;
 }
 
@@ -42,6 +51,15 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
+  const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState(1000.0);
+  const [isEvaluationActive, setIsEvaluationActive] = useState(false);
+  const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
+    useState<SplitMergerEvaluationSettings>({
+      useSparseTracing: true,
+      sparseTubeThresholdInNm: 1000,
+      minimumMergerPathLengthInNm: 800,
+    });
+  const [useAnnotation, setUseAnnotation] = useState(true);
 
   const dispatch = useDispatch();
 
@@ -80,7 +98,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
     try {
-      if ("traininJob" in selectedModel) {
+      if ("trainingJob" in selectedModel) {
         // Custom models
         const commonInferenceArgs = {
           ...maybeAnnotationId,
@@ -95,10 +113,19 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         if (selectedModel.category === APIAiModelCategory.EM_NUCLEI) {
           await runInstanceModelInferenceWithAiModelJob({
             ...commonInferenceArgs,
-            seedGeneratorDistanceThreshold: 1000.0,
+            seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
           });
         } else {
-          await runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
+          const evaluationArgs = isEvaluationActive
+            ? {
+                splitMergerEvaluationSettings,
+                useAnnotation,
+              }
+            : {};
+          await runNeuronModelInferenceWithAiModelJob({
+            ...commonInferenceArgs,
+            ...evaluationArgs,
+          });
         }
       } else {
         // Pre-trained models
@@ -142,6 +169,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     dataset,
     isViewMode,
     annotationId,
+    seedGeneratorDistanceThreshold,
+    isEvaluationActive,
+    splitMergerEvaluationSettings,
+    useAnnotation,
   ]);
 
   const value = {
@@ -150,11 +181,19 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     selectedBoundingBox,
     newDatasetName,
     selectedLayerName,
+    seedGeneratorDistanceThreshold,
+    isEvaluationActive,
+    splitMergerEvaluationSettings,
+    useAnnotation,
     setSelectedModel,
     setSelectedJobType,
     setSelectedBoundingBox,
     setNewDatasetName,
     setSelectedLayerName,
+    setSeedGeneratorDistanceThreshold,
+    setIsEvaluationActive,
+    setSplitMergerEvaluationSettings,
+    setUseAnnotation,
     handleStartAnalysis,
   };
 

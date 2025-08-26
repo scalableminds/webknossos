@@ -19,6 +19,7 @@ export function CollapsibleSplitMergerEvaluationSettings({
       style={{ marginBottom: 8 }}
       onChange={handleCollapseChange}
       expandIcon={() => <Checkbox checked={isActive} />}
+      ghost
       items={[
         {
           key: "evaluation",

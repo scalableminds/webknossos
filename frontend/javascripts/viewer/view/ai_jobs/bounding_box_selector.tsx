@@ -8,8 +8,8 @@ import { BoundingBoxSelection } from "viewer/view/action-bar/ai_job_modals/compo
 import { getBoundingBoxesForLayers } from "viewer/view/action-bar/ai_job_modals/utils";
 
 interface BoundingBoxSelectorProps {
-  value: UserBoundingBox | null;
-  onChange: (value: UserBoundingBox | null) => void;
+  value?: UserBoundingBox | null;
+  onChange?: (value: UserBoundingBox | null) => void;
 }
 
 export const BoundingBoxSelector: React.FC<BoundingBoxSelectorProps> = ({ value, onChange }) => {
@@ -31,7 +31,7 @@ export const BoundingBoxSelector: React.FC<BoundingBoxSelectorProps> = ({ value,
     <BoundingBoxSelection
       userBoundingBoxes={allBoundingBoxes}
       setSelectedBoundingBoxId={handleChange}
-      value={value?.id || null}
+      value={value?.id ?? null}
       showVolume
     />
   );

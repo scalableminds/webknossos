@@ -1,10 +1,10 @@
 import { Flex } from "antd";
-import { CreditInformation } from "../credit_information";
+import { RunAiModelCreditInformation } from "../credit_information";
 import { AiAnalysisParameters } from "./ai_analysis_parameters";
 import { RunAiModelJobContextProvider } from "./ai_image_segmentation_job_context";
 import { AiModelSelector } from "./ai_model_selector";
 
-export const AiImageSegmentation = () => {
+export const AiImageSegmentationJob = () => {
   return (
     <RunAiModelJobContextProvider>
       <Flex gap={24}>
@@ -13,7 +13,7 @@ export const AiImageSegmentation = () => {
           <AiAnalysisParameters />
         </Flex>
         <Flex flex="1" vertical>
-          <CreditInformation />
+          <RunAiModelCreditInformation />
         </Flex>
       </Flex>
     </RunAiModelJobContextProvider>

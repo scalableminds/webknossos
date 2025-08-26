@@ -9,7 +9,11 @@ import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
-const preTrainedModels: (Partial<AiModel> & { jobType: APIJobType })[] = [
+const preTrainedModels: (Partial<AiModel> & {
+  jobType: APIJobType;
+  image: string;
+  disabled?: boolean;
+})[] = [
   {
     name: "Neuron Segmentation",
     comment: "Advanced neuron segmentation for EM data",

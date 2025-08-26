@@ -8,25 +8,68 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import { APIJobType } from "types/api_types";
+import { APIJobType, type AiModel } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { UserBoundingBox } from "viewer/store";
+import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
-export const CreditInformation: React.FC = () => {
+export const RunAiModelCreditInformation: React.FC = () => {
+  const { selectedModel, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
+    useRunAiModelJobContext();
+  return (
+    <CreditInformation
+      selectedModel={selectedModel}
+      selectedJobType={selectedJobType}
+      selectedBoundingBox={selectedBoundingBox}
+      handleStartAnalysis={handleStartAnalysis}
+      startButtonTitle="Start Analysis"
+    />
+  );
+};
+
+export const AlignmentCreditInformation: React.FC = () => {
+  const { selectedTask, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
+    useAlignmentJobContext();
+  return (
+    <CreditInformation
+      selectedModel={selectedTask}
+      selectedJobType={selectedJobType}
+      selectedBoundingBox={selectedBoundingBox}
+      handleStartAnalysis={handleStartAnalysis}
+      startButtonTitle="Start Alignment"
+    />
+  );
+};
+
+interface CreditInformationProps {
+  selectedModel: AiModel | Partial<AiModel> | null;
+  selectedJobType: APIJobType | null;
+  selectedBoundingBox: UserBoundingBox | null;
+  handleStartAnalysis: () => void;
+  startButtonTitle: string;
+}
+
+export const CreditInformation: React.FC<CreditInformationProps> = ({
+  selectedModel,
+  selectedJobType,
+  selectedBoundingBox,
+  handleStartAnalysis,
+  startButtonTitle,
+}) => {
   const jobTypeToCreditCostPerGVx: Partial<Record<APIJobType, number>> = useMemo(
     () => ({
       [APIJobType.INFER_NUCLEI]: features().neuronInferralCostPerGVx,
       [APIJobType.INFER_NEURONS]: features().neuronInferralCostPerGVx,
       [APIJobType.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
       [APIJobType.INFER_INSTANCES]: features().neuronInferralCostPerGVx,
+      [APIJobType.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
     }),
     [],
   );
 
-  const { selectedModel, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
-    useRunAiModelJobContext();
   const organizationCredits = useWkSelector(
     (state) => state.activeOrganization?.creditBalance || "0",
   );
@@ -121,7 +164,7 @@ export const CreditInformation: React.FC = () => {
         disabled={!selectedModel || !selectedBoundingBox || !jobCreditCostInfo?.hasEnoughCredits}
         onClick={handleStartAnalysis}
       >
-        Start Analysis
+        {startButtonTitle}
       </Button>
     </Card>
   );

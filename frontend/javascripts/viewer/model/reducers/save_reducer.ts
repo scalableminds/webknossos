@@ -195,6 +195,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_ANNOTATION_TO_PREPARE_REBASING_ACTION": {
+      return updateKey(state, "annotation", action.annotation);
+    }
+
     default:
       return state;
   }

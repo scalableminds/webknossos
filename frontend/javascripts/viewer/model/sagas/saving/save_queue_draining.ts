@@ -139,7 +139,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
   // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
     let exceptionDuringMarkBucketsAsNotDirty = false;
-
+    console.error("Sending save request to server");
     try {
       const startTime = Date.now();
       yield* call(

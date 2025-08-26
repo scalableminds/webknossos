@@ -9,6 +9,8 @@ import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   type EnsureHasNewestVersionAction,
+  ensureTracingsWereDiffedToSaveQueueAction,
+  setAnnotationToPrepareRebasingAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -18,11 +20,13 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
-import type { SkeletonTracing, VolumeTracing } from "viewer/store";
+import type { SaveQueueEntry, SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
+import Deferred from "libs/async/deferred";
+import type { ServerUpdateAction } from "../volume/update_actions";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -37,6 +41,22 @@ export function* setupSavingToServer(): Saga<void> {
 const VERSION_POLL_INTERVAL_COLLAB = 20 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+
+function saveQueueEntriesToUpdateActionBatch(data: Array<SaveQueueEntry>, version: number) {
+  return data.map((entry) => ({
+    version,
+    value: entry.actions.map(
+      (action) =>
+        ({
+          ...action,
+          value: {
+            actionTimestamp: 0,
+            ...action.value,
+          },
+        }) as ServerUpdateAction,
+    ),
+  }));
+}
 
 function* watchForSaveConflicts(): Saga<void> {
   function* checkForAndTryToIncorporateNewVersion(): Saga<boolean> {
@@ -160,14 +180,17 @@ function* watchForSaveConflicts(): Saga<void> {
 
   const channel = yield actionChannel(
     ["ENSURE_HAS_NEWEST_VERSION"],
-    // todop: if multiple actions are sent to this buffer (without consumption inbetween),
-    // we only want to poll the newest version once. This is why the current implementation
-    // uses a sliding buffer of size 1. However, this means that dropped actions won't get
-    // their callback's notified. This is a problem and could lead to infinite waiting.
+    // If multiple actions are sent to this buffer (without consumption inbetween),
+    // we want to flush them all at once. This is achieved by using an expanding buffer
+    // and flushing all events and calling their callbacks it every time a ensureHasNewestVersion
+    // action is resolved.
     buffers.expanding<EnsureHasNewestVersionAction>(1),
   );
 
   while (true) {
+    // Have a reference to the annotation to what was last synced to the server.
+    // Use this annotation for rebasing the incoming update actions.
+    const annotationServerVersion = yield* select((state) => state.annotation);
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
       sleep: call(sleep, interval),
@@ -176,13 +199,49 @@ function* watchForSaveConflicts(): Saga<void> {
     if (yield* select((state) => state.uiInformation.showVersionRestore)) {
       continue;
     }
+    const saveQueueEntriesBefore = yield* select((state) => state.save.queue);
+    ColoredLogger.logBlue("Save Queue Entries before", saveQueueEntriesBefore);
+
+    // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
+    // Then incorporate the actions from backend and then those from the user again. then resolve.
+    debugger;
+    /*const everythingIsDiffedDeferred = new Deferred();
+    const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
+      everythingIsDiffedDeferred.resolve(null),
+    );
+    yield* put(action);
+    yield everythingIsDiffedDeferred.promise();
+    yield* put(setAnnotationToPrepareRebasingAction(annotationServerVersion));
+    const saveQueueEntriesAfter = yield* select((state) => state.save.queue);
+    ColoredLogger.logBlue("Save Queue Entries after", saveQueueEntriesAfter);*/
+
     try {
+      ColoredLogger.logBlue("Starting incorporating Backend updates.");
       const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
-      if (didAskUserToRefreshPage) {
+      const saveQueueEntries = yield* select((state) => state.save.queue);
+      const currentVersion = yield* select((state) => state.annotation.version);
+      ColoredLogger.logBlue("Successfully incorporated backend updates.");
+      ColoredLogger.logBlue(
+        "didAskUserToRefreshPage",
+        didAskUserToRefreshPage,
+        "currentVersion",
+        currentVersion,
+        "saveQueueEntries amount",
+        saveQueueEntries,
+      );
+      ColoredLogger.logBlue("Starting incorporating Frontend updates.");
+      const success =
+        !didAskUserToRefreshPage &&
+        (yield* tryToIncorporateActions(
+          saveQueueEntriesToUpdateActionBatch(saveQueueEntries, currentVersion),
+        ));
+      if (!success) {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
       } else {
+        // TODOM: Apply savequeue actions
+
         // drain all accumulated actions at once
         const pendingActions: EnsureHasNewestVersionAction[] = yield* flush(channel);
 

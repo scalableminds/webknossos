@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 
 import java.net.URI
@@ -117,6 +118,9 @@ class LocalUPath(nioPath: Path) extends UPath {
   override def getScheme: Option[String] = None
 
   override def toRemoteUriUnsafe: URI = throw new Exception(s"Called toUriUnsafe on LocalUPath $toString")
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(19, 29).append(nioPath).toHashCode
 }
 
 // TODO prevent usage of constructor?
@@ -163,4 +167,7 @@ class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
   override def getScheme: Option[String] = Some(scheme)
 
   override def toRemoteUriUnsafe: URI = new URI(toString)
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(19, 29).append(scheme).append(segments).toHashCode
 }

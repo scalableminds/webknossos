@@ -69,25 +69,17 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
   def resolveMagPath(localDatasetDir: Path, layerDir: Path, layerName: String, magLocator: MagLocator): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        if (magLocatorPath.isRemote) {
+        if (magLocatorPath.isAbsolute) {
           magLocatorPath
         } else {
-          if (magLocatorPath.isAbsolute) {
-            if (magLocatorPath.toString.startsWith(localDatasetDir.getParent.toAbsolutePath.toString) || dataStoreConfig.Datastore.localDirectoryWhitelist
-                  .exists(whitelistEntry => magLocatorPath.toString.startsWith(whitelistEntry)))
-              magLocatorPath
-            else
-              throw new Exception(
-                s"Absolute path $magLocatorPath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist")
-          } else { // relative local path, resolve in dataset dir
-            val pathRelativeToDataset = localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize
-            val pathRelativeToLayer =
-              localDatasetDir.resolve(layerName).resolve(magLocatorPath.toLocalPathUnsafe).normalize
-            if (pathRelativeToDataset.toFile.exists) {
-              UPath.fromLocalPath(pathRelativeToDataset)
-            } else {
-              UPath.fromLocalPath(pathRelativeToLayer)
-            }
+          // relative local path, resolve in dataset dir
+          val pathRelativeToDataset = localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize
+          val pathRelativeToLayer =
+            localDatasetDir.resolve(layerName).resolve(magLocatorPath.toLocalPathUnsafe).normalize
+          if (pathRelativeToDataset.toFile.exists) {
+            UPath.fromLocalPath(pathRelativeToDataset)
+          } else {
+            UPath.fromLocalPath(pathRelativeToLayer)
           }
         }
       case _ =>

@@ -109,44 +109,44 @@ class DataSourceService @Inject()(
     } yield ()
 
   private def determineMagRealPathsForDataSource(dataSource: DataSource) = tryo {
-    val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
-    val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
+    val absoluteDatasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         usableDataSource.dataLayers.flatMap { dataLayer =>
-          val rawLayerPath = datasetPath.resolve(dataLayer.name)
-          val absoluteLayerPath = if (Files.isSymbolicLink(rawLayerPath)) {
-            resolveRelativePath(datasetPath, Files.readSymbolicLink(rawLayerPath))
+          val absoluteRawLayerPath = absoluteDatasetPath.resolve(dataLayer.name)
+          val absoluteRealLayerPath = if (Files.isSymbolicLink(absoluteRawLayerPath)) {
+            resolveRelativePath(absoluteDatasetPath, Files.readSymbolicLink(absoluteRawLayerPath))
           } else {
-            rawLayerPath.toAbsolutePath
+            absoluteRawLayerPath.toAbsolutePath
           }
           dataLayer.mags.map { mag =>
-            getMagPathInfo(datasetPath, absoluteLayerPath, rawLayerPath, dataLayer, mag)
+            getMagPathInfo(absoluteDatasetPath, absoluteRealLayerPath, absoluteRawLayerPath, dataLayer, mag)
           }
         }
       case None => List()
     }
   }
 
-  private def getMagPathInfo(datasetPath: Path,
-                             absoluteLayerPath: Path,
-                             rawLayerPath: Path,
+  private def getMagPathInfo(absoluteDatasetPath: Path,
+                             absoluteRealLayerPath: Path,
+                             absoluteRawLayerPath: Path,
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
-    val resolvedMagPath = resolveMagPath(datasetPath, absoluteLayerPath, mag)
+    val resolvedMagPath = resolveMagPath(absoluteDatasetPath, absoluteRealLayerPath, mag)
     if (resolvedMagPath.isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
     } else {
       val magPath = resolvedMagPath.toLocalPathUnsafe
-      val realPath = magPath.toRealPath()
+      val realMagPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-      val isDatasetLocal = realPath.startsWith(datasetPath.toAbsolutePath)
-      val unresolvedPath =
-        rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
+      val isDatasetLocal = realMagPath.startsWith(absoluteDatasetPath.toAbsolutePath)
+      val absoluteUnresolvedPath = absoluteRawLayerPath.resolve(absoluteRealLayerPath.relativize(magPath)).normalize()
+      val resultingMagPath =
+        if (isDatasetLocal) absoluteDatasetPath.relativize(absoluteUnresolvedPath) else absoluteUnresolvedPath
       MagPathInfo(dataLayer.name,
                   mag.mag,
-                  UPath.fromLocalPath(unresolvedPath),
-                  UPath.fromLocalPath(realPath),
+                  UPath.fromLocalPath(resultingMagPath),
+                  UPath.fromLocalPath(realMagPath),
                   hasLocalData = isDatasetLocal)
     }
   }

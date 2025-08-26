@@ -32,12 +32,7 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer with
       boundingBox <- n5Header
         .boundingBox(guessedAxisOrder)
         .toFox ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      magLocator = MagLocator(Vec3Int.ones,
-                              Some(remotePath.toUPath),
-                              None,
-                              Some(guessedAxisOrder),
-                              None,
-                              credentialId)
+      magLocator = MagLocator(Vec3Int.ones, Some(remotePath.toUPath), None, Some(guessedAxisOrder), None, credentialId)
       layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
         StaticSegmentationLayer(name,
                                 DataFormat.n5,

@@ -1,7 +1,12 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.{
+  BucketProvider,
+  DatasetArrayBucketProvider,
+  MagLocator,
+  MappingProvider
+}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -74,8 +79,6 @@ trait StaticLayer extends DataLayer {
   def bucketProviderCacheKey: String = this.name
 
   def mags: List[MagLocator]
-
-  def withoutCredentials(): StaticLayer
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -161,11 +164,8 @@ case class StaticColorLayer(name: String,
                             attachments: Option[DataLayerAttachments] = None)
     extends StaticLayer {
   def category: LayerCategory.Value = LayerCategory.color
-
-  def withoutCredentials(): StaticColorLayer =
-    this.copy(mags = this.mags.map(_.copy(credentialId = None, credentials = None)),
-              attachments = this.attachments.map(_.withoutCredentials()))
 }
+
 object StaticColorLayer {
   implicit val jsonFormat: Format[StaticColorLayer] = new Format[StaticColorLayer] {
     def reads(json: JsValue): JsResult[StaticColorLayer] =
@@ -220,11 +220,7 @@ case class StaticSegmentationLayer(name: String,
                                    largestSegmentId: Option[Long] = None,
                                    mappings: Option[Set[String]] = None)
     extends StaticLayer
-    with SegmentationLayer {
-  def withoutCredentials(): StaticSegmentationLayer =
-    this.copy(mags = this.mags.map(_.copy(credentialId = None, credentials = None)),
-              attachments = this.attachments.map(_.withoutCredentials()))
-}
+    with SegmentationLayer
 
 object StaticSegmentationLayer {
   implicit val jsonFormat: Format[StaticSegmentationLayer] = new Format[StaticSegmentationLayer] {

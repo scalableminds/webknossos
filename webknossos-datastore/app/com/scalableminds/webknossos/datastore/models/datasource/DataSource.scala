@@ -25,8 +25,6 @@ trait DataSource {
 
   def defaultViewConfiguration: Option[DatasetViewConfiguration]
 
-  def withoutCredentials: DataSource
-
   def allLayers: List[StaticLayer]
 }
 
@@ -59,8 +57,6 @@ case class UnusableDataSource(id: DataSourceId,
   val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
 
   def withUpdatedId(newId: DataSourceId): UnusableDataSource = copy(id = newId)
-
-  def withoutCredentials: UnusableDataSource = this
 
   def allLayers: List[StaticLayer] = dataLayers.getOrElse(List.empty)
 }
@@ -100,8 +96,6 @@ case class UsableDataSource(id: DataSourceId,
   def withUpdatedId(newId: DataSourceId): UsableDataSource = copy(id = newId)
 
   def allExplicitPaths: Seq[UPath] = dataLayers.flatMap(_.allExplicitPaths)
-
-  def withoutCredentials: UsableDataSource = this.copy(dataLayers = this.dataLayers.map(_.withoutCredentials()))
 
   def allLayers: List[StaticLayer] = dataLayers
 }

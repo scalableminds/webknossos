@@ -46,8 +46,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 case class PathValidationResult(
-                                 path: UPath,
-                                 valid: Boolean
+    path: UPath,
+    valid: Boolean
 )
 
 object PathValidationResult {

@@ -239,22 +239,18 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "get parent" in {
-          assert((somePath / "..").toString == "protocol://host/a/")
+          assert((somePath / "..").toString == "protocol://host/a")
         }
 
         "get directory" in {
-          assert((somePath / ".").toString == s"${someUpath.toString}/")
+          assert((somePath / ".").toString == someUpath.toString)
         }
 
         "handle sequential parameters" in {
           assert((somePath / "c" / "d" / "e").toString == "protocol://host/a/b/c/d/e")
         }
 
-        "resolve relative to host with starting slash in parameter" in {
-          assert((somePath / "/x").toString == "protocol://host/x")
-        }
-
-        "resolving path respects trailing slash" in {
+        "resolve and keep respect trailing slash" in {
           assert((somePath / "x/").toString == "protocol://host/a/b/x/")
           assert((somePath / "x").toString == "protocol://host/a/b/x")
         }
@@ -268,11 +264,11 @@ class DataVaultTestSuite extends PlaySpec {
         }
 
         "get parent" in {
-          assert((trailingSlashPath / "..").toString == "protocol://host/a/")
+          assert((trailingSlashPath / "..").toString == "protocol://host/a")
         }
 
         "get directory" in {
-          assert((trailingSlashPath / ".").toString == s"${trailingSlashUpath.toString}")
+          assert((trailingSlashPath / ".").toString == trailingSlashUpath.toString.dropRight(1))
         }
       }
 

@@ -53,6 +53,7 @@ trait UPath {
 object UPath {
   def separator: Char = '/'
   private def schemeSeparator: String = "://"
+  def splitKeepLastIfEmpty: Int = -1
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
@@ -68,7 +69,9 @@ object UPath {
             s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
         fromLocalPath(nioPath)
       case Some(scheme) =>
-        new RemotePath(scheme, segments = literal.drop(s"$scheme://".length).split(separator.toString).toSeq)
+        new RemotePath(
+          scheme,
+          segments = literal.drop(s"$scheme://".length).split(separator.toString, splitKeepLastIfEmpty).toSeq).normalize
     }
   }
 
@@ -116,14 +119,31 @@ class LocalUPath(nioPath: Path) extends UPath {
   override def toRemoteUriUnsafe: URI = throw new Exception(s"Called toUriUnsafe on LocalUPath $toString")
 }
 
+// TODO prevent usage of constructor?
 class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
   override def isAbsolute: Boolean = true
 
   def /(other: String): UPath = {
-    val newSegments = other.split(UPath.separator.toString)
-    if (newSegments.isEmpty) this
-    else
-      new RemotePath(scheme, segments ++ newSegments)
+    val otherSegments = other.split(UPath.separator.toString, UPath.splitKeepLastIfEmpty)
+    // if last own segment is emptystring, drop it
+    val ownSegments = if (segments.lastOption.exists(_.isEmpty)) segments.dropRight(1) else segments
+    new RemotePath(scheme, ownSegments ++ otherSegments).normalize
+  }
+
+  def normalize: UPath = {
+    val collectedSegmentsMutable = scala.collection.mutable.ArrayBuffer[String]()
+    segments.foreach { segment =>
+      if (segment == ".") {
+        // do not add it
+      } else if (segment == "..") {
+        if (collectedSegmentsMutable.length >= 2) {
+          collectedSegmentsMutable.remove(collectedSegmentsMutable.length - 1)
+        }
+      } else {
+        collectedSegmentsMutable.addOne(segment)
+      }
+    }
+    new RemotePath(scheme, collectedSegmentsMutable.toSeq)
   }
 
   override def toLocalPathUnsafe: Path = throw new Exception(s"Called toLocalPathUnsafe on RemotePath $this")

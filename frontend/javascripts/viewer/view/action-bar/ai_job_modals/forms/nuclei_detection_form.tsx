@@ -1,4 +1,4 @@
-import { startNucleiInferralJob } from "admin/rest_api";
+import { runPretrainedNucleiInferenceJob } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
@@ -37,7 +37,7 @@ export function NucleiDetectionForm() {
       if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
         return;
       }
-      return startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+      return runPretrainedNucleiInferenceJob(dataset.id, colorLayer.name, newDatasetName);
     },
     [dataset],
   );

@@ -1,4 +1,4 @@
-import { startNeuronInferralJob } from "admin/rest_api";
+import { runPretrainedNeuronInferencelJob } from "admin/rest_api";
 import { type FormInstance, Row, Space } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -66,7 +66,7 @@ export function NeuronSegmentationForm() {
       }
 
       if (!doSplitMergerEvaluation) {
-        return startNeuronInferralJob(
+        return runPretrainedNeuronInferencelJob(
           dataset.id,
           colorLayer.name,
           bbox,
@@ -93,7 +93,7 @@ export function NeuronSegmentationForm() {
         Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
         return;
       }
-      return startNeuronInferralJob(
+      return runPretrainedNeuronInferencelJob(
         dataset.id,
         colorLayer.name,
         bbox,

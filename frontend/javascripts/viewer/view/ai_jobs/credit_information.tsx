@@ -13,6 +13,7 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
+import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
 
 const { Title, Text } = Typography;
 
@@ -44,6 +45,24 @@ export const AlignmentCreditInformation: React.FC = () => {
   );
 };
 
+export const TrainingCreditInformation: React.FC = () => {
+  const {
+    selectedTask,
+    selectedJobType,
+    selectedBoundingBoxes: selectedBoundingBox,
+    handleStartAnalysis,
+  } = useAiTrainingJobContext();
+  return (
+    <CreditInformation
+      selectedModel={selectedTask}
+      selectedJobType={selectedJobType}
+      selectedBoundingBox={selectedBoundingBox}
+      handleStartAnalysis={handleStartAnalysis}
+      startButtonTitle="Start Training"
+    />
+  );
+};
+
 interface CreditInformationProps {
   selectedModel: AiModel | Partial<AiModel> | null;
   selectedJobType: APIJobType | null;
@@ -66,6 +85,8 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
       [APIJobType.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
       [APIJobType.INFER_INSTANCES]: features().neuronInferralCostPerGVx,
       [APIJobType.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
+      [APIJobType.TRAIN_INSTANCE_MODEL]: 0,
+      [APIJobType.TRAIN_NEURON_MODEL]: 0,
     }),
     [],
   );

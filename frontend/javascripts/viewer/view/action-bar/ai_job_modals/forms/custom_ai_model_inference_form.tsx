@@ -1,9 +1,9 @@
 import {
   APIAiModelCategory,
-  type BaseModelInferenceParameters,
+  type BaseCustomModelInferenceParameters,
   getAiModels,
-  runInstanceModelInferenceWithAiModelJob,
-  runNeuronModelInferenceWithAiModelJob,
+  runCustomInstanceModelInferenceJob,
+  runCustomNeuronModelInferenceJob,
 } from "admin/rest_api";
 import { Form, type FormInstance, InputNumber, Row, Select, Space } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
@@ -55,7 +55,7 @@ export function CustomAiModelInferenceForm() {
       const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
       const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
-      const commonInferenceArgs: BaseModelInferenceParameters = {
+      const commonInferenceArgs: BaseCustomModelInferenceParameters = {
         ...maybeAnnotationId,
         aiModelId: form.getFieldValue("aiModel"),
         workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
@@ -67,12 +67,12 @@ export function CustomAiModelInferenceForm() {
       };
 
       if (isInstanceModelSelected) {
-        return runInstanceModelInferenceWithAiModelJob({
+        return runCustomInstanceModelInferenceJob({
           ...commonInferenceArgs,
           seedGeneratorDistanceThreshold: form.getFieldValue("seedGeneratorDistanceThreshold"),
         });
       }
-      return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
+      return runCustomNeuronModelInferenceJob(commonInferenceArgs);
     },
     [dataset, isViewMode, annotationId, isInstanceModelSelected],
   );

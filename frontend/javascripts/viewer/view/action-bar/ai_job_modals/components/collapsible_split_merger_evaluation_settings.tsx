@@ -79,7 +79,6 @@ export function CollapsibleSplitMergerEvaluationSettings({
                 >
                   <InputNumber style={{ width: "100%" }} placeholder="800" />
                 </Form.Item>
-                <Form.Item name="useAnnotation" initialValue={true} hidden />
               </Col>
             </Row>
           ),

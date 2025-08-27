@@ -9,15 +9,17 @@ import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
-import { MEAN_VX_SIZE, MIN_BBOX_EXTENT, type ModalJobTypes } from "./constants";
+import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
 
-export const getMinimumDSSize = (jobType: ModalJobTypes) => {
+export const getMinimumDSSize = (jobType: APIJobType) => {
   switch (jobType) {
     case APIJobType.INFER_NEURONS:
     case APIJobType.INFER_NUCLEI:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     case APIJobType.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
+    default:
+      throw new Error(`Unknown job type: ${jobType}`);
   }
 };
 
@@ -78,7 +80,7 @@ export const getBestFittingMagComparedToTrainingDS = (
 
 export const isBBoxTooSmall = (
   bbox: Vector3,
-  segmentationType: ModalJobTypes,
+  segmentationType: APIJobType,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -103,7 +105,7 @@ export const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6,
   mag: Vector3,
   colorLayer: APIDataLayer,
-  segmentationType: ModalJobTypes,
+  segmentationType: APIJobType,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

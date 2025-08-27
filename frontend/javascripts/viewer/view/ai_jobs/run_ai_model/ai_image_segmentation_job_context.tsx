@@ -1,48 +1,63 @@
 import {
   APIAiModelCategory,
-  runInstanceModelInferenceWithAiModelJob,
-  runNeuronModelInferenceWithAiModelJob,
-  startMitochondriaInferralJob,
-  startNeuronInferralJob,
-  startNucleiInferralJob,
+  runCustomInstanceModelInferenceJob,
+  runCustomNeuronModelInferenceJob,
+  runPretrainedMitochondriaInferenceJob,
+  runPretrainedNeuronInferencelJob,
+  runPretrainedNucleiInferenceJob,
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType, type AiModel } from "types/api_types";
+import { type APIDataLayer, APIJobType, type AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
+import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  getTaskBoundingBoxes,
+  getUserBoundingBoxesFromState,
+} from "viewer/model/accessors/tracing_accessor";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import {
+  getBestFittingMagComparedToTrainingDS,
+  isDatasetOrBoundingBoxTooSmall,
+} from "viewer/view/action-bar/ai_job_modals/utils";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;
   selectedJobType: APIJobType | null;
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
-  selectedLayerName: string | null;
+  selectedLayer: APIDataLayer | null;
   seedGeneratorDistanceThreshold: number;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
-  useAnnotation: boolean;
   setSelectedJobType: (jobType: APIJobType) => void;
   setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
-  setSelectedLayerName: (name: string) => void;
+  setSelectedLayer: (layer: APIDataLayer) => void;
   setSeedGeneratorDistanceThreshold: (threshold: number) => void;
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
-  setUseAnnotation: (use: boolean) => void;
   handleStartAnalysis: () => void;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
 
+/**
+ * Context provider supplying state and actions for running AI image segmentation/inference jobs.
+ *
+ * Manages selected model, job type, bounding box, output dataset name, color layer,
+ * evaluation options, and exposes a handler to start the analysis. Components within
+ * this provider can read/update these values via `useRunAiModelJobContext`.
+ */
 export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -50,7 +65,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [selectedJobType, setSelectedJobType] = useState<APIJobType | null>(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
-  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<APIDataLayer | null>(null);
   const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState(1000.0);
   const [isEvaluationActive, setIsEvaluationActive] = useState(false);
   const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
@@ -59,10 +74,14 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       sparseTubeThresholdInNm: 1000,
       minimumMergerPathLengthInNm: 800,
     });
-  const [useAnnotation, setUseAnnotation] = useState(true);
 
   const dispatch = useDispatch();
 
+  const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
+  const userBoundingBoxCount = useWkSelector(
+    (state) => getUserBoundingBoxesFromState(state).length,
+  );
+  const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const isViewMode = useWkSelector(
@@ -78,7 +97,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
   useEffect(() => {
     if (colorLayers.length > 0) {
-      setSelectedLayerName(colorLayers[0].name);
+      setSelectedLayer(colorLayers[0]);
     }
   }, [colorLayers]);
 
@@ -88,7 +107,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       !selectedJobType ||
       !selectedBoundingBox ||
       !newDatasetName ||
-      !selectedLayerName
+      !selectedLayer
     ) {
       Toast.error("Please select a model, bounding box, and provide a dataset name.");
       return;
@@ -96,6 +115,39 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
     const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
+
+    const mag = getBestFittingMagComparedToTrainingDS(
+      selectedLayer,
+      dataset.dataSource.scale,
+      APIJobType.INFER_NUCLEI,
+    );
+
+    if (isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)) {
+      new Error("The bounding box is too small for the selected model.");
+      return;
+    }
+
+    if (userBoundingBoxCount > 1) {
+      Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
+      return;
+    }
+
+    if (Object.values(taskBoundingBoxes).length + userBoundingBoxCount !== 1) {
+      Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
+      return;
+    }
+
+    if (
+      isEvaluationActive &&
+      (skeletonAnnotation == null || skeletonAnnotation.trees.size() === 0)
+    ) {
+      Toast.error("Please ensure that a skeleton tree exists within the selected bounding box.");
+      return;
+    }
+    if (isEvaluationActive && skeletonAnnotation && hasEmptyTrees(skeletonAnnotation.trees)) {
+      Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
+      return;
+    }
 
     try {
       if ("trainingJob" in selectedModel) {
@@ -105,50 +157,52 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           aiModelId: selectedModel.id as string,
           datasetDirectoryName: dataset.directoryName,
           organizationId: dataset.owningOrganization,
-          colorLayerName: selectedLayerName,
+          colorLayerName: selectedLayer.name,
           boundingBox,
           newDatasetName: newDatasetName,
         };
 
         if (selectedModel.category === APIAiModelCategory.EM_NUCLEI) {
-          await runInstanceModelInferenceWithAiModelJob({
+          await runCustomInstanceModelInferenceJob({
             ...commonInferenceArgs,
             seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
           });
         } else {
-          const evaluationArgs = isEvaluationActive
-            ? {
-                splitMergerEvaluationSettings,
-                useAnnotation,
-              }
-            : {};
-          await runNeuronModelInferenceWithAiModelJob({
+          await runCustomNeuronModelInferenceJob({
             ...commonInferenceArgs,
-            ...evaluationArgs,
           });
         }
       } else {
         // Pre-trained models
         switch (selectedJobType) {
           case APIJobType.INFER_NEURONS:
-            await startNeuronInferralJob(
+            await runPretrainedNeuronInferencelJob(
               dataset.id,
-              selectedLayerName,
+              selectedLayer.name,
               boundingBox,
               newDatasetName,
-              false,
+              isEvaluationActive,
+              isEvaluationActive ? annotationId : undefined,
+              isEvaluationActive ? splitMergerEvaluationSettings.useSparseTracing : undefined,
+              isEvaluationActive ? splitMergerEvaluationSettings.maxEdgeLength : undefined,
+              isEvaluationActive
+                ? splitMergerEvaluationSettings.sparseTubeThresholdInNm
+                : undefined,
+              isEvaluationActive
+                ? splitMergerEvaluationSettings.minimumMergerPathLengthInNm
+                : undefined,
             );
             break;
           case APIJobType.INFER_MITOCHONDRIA:
-            await startMitochondriaInferralJob(
+            await runPretrainedMitochondriaInferenceJob(
               dataset.id,
-              selectedLayerName,
+              selectedLayer.name,
               boundingBox,
               newDatasetName,
             );
             break;
           case APIJobType.INFER_NUCLEI:
-            await startNucleiInferralJob(dataset.id, selectedLayerName, newDatasetName);
+            await runPretrainedNucleiInferenceJob(dataset.id, selectedLayer.name, newDatasetName);
             break;
           default:
             throw new Error(`Unsupported job type: ${selectedJobType}`);
@@ -165,14 +219,17 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     selectedJobType,
     selectedBoundingBox,
     newDatasetName,
-    selectedLayerName,
+    selectedLayer,
     dataset,
     isViewMode,
     annotationId,
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
-    useAnnotation,
+    userBoundingBoxCount,
+    taskBoundingBoxes,
+    skeletonAnnotation,
+    dispatch,
   ]);
 
   const value = {
@@ -180,20 +237,18 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     selectedJobType,
     selectedBoundingBox,
     newDatasetName,
-    selectedLayerName,
+    selectedLayer,
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
-    useAnnotation,
     setSelectedModel,
     setSelectedJobType,
     setSelectedBoundingBox,
     setNewDatasetName,
-    setSelectedLayerName,
+    setSelectedLayer,
     setSeedGeneratorDistanceThreshold,
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
-    setUseAnnotation,
     handleStartAnalysis,
   };
 

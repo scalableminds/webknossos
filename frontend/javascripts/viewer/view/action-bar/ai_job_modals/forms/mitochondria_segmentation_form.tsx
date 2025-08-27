@@ -1,4 +1,4 @@
-import { startMitochondriaInferralJob } from "admin/rest_api";
+import { runPretrainedMitochondriaInferenceJob } from "admin/rest_api";
 import { Row, Space } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -38,7 +38,12 @@ export function MitochondriaSegmentationForm() {
       if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
         return;
       }
-      return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
+      return runPretrainedMitochondriaInferenceJob(
+        dataset.id,
+        colorLayer.name,
+        bbox,
+        newDatasetName,
+      );
     },
     [dataset],
   );

@@ -29,8 +29,8 @@ export const AiAnalysisParameters: React.FC = () => {
     setSelectedBoundingBox,
     newDatasetName,
     setNewDatasetName,
-    selectedLayerName,
-    setSelectedLayerName,
+    selectedLayer,
+    setSelectedLayer,
     selectedModel,
     seedGeneratorDistanceThreshold,
     setSeedGeneratorDistanceThreshold,
@@ -38,8 +38,6 @@ export const AiAnalysisParameters: React.FC = () => {
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
     setSplitMergerEvaluationSettings,
-    useAnnotation,
-    setUseAnnotation,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
   const colorLayers = getColorLayers(dataset);
@@ -48,8 +46,8 @@ export const AiAnalysisParameters: React.FC = () => {
     if (Object.prototype.hasOwnProperty.call(changedValues, "newDatasetName")) {
       setNewDatasetName(changedValues.newDatasetName);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "selectedLayerName")) {
-      setSelectedLayerName(changedValues.selectedLayerName);
+    if (Object.prototype.hasOwnProperty.call(changedValues, "selectedLayer")) {
+      setSelectedLayer(changedValues.selectedLayer);
     }
     if (Object.prototype.hasOwnProperty.call(changedValues, "selectedBoundingBox")) {
       setSelectedBoundingBox(changedValues.selectedBoundingBox);
@@ -62,9 +60,6 @@ export const AiAnalysisParameters: React.FC = () => {
         allValues.splitMergerEvaluationSettings as SplitMergerEvaluationSettings,
       );
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "useAnnotation")) {
-      setUseAnnotation(changedValues.useAnnotation);
-    }
   };
 
   const isInstanceModel = selectedModel?.category === APIAiModelCategory.EM_NUCLEI;
@@ -72,7 +67,7 @@ export const AiAnalysisParameters: React.FC = () => {
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
-    { name: ["selectedLayerName"], value: selectedLayerName },
+    { name: ["selectedLayer"], value: selectedLayer },
     { name: ["selectedBoundingBox"], value: selectedBoundingBox },
     { name: ["seedGeneratorDistanceThreshold"], value: seedGeneratorDistanceThreshold },
     {
@@ -91,7 +86,6 @@ export const AiAnalysisParameters: React.FC = () => {
       name: ["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"],
       value: splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
     },
-    { name: ["useAnnotation"], value: useAnnotation },
   ];
 
   return (
@@ -114,13 +108,13 @@ export const AiAnalysisParameters: React.FC = () => {
               <Input />
             </Form.Item>
             <Form.Item
-              name="selectedLayerName"
+              name="selectedLayer"
               label="Image Data Layer"
               rules={[{ required: true, message: "Please select an image data layer" }]}
             >
               <Select
                 style={{ width: "100%" }}
-                options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
+                options={colorLayers.map((l) => ({ value: l, label: l.name }))}
               />
             </Form.Item>
           </Col>
@@ -146,21 +140,20 @@ export const AiAnalysisParameters: React.FC = () => {
         >
           <Collapse style={{ marginBottom: "24px" }} ghost bordered={false}>
             <Collapse.Panel header="Advanced Settings" key="1">
-              {isInstanceModel && (
-                <Form.Item
-                  name="seedGeneratorDistanceThreshold"
-                  label="Seed generator distance threshold (nm)"
-                  tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
-                  rules={[{ required: true, message: "Please enter positive number" }]}
-                >
-                  <InputNumber
-                    min={0.1}
-                    suffix="nm"
-                    style={{ width: "100%" }}
-                    defaultValue={1000}
-                  />
-                </Form.Item>
-              )}
+              <Form.Item
+                name="seedGeneratorDistanceThreshold"
+                label="Seed generator distance threshold (nm)"
+                tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
+                rules={[{ required: true, message: "Please enter positive number" }]}
+              >
+                <InputNumber
+                  min={0.1}
+                  suffix="nm"
+                  style={{ width: "100%" }}
+                  defaultValue={1000}
+                  disabled={!isInstanceModel}
+                />
+              </Form.Item>
 
               {isNeuronModel && (
                 <CollapsibleSplitMergerEvaluationSettings

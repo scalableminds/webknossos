@@ -1129,7 +1129,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     for {
       _ <- run(
         q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
-            VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true}
+            VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true})
          """.asUpdate)
     } yield ()
 
@@ -1137,14 +1137,14 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                                        layerName: String,
                                        attachmentName: Option[String],
                                        attachmentType: LayerAttachmentType.Value): Fox[Int] = {
-    val namePredicate = attachmentName.map(name => q"NAME = $name").getOrElse(q"TRUE")
+    val namePredicate = attachmentName.map(name => q"name = $name").getOrElse(q"TRUE")
     for {
-      rows <- run(q"""COUNT(*)
+      rows <- run(q"""SELECT COUNT(*)
                       FROM webknossos.dataset_layer_attachments
                       WHERE _dataset = $datasetId
                       AND layerName = $layerName
                       AND $namePredicate
-                      AND attachmentType = $attachmentType
+                      AND type = $attachmentType
                       """.as[Int])
       first <- rows.headOption.toFox
     } yield first
@@ -1156,11 +1156,11 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                          attachmentType: LayerAttachmentType.Value): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
-            SET manualUploadIsPending = ${false}
-            WHERE _dataset = $datasetId
-                              AND layerName = $layerName
-                              AND name = $attachmentName
-                              AND attachmentType = $attachmentType
+                   SET manualUploadIsPending = ${false}
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   AND name = $attachmentName
+                   AND type = $attachmentType
          """.asUpdate)
     } yield ()
 }

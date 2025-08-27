@@ -1085,27 +1085,33 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
-  // TODO can we get rid of some of the toStrings here?
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
-    def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
-          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT), ${false}""".asUpdate
+    if (datasetId.toString == "68aebaded50000a4245670eb") {
+      logger.error(Json.toJson(dataLayers).toString)
+    }
+    def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
+      val query =
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, ${attachmentType}::webknossos.LAYER_ATTACHMENT_TYPE,
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false})"""
+      query.asUpdate
+    }
+
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT manualUploadIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.attachments match {
         case Some(attachments) =>
           attachments.agglomerates.map { agglomerate =>
-            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate.toString)
+            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate)
           } ++ attachments.connectomes.map { connectome =>
-            insertQuery(connectome, layer.name, LayerAttachmentType.connectome.toString)
+            insertQuery(connectome, layer.name, LayerAttachmentType.connectome)
           } ++ attachments.segmentIndex.map { segmentIndex =>
-            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex.toString)
+            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex)
           } ++ attachments.meshes.map { mesh =>
-            insertQuery(mesh, layer.name, LayerAttachmentType.mesh.toString)
+            insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
           } ++ attachments.cumsum.map { cumsumFile =>
-            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum.toString)
+            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
           }
         case None =>
           List.empty

@@ -115,35 +115,6 @@ class DataSourceController @Inject()(
       }
     }
 
-  // TODO remove
-  // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
-  // and it can be put in a webknossos folder where they have access
-  def reserveManualUpload(): Action[ReserveManualUploadInformation] =
-    Action.async(validateJson[ReserveManualUploadInformation]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDataSources(request.body.organization)) {
-        for {
-          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
-            ReserveUploadInformation(
-              "aManualUpload",
-              request.body.datasetName,
-              request.body.organization,
-              0,
-              Some(List.empty),
-              None,
-              None,
-              request.body.initialTeamIds,
-              request.body.folderId,
-              Some(request.body.requireUniqueName)
-            )
-          ) ?~> "dataset.upload.validation.failed"
-        } yield
-          Ok(
-            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
-                     "directoryName" -> reservedDatasetInfo.directoryName))
-      }
-    }
-
   /* Upload a byte chunk for a new dataset
   Expects:
     - As file attachment: A raw byte chunk of the dataset
@@ -355,6 +326,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  // TODO skip vor isVirtual datasets
   def update(datasetId: ObjectId): Action[UsableDataSource] =
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
@@ -368,7 +340,6 @@ class DataSourceController @Inject()(
               _ <- Fox.runIf(dataSourceService.existsOnDisk(existingDataSource.id)) {
                 // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
                 // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-                // TODO remove?
                 dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true)
               }
               _ <- dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)

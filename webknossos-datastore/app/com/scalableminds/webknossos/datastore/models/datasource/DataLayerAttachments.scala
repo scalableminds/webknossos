@@ -92,10 +92,14 @@ object LayerAttachment {
       paths match {
         case Full(p) =>
           p.map(
-            path =>
+            path => {
+              val relativizedPath =
+                if (path.startsWith(layerDirectory.getParent)) layerDirectory.getParent.relativize(path) else path
               LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString),
-                              UPath.fromLocalPath(path),
-                              dataFormat))
+                              UPath.fromLocalPath(relativizedPath),
+                              dataFormat)
+            }
+          )
         case _ => Seq.empty
       }
     } else {

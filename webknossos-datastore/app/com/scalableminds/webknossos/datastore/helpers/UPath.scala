@@ -59,7 +59,6 @@ object UPath {
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
   def fromStringUnsafe(literal: String): UPath = {
-    // TODO assert at least one segment? assert only supported schemes?
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {
       case None => fromLocalPath(Path.of(literal))
@@ -94,7 +93,7 @@ object UPath {
 
 }
 
-class LocalUPath(nioPath: Path) extends UPath {
+private class LocalUPath(nioPath: Path) extends UPath {
   override def isAbsolute: Boolean = nioPath.isAbsolute
 
   def toLocalPathUnsafe: Path = nioPath
@@ -123,8 +122,8 @@ class LocalUPath(nioPath: Path) extends UPath {
     new HashCodeBuilder(19, 29).append(nioPath).toHashCode
 }
 
-// TODO prevent usage of constructor?
-class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
+private class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
+
   override def isAbsolute: Boolean = true
 
   def /(other: String): UPath = {

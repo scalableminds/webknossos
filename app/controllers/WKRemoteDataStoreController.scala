@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full, TextUtils}
+import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -64,6 +64,7 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  // TODO re-test with libs and layersToLink
   def reserveDatasetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
@@ -81,12 +82,13 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           folderId = uploadInfo.folderId.getOrElse(organization._rootFolder)
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-          layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
+          layersToLinkWithDirectoryName <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           newDatasetId = ObjectId.generate
           dataset <- datasetService.createPreliminaryDataset(newDatasetId,
                                                              uploadInfo.name,
-                                                             generateDirectoryName(uploadInfo.name, newDatasetId),
+                                                             datasetService.generateDirectoryName(uploadInfo.name,
+                                                                                                  newDatasetId),
                                                              uploadInfo.organization,
                                                              dataStore) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
@@ -94,17 +96,10 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id,
                                                         dataset.directoryName,
-                                                        if (layersToLinkWithDatasetId.isEmpty) None
-                                                        else Some(layersToLinkWithDatasetId))
+                                                        if (layersToLinkWithDirectoryName.isEmpty) None
+                                                        else Some(layersToLinkWithDirectoryName))
         } yield Ok(Json.toJson(additionalInfo))
       }
-    }
-
-  // TODO duplication, extract somewhere
-  private def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
-    TextUtils.normalizeStrong(datasetName) match {
-      case Some(prefix) => s"$prefix-$datasetId"
-      case None         => datasetId.toString
     }
 
   def getUnfinishedUploadsForUser(name: String,
@@ -305,33 +300,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(dataSource))
       }
 
-    }
-
-  // Register a datasource from the datastore as a dataset in the database.
-  // This is called when adding remote virtual datasets (that should only exist in the database)
-  // by the data store after exploration.
-  def registerDataSource(name: String,
-                         key: String,
-                         organizationId: String,
-                         directoryName: String,
-                         token: String): Action[DataSourceRegistrationInfo] =
-    Action.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { dataStore =>
-        for {
-          user <- bearerTokenService.userForToken(token)
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            organizationId) ~> NOT_FOUND
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          dataset <- datasetService.createVirtualDataset(
-            directoryName,
-            dataStore,
-            request.body.dataSource,
-            request.body.folderId,
-            user
-          )
-        } yield Ok(dataset._id.toString)
-      }
     }
 
   def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[UsableDataSource] =

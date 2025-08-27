@@ -506,8 +506,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
-        // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
-        "publication" -> None,
         "usedStorageBytes" -> usedStorageBytes
       )
     }

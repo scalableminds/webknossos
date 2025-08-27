@@ -137,7 +137,7 @@ object StaticLayer {
           case l: StaticSegmentationLayer => StaticSegmentationLayer.jsonFormat.writes(l)
         }).as[JsObject] ++
         Json.obj(
-          "resolutions" -> layer.resolutions, // TODO remove again, adapt clients, introduce new api version?
+          "resolutions" -> layer.resolutions,
           "numChannels" -> layer.numChannels
         )
   }

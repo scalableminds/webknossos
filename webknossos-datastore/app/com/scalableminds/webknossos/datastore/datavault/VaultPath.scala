@@ -80,7 +80,6 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
 
   private def getDataVault: DataVault = dataVault
 
-  // TODO re-test
   override def equals(obj: Any): Boolean = obj match {
     case other: VaultPath => other.toUPath == toUPath && other.getDataVault == dataVault
     case _                => false

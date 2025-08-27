@@ -23,7 +23,7 @@ class UPathTestSuite extends PlaySpec {
       assert(UPath.fromString("file://somewhere").isEmpty)
     }
 
-    "resolve strings correctly" in {
+    "resolve strings correctly (local)" in {
       assert(
         (UPath.fromStringUnsafe("relative/elsewhere") / "subdirectory").toString == "./relative/elsewhere/subdirectory")
       assert(

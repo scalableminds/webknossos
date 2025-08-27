@@ -37,7 +37,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "publicUrl").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
       (__ \ "allowsUpload").readNullable[Boolean] and
-      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromUpdateForm _) // TODO adapt frontend?
+      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

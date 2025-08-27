@@ -272,6 +272,21 @@ class DataVaultTestSuite extends PlaySpec {
         }
       }
 
+      "comparing two" should {
+        "correctly identify equality" in {
+          val mockDataVault = new MockDataVault
+          val somePath = new VaultPath(UPath.fromStringUnsafe("protocol://host/a/b"), mockDataVault)
+          val someOtherPath = new VaultPath(UPath.fromStringUnsafe("protocol://host/a/b"), mockDataVault)
+          assert(somePath == someOtherPath)
+        }
+        "correctly identify inequality" in {
+          val mockDataVault = new MockDataVault
+          val somePath = new VaultPath(UPath.fromStringUnsafe("protocol://host/a/b"), mockDataVault)
+          val someOtherPath = new VaultPath(UPath.fromStringUnsafe("protocol://host/a/c"), mockDataVault)
+          assert(somePath != someOtherPath)
+        }
+      }
+
     }
   }
 

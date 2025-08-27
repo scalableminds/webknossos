@@ -15,7 +15,6 @@ import play.api.libs.json._
 import java.net.URI
 import scala.concurrent.ExecutionContext
 
-// TODO re-test with new toRemoteUriUnsafe
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
     extends RemoteLayerExplorer
     with FoxImplicits

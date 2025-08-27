@@ -76,6 +76,7 @@ export default function DatasetSettingsDataTab() {
             disabled={!isJSONValid}
             style={{
               marginBottom: 6,
+              display: "none",
             }}
             onChange={(bool) => {
               const key = bool ? "advanced" : "simple";
@@ -107,7 +108,7 @@ export default function DatasetSettingsDataTab() {
             },
           ]}
         >
-          <Input.TextArea rows={20} style={jsonEditStyle} disabled />
+          <Input.TextArea rows={20} style={{display: "none"}} disabled />
         </FormItem>
       </Hideable>
     </div>

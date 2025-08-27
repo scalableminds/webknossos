@@ -197,12 +197,18 @@ class DatasetController @Inject()(userService: UserService,
                                                                                request.identity)
         dataSource <- exploreResponse.dataSource.toFox ?~> "dataset.explore.failed"
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+        _ <- datasetService.validatePaths(dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
-        _ <- wkExploreRemoteLayerService.addRemoteDatasourceToDatabase(dataSource,
-                                                                       request.body.datasetName,
-                                                                       request.identity,
-                                                                       folderIdOpt) ?~> "dataset.explore.autoAdd.failed"
+        _ <- datasetService.assertValidDatasetName(request.body.datasetName)
+        _ <- datasetService.createVirtualDataset(
+          request.body.datasetName,
+          dataStore,
+          dataSource,
+          folderIdOpt.map(_.toString),
+          request.identity
+        ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok
     }
 
@@ -583,7 +589,7 @@ class DatasetController @Inject()(userService: UserService,
   def compose(): Action[ComposeRequest] =
     sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
       for {
-        (dataSource, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
+        (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
@@ -684,7 +690,6 @@ class DatasetController @Inject()(userService: UserService,
     for {
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
       referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore)
-      // TODO isVirtual is not enough. only require for datasets with local data. Maybe as follow-up?
       _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
       dataStore <- referencedDatastoreNames.headOption match {
         case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)

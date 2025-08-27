@@ -4,9 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
@@ -19,11 +17,10 @@ import com.scalableminds.util.tools._
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
-import java.io.{File, FileWriter}
+import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -35,6 +32,7 @@ class DataSourceService @Inject()(
     extends IntervalScheduler
     with DatasetDeleter
     with LazyLogging
+    with DataSourceToDiskWriter
     with FoxImplicits
     with Formatter {
 
@@ -46,7 +44,6 @@ class DataSourceService @Inject()(
   val dataBaseDir: Path = config.Datastore.baseDirectory
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-  private val logFileName = Path.of("datasource-properties-backups.log")
 
   private var inboxCheckVerboseCounter = 0
 
@@ -141,11 +138,9 @@ class DataSourceService @Inject()(
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
       val isDatasetLocal = realMagPath.startsWith(absoluteDatasetPath.toAbsolutePath)
       val absoluteUnresolvedPath = absoluteRawLayerPath.resolve(absoluteRealLayerPath.relativize(magPath)).normalize()
-      val resultingMagPath =
-        if (isDatasetLocal) absoluteDatasetPath.relativize(absoluteUnresolvedPath) else absoluteUnresolvedPath
       MagPathInfo(dataLayer.name,
                   mag.mag,
-                  UPath.fromLocalPath(resultingMagPath),
+                  UPath.fromLocalPath(absoluteUnresolvedPath),
                   UPath.fromLocalPath(realMagPath),
                   hasLocalData = isDatasetLocal)
     }
@@ -211,98 +206,6 @@ class DataSourceService @Inject()(
       .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
-  private def validateDataSource(dataSource: UsableDataSource, organizationDir: Path): Box[Unit] = {
-    def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
-
-    // Check that when mags are sorted by max dimension, all dimensions are sorted.
-    // This means each dimension increases monotonically.
-    val magsSorted = dataSource.dataLayers.map(_.resolutions.sortBy(_.maxDim))
-    val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
-    val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
-    val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
-
-    def pathOk(path: UPath): Boolean =
-      if (path.isRemote) true
-      else {
-        val absoluteWithinDataset =
-          organizationDir.resolve(dataSource.id.directoryName).resolve(path.toLocalPathUnsafe).toAbsolutePath
-        val allowedParent = organizationDir.toAbsolutePath
-        if (absoluteWithinDataset.startsWith(allowedParent)) true else false
-      }
-
-    val errors = List(
-      Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),
-      Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
-      Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
-      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.segmentationElementClasses.contains(layer.elementClass)
-        },
-        s"Invalid element class for segmentation layer"
-      ),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
-        },
-        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
-      ),
-      Check(
-        dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
-        "Layer names must be unique. At least two layers have the same name."
-      ),
-      Check(
-        dataSource.dataLayers.flatMap(_.mags).flatMap(_.path).forall(pathOk),
-        "Mags with explicit paths must stay within the organization directory."
-      )
-    ).flatten
-
-    if (errors.isEmpty) {
-      Full(())
-    } else {
-      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
-    }
-  }
-
-  def updateDataSourceOnDisk(dataSource: UsableDataSource, expectExisting: Boolean): Fox[Unit] = {
-    val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
-    val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
-    for {
-      _ <- validateDataSource(dataSource, organizationDir).toFox
-      propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
-      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
-      _ <- JsonHelper
-        .writeToFile(propertiesFile, JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("resolutions")))
-        .toFox ?~> "Could not update datasource-properties.json"
-    } yield ()
-  }
-
-  private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
-    val propertiesFile = dataSourcePath.resolve(propertiesFileName)
-    val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
-      val previousContentSource = Source.fromFile(propertiesFile.toString)
-      val previousContent = previousContentSource.getLines().mkString("\n")
-      previousContentSource.close()
-      previousContent
-    } else {
-      "<empty>"
-    }
-    val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by WEBKNOSSOS at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
-    val logfilePath = dataSourcePath.resolve(logFileName)
-    try {
-      val fileWriter = new FileWriter(logfilePath.toString, true)
-      try {
-        fileWriter.write(outputForLogfile)
-        Full(())
-      } finally fileWriter.close()
-    } catch {
-      case e: Exception => Failure(s"Could not back up old contents: ${e.toString}")
-    }
-  }
-
   private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
     val organization = path.getFileName.toString
 
@@ -325,7 +228,7 @@ class DataSourceService @Inject()(
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) {
             val dataSourceWithAttachments = dataSource.copy(
-              dataLayers = scanForAttachedFiles(path, dataSource)
+              dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
             )
             dataSourceWithAttachments.copy(id)
           } else
@@ -345,17 +248,19 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: UsableDataSource) =
+  private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-      dataLayer.withAttachments(
+      dataLayer.withMergedAndResolvedAttachments(
+        UPath.fromLocalPath(dataSourcePath),
         DataLayerAttachments(
           MeshFileInfo.scanForMeshFiles(dataLayerPath),
           AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
           ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
           CumsumFileInfo.scanForCumsumFile(dataLayerPath)
-        ))
+        )
+      )
     })
 
   def invalidateVaultCache(dataSource: DataSource, dataLayerName: Option[String]): Option[Int] =

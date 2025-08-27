@@ -84,12 +84,16 @@ trait StaticLayer extends DataLayer {
 
   def numChannels: Int = if (elementClass == ElementClass.uint24) 3 else 1
 
-  def withAttachments(attachments: DataLayerAttachments): StaticLayer =
+  def withMergedAndResolvedAttachments(dataSourcePath: UPath, attachments: DataLayerAttachments): StaticLayer =
     this match {
       case l: StaticSegmentationLayer =>
-        l.copy(attachments = l.attachments.map(_.merge(attachments)).orElse(Some(attachments)))
+        l.copy(
+          attachments =
+            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
       case l: StaticColorLayer =>
-        l.copy(attachments = l.attachments.map(_.merge(attachments)).orElse(Some(attachments)))
+        l.copy(
+          attachments =
+            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
     }
 
   def mapped(
@@ -114,6 +118,20 @@ trait StaticLayer extends DataLayer {
           mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
+        )
+    }
+
+  def relativizePaths(dataSourcePath: UPath): StaticLayer =
+    this match {
+      case l: StaticColorLayer =>
+        l.copy(
+          mags = l.mags.map(mag => mag.copy(path = mag.path.map(_.relativizedIn(dataSourcePath)))),
+          attachments = l.attachments.map(_.relativizedIn(dataSourcePath))
+        )
+      case l: StaticSegmentationLayer =>
+        l.copy(
+          mags = l.mags.map(mag => mag.copy(path = mag.path.map(_.relativizedIn(dataSourcePath)))),
+          attachments = l.attachments.map(_.relativizedIn(dataSourcePath))
         )
     }
 }

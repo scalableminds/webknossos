@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.google.inject.Inject
-import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
@@ -489,7 +488,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSourceOnDisk(dataSourceWithLinkedLayers, expectExisting = true) ?~> "Could not write combined properties file"
+        _ <- dataSourceService.updateDataSourceOnDisk(dataSourceWithLinkedLayers,
+                                                      expectExisting = true,
+                                                      validate = true) ?~> "Could not write combined properties file"
       } yield ()
     }
 

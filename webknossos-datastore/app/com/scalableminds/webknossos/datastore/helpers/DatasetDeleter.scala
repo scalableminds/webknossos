@@ -2,19 +2,18 @@ package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
-import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceToDiskWriter}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
+trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits with DataSourceToDiskWriter {
   def dataBaseDir: Path
 
   def existsOnDisk(dataSourceId: DataSourceId, isInConversion: Boolean = false): Boolean = {
@@ -127,30 +126,28 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
     // We need to update locally explored datasets, since they now may have symlinks where previously they only had the
     // path property set.
     Fox.serialCombined(dataSourceIds)(dataSourceId => {
-      val propertiesPath = dataBaseDir
-        .resolve(dataSourceId.organizationId)
-        .resolve(dataSourceId.directoryName)
-        .resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+      val dataSourcePath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+      val propertiesPath = dataSourcePath.resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       if (Files.exists(propertiesPath)) {
         JsonHelper.parseFromFileAs[UsableDataSource](propertiesPath, dataBaseDir) match {
           case Full(dataSource) =>
-            val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
-              case dl: StaticLayer =>
-                if (dl.mags.forall(_.path.exists(_.toString.startsWith(s"${PathSchemes.schemeFile}://")))) {
-                  // Setting path to None means using resolution of layer/mag directories to access data
-                  dl.mapped(magMapping = _.copy(path = None))
-                } else {
-                  dl
-                }
-              case dl => dl
-            })
+            val updatedDataSource = dataSource.copy(
+              id = dataSourceId,
+              dataLayers = dataSource.dataLayers.map {
+                case dl: StaticLayer =>
+                  if (dl.mags.forall(_.path.exists(p => p.isLocal && p.isAbsolute))) {
+                    // Setting path to None means using resolution of layer/mag directories to access data
+                    dl.mapped(magMapping = _.copy(path = None))
+                  } else {
+                    dl
+                  }
+                case dl => dl
+              }
+            )
             // Write properties back
             tryo(Files.delete(propertiesPath)) match {
               case Full(_) =>
-                JsonHelper
-                  .writeToFile(propertiesPath,
-                               JsonHelper.removeKeyRecursively(Json.toJson(updatedDataSource), Set("resolutions")))
-                  .toFox
+                updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = false)
               case e => e.toFox
             }
           case _ => Fox.successful(())

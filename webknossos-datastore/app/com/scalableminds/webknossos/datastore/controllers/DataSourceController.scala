@@ -340,7 +340,7 @@ class DataSourceController @Inject()(
               _ <- Fox.runIf(dataSourceService.existsOnDisk(existingDataSource.id)) {
                 // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
                 // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-                dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true)
+                dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = true)
               }
               _ <- dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
               _ = datasetCache.invalidateCache(datasetId)

@@ -27,6 +27,24 @@ case class DataLayerAttachments(
       connectomes = if (this.connectomes.isEmpty) other.connectomes else this.connectomes,
       cumsum = this.cumsum.orElse(other.cumsum)
     )
+
+  def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
+    DataLayerAttachments(
+      meshes = meshes.map(_.resolvedIn(dataSourcePath)),
+      agglomerates = agglomerates.map(_.resolvedIn(dataSourcePath)),
+      segmentIndex = segmentIndex.map(_.resolvedIn(dataSourcePath)),
+      connectomes = connectomes.map(_.resolvedIn(dataSourcePath)),
+      cumsum = cumsum.map(_.resolvedIn(dataSourcePath))
+    )
+
+  def relativizedIn(dataSourcePath: UPath): DataLayerAttachments =
+    DataLayerAttachments(
+      meshes = meshes.map(_.relativizedIn(dataSourcePath)),
+      agglomerates = agglomerates.map(_.relativizedIn(dataSourcePath)),
+      segmentIndex = segmentIndex.map(_.relativizedIn(dataSourcePath)),
+      connectomes = connectomes.map(_.relativizedIn(dataSourcePath)),
+      cumsum = cumsum.map(_.relativizedIn(dataSourcePath))
+    )
 }
 
 object DataLayerAttachments {
@@ -76,6 +94,12 @@ case class LayerAttachment(name: String,
     val datasetPath = UPath.fromLocalPath(dataBaseDir) / dataSourceId.organizationId / dataSourceId.directoryName
     path.resolvedIn(datasetPath)
   }
+
+  def resolvedIn(dataSourcePath: UPath): LayerAttachment =
+    this.copy(path = this.path.resolvedIn(dataSourcePath))
+
+  def relativizedIn(dataSourcePath: UPath): LayerAttachment =
+    this.copy(path = this.path.relativizedIn(dataSourcePath))
 }
 
 object LayerAttachment {
@@ -92,14 +116,10 @@ object LayerAttachment {
       paths match {
         case Full(p) =>
           p.map(
-            path => {
-              val relativizedPath =
-                if (path.startsWith(layerDirectory.getParent)) layerDirectory.getParent.relativize(path) else path
+            path =>
               LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString),
-                              UPath.fromLocalPath(relativizedPath),
-                              dataFormat)
-            }
-          )
+                              UPath.fromLocalPath(path),
+                              dataFormat))
         case _ => Seq.empty
       }
     } else {

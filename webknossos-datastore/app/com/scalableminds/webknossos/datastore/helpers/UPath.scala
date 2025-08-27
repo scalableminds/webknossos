@@ -39,6 +39,8 @@ trait UPath {
       parentIfRelative / this
     } else this
 
+  def relativizedIn(potentialParent: UPath): UPath
+
   def basename: String
 
   def parent: UPath
@@ -69,13 +71,13 @@ object UPath {
             s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
         fromLocalPath(nioPath)
       case Some(scheme) =>
-        new RemotePath(
+        RemotePath(
           scheme,
           segments = literal.drop(s"$scheme://".length).split(separator.toString, splitKeepLastIfEmpty).toSeq).normalize
     }
   }
 
-  def fromLocalPath(localPath: Path): UPath = new LocalUPath(localPath.normalize())
+  def fromLocalPath(localPath: Path): UPath = LocalUPath(localPath.normalize())
 
   implicit object jsonFormat extends Format[UPath] {
     override def reads(json: JsValue): JsResult[UPath] =
@@ -93,7 +95,7 @@ object UPath {
 
 }
 
-private class LocalUPath(nioPath: Path) extends UPath {
+private case class LocalUPath(nioPath: Path) extends UPath {
   override def isAbsolute: Boolean = nioPath.isAbsolute
 
   def toLocalPathUnsafe: Path = nioPath
@@ -118,11 +120,20 @@ private class LocalUPath(nioPath: Path) extends UPath {
 
   override def toRemoteUriUnsafe: URI = throw new Exception(s"Called toUriUnsafe on LocalUPath $toString")
 
+  override def relativizedIn(potentialAncestor: UPath): UPath =
+    potentialAncestor match {
+      case LocalUPath(potentialAncestorNioPath) =>
+        if (nioPath.toAbsolutePath.startsWith(potentialAncestorNioPath.toAbsolutePath)) {
+          LocalUPath(potentialAncestorNioPath.toAbsolutePath.relativize(nioPath.toAbsolutePath))
+        } else this
+      case _ => this
+    }
+
   override def hashCode(): Int =
     new HashCodeBuilder(19, 29).append(nioPath).toHashCode
 }
 
-private class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
+private case class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
 
   override def isAbsolute: Boolean = true
 
@@ -130,7 +141,7 @@ private class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
     val otherSegments = other.split(UPath.separator.toString, UPath.splitKeepLastIfEmpty)
     // if last own segment is emptystring, drop it
     val ownSegments = if (segments.lastOption.exists(_.isEmpty)) segments.dropRight(1) else segments
-    new RemotePath(scheme, ownSegments ++ otherSegments).normalize
+    RemotePath(scheme, ownSegments ++ otherSegments).normalize
   }
 
   def normalize: UPath = {
@@ -146,7 +157,7 @@ private class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
         collectedSegmentsMutable.addOne(segment)
       }
     }
-    new RemotePath(scheme, collectedSegmentsMutable.toSeq)
+    RemotePath(scheme, collectedSegmentsMutable.toSeq)
   }
 
   override def toLocalPathUnsafe: Path = throw new Exception(s"Called toLocalPathUnsafe on RemotePath $this")
@@ -161,11 +172,13 @@ private class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
 
   override def parent: UPath =
     // need to have at least one segment (assumed to be the authority)
-    if (segments.length < 2) this else new RemotePath(scheme, segments.dropRight(1))
+    if (segments.length < 2) this else RemotePath(scheme, segments.dropRight(1))
 
   override def getScheme: Option[String] = Some(scheme)
 
   override def toRemoteUriUnsafe: URI = new URI(toString)
+
+  override def relativizedIn(potentialAncestor: UPath): UPath = this
 
   override def hashCode(): Int =
     new HashCodeBuilder(19, 29).append(scheme).append(segments).toHashCode

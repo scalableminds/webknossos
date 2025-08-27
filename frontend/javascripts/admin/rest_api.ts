@@ -995,11 +995,19 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 
 export function getDataset(
   datasetId: string,
+  includePaths?: boolean | null | undefined,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
+  const params = new URLSearchParams();
+  if (sharingToken != null) {
+    params.set("sharingToken", String(sharingToken));
+  }
+  if (includePaths != null) {
+    params.set("includePaths", String(includePaths));
+  }
+  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
 }
 
 export async function getDatasetLegacy(
@@ -1014,7 +1022,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getDataset(datasetId, true, sharingToken, options);
 }
 
 export type DatasetUpdater = {

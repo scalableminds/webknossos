@@ -71,7 +71,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "comment" -> aiModel.comment,
         "trainingJob" -> trainingJobJsOpt,
         "created" -> aiModel.created,
-        "sharedOrganizationIds" -> sharedOrganizationIds
+        "sharedOrganizationIds" -> sharedOrganizationIds,
+        "category" -> aiModel.category
       )
 }
 

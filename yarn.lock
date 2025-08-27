@@ -10297,13 +10297,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"os-tmpdir@npm:~1.0.2":
-  version: 1.0.2
-  resolution: "os-tmpdir@npm:1.0.2"
-  checksum: 10c0/f438450224f8e2687605a8dd318f0db694b6293c5d835ae509a69e97c8de38b6994645337e5577f5001115470414638978cc49da1cdcc25106dad8738dc69990
-  languageName: node
-  linkType: hard
-
 "p-limit@npm:^2.2.0":
   version: 2.3.0
   resolution: "p-limit@npm:2.3.0"
@@ -13779,15 +13772,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tmp@npm:0.0.33":
-  version: 0.0.33
-  resolution: "tmp@npm:0.0.33"
-  dependencies:
-    os-tmpdir: "npm:~1.0.2"
-  checksum: 10c0/69863947b8c29cabad43fe0ce65cec5bb4b481d15d4b4b21e036b060b3edbf3bc7a5541de1bacb437bb3f7c4538f669752627fdf9b4aaf034cebd172ba373408
-  languageName: node
-  linkType: hard
-
 "to-fast-properties@npm:^2.0.0":
   version: 2.0.0
   resolution: "to-fast-properties@npm:2.0.0"
@@ -14916,7 +14900,6 @@ __metadata:
     shelljs: "npm:^0.8.5"
     three: "npm:^0.169.0"
     three-mesh-bvh: "npm:^0.9.0"
-    tmp: "npm:0.0.33"
     ts-loader: "npm:^9.4.1"
     tween.js: "npm:^16.3.1"
     typed-redux-saga: "npm:^1.4.0"

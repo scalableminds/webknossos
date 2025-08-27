@@ -51,7 +51,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
@@ -85,7 +85,11 @@ describe("Volume Tracing", () => {
     await api.tracing.save();
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, newCellId + 1, 500),
+      createBucketResponseFunction(
+        { volumeTracingId: "uint16", color: "uint8" },
+        newCellId + 1,
+        500,
+      ),
     );
 
     const cube = api.data.model.getCubeByLayerName(volumeTracingLayerName);
@@ -106,7 +110,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     Store.dispatch(setZoomStepAction(4));
@@ -150,7 +154,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     Store.dispatch(setZoomStepAction(4));
@@ -210,7 +214,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
 
     Store.dispatch(setZoomStepAction(4));
@@ -258,7 +262,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+      createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, oldCellId, 500),
     );
     Store.dispatch(setZoomStepAction(4));
     // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders

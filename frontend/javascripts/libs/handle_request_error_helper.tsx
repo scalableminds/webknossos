@@ -14,6 +14,8 @@ export const handleError = async (
     // Check whether this request failed due to a problematic datastore
     pingMentionedDataStores(requestedUrl);
     if (error instanceof Response) {
+      // Handle 401 Unauthorized errors and ensure an understandable error toast is shown.
+      // This might happen e.g. after a user logged out everywhere.
       if (error.status === 401 && showErrorToast) {
         showToastOnce(
           "error",

@@ -1,6 +1,6 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
 import { changePassword, logoutUserEverywhere } from "admin/rest_api";
-import { Alert, Button, Col, Form, Input, Modal, Row, Space } from "antd";
+import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -19,8 +19,9 @@ const MIN_PASSWORD_LENGTH = 8;
 function AccountSecurityView() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const modal = App.useApp();
+  const confirm = modal.modal.confirm;
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
-  const [showConfirmLogoutModal, setShowConfirmLogoutModal] = useState(false);
 
   async function onFinish(formValues: Record<string, any>) {
     try {
@@ -153,6 +154,13 @@ function AccountSecurityView() {
     );
   }
 
+  const handleLogoutEverywhere = () => {
+    confirm({
+      title: "Confirm Logout",
+      content: <p>Are you sure you want to log out on all devices?</p>,
+      onOk: handleLogout,
+    });
+  };
   const securityItems: SettingsCardProps[] = [
     {
       title: "Password",
@@ -170,7 +178,7 @@ function AccountSecurityView() {
     {
       title: "Log out everywhere",
       content: (
-        <Button type="default" onClick={() => setShowConfirmLogoutModal(true)}>
+        <Button type="default" onClick={handleLogoutEverywhere}>
           Log out on all devices
         </Button>
       ),
@@ -208,14 +216,6 @@ function AccountSecurityView() {
           </Col>
         ))}
       </Row>
-      <Modal
-        open={showConfirmLogoutModal}
-        title="Confirm Logout"
-        onOk={handleLogout}
-        onCancel={() => setShowConfirmLogoutModal(false)}
-      >
-        <p>Are you sure you want to log out on all devices?</p>
-      </Modal>
 
       {passkeysEnabled && (
         <>

@@ -104,10 +104,17 @@ export function NeuronSegmentationForm() {
         layerConfiguration.isInverted,
         doSplitMergerEvaluation,
         annotationId,
-        splitMergerEvaluationSettings
+        splitMergerEvaluationSettings,
       );
     },
-    [dataset, doSplitMergerEvaluation, userBoundingBoxCount, taskBoundingBoxes, skeletonAnnotation, datasetConfiguration],
+    [
+      dataset,
+      doSplitMergerEvaluation,
+      userBoundingBoxCount,
+      taskBoundingBoxes,
+      skeletonAnnotation,
+      datasetConfiguration,
+    ],
   );
 
   return (

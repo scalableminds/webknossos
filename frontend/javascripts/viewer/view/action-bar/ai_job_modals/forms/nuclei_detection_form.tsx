@@ -39,13 +39,12 @@ export function NucleiDetectionForm() {
         return;
       }
       const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
-      startNucleiInferralJob(
+      return startNucleiInferralJob(
         dataset.id,
         colorLayer.name,
         newDatasetName,
         layerConfiguration.isInverted,
       );
-      return startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName, layerConfiguration.isInverted);
     },
     [dataset, datasetConfiguration],
   );

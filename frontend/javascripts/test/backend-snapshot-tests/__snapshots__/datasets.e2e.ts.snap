@@ -30,11 +30,11 @@ exports[`Dataset API (E2E) > Dataset Paths 1`] = `
 
 exports[`Dataset API (E2E) > Zarr 3 streaming 1`] = `"{"zarr_format":3,"node_type":"group","attributes":{"ome":{"version":"0.5","multiscales":[{"name":"segmentation","axes":[{"name":"c","type":"channel"},{"name":"x","type":"space","unit":"nanometer"},{"name":"y","type":"space","unit":"nanometer"},{"name":"z","type":"space","unit":"nanometer"}],"datasets":[{"path":"1","coordinateTransformations":[{"type":"scale","scale":[1,11.24,11.24,28]}]}]}]}}}"`;
 
-exports[`Dataset API (E2E) > Zarr 3 streaming 2`] = `"eyJtZXNzYWdlcyI6W3siZXJyb3IiOiIifSx7ImNoYWluIjoiW1NlcnZlciBUaW1lIDIwMjUtMDgtMjZUMTE6NDg6MjkuMDQzWl0gIHphcnIuY2h1bmtOb3RGb3VuZCJ9XX0="`;
+exports[`Dataset API (E2E) > Zarr 3 streaming 2`] = `"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAA="`;
 
 exports[`Dataset API (E2E) > Zarr streaming 1`] = `"{"multiscales":[{"version":"0.4","name":"segmentation","axes":[{"name":"c","type":"channel"},{"name":"x","type":"space","unit":"nanometer"},{"name":"y","type":"space","unit":"nanometer"},{"name":"z","type":"space","unit":"nanometer"}],"datasets":[{"path":"1","coordinateTransformations":[{"type":"scale","scale":[1,11.24,11.24,28]}]}]}]}"`;
 
-exports[`Dataset API (E2E) > Zarr streaming 2`] = `"eyJtZXNzYWdlcyI6W3siZXJyb3IiOiIifSx7ImNoYWluIjoiW1NlcnZlciBUaW1lIDIwMjUtMDgtMjZUMTE6NDg6MjguOTk2Wl0gIHphcnIuY2h1bmtOb3RGb3VuZCJ9XX0="`;
+exports[`Dataset API (E2E) > Zarr streaming 2`] = `"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAA="`;
 
 exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
 [
@@ -109,7 +109,6 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "metadata": [],
     "name": "test-dataset",
     "owningOrganization": "Organization_X",
-    "publication": null,
     "sortingKey": "sortingKey",
     "tags": [],
     "usedStorageBytes": 0,

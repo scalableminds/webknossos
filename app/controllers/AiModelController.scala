@@ -60,7 +60,7 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String],
                                   workflowYaml: Option[String],
-                                  invertColorLayer: Option[Boolean])
+                                  invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double])
 
 object RunInferenceParameters {

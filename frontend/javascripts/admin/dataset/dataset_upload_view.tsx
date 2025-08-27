@@ -492,17 +492,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         open={isUploading}
         keyboard={false}
         maskClosable={false}
-        className="no-footer-modal"
-        okButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        cancelButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
+        footer={null}
         onCancel={this.cancelUpload}
       >
         <div
@@ -809,10 +799,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             ref={this.formRef}
             initialValues={{
               initialTeams: [],
-              voxelSize: [0, 0, 0],
+              voxelSizeUnit: UnitLong.nm,
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
-              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (
@@ -885,7 +874,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
                     // @ts-ignore
                     disabled={this.state.needsConversion}
-                    help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                    help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[
                       {
                         required: this.state.needsConversion,
@@ -901,6 +890,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   >
                     <Vector3Input
                       allowDecimals
+                      placeholder="e.g. 11.23, 11.23, 28.3"
                       onChange={(voxelSizeFactor: Vector3) => {
                         if (this.formRef.current == null) return;
                         this.formRef.current.setFieldsValue({

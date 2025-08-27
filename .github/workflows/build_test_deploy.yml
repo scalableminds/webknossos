@@ -99,6 +99,9 @@ jobs:
         run: tools/postgres/dbtool.js check-evolutions-schema
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
+      - name: Assert no 'SELECT *'  are present in scala files
+        run: tools/assert-no-select-asterisk-present.sh
+
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"

@@ -625,9 +625,11 @@ export class DataBucket {
               channelCount,
             };
       console.warn(`bucket.data for ${this.zoomedAddress} has unexpected length`, debugInfo);
-      ErrorHandling.notify(
-        new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),
+      const error = new Error(
+        `bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`,
       );
+      ErrorHandling.notify(error);
+      throw error;
     }
 
     switch (this.state) {

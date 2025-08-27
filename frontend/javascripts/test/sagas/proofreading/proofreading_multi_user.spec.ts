@@ -24,9 +24,7 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
-WkDevFlags.logActions = false;
 describe("Proofreading (Multi User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -63,7 +61,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -72,6 +69,15 @@ describe("Proofreading (Multi User)", () => {
 
       yield call(createEditableMapping);
 
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
@@ -88,7 +94,7 @@ describe("Proofreading (Multi User)", () => {
 
       expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
 
-      yield call(() => api.tracing.save());
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -139,7 +145,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -147,6 +152,15 @@ describe("Proofreading (Multi User)", () => {
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -224,7 +238,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -232,6 +245,15 @@ describe("Proofreading (Multi User)", () => {
       yield put(setActiveCellAction(2));
 
       yield call(createEditableMapping);
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -300,7 +322,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -308,6 +329,15 @@ describe("Proofreading (Multi User)", () => {
       yield put(setActiveCellAction(3));
 
       yield call(createEditableMapping);
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -388,7 +418,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -396,6 +425,15 @@ describe("Proofreading (Multi User)", () => {
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -526,19 +564,17 @@ describe("Proofreading (Multi User)", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
-      expect(mapping0).toEqual(
-        new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 1337],
-          [7, 1337],
-          // [1337, 1337], not loaded
-        ]),
-      );
-      yield put(setOthersMayEditForAnnotationAction(true));
+      const initialExpectedMapping = new Map([
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
+      ]);
+      expect(mapping0).toEqual(initialExpectedMapping);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -546,6 +582,15 @@ describe("Proofreading (Multi User)", () => {
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialExpectedMapping);
+      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+      // TODOM: Support integrating this action, if it originates from this user.
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(

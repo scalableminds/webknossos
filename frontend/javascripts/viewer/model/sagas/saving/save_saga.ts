@@ -198,12 +198,9 @@ function* watchForSaveConflicts(): Saga<void> {
     if (yield* select((state) => state.uiInformation.showVersionRestore)) {
       continue;
     }
-    const saveQueueEntriesBefore = yield* select((state) => state.save.queue);
-    ColoredLogger.logBlue("Save Queue Entries before", saveQueueEntriesBefore);
 
     // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
     // Then incorporate the actions from backend and then those from the user again. then resolve.
-    debugger;
     const everythingIsDiffedDeferred = new Deferred();
     const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
       // TODOM: Ensure all tracings were diffed to save queue!!!
@@ -212,24 +209,11 @@ function* watchForSaveConflicts(): Saga<void> {
     yield* put(action);
     yield everythingIsDiffedDeferred.promise();
     yield* put(prepareRebasingAction());
-    const saveQueueEntriesAfter = yield* select((state) => state.save.queue);
-    ColoredLogger.logBlue("Save Queue Entries after", saveQueueEntriesAfter);
 
     try {
-      ColoredLogger.logBlue("Starting incorporating Backend updates.");
       const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
       const saveQueueEntries = yield* select((state) => state.save.queue);
       const currentVersion = yield* select((state) => state.annotation.version);
-      ColoredLogger.logBlue("Successfully incorporated backend updates.");
-      ColoredLogger.logBlue(
-        "didAskUserToRefreshPage",
-        didAskUserToRefreshPage,
-        "currentVersion",
-        currentVersion,
-        "saveQueueEntries amount",
-        saveQueueEntries,
-      );
-      ColoredLogger.logBlue("Starting incorporating Frontend updates.");
       const success =
         !didAskUserToRefreshPage &&
         (yield* tryToIncorporateActions(
@@ -240,8 +224,6 @@ function* watchForSaveConflicts(): Saga<void> {
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
       } else {
-        // TODOM: Apply savequeue actions
-
         // drain all accumulated actions at once
         const pendingActions: EnsureHasNewestVersionAction[] = yield* flush(channel);
 
@@ -382,7 +364,6 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
-          ColoredLogger.logBlue("Incorporating mergeAgglomerate");
           const activeMapping = yield* select(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
@@ -477,6 +458,7 @@ export function* tryToIncorporateActions(
         /*
          * Currently NOT supported:
          */
+        // TODOM: These actions should be supported if applied from own save queue!
 
         // High-level annotation specific
         case "addLayerToAnnotation":

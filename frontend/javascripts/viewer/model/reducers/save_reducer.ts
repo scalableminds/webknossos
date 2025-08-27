@@ -217,6 +217,22 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "UPDATE_MAPPING_REBASE_INFORMATION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.volumeLayerIdToUpdate];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.volumeLayerIdToUpdate]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
     case "DONE_SAVING": {
       return update(state, {
         save: {

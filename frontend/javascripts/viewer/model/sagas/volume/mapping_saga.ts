@@ -79,6 +79,7 @@ import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetr
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkReady } from "../ready_sagas";
+import { updateMappingRebaseInformationAction } from "viewer/model/actions/save_actions";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -574,6 +575,7 @@ export function* updateLocalHdf5Mapping(
   });
 
   yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+  yield* put(updateMappingRebaseInformationAction(layerName));
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 
@@ -793,7 +795,9 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
       duration: 10,
     });
     console.error(errorMessage);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, {}));
+    yield* put(updateMappingRebaseInformationAction(layerName));
+
     return false;
   }
 

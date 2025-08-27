@@ -33,6 +33,9 @@ export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebasingAction = ReturnType<typeof prepareRebasingAction>;
+export type UpdateMappingRebaseInformationAction = ReturnType<
+  typeof updateMappingRebaseInformationAction
+>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -51,7 +54,8 @@ export type SaveAction =
   | DoneSavingAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
-  | PrepareRebasingAction;
+  | PrepareRebasingAction
+  | UpdateMappingRebaseInformationAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -194,4 +198,10 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
 export const prepareRebasingAction = () =>
   ({
     type: "PREPARE_REBASING",
+  }) as const;
+
+export const updateMappingRebaseInformationAction = (volumeLayerIdToUpdate: string) =>
+  ({
+    type: "UPDATE_MAPPING_REBASE_INFORMATION",
+    volumeLayerIdToUpdate,
   }) as const;

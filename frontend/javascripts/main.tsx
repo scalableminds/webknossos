@@ -1,4 +1,4 @@
-import "es-iterator-helpers/auto"; // polyfill for iterator helpers
+import "core-js/actual/iterator"; // polyfill for iterator helpers
 import { message } from "antd";
 import window, { document } from "libs/window";
 import { createRoot } from "react-dom/client";

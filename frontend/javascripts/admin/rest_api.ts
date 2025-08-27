@@ -999,7 +999,6 @@ export function getDataset(
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));

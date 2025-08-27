@@ -21,7 +21,6 @@ import {
   FormItemWithInfo,
   Hideable,
   RetryingErrorBoundary,
-  jsonEditStyle,
 } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -108,7 +107,7 @@ export default function DatasetSettingsDataTab() {
             },
           ]}
         >
-          <Input.TextArea rows={20} style={{display: "none"}} disabled />
+          <Input.TextArea rows={20} style={{ display: "none" }} disabled />
         </FormItem>
       </Hideable>
     </div>

@@ -1,6 +1,6 @@
 package models.dataset.explore
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
@@ -9,7 +9,6 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.{DataStore, DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
@@ -48,7 +47,6 @@ object ExploreAndAddRemoteDatasetParameters {
 class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                             organizationDAO: OrganizationDAO,
                                             dataStoreDAO: DataStoreDAO,
-                                            datasetService: DatasetService,
                                             wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                             rpc: RPC)
     extends FoxImplicits

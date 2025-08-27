@@ -3,6 +3,7 @@
 exports[`Teams API (E2E) > createTeam and deleteTeam 1`] = `
 {
   "id": "fixed-team-id",
+  "isOrganizationTeam": false,
   "messages": [
     {
       "success": "Team was created successfully",
@@ -27,21 +28,25 @@ exports[`Teams API (E2E) > getEditableTeams() 1`] = `
 [
   {
     "id": "570b9f4b2a7c0e3b008da6ec",
+    "isOrganizationTeam": true,
     "name": "team_X1",
     "organization": "Organization_X",
   },
   {
     "id": "69882b370d889b84020efd4f",
+    "isOrganizationTeam": false,
     "name": "team_X2",
     "organization": "Organization_X",
   },
   {
     "id": "59882b370d889b84020efd3f",
+    "isOrganizationTeam": false,
     "name": "team_X3",
     "organization": "Organization_X",
   },
   {
     "id": "59882b370d889b84020efd6f",
+    "isOrganizationTeam": false,
     "name": "team_X4",
     "organization": "Organization_X",
   },
@@ -52,21 +57,25 @@ exports[`Teams API (E2E) > getTeams() 1`] = `
 [
   {
     "id": "570b9f4b2a7c0e3b008da6ec",
+    "isOrganizationTeam": true,
     "name": "team_X1",
     "organization": "Organization_X",
   },
   {
     "id": "69882b370d889b84020efd4f",
+    "isOrganizationTeam": false,
     "name": "team_X2",
     "organization": "Organization_X",
   },
   {
     "id": "59882b370d889b84020efd3f",
+    "isOrganizationTeam": false,
     "name": "team_X3",
     "organization": "Organization_X",
   },
   {
     "id": "59882b370d889b84020efd6f",
+    "isOrganizationTeam": false,
     "name": "team_X4",
     "organization": "Organization_X",
   },

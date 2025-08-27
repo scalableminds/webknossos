@@ -362,7 +362,12 @@ class ZstdCompressor(level: Int, checksum: Boolean) extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
-    val zstd = new ZstdCompressorOutputStream(os, level, true, checksum)
+    val zstd = ZstdCompressorOutputStream.builder
+      .setOutputStream(os)
+      .setLevel(level)
+      .setCloseFrameOnFlush(true)
+      .setChecksum(checksum)
+      .get()
     try passThrough(is, zstd)
     finally if (zstd != null) zstd.close()
     os.toByteArray

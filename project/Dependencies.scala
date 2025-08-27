@@ -3,22 +3,22 @@ import sbt._
 
 object Dependencies {
   private val silhouetteVersion = "10.0.3"
-  private val brotliVersion = "1.18.0"
+  private val brotliVersion = "1.19.0"
   private val slickVersion = "3.5.2"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.7",
+    "org.playframework" %% "play" % "3.0.8",
     // Play’s JSON serialization. import play.api.libs.json
-    "org.playframework" %% "play-json" % "3.0.4",
+    "org.playframework" %% "play-json" % "3.0.5",
     // Sending emails. import org.apache.commons.mail
     "org.apache.commons" % "commons-email" % "1.6.0",
     // File utils. import org.apache.commons.io
-    "commons-io" % "commons-io" % "2.19.0",
+    "commons-io" % "commons-io" % "2.20.0",
     // HashCodeBuilder. import org.apache.commons.lang3
-    "org.apache.commons" % "commons-lang3" % "3.17.0",
+    "org.apache.commons" % "commons-lang3" % "3.18.0",
     // ObjectIds. import reactivemongo.api.bson
     "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
     // Protocol buffers. import scalapb
@@ -55,15 +55,15 @@ object Dependencies {
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
-    "software.amazon.awssdk" % "s3" % "2.31.50",
+    "software.amazon.awssdk" % "s3" % "2.32.24",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.52.3",
+    "com.google.cloud" % "google-cloud-storage" % "2.55.0",
     // Blosc compression. import org.blosc
     "org.lasersonlab" % "jblosc" % "1.0.1",
     // Zstd compression. import org.apache.commons.compress
-    "org.apache.commons" % "commons-compress" % "1.27.1",
+    "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.7-3",
+    "com.github.luben" % "zstd-jni" % "1.5.7-4",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -81,9 +81,9 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.18.0",
+    "commons-codec" % "commons-codec" % "1.19.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
-    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
+    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % "test",
     // Authenticated requests. import play.silhouette
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import play.silhouette.crypto
@@ -93,9 +93,9 @@ object Dependencies {
     // Writing XML. import com.sun.xml.txw2
     "org.glassfish.jaxb" % "txw2" % "4.0.5",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "com.fasterxml.woodstox" % "woodstox-core" % "7.1.0",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.1.1",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
-    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.4",
+    "com.github.jwt-scala" %% "jwt-play-json" % "11.0.2",
     // SQL Queries. import slick
     "com.typesafe.slick" %% "slick" % slickVersion,
     // SQL Queries connection pool. not imported.
@@ -103,9 +103,9 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.5",
+    "org.postgresql" % "postgresql" % "42.7.7",
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.29.5.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+    "com.webauthn4j" % "webauthn4j-core" % "0.29.5.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

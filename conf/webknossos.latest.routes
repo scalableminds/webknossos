@@ -88,6 +88,7 @@ GET           /datasets                                                         
 POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
+POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
 GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String, sharingToken: Option[String])
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
@@ -102,6 +103,7 @@ POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask            
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 
 # Folders
@@ -120,14 +122,12 @@ PUT           /datastores/:name/datasources                                     
 PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
 GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
-POST          /datastores/:name/datasources/:organizationId/:directoryName                      controllers.WKRemoteDataStoreController.registerDataSource(name: String, key: String, organizationId: String, directoryName: String, token: String)
 PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
 POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetDirectoryName: String, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
-POST          /datastores/:name/deleteVirtualDataset                                            controllers.WKRemoteDataStoreController.deleteVirtualDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
 GET           /datastores/:name/findCredential                                                  controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: ObjectId)
@@ -285,8 +285,10 @@ POST          /jobs/:id/attachDatasetToInference                                
 GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: ObjectId)
 
 # AI Models
-POST          /aiModels/runNeuronTraining                                                       controllers.AiModelController.runNeuronTraining
-POST          /aiModels/inferences/runCustomNeuronInference                                     controllers.AiModelController.runCustomNeuronInference
+POST          /aiModels/runNeuronModelTraining                                                  controllers.AiModelController.runNeuronTraining
+POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining 
+POST          /aiModels/inferences/runCustomNeuronModelInference                                controllers.AiModelController.runCustomNeuronInference
+POST          /aiModels/inferences/runCustomInstanceModelInference                              controllers.AiModelController.runCustomInstanceModelInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels

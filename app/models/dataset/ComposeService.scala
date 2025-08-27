@@ -44,7 +44,6 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       dataset <- datasetService.createVirtualDataset(composeRequest.newDatasetName,
-                                                     composeRequest.organizationId,
                                                      dataStore,
                                                      dataSource,
                                                      Some(composeRequest.targetFolderId.toString),

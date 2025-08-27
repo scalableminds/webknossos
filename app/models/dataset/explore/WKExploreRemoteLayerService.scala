@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.explore.{
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{DataStore, DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User

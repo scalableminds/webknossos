@@ -1,23 +1,17 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, Full, TextUtils, TristateOptionJsonHelper}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJsonHelper}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerAttachments,
-  DataSourceId,
   DataSourceStatus,
   ElementClass,
-  LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType,
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
   UnusableDataSource,
   UsableDataSource
 }
@@ -33,9 +27,6 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -134,6 +125,7 @@ class DatasetController @Inject()(userService: UserService,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                  datasetManualUploadService: DatasetManualUploadService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
@@ -597,37 +589,8 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- datasetService.usableDataSourceFor(dataset)
-        existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
-          datasetId,
-          request.body.layerName,
-          Some(request.body.attachmentName),
-          request.body.attachmentType)
-        _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> "attachment.name.taken"
-        _ <- Fox.runIf(LayerAttachmentType.isSingletonAttachment(request.body.attachmentType)) {
-          for {
-            existingSingletonAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
-              datasetId,
-              request.body.layerName,
-              None,
-              request.body.attachmentType
-            )
-            _ <- Fox.fromBool(existingSingletonAttachmentsCount == 0) ?~> "attachment.singleton.alreadyFilled"
-          } yield ()
-        }
-        manualUploadPrefix <- manualUploadPrefixBox.toFox
-        newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, datasetId)
-        datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName
-        attachmentPath = datasetPath / request.body.layerName / LayerAttachmentType.defaultDirectoryNameFor(
-          request.body.attachmentType) / (TextUtils
-          .normalizeStrong(request.body.attachmentName)
-          .getOrElse("") + "-" + ObjectId.generate.toString)
-        _ <- datasetLayerAttachmentsDAO.insertPending(datasetId,
-                                                      request.body.layerName,
-                                                      request.body.attachmentName,
-                                                      request.body.attachmentType,
-                                                      request.body.attachmentDataformat,
-                                                      attachmentPath)
+        attachmentPath <- datasetManualUploadService.reserveManualAttachmentUpload(dataset, request.body)
+
       } yield Ok(Json.toJson(attachmentPath))
     }
 
@@ -647,140 +610,20 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
-        _ <- Fox.runIf(request.body.requireUniqueName)(
-          datasetService.checkNameAvailable(request.body.datasetName, request.identity._organization))
-        newDirectoryName = datasetService.generateDirectoryName(request.body.datasetName, newDatasetId)
-        _ <- Fox.fromBool(request.body.dataSource.allLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
-        dataSourceWithPaths <- addPathsToDatasource(request.body.dataSource,
-                                                    request.identity._organization,
-                                                    newDatasetId)
-        dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, request.body.layersToLink)
-        dataStore <- findReferencedDataStore(request.body.layersToLink)
-        dataset <- datasetService.createDataset(
-          dataStore,
-          newDatasetId,
-          request.body.datasetName,
-          dataSourceWithLayersToLink.copy(id = DataSourceId(newDirectoryName, request.identity._organization),
-                                          status = DataSourceStatus.notYetManuallyUploaded),
-          None,
-          isVirtual = true
-        )
-        organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- datasetDAO.updateFolder(newDatasetId, request.body.folderId.getOrElse(organization._rootFolder))(
-          GlobalAccessContext)
-        _ <- datasetService.addInitialTeams(dataset, request.body.initialTeamIds, request.identity)(
-          AuthorizedAccessContext(request.identity))
-        _ <- datasetService.addUploader(dataset, request.identity._id)(GlobalAccessContext)
-      } yield Ok(Json.obj("newDatasetId" -> dataset._id, "dataSource" -> Json.toJson(dataSourceWithPaths)))
+        dataSourceWithPaths <- datasetManualUploadService.reserveManualUpload(request.body,
+                                                                              request.identity,
+                                                                              newDatasetId)
+      } yield Ok(Json.obj("newDatasetId" -> newDatasetId, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
   def finishManualUpload(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetManuallyUploaded) ?~> s"Dataset is not in manually uploading state, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
       } yield Ok
     }
-
-  private def findReferencedDataStore(layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext): Fox[DataStore] = {
-    val datasetIds = layersToLink.map(_.datasetId).toSet
-    for {
-      datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
-      referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore)
-      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
-      dataStore <- referencedDatastoreNames.headOption match {
-        case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
-        case None                     => dataStoreDAO.findOneWithManualUploadsAllowed
-      }
-      _ <- Fox.fromBool(dataStore.allowsManualUpload) ?~> "dataStore.manualUploadNotAllowed"
-    } yield dataStore
-  }
-
-  private lazy val manualUploadPrefixBox: Box[UPath] = for {
-    fromConfig <- UPath.fromString(conf.WebKnossos.Datasets.manualUploadPrefix)
-    absolute <- fromConfig.toAbsolute
-  } yield absolute
-
-  private def addPathsToDatasource(dataSource: UnusableDataSource,
-                                   organizationId: String,
-                                   datasetId: ObjectId): Fox[UnusableDataSource] =
-    for {
-      manualUploadPrefix <- manualUploadPrefixBox.toFox
-      datasetPath = manualUploadPrefix / organizationId / datasetId.toString
-      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers.getOrElse(Seq.empty))(layer =>
-        addPathsToLayer(layer, datasetPath))
-    } yield dataSource.copy(dataLayers = Some(layersWithPaths))
-
-  private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: UPath): Fox[StaticLayer] =
-    for {
-      layerPath <- Fox.successful(dataSourcePath / dataLayer.name)
-      magsWithPaths = dataLayer.mags.map(mag => addPathToMag(mag, layerPath))
-      attachmentsWithPaths <- addPathsToAttachments(dataLayer.attachments, layerPath)
-      layerUpdated <- dataLayer match {
-        case l: StaticColorLayer => Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case l: StaticSegmentationLayer =>
-          Fox.successful(l.copy(mags = magsWithPaths, attachments = attachmentsWithPaths))
-        case _ => Fox.failure("Unknown layer type in reserveManualUpload")
-      }
-    } yield layerUpdated
-
-  private def addPathToMag(mag: MagLocator, layerPath: UPath): MagLocator =
-    mag.copy(path = Some(layerPath / mag.mag.toMagLiteral()))
-
-  private def addPathsToAttachments(attachmentsOpt: Option[DataLayerAttachments],
-                                    layerPath: UPath): Fox[Option[DataLayerAttachments]] =
-    attachmentsOpt match {
-      case None => Fox.successful(None)
-      case Some(attachments) =>
-        Fox.successful(
-          Some(
-            attachments.copy(
-              meshes = attachments.meshes.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.mesh, layerPath)),
-              agglomerates = attachments.agglomerates.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.agglomerate, layerPath)),
-              segmentIndex = attachments.segmentIndex.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.segmentIndex, layerPath)),
-              connectomes = attachments.connectomes.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.connectome, layerPath)),
-              cumsum = attachments.cumsum.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)),
-            )))
-    }
-
-  private def addPathToAttachment(attachment: LayerAttachment,
-                                  attachmentType: LayerAttachmentType,
-                                  layerPath: UPath): LayerAttachment = {
-    val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
-    val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
-    val path = layerPath / defaultDirName / (attachment.name + suffix)
-    attachment.copy(path = path)
-  }
-
-  private def addLayersToLink(dataSource: UnusableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[UnusableDataSource] =
-    for {
-      linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-    } yield dataSource.copy(dataLayers = Some(dataSource.dataLayers.getOrElse(List.empty) ++ linkedLayers))
-
-  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
-                                                                     mp: MessagesProvider): Fox[StaticLayer] =
-    for {
-      dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
-      usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer: StaticLayer <- usableDataSource.dataLayers
-        .find(_.name == layerToLink.layerName)
-        .toFox ?~> "dataset.layerToLink.layerNotFound"
-      newName = layerToLink.newLayerName.getOrElse(layer.name)
-      layerRenamed: StaticLayer <- layer match {
-        case l: StaticColorLayer        => Fox.successful(l.copy(name = newName))
-        case l: StaticSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case _                          => Fox.failure("Unknown layer type for link")
-      }
-    } yield layerRenamed
 
 }

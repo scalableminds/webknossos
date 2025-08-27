@@ -117,7 +117,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
 
-  // TODO make private again?
   def createDataset(
       dataStore: DataStore,
       datasetId: ObjectId,

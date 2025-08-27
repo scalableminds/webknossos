@@ -169,7 +169,7 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/reports/openTasks" element={<Navigate to="/reports/availableTasks" />} />
+    <Route path="/reports/openTasks" element={<Navigate to="/reports/availableTasks" replace />} />
     <Route
       path="/reports/availableTasks"
       element={
@@ -275,7 +275,7 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="data" />} />
+      <Route index element={<Navigate to="data" replace />} />
       <Route path="data" element={<DatasetSettingsDataTab />} />
       <Route path="sharing" element={<DatasetSettingsSharingTab />} />
       <Route path="metadata" element={<DatasetSettingsMetadataTab />} />
@@ -354,7 +354,10 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/organizations/:organizationId" element={<Navigate to="/organization" />} />
+    <Route
+      path="/organizations/:organizationId"
+      element={<Navigate to="/organization" replace />}
+    />
     <Route
       path="/organization"
       element={
@@ -363,14 +366,16 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="overview" />} />
+      <Route index element={<Navigate to="overview" replace />} />
       <Route path="overview" element={<OrganizationOverviewView />} />
       <Route path="notifications" element={<OrganizationNotificationsView />} />
       <Route path="delete" element={<OrganizationDangerZoneView />} />
     </Route>
     <Route
       path="/help/keyboardshortcuts"
-      element={<Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />}
+      element={
+        <Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" replace />
+      }
     />
     {/* Backwards compatibility for old auth token URLs */}
     <Route path="/auth/token" element={<Navigate to="/account/token" replace />} />
@@ -427,7 +432,7 @@ const routes = createRoutesFromElements(
     />
     <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
     <Route path="/publications/:id" element={<PublicationDetailView />} />
-    <Route path="/publication/:id" element={<Navigate to="/publications/:id" />} />
+    <Route path="/publication/:id" element={<Navigate to="/publications/:id" replace />} />
     <Route
       path="/workflows"
       element={
@@ -464,7 +469,7 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="profile" />} />
+      <Route index element={<Navigate to="profile" replace />} />
       <Route path="profile" element={<AccountProfileView />} />
       <Route path="security" element={<AccountSecurityView />} />
       <Route path="token" element={<AccountAuthTokenView />} />

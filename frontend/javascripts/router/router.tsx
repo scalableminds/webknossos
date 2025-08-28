@@ -374,9 +374,7 @@ const routes = createRoutesFromElements(
     </Route>
     <Route
       path="/help/keyboardshortcuts"
-      element={
-        <Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" replace />
-      }
+      loader={() => redirect("https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html")}
     />
     {/* Backwards compatibility for old auth token URLs */}
     <Route path="/auth/token" element={<Navigate to="/account/token" replace />} />

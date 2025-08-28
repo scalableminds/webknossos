@@ -94,7 +94,6 @@ describe("Proofreading (Multi User)", () => {
       );
 
       expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
-
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -109,7 +108,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -193,7 +191,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -216,6 +213,7 @@ describe("Proofreading (Multi User)", () => {
   }, 8000);
 
   it("should split two agglomerates after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     backendMock.planVersionInjection(7, [
@@ -262,9 +260,9 @@ describe("Proofreading (Multi User)", () => {
           [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
         ),
       );
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
       yield take("DONE_SAVING");
+      yield call(() => api.tracing.save());
+
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
@@ -362,7 +360,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -476,7 +473,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -634,7 +630,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

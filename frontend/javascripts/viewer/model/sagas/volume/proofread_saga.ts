@@ -1305,20 +1305,20 @@ function* splitAgglomerateInMapping(
   return splitMapping;
 }
 
-function mergeAgglomeratesInMapping(
+function* mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
   sourceUnmappedId: number,
   targetUnmappedId: number,
-): Mapping {
+): Saga<Mapping> {
   const adaptToType =
     activeMapping.mapping && isNumberMap(activeMapping.mapping)
       ? (el: number) => el
       : (el: number) => BigInt(el);
 
-  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
+  let sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
     adaptToType(sourceUnmappedId),
   );
-  const targetAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
+  let targetAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
     adaptToType(targetUnmappedId),
   );
   console.log(
@@ -1333,6 +1333,32 @@ function mergeAgglomeratesInMapping(
     ")",
   );
   console.log("oldMapping", activeMapping.mapping);
+  const agglomeratesToRequest = [];
+  if (targetAgglomerateId == null) {
+    agglomeratesToRequest.push(targetUnmappedId);
+  }
+
+  if (sourceAgglomerateId == null) {
+    agglomeratesToRequest.push(sourceAgglomerateId);
+  }
+  // TODOM: think about cases where reloading isnt necessary.
+  if (agglomeratesToRequest.length > 0 && activeMapping.mappingName) {
+    const annotation = yield* select((state) => state.annotation);
+    const missingAgglomerateIdMap = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
+      annotation.tracingStore.url,
+      activeMapping.mappingName,
+      [sourceUnmappedId],
+      annotation.annotationId,
+      annotation.version,
+    );
+    sourceAgglomerateId =
+      sourceAgglomerateId ||
+      (missingAgglomerateIdMap as NumberLikeMap).get(adaptToType(sourceUnmappedId));
+    targetAgglomerateId =
+      targetAgglomerateId ||
+      (missingAgglomerateIdMap as NumberLikeMap).get(adaptToType(targetUnmappedId));
+  }
 
   if (
     sourceAgglomerateId === targetAgglomerateId ||

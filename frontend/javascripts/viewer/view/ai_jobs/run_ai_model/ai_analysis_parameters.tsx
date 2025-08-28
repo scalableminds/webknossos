@@ -1,4 +1,5 @@
 import { SettingOutlined } from "@ant-design/icons";
+import { getDatasetNameRules } from "admin/dataset/dataset_components";
 import { APIAiModelCategory } from "admin/rest_api";
 import {
   Card,
@@ -14,14 +15,21 @@ import {
 } from "antd";
 import type { FormProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
+import type { UserBoundingBox } from "viewer/store";
 import {
   CollapsibleSplitMergerEvaluationSettings,
   type SplitMergerEvaluationSettings,
 } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import {
+  getBestFittingMagComparedToTrainingDS,
+  isDatasetOrBoundingBoxTooSmall,
+} from "viewer/view/action-bar/ai_job_modals/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
+import { type APIDataLayer, APIJobType } from "types/api_types";
 
 export const AiAnalysisParameters: React.FC = () => {
   const {
@@ -38,16 +46,20 @@ export const AiAnalysisParameters: React.FC = () => {
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
     setSplitMergerEvaluationSettings,
+    selectedJobType,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
   const colorLayers = getColorLayers(dataset);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues, allValues) => {
     if (Object.prototype.hasOwnProperty.call(changedValues, "newDatasetName")) {
       setNewDatasetName(changedValues.newDatasetName);
     }
     if (Object.prototype.hasOwnProperty.call(changedValues, "selectedLayer")) {
-      setSelectedLayer(changedValues.selectedLayer);
+      setSelectedLayer(
+        colorLayers.find((l) => l.name === changedValues.selectedLayer.name) as APIDataLayer,
+      );
     }
     if (Object.prototype.hasOwnProperty.call(changedValues, "selectedBoundingBox")) {
       setSelectedBoundingBox(changedValues.selectedBoundingBox);
@@ -67,7 +79,7 @@ export const AiAnalysisParameters: React.FC = () => {
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
-    { name: ["selectedLayer"], value: selectedLayer },
+    { name: ["selectedLayer"], value: selectedLayer?.name },
     { name: ["selectedBoundingBox"], value: selectedBoundingBox },
     { name: ["seedGeneratorDistanceThreshold"], value: seedGeneratorDistanceThreshold },
     {
@@ -103,34 +115,71 @@ export const AiAnalysisParameters: React.FC = () => {
             <Form.Item
               name="newDatasetName"
               label="New Dataset Name"
-              rules={[{ required: true, message: "Please provide a name for the new dataset" }]}
+              rules={getDatasetNameRules(activeUser)}
             >
               <Input />
-            </Form.Item>
-            <Form.Item
-              name="selectedLayer"
-              label="Image Data Layer"
-              rules={[{ required: true, message: "Please select an image data layer" }]}
-            >
-              <Select
-                style={{ width: "100%" }}
-                options={colorLayers.map((l) => ({ value: l, label: l.name }))}
-              />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
-              name="selectedBoundingBox"
-              label="Bounding Box"
-              rules={[{ required: true, message: "Please select a bounding box" }]}
+              name="selectedLayer"
+              label="Image Data Layer"
+              rules={[
+                { required: true, message: "Please select an image data layer" },
+                {
+                  validator: (_, value: APIDataLayer) => {
+                    if (value && value.elementClass === "uint24") {
+                      return Promise.reject(
+                        new Error(
+                          "The selected layer of type uint24 is not supported. Please select a different one.",
+                        ),
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
-              <BoundingBoxSelector />
-            </Form.Item>
-            <Form.Item label="Comments">
-              <Input.TextArea rows={3} />
+              <Select
+                style={{ width: "100%" }}
+                options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
+              />
             </Form.Item>
           </Col>
         </Row>
+
+        <Form.Item
+          name="selectedBoundingBox"
+          label="Bounding Box"
+          rules={[
+            { required: true, message: "Please select a bounding box" },
+            {
+              validator: (_, value: UserBoundingBox) => {
+                if (value && selectedLayer && selectedJobType) {
+                  const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
+                  const mag = getBestFittingMagComparedToTrainingDS(
+                    selectedLayer,
+                    dataset.dataSource.scale,
+                    selectedJobType || APIJobType.INFER_NEURONS,
+                  );
+                  if (
+                    isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)
+                  ) {
+                    return Promise.reject(
+                      new Error("The bounding box is too small for the selected model."),
+                    );
+                  }
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
+          <BoundingBoxSelector />
+        </Form.Item>
+        <Form.Item label="Comments">
+          <Input.TextArea rows={2} />
+        </Form.Item>
         <ConfigProvider
           theme={{
             components: {
@@ -140,20 +189,24 @@ export const AiAnalysisParameters: React.FC = () => {
         >
           <Collapse style={{ marginBottom: "24px" }} ghost bordered={false}>
             <Collapse.Panel header="Advanced Settings" key="1">
-              <Form.Item
-                name="seedGeneratorDistanceThreshold"
-                label="Seed generator distance threshold (nm)"
-                tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
-                rules={[{ required: true, message: "Please enter positive number" }]}
-              >
-                <InputNumber
-                  min={0.1}
-                  suffix="nm"
-                  style={{ width: "100%" }}
-                  defaultValue={1000}
-                  disabled={!isInstanceModel}
-                />
-              </Form.Item>
+              <Row gutter={24}>
+                <Col span={12}>
+                  <Form.Item
+                    name="seedGeneratorDistanceThreshold"
+                    label="Seed generator distance threshold (nm)"
+                    tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
+                    rules={[{ required: true, message: "Please enter positive number" }]}
+                  >
+                    <InputNumber
+                      min={0.1}
+                      suffix="nm"
+                      style={{ width: "100%" }}
+                      defaultValue={1000}
+                      disabled={!isInstanceModel}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
 
               {isNeuronModel && (
                 <CollapsibleSplitMergerEvaluationSettings

@@ -22,12 +22,9 @@ import {
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
-import {
-  getBestFittingMagComparedToTrainingDS,
-  isDatasetOrBoundingBoxTooSmall,
-} from "viewer/view/action-bar/ai_job_modals/utils";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;
@@ -113,19 +110,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       return;
     }
 
+    await Model.ensureSavedState();
+
     const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
-
-    const mag = getBestFittingMagComparedToTrainingDS(
-      selectedLayer,
-      dataset.dataSource.scale,
-      APIJobType.INFER_NUCLEI,
-    );
-
-    if (isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)) {
-      new Error("The bounding box is too small for the selected model.");
-      return;
-    }
 
     if (userBoundingBoxCount > 1) {
       Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);

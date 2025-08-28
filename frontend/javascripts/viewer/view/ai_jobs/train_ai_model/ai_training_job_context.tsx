@@ -113,7 +113,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     }
   }, [
     modelName,
-    selectedTask,
+    selectedJobType,
     imageDataLayer,
     groundTruthLayer,
     magnification,

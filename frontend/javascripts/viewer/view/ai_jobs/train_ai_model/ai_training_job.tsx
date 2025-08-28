@@ -3,6 +3,7 @@ import { TrainingCreditInformation } from "../credit_information";
 import { AiTrainingJobContextProvider } from "./ai_training_job_context";
 import { AiTrainingModelSelector } from "./ai_training_model_selector";
 import { AiTrainingParameters } from "./ai_training_parameters";
+import { AiTrainingDataSection } from "./ai_training_data_selector";
 
 export const AiModelTrainingJob = () => {
   return (
@@ -10,6 +11,7 @@ export const AiModelTrainingJob = () => {
       <Flex gap={24}>
         <Flex flex="2" vertical gap={24}>
           <AiTrainingModelSelector />
+          <AiTrainingDataSection />
           <AiTrainingParameters />
         </Flex>
         <Flex flex="1" vertical>

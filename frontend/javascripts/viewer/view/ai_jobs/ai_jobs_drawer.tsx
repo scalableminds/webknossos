@@ -8,7 +8,7 @@ const { TabPane } = Tabs;
 export const AiJobsDrawer = () => {
   return (
     <Drawer title="AI Jobs" placement="right" width={1200} open={true}>
-      <Tabs defaultActiveKey="1">
+      <Tabs defaultActiveKey="2">
         <TabPane tab="Image Segmentation" key="1">
           <AiImageSegmentationJob />
         </TabPane>

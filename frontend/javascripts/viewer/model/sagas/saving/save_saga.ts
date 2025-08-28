@@ -27,6 +27,7 @@ import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
 import Deferred from "libs/async/deferred";
 import type { ServerUpdateAction } from "../volume/update_actions";
+import { updateMappingWithMerge } from "../volume/proofread_saga";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -368,6 +369,13 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
+          yield* call(
+            updateMappingWithMerge,
+            action.value.actionTracingId,
+            activeMapping,
+            action.value.segmentId1 || 1,
+            action.value.segmentId2 || 2,
+          );
           // todop: segmentId1 and segmentId2 might not exist in the local mapping. this does not
           // mean that the action can be ignored, though, because the agglomerates themselves might
           // exist. we need to map the ids and find out whether these exist in the mapping.
@@ -378,7 +386,7 @@ export function* tryToIncorporateActions(
           //   action.value.segmentId1,
           //   action.value.segmentId2,
           // );
-          const layerName = action.value.actionTracingId;
+          /*const layerName = action.value.actionTracingId;
           const mappingInfo = yield* select((state) =>
             getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
           );
@@ -395,7 +403,7 @@ export function* tryToIncorporateActions(
             console.log("clearing and refreshing mapping because of split/merge action");
             yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
-          };
+          };*/
           break;
         }
         case "splitAgglomerate": {

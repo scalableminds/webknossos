@@ -36,6 +36,7 @@ describe("Proofreading (Multi User)", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
+  // TODOM: Does not terminate
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);

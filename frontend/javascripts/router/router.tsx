@@ -32,6 +32,7 @@ import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
+  redirect,
 } from "react-router-dom";
 
 import AccountSettingsView from "admin/account/account_settings_view";
@@ -432,7 +433,10 @@ const routes = createRoutesFromElements(
     />
     <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
     <Route path="/publications/:id" element={<PublicationDetailView />} />
-    <Route path="/publication/:id" element={<Navigate to="/publications/:id" replace />} />
+    <Route
+      path="/publication/:id"
+      loader={({ params }) => redirect(`/publications/${params.id}`)}
+    />
     <Route
       path="/workflows"
       element={

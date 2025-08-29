@@ -225,6 +225,13 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     clevel
   }
 
+  val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
+    case None                                           => BloscCompressor.defaultTypesize
+    case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
+    case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
+    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
+  }
+
   val shuffle: Blosc.Shuffle = properties.get(BloscCompressor.keyShuffle) match {
     case None                                          => BloscCompressor.defaultShuffle
     case Some(StringCompressionSetting(shuffleString)) => validateShuffleStr(shuffleString)
@@ -266,13 +273,6 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case Some(StringCompressionSetting(blockSizeString)) => blockSizeString.toInt
     case Some(IntCompressionSetting(blockSizeInt))       => blockSizeInt
     case _                                               => throw new IllegalArgumentException("Blosc blocksize must be int or string")
-  }
-
-  val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
-    case None                                           => BloscCompressor.defaultTypesize
-    case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
-    case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
-    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
   }
 
   override def getId = "blosc"

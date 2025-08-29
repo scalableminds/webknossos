@@ -78,8 +78,8 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
             const mappingName = config[layerName]?.mapping?.name;
             const doesMappingExist =
               mappingType === "JSON"
-                ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
-                : mappingsForLayer.some((mapping) => mapping === mappingName);
+                ? mappingsForLayer.some((mapping) => mapping === mappingName)
+                : agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName);
             return doesMappingExist
               ? null
               : `The mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;

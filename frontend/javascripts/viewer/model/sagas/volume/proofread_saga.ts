@@ -1282,6 +1282,9 @@ export function* splitAgglomerateInMapping(
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
+  if (splitSegmentIds.length === 0) {
+    return activeMapping.mapping;
+  }
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
     tracingStoreUrl,

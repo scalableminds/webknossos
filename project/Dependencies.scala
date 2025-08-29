@@ -58,8 +58,8 @@ object Dependencies {
     "software.amazon.awssdk" % "s3" % "2.32.24",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
     "com.google.cloud" % "google-cloud-storage" % "2.55.0",
-    // Blosc compression. import org.blosc
-    "org.lasersonlab" % "jblosc" % "1.0.1",
+    // Blosc compression. import dev.zarr.bloscjava
+    "com.scalableminds" % "blosc-java" % "0.1-1.21.4",
     // Zstd compression. import org.apache.commons.compress
     "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported

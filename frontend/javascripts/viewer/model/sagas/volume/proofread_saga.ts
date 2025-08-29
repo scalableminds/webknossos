@@ -1271,10 +1271,11 @@ function getSegmentIdsThatMapToAgglomerate(
     .map(([segmentId, _agglomerateId]) => segmentId);
 }
 
-function* splitAgglomerateInMapping(
+export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   volumeTracingId: string,
+  version?: number | undefined,
 ) {
   const splitSegmentIds = getSegmentIdsThatMapToAgglomerate(activeMapping, sourceAgglomerateId);
   const annotationId = yield* select((state) => state.annotation.annotationId);
@@ -1287,6 +1288,7 @@ function* splitAgglomerateInMapping(
     volumeTracingId,
     splitSegmentIds,
     annotationId,
+    version,
   );
 
   // Create a new mapping which is equal to the old one with the difference that

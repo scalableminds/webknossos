@@ -1,7 +1,7 @@
 import { getUpdateActionLog } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { ColoredLogger, sleep } from "libs/utils";
+import { ColoredLogger, isNumberMap, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -20,14 +20,21 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
-import type { SaveQueueEntry, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type {
+  NumberLike,
+  NumberLikeMap,
+  SaveQueueEntry,
+  SkeletonTracing,
+  VolumeTracing,
+} from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
 import Deferred from "libs/async/deferred";
 import type { ServerUpdateAction } from "../volume/update_actions";
-import { updateMappingWithMerge } from "../volume/proofread_saga";
+import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import { setMappingAction } from "viewer/model/actions/settings_actions";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -270,6 +277,8 @@ export function* tryToIncorporateActions(
     }
   }
   for (const actionBatch of newerActions) {
+    const agglomerateIdsToRefresh = new Set<NumberLike>();
+    let volumeTracingIdOfMapping = null;
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
@@ -414,6 +423,31 @@ export function* tryToIncorporateActions(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
+          const { segmentId1, segmentId2 } = action.value;
+          if (
+            !activeMapping ||
+            !activeMapping.mapping ||
+            segmentId1 == null ||
+            segmentId2 == null
+          ) {
+            continue;
+          }
+          const { mapping } = activeMapping;
+          const adaptToType =
+            activeMapping.mapping && isNumberMap(mapping)
+              ? (el: number) => el
+              : (el: number) => BigInt(el);
+          let firstAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId1));
+          let secondAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId2));
+          volumeTracingIdOfMapping = action.value.actionTracingId;
+          if (firstAgglomerateId) {
+            agglomerateIdsToRefresh.add(firstAgglomerateId);
+          }
+          if (secondAgglomerateId) {
+            agglomerateIdsToRefresh.add(secondAgglomerateId);
+          }
+
+          // const mappingWithSplitted = yield* call(splitAgglomerateInMapping);
           // yield* call(
           //   removeAgglomerateFromActiveMapping,
           //   action.value.actionTracingId,
@@ -438,7 +472,7 @@ export function* tryToIncorporateActions(
           //   action.value.agglomerateId,
           // );
 
-          const layerName = action.value.actionTracingId;
+          /*const layerName = action.value.actionTracingId;
 
           const mappingInfo = yield* select((state) =>
             getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
@@ -458,7 +492,7 @@ export function* tryToIncorporateActions(
             console.log("clearing and refreshing mapping because of split/merge action");
             yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
             yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
-          };
+          };*/
 
           break;
         }
@@ -500,6 +534,37 @@ export function* tryToIncorporateActions(
     }
     ColoredLogger.logGreen("Setting local version to", actionBatch.version);
     yield* put(setVersionNumberAction(actionBatch.version));
+    // TODOM refresh split
+    if (agglomerateIdsToRefresh.size > 0 && volumeTracingIdOfMapping) {
+      const agglomerateIdToRefresh = agglomerateIdsToRefresh.values().next().value;
+      if (!agglomerateIdToRefresh) {
+        continue;
+      }
+      const activeMapping = yield* select(
+        (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingIdOfMapping],
+      );
+      const splitMapping = yield* splitAgglomerateInMapping(
+        activeMapping,
+        //  TODO: Add 64 bit support
+        Number(agglomerateIdToRefresh),
+        volumeTracingIdOfMapping,
+        actionBatch.version,
+      );
+
+      console.log(
+        "dispatch setMappingAction after loading updated mapping due to incorporating a split action",
+      );
+      yield* put(
+        setMappingAction(
+          volumeTracingIdOfMapping,
+          activeMapping.mappingName,
+          activeMapping.mappingType,
+          {
+            mapping: splitMapping,
+          },
+        ),
+      );
+    }
   }
   yield* call(finalize);
   return { success: true };

@@ -1,25 +1,48 @@
 import React, { useState, useEffect } from "react";
 import { Table, Select, Space, Button, Alert, Tag, Card, Form, Row, Col, Input } from "antd";
 import { FolderOutlined, SettingOutlined } from "@ant-design/icons";
+import { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
+import { useWatch } from "antd/es/form/Form";
+import {
+  getColorLayers,
+  getMagInfo,
+  getSegmentationLayers,
+} from "viewer/model/accessors/dataset_accessor";
+import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
+import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 const { Option } = Select;
 
-const getMagsForSegmentationLayer = (annotation: string, layerName: string) => {
-      const segmentationLayer = getSegmentationLayerByHumanReadableName(
-        dataset,
-        annotation,
-        layerName,
-      );
-      return getMagInfo(segmentationLayer.resolutions);
-    }
-  );
-  const userBoundingBoxes = getSomeTracing(annotation).userBoundingBoxes;
+const AiTrainingDataSelector = (props: AnnotationInfoForAITrainingJob) => {
+  const { annotation, dataset, volumeTracings, volumeTracingMags } = props;
+  // Gather layer names from dataset. Omit the layers that are also present
+  // in annotationLayers.
+  const segmentationLayerNames = getSegmentationLayers(dataset)
+    .map((layer) => layer.name)
+    .filter(
+      (tracingId) =>
+        !annotation.annotationLayers.find(
+          (annotationLayer) => annotationLayer.tracingId === tracingId,
+        ),
+    );
 
-const AiTrainingDataSelector = () => {
-  const colorLayers = [];
-  const segmentationLayers = [];
-  const availableMagnifications = [];
-  const imageDataLayer = false;
+  // Gather layer names from the annotation
+  const annotationLayerNames = annotation.annotationLayers
+    .filter((layer) => layer.typ === "Volume")
+    .map((layer) => layer.name);
+
+  const segmentationAndColorLayers: Array<string> = _.uniq([
+    ...segmentationLayerNames,
+    ...annotationLayerNames,
+  ]);
+  const fixedSelectedSegmentationLayer =
+    segmentationAndColorLayers.length === 1 ? segmentationAndColorLayers[0] : null;
+
+  // Remove uint24 color layers because they cannot be trained on currently
+  const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
+  const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
+  const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
+  const imageDataLayer = Form.useWatch("imageDataLayer");
 
   return (
     <Card style={{ marginBottom: "24px" }}>
@@ -61,6 +84,8 @@ const AiTrainingDataSelector = () => {
 };
 
 export const AiTrainingDataSection = () => {
+  const { annotationInfos } = useAiTrainingJobContext();
+
   return (
     <Card
       title={

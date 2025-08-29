@@ -103,7 +103,7 @@ export function* ensureMaybeActiveMappingIsLocked(
     activeMappingByLayer[volumeTracing.tracingId].mappingStatus === MappingStatusEnum.ENABLED;
   const isHDF5Mapping =
     volumeTracing.tracingId in activeMappingByLayer &&
-    activeMappingByLayer[volumeTracing.tracingId].mappingType === "HDF5";
+    activeMappingByLayer[volumeTracing.tracingId].mappingType !== "JSON";
   if (isSomeMappingActive && isHDF5Mapping) {
     try {
       return yield* call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer);

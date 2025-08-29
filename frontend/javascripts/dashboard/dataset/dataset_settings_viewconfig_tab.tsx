@@ -77,7 +77,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
             const mappingType = config[layerName]?.mapping?.type;
             const mappingName = config[layerName]?.mapping?.name;
             const doesMappingExist =
-              mappingType === "HDF5"
+              mappingType === "JSON"
                 ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
                 : mappingsForLayer.some((mapping) => mapping === mappingName);
             return doesMappingExist

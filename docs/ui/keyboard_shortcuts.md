@@ -138,10 +138,10 @@ General Shortcuts:
 
 If Multi Cut Tool is activated, the following shortcuts are available:
 
-| Key Binding                     | Operation                                  |
-|---------------------------------|--------------------------------------------|
-| ++ctrl++ / ++cmd++ + Left Click | Add Segment to Partition One for Multi Cut |
-| ++shift++ + Left Click          | Add Segment to Partition Two for Multi Cut |
+| Key Binding                                 | Operation                                  |
+|---------------------------------------------|--------------------------------------------|
+| ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut |
+| ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut |
 
 #### 3D Viewport Interactions:
 

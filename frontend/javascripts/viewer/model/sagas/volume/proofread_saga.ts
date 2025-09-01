@@ -622,13 +622,6 @@ function* performMinCut(
 }
 
 function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction): Saga<void> {
-  // TODOM: Make partition activation resilient against selecting segments from different agglomerates.
-  /*if (sourceAgglomerateId !== targetAgglomerateId) {
-    Toast.error(
-      "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
-    );
-    return true;
-  }*/
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
   if (!isMultiSplitActive) {
     return;
@@ -987,6 +980,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
+    if (sourceAgglomerateId !== targetAgglomerateId) {
+      Toast.error(
+        "The selected positions are not part of the same agglomerate and cannot be split.",
+      );
+      return;
+    }
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
@@ -1501,7 +1500,7 @@ function* splitAgglomerateInMapping(
   );
   // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.
   for (const unmappedId of additionalSegmentsToRequest) {
-    // @ts-ignore get() is expected to accept the type that unmappedId has,
+    // @ts-ignore get() is expected to accept the type that unmappedId has.
     const mappedId = mappingAfterSplit.get(unmappedId);
     if (mappedId) {
       splitMapping.set(unmappedId, mappedId);

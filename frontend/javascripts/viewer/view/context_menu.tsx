@@ -1828,7 +1828,7 @@ function ContextMenuInner() {
     </FastTooltip>
   );
 
-  const areSegmentStatisticsAvailable = false && wasSegmentOrMeshClicked && isSegmentIndexAvailable;
+  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(

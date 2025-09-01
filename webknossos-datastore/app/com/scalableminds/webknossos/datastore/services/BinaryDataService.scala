@@ -67,9 +67,7 @@ class BinaryDataService(val dataBaseDir: Path,
         firstRequest <- requests.headOption.toFox
         // Requests outside of the layer range can be skipped. They will be answered with Empty below.
         indicesWhereOutsideRange: Set[Int] = requests.zipWithIndex.collect {
-          case (request, idx)
-              if !dataLayer.doesContainBucket(request.cuboid.topLeft.toBucket) || !request.dataLayer.containsMag(
-                request.cuboid.mag) =>
+          case (request, idx) if !request.dataLayer.containsMag(request.cuboid.mag) =>
             idx
         }.toSet
         requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
@@ -187,7 +185,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
-    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
+    if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir,
                             request.dataSourceIdOrVolumeDummy,

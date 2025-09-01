@@ -177,7 +177,9 @@ class Zarr3Array(vaultPath: VaultPath,
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
       chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
       (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
-      _ <- Fox.fromBool(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
+      _ <- if (chunkOffset == -1 || chunkLength == -1) {
+        Fox.empty // -1 signifies empty/missing chunk
+      } else Fox.successful(())
       range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
     } yield (shardPath, range)
 }

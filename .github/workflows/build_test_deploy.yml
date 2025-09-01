@@ -91,7 +91,7 @@ jobs:
         run: yarn install --immutable
 
       - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
 
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -151,7 +151,7 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev
 
       - name: "Custom environment variables (Pull Request)"
         if: ${{ github.event_name == 'pull_request' }}

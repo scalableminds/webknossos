@@ -1,5 +1,4 @@
 import handleStatus from "libs/handle_http_status";
-import Toast from "libs/toast";
 import _ from "lodash";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
@@ -7,6 +6,7 @@ import { createWorker } from "viewer/workers/comlink_wrapper";
 import CompressWorker from "viewer/workers/compress.worker";
 import FetchBufferWorker from "viewer/workers/fetch_buffer.worker";
 import FetchBufferWithHeadersWorker from "viewer/workers/fetch_buffer_with_headers.worker";
+import { handleError } from "./handle_request_error_helper";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -31,10 +31,6 @@ export type RequestOptionsBase<T> = {
 export type RequestOptions = RequestOptionsBase<Record<string, string>>;
 export type RequestOptionsWithData<T> = RequestOptions & {
   data: T;
-};
-
-export type ServerErrorMessage = {
-  error: string;
 };
 
 class Request {
@@ -256,7 +252,7 @@ class Request {
         ? fetchBufferWithHeaders(url, options)
         : fetchBufferViaWorker(url, options);
     } else {
-      fetchPromise = fetch(url, options).then(handleStatus);
+      fetchPromise = fetch(url, options).then((response) => handleStatus(response));
 
       if (responseDataHandler != null) {
         fetchPromise = fetchPromise.then(responseDataHandler);
@@ -264,7 +260,7 @@ class Request {
     }
 
     fetchPromise = fetchPromise.catch((error) =>
-      this.handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
+      handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
     );
 
     if (options.timeout != null) {
@@ -284,75 +280,6 @@ class Request {
     new Promise((resolve) => {
       setTimeout(() => resolve("timeout"), timeout);
     });
-
-  handleError = async (
-    requestedUrl: string,
-    showErrorToast: boolean,
-    doInvestigate: boolean,
-    error: Response | Error,
-  ): Promise<void> => {
-    if (doInvestigate) {
-      // Avoid circular imports via dynamic import
-      const { pingMentionedDataStores } = await import("admin/datastore_health_check");
-      // Check whether this request failed due to a problematic datastore
-      pingMentionedDataStores(requestedUrl);
-      if (error instanceof Response) {
-        return error.text().then(
-          (text) => {
-            try {
-              const json = JSON.parse(text);
-
-              // Propagate HTTP status code for further processing down the road
-              if (error.status != null) {
-                json.status = error.status;
-              }
-
-              const messages = json.messages.map((message: ServerErrorMessage[]) => ({
-                ...message,
-                key: json.status.toString(),
-              }));
-              if (showErrorToast) {
-                Toast.messages(messages); // Note: Toast.error internally logs to console
-              } else {
-                console.error(messages);
-              }
-              // Check whether the error chain mentions an url which belongs
-              // to a datastore. Then, ping the datastore
-              pingMentionedDataStores(text);
-
-              /* eslint-disable-next-line prefer-promise-reject-errors */
-              return Promise.reject({ ...json, url: requestedUrl });
-            } catch (_jsonError) {
-              if (showErrorToast) {
-                Toast.error(text); // Note: Toast.error internally logs to console
-              } else {
-                console.error(`Request failed for ${requestedUrl}:`, text);
-              }
-
-              /* eslint-disable-next-line prefer-promise-reject-errors */
-              return Promise.reject({
-                errors: [text],
-                status: error.status != null ? error.status : -1,
-                url: requestedUrl,
-              });
-            }
-          },
-          (textError) => {
-            Toast.error(textError.toString());
-            return Promise.reject(textError);
-          },
-        );
-      }
-    }
-
-    // If doInvestigate is false or the error is not instanceof Response,
-    // still add additional information to the error
-    if (!(error instanceof Response)) {
-      error.message += ` - Url: ${requestedUrl}`;
-    }
-
-    return Promise.reject(error);
-  };
 
   handleEmptyJsonResponse = (response: Response): Promise<ArbitraryObject> =>
     response.text().then((responseText) => {

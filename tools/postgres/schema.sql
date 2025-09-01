@@ -412,6 +412,7 @@ CREATE TABLE webknossos.users(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId TEXT CONSTRAINT lastTaskTypeId_objectId CHECK (lastTaskTypeId ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
+  loggedOutEverywhereTime TIMESTAMPTZ,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')

@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.09.0](https://github.com/scalableminds/webknossos/releases/tag/25.09.0) - 2025-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.1...25.09.0)
+
+### Postgres Evolutions
+- [138-add-webauthn-credentials.sql](conf/evolutions/138-add-webauthn-credentials.sql)
+- [136-extra-column-for-email-changed.sql](conf/evolutions/136-extra-column-for-email-changed.sql)
+- [137-virtual-datasets.sql](conf/evolutions/137-virtual-datasets.sql)
+
 ## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
 [Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
 

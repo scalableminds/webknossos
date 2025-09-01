@@ -40,6 +40,7 @@ case class User(
     isUnlisted: Boolean,
     created: Instant = Instant.now,
     lastTaskTypeId: Option[ObjectId] = None,
+    loggedOutEverywhereTime: Option[Instant] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
     with Identity
@@ -118,6 +119,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isunlisted,
         Instant.fromSql(r.created),
         r.lasttasktypeid.map(ObjectId(_)),
+        r.loggedouteverywheretime.map(Instant.fromSql),
         r.isdeleted
       )
     }
@@ -162,6 +164,9 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
+
+  def findIdsByMultiUserId(multiUserId: ObjectId): Fox[Seq[ObjectId]] =
+    run(q"SELECT _id FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[ObjectId])
 
   def buildSelectionPredicates(isEditableOpt: Option[Boolean],
                                isTeamManagerOrAdminOpt: Option[Boolean],
@@ -465,12 +470,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption.toFox
     } yield result
 
-  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
-    for {
-      resultList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[Int])
-      result <- resultList.headOption.toFox
-    } yield result
-
   def insertOne(u: User): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.users(
@@ -478,6 +477,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                lastActivity, userConfiguration,
                                isDeactivated, isAdmin, isOrganizationOwner,
                                isDatasetManager, isUnlisted,
+                               loggedOutEverywhereTime,
                                created, isDeleted
                              )
                              VALUES(
@@ -485,6 +485,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                ${u.lastActivity}, ${u.userConfiguration},
                                ${u.isDeactivated}, ${u.isAdmin}, ${u.isOrganizationOwner},
                                ${u.isDatasetManager}, ${u.isUnlisted},
+                               ${u.loggedOutEverywhereTime},
                                ${u.created}, ${u.isDeleted}
                              )""".asUpdate)
     } yield ()
@@ -586,6 +587,11 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def logOutEverywhereByMultiUserId(multiUserId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""UPDATE webknossos.users SET loggedOutEverywhereTime = ${Instant.now} WHERE _multiUser = $multiUserId""".asUpdate)
+    } yield ()
 }
 
 class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)

@@ -1,10 +1,10 @@
 import { requestVerificationMail, verifyEmail } from "admin/rest_api";
 import { Spin } from "antd";
 import { useFetch } from "libs/react_helpers";
-import type { ServerErrorMessage } from "libs/request";
 import Toast from "libs/toast";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import type { ServerErrorMessage } from "types/api_types";
 import { Store } from "viewer/singletons";
 
 export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";

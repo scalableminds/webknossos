@@ -1304,3 +1304,7 @@ export type RenderAnimationOptions = {
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
 };
+
+export type ServerErrorMessage = {
+  error: string;
+};

@@ -36,6 +36,7 @@ import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_act
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
@@ -48,9 +49,6 @@ const INITIAL_BACKOFF_TIME = 1000;
 const BACKOFF_TIME_MULTIPLIER = 1.5;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
-
-// TODOM
-const DISABLE_EAGER_MUTEX_ACQUISITION = true;
 
 type MutexLogicState = {
   isInitialRequest: boolean;
@@ -90,7 +88,7 @@ function* determineInitialMutexLogicState(): Saga<MutexLogicState> {
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   if (
-    DISABLE_EAGER_MUTEX_ACQUISITION &&
+    WkDevFlags.liveCollab &&
     activeVolumeTracing?.hasEditableMapping &&
     activeVolumeTracing?.mappingIsLocked &&
     TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT.includes(activeTool.id)
@@ -221,7 +219,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   }
 }
 
-// TODO:
 function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void> {
   /*
    * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
@@ -273,6 +270,7 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
     if (!canEdit) {
       // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
       // Maybe its ok to crash / enforce a reload in that case.
+      // One scenario in which this might happen is when the user disconnects from the internet while having the mutex and later reconnects.
       console.error("Failed to continuously acquire mutex.");
     }
     yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
@@ -313,7 +311,7 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
       // New volume annotation layer was activated. Check if this is a proofreading only annotation to determine whether the mutex should be fetched only on save.
       const isMappingEditable = yield* select((state) => hasEditableMapping(state, layerName));
       const isLockedMapping = yield* select((state) => isMappingLocked(state, layerName));
-      if (DISABLE_EAGER_MUTEX_ACQUISITION && isMappingEditable && isLockedMapping) {
+      if (WkDevFlags.liveCollab && isMappingEditable && isLockedMapping) {
         // We are in a proofreading annotation -> Turn on on save mutex acquiring.
         mutexLogicState.onlyRequiredOnSave = true;
       } else {
@@ -405,7 +403,8 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
 
 function* releaseMutex() {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  // TODO!!!!
+  // TODOM: Mutex is auto released after a Model.ensureSavedState or so, sometimes (e.g. a proofreading action),
+  // directly triggers new updates afterwards. Currently, this needs to re-acquire the mutex, but that should be necessary IMO.
   yield* retry(
     RETRY_COUNT,
     ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,

@@ -104,7 +104,7 @@ private case class LocalUPath(nioPath: Path) extends UPath {
     UPath.fromLocalPath(nioPath.resolve(other))
 
   override def toString: String = {
-    val prefix = if (isRelative) "./" else PathSchemes.schemeFile + "://"
+    val prefix = if (isRelative) "./" else ""
     prefix + nioPath.toString
   }
 

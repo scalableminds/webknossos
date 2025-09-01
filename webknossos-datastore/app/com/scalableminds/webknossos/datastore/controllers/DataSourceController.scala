@@ -103,6 +103,12 @@ class DataSourceController @Inject()(
       }
     }
 
+  def reserveManualUploadDeprecated: Action[AnyContent] =
+    Action.async { implicit request =>
+      Fox.failure(
+        "Reserving manual uploads via datastore route /datasets/reserveManualUpload is no longer available in this WEBKNOSSOS server version. This is an exception to the listed API compatibility. Please use a client version that supports API version 11 or newer.")
+    }
+
   def getUnfinishedUploads(organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationName)) {

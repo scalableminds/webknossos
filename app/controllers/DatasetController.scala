@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   LayerAttachmentDataformat,
   LayerAttachmentType,
-  UnusableDataSource,
   UsableDataSource
 }
 import mail.{MailchimpClient, MailchimpTag}
@@ -62,7 +61,7 @@ object LinkedLayerIdentifier {
 case class ReserveManualUploadRequest(
     datasetName: String,
     layersToLink: Seq[LinkedLayerIdentifier],
-    dataSource: UnusableDataSource,
+    dataSource: UsableDataSource,
     folderId: Option[ObjectId],
     initialTeamIds: Seq[ObjectId] = Seq.empty,
     requireUniqueName: Boolean = false

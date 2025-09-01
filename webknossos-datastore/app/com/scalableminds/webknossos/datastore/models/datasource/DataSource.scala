@@ -98,6 +98,13 @@ case class UsableDataSource(id: DataSourceId,
   def allExplicitPaths: Seq[UPath] = dataLayers.flatMap(_.allExplicitPaths)
 
   def allLayers: List[StaticLayer] = dataLayers
+
+  def toUnusableWithStatus(status: String): UnusableDataSource = UnusableDataSource(
+    id,
+    Some(dataLayers),
+    status,
+    Some(scale)
+  )
 }
 
 object UsableDataSource {

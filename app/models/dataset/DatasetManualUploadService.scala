@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer,
-  UnusableDataSource
+  UsableDataSource
 }
 import controllers.{LinkedLayerIdentifier, ReserveManualAttachmentUploadRequest, ReserveManualUploadRequest}
 import models.organization.OrganizationDAO
@@ -38,13 +38,13 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
   def reserveManualUpload(parameters: ReserveManualUploadRequest, requestingUser: User, newDatasetId: ObjectId)(
       implicit ec: ExecutionContext,
       ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[UnusableDataSource] =
+      mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
       _ <- Fox.runIf(parameters.requireUniqueName)(
         datasetService.checkNameAvailable(parameters.datasetName, organization._id))
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
-      _ <- Fox.fromBool(parameters.dataSource.allLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
+      _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
       dataSourceWithPaths <- addPathsToDatasource(parameters.dataSource, organization._id, newDatasetId)
       dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
       dataStore <- findReferencedDataStore(parameters.layersToLink)
@@ -52,8 +52,9 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         dataStore,
         newDatasetId,
         parameters.datasetName,
-        dataSourceWithLayersToLink.copy(id = DataSourceId(newDirectoryName, organization._id),
-                                        status = DataSourceStatus.notYetManuallyUploaded),
+        dataSourceWithLayersToLink
+          .copy(id = DataSourceId(newDirectoryName, organization._id))
+          .toUnusableWithStatus(DataSourceStatus.notYetManuallyUploaded),
         None,
         isVirtual = true
       )
@@ -84,14 +85,13 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
     absolute <- fromConfig.toAbsolute
   } yield absolute
 
-  private def addPathsToDatasource(dataSource: UnusableDataSource, organizationId: String, datasetId: ObjectId)(
-      implicit ec: ExecutionContext): Fox[UnusableDataSource] =
+  private def addPathsToDatasource(dataSource: UsableDataSource, organizationId: String, datasetId: ObjectId)(
+      implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox
       datasetPath = manualUploadPrefix / organizationId / datasetId.toString
-      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers.getOrElse(Seq.empty))(layer =>
-        addPathsToLayer(layer, datasetPath))
-    } yield dataSource.copy(dataLayers = Some(layersWithPaths))
+      layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
+    } yield dataSource.copy(dataLayers = layersWithPaths)
 
   private def addPathsToLayer(dataLayer: StaticLayer, dataSourcePath: UPath)(
       implicit ec: ExecutionContext): Fox[StaticLayer] =
@@ -140,13 +140,13 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
     attachment.copy(path = path)
   }
 
-  private def addLayersToLink(dataSource: UnusableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
+  private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
       implicit ctx: DBAccessContext,
       mp: MessagesProvider,
-      ec: ExecutionContext): Fox[UnusableDataSource] =
+      ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-    } yield dataSource.copy(dataLayers = Some(dataSource.dataLayers.getOrElse(List.empty) ++ linkedLayers))
+    } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
                                                                      ec: ExecutionContext,

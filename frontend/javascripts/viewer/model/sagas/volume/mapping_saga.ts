@@ -242,6 +242,7 @@ function* reloadData(
   if (isAgglomerate(mapping) && !needsLocalHdf5Mapping) {
     if (mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
       yield* put(finishMappingInitializationAction(layerName));
+      yield* put(updateMappingRebaseInformationAction(layerName));
       message.destroy(MAPPING_MESSAGE_KEY);
     } else if (mapping.mappingStatus === MappingStatusEnum.ENABLED) {
       // If the mapping is already enabled (happens when an annotation was loaded initially

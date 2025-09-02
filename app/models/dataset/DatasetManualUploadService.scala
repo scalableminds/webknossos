@@ -193,7 +193,8 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       attachmentPath = datasetPath / parameters.layerName / LayerAttachmentType.defaultDirectoryNameFor(
         parameters.attachmentType) / (TextUtils
         .normalizeStrong(parameters.attachmentName)
-        .getOrElse("") + "-" + ObjectId.generate.toString)
+        .getOrElse("") + "-" + ObjectId.generate.toString + LayerAttachmentDataformat.suffixFor(
+        parameters.attachmentDataformat))
       _ <- datasetLayerAttachmentsDAO.insertPending(dataset._id,
                                                     parameters.layerName,
                                                     parameters.attachmentName,

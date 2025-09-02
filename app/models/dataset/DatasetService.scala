@@ -274,7 +274,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         logger.info(s"Updating dataSource of $datasetId")
         for {
           _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
-          _ = dataStoreClient.invalidateDatasetInDSCache(datasetId)
+          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           _ <- datasetDAO.updateDataSource(datasetId,
                                            dataset._dataStore,
                                            updatedDataSource.hashCode(),

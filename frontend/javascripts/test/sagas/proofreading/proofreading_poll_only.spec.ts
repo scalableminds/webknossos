@@ -1,5 +1,5 @@
 import { ColoredLogger } from "libs/utils";
-import { call, select } from "redux-saga/effects";
+import { call, select, put } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
@@ -17,15 +17,17 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 
 describe("Proofreading (Poll only)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
+    //Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
     context.tearDownPullQueues();
-    // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
@@ -38,16 +40,23 @@ describe("Proofreading (Poll only)", () => {
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
+      ColoredLogger.logGreen("1");
 
       const mapping0 = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
+      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
+      // other user (via backendMock.injectVersion) are both editing the annotation in this test
+      // (although the user of this test only sends empty updates). Else the polling logic would not work.
+      yield put(setOthersMayEditForAnnotationAction(true));
+
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 
       ColoredLogger.logGreen("storing merge on server");
+      ColoredLogger.logGreen("1");
       backendMock.injectVersion(
         [
           {
@@ -61,7 +70,7 @@ describe("Proofreading (Poll only)", () => {
         ],
         4,
       );
-
+      WkDevFlags.logActions = true;
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
       const mapping1 = yield select(
@@ -97,6 +106,12 @@ describe("Proofreading (Poll only)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
+
+      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
+      // other user (via backendMock.injectVersion) are both editing the annotation in this test
+      // (although the user of this test only sends empty updates). Else the polling logic would not work.
+      yield put(setOthersMayEditForAnnotationAction(true));
+
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest = [];
 

@@ -35,6 +35,7 @@ import Deferred from "libs/async/deferred";
 import type { ServerUpdateAction } from "../volume/update_actions";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -79,9 +80,13 @@ function* watchForSaveConflicts(): Saga<void> {
       (state) =>
         state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
     );
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
     // todop
-    if (false && allowSave) {
+    if (
+      (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
+      (!WkDevFlags.liveCollab && allowSave)
+    ) {
       // The active user is currently the only one that is allowed to mutate the annotation.
       // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
       // between the page load and this check here.
@@ -135,7 +140,7 @@ function* watchForSaveConflicts(): Saga<void> {
     const toastKey = "save_conflicts_warning";
     if (newerActions.length > 0) {
       try {
-        if ((yield* tryToIncorporateActions(newerActions)).success) {
+        if ((yield* tryToIncorporateActions(newerActions, false)).success) {
           return false;
         }
       } catch (exc) {
@@ -206,27 +211,33 @@ function* watchForSaveConflicts(): Saga<void> {
     if (yield* select((state) => state.uiInformation.showVersionRestore)) {
       continue;
     }
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-    // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
-    // Then incorporate the actions from backend and then those from the user again. then resolve.
-    const everythingIsDiffedDeferred = new Deferred();
-    const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
-      // TODOM: Ensure all tracings were diffed to save queue!!!
-      everythingIsDiffedDeferred.resolve(null),
-    );
-    yield* put(action);
-    yield everythingIsDiffedDeferred.promise();
-    yield* put(prepareRebasingAction());
+    if (WkDevFlags.liveCollab && othersMayEdit) {
+      // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
+      // Then incorporate the actions from backend and then those from the user again. then resolve.
+      const everythingIsDiffedDeferred = new Deferred();
+      const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
+        // TODOM: Ensure all tracings were diffed to save queue!!!
+        everythingIsDiffedDeferred.resolve(null),
+      );
+      yield* put(action);
+      yield everythingIsDiffedDeferred.promise();
+      yield* put(prepareRebasingAction());
+    }
 
     try {
       const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
       const saveQueueEntries = yield* select((state) => state.save.queue);
       const currentVersion = yield* select((state) => state.annotation.version);
       const success =
-        !didAskUserToRefreshPage &&
-        (yield* tryToIncorporateActions(
-          saveQueueEntriesToUpdateActionBatch(saveQueueEntries, currentVersion),
-        ));
+        WkDevFlags.liveCollab && othersMayEdit
+          ? !didAskUserToRefreshPage &&
+            (yield* tryToIncorporateActions(
+              saveQueueEntriesToUpdateActionBatch(saveQueueEntries, currentVersion),
+              true,
+            ))
+          : !didAskUserToRefreshPage;
       if (!success) {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
@@ -261,6 +272,7 @@ function* watchForSaveConflicts(): Saga<void> {
 
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
+  areUnsavedChangesOfUser: boolean,
 ): Saga<{ success: boolean }> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
@@ -416,6 +428,14 @@ export function* tryToIncorporateActions(
           break;
         }
         case "splitAgglomerate": {
+          // If the changes are done by the local user, no need to do the partial refreshing of the mapping,
+          // as this is done by the proofreading saga itself after saving the split actions.
+          // Moreover, as the split actions are still needed to be saved after tryToIncorporateActions is finished,
+          // the backend and thus a refresh within tryToIncorporateActions wouldn't yet know about the split actions and
+          // thus the new update mapping after the split actions.
+          if (areUnsavedChangesOfUser) {
+            break;
+          }
           // todop: doublecheck that this is respected properly:
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
@@ -560,7 +580,7 @@ export function* tryToIncorporateActions(
           activeMapping.mappingName,
           activeMapping.mappingType,
           {
-            mapping: splitMapping,
+            mapping: splitMapping || undefined,
           },
         ),
       );

@@ -195,6 +195,23 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_MAPPING": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
+
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.layerName]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
     case "PREPARE_REBASING": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
       return update(state, {
@@ -225,6 +242,22 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
           rebaseRelevantServerAnnotationState: {
             activeMappingByLayer: {
               [action.volumeLayerIdToUpdate]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.layerName]: {
                 $set: mappingInfoOfLayer,
               },
             },

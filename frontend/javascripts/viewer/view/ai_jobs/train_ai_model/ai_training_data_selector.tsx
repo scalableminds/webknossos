@@ -1,20 +1,51 @@
-import React, { useState, useEffect } from "react";
-import { Table, Select, Space, Button, Alert, Tag, Card, Form, Row, Col, Input } from "antd";
-import { FolderOutlined, SettingOutlined } from "@ant-design/icons";
-import { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
-import { useWatch } from "antd/es/form/Form";
+import { FolderOutlined } from "@ant-design/icons";
+import { Card, Col, Form, Row, Select, Space } from "antd";
+import { V3 } from "libs/mjs";
+import _ from "lodash";
+import { useMemo } from "react";
+import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import {
   getColorLayers,
   getMagInfo,
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
+import type { StoreAnnotation } from "viewer/store";
+import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
-const { Option } = Select;
+const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+  const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+};
 
-const AiTrainingDataSelector = (props: AnnotationInfoForAITrainingJob) => {
-  const { annotation, dataset, volumeTracings, volumeTracingMags } = props;
+const getIntersectingMagList = (
+  annotation: APIAnnotation,
+  dataset: APIDataset,
+  groundTruthLayerName: string,
+  imageDataLayerName: string,
+) => {
+  const colorLayers = getColorLayers(dataset);
+  const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+  const segmentationLayer = getSegmentationLayerByHumanReadableName(
+    dataset,
+    annotation,
+    groundTruthLayerName,
+  );
+  const groundTruthLayerMags = getMagInfo(segmentationLayer.resolutions).getMagList();
+
+  return groundTruthLayerMags?.filter((groundTruthMag) =>
+    dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+  );
+};
+
+const AiTrainingDataSelector = (props: AnnotationInfoForAITrainingJob<StoreAnnotation>) => {
+  const { annotation, dataset } = props;
+  const { selections, handleSelectionChange } = useAiTrainingJobContext();
+
+  const annotationId = annotation.annotationId;
+  const selection = selections.find((s) => s.annotationId === annotationId);
+
   // Gather layer names from dataset. Omit the layers that are also present
   // in annotationLayers.
   const segmentationLayerNames = getSegmentationLayers(dataset)
@@ -35,46 +66,69 @@ const AiTrainingDataSelector = (props: AnnotationInfoForAITrainingJob) => {
     ...segmentationLayerNames,
     ...annotationLayerNames,
   ]);
-  const fixedSelectedSegmentationLayer =
-    segmentationAndColorLayers.length === 1 ? segmentationAndColorLayers[0] : null;
 
   // Remove uint24 color layers because they cannot be trained on currently
   const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
-  const fixedSelectedColorLayer = colorLayers.length === 1 ? colorLayers[0] : null;
-  const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
-  const imageDataLayer = Form.useWatch("imageDataLayer");
+
+  const availableMagnifications = useMemo(() => {
+    if (selection?.imageDataLayer && selection?.groundTruthLayer) {
+      return (
+        getIntersectingMagList(
+          annotation,
+          dataset,
+          selection.groundTruthLayer,
+          selection.imageDataLayer,
+        ) || []
+      );
+    }
+    return [];
+  }, [selection?.imageDataLayer, selection?.groundTruthLayer, annotation, dataset]);
 
   return (
-    <Card style={{ marginBottom: "24px" }}>
+    <Card title={`Annotation: ${annotationId}`} style={{ marginBottom: "24px" }}>
       <Row gutter={24}>
         <Col span={12}>
           <Form.Item
-            name="imageDataLayer"
             label="Image Data Layer"
+            required
             rules={[{ required: true, message: "Please select an image data layer" }]}
           >
-            <Select options={colorLayers.map((l) => ({ value: l.name, label: l.name }))} />
+            <Select
+              options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
+              value={selection?.imageDataLayer}
+              onChange={(value) => handleSelectionChange(annotationId, { imageDataLayer: value })}
+            />
           </Form.Item>
           <Form.Item
-            name="groundTruthLayer"
             label="Ground Truth Layer"
+            required
             rules={[{ required: true, message: "Please select a ground truth layer" }]}
           >
-            <Select options={segmentationLayers.map((l) => ({ value: l.name, label: l.name }))} />
+            <Select
+              options={segmentationAndColorLayers.map((l) => ({ value: l, label: l }))}
+              value={selection?.groundTruthLayer}
+              onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
+            />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            name="magnification"
             label="Magnification"
+            required
             rules={[{ required: true, message: "Please select a magnification" }]}
           >
             <Select
-              disabled={!imageDataLayer}
-              options={availableMagnifications.map((m) => ({
-                value: m,
-                label: `${m[0]}x, ${m[1]}x, ${m[2]}x`,
+              disabled={!selection?.imageDataLayer || !selection?.groundTruthLayer}
+              options={availableMagnifications.map((m, index) => ({
+                value: index,
+                label: `${m[0]}-${m[1]}-${m[2]}`,
               }))}
+              value={selection?.magnification}
+              onChange={(index: number) =>
+                handleSelectionChange(annotationId, {
+                  magnification: availableMagnifications[index],
+                })
+              }
             />
           </Form.Item>
         </Col>
@@ -96,8 +150,10 @@ export const AiTrainingDataSection = () => {
       }
     >
       <Form layout="vertical">
-        <AiTrainingDataSelector />
-        <AiTrainingDataSelector />
+        {annotationInfos.map((info) => {
+          const annotationId = "id" in info.annotation ? info.annotation.id : info.annotation;
+          return <AiTrainingDataSelector key={annotationId} {...info} />;
+        })}
       </Form>
     </Card>
   );

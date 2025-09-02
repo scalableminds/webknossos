@@ -5,12 +5,16 @@ import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { computeArrayFromBoundingBox } from "libs/utils";
+import {
+  computeArrayFromBoundingBox,
+  computeShapeFromBoundingBox,
+  computeVolumeFromBoundingBox,
+} from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { APIJobType, type AiModel } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { UserBoundingBox } from "viewer/store";
+import type { UserBoundingBox, UserBoundingBoxWithoutId } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
@@ -46,17 +50,36 @@ export const AlignmentCreditInformation: React.FC = () => {
 };
 
 export const TrainingCreditInformation: React.FC = () => {
-  const {
-    selectedTask,
-    selectedJobType,
-    selectedBoundingBoxes: selectedBoundingBox,
-    handleStartAnalysis,
-  } = useAiTrainingJobContext();
+  const { selectedTask, selectedJobType, annotationInfos, handleStartAnalysis } =
+    useAiTrainingJobContext();
+
+  // sum all training volumes into a single bounding box
+  // This is a shitty way to do it, but it works for now.
+  const totalVolume = annotationInfos.reduce(
+    (total, { userBoundingBoxes }) =>
+      total +
+      userBoundingBoxes.reduce(
+        (sum, box) => sum + computeVolumeFromBoundingBox(box.boundingBox),
+        0,
+      ),
+    0,
+  );
+  const side = Math.cbrt(totalVolume);
+  const trainingBoundingBox: UserBoundingBoxWithoutId = {
+    boundingBox: {
+      min: [0, 0, 0],
+      max: [side, side, side],
+    },
+    name: "Training Volume",
+    color: [0, 0, 1],
+    isVisible: false,
+  };
+
   return (
     <CreditInformation
       selectedModel={selectedTask}
       selectedJobType={selectedJobType}
-      selectedBoundingBox={selectedBoundingBox}
+      selectedBoundingBox={trainingBoundingBox as UserBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Training"
     />

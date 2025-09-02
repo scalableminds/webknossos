@@ -311,6 +311,11 @@ export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
+export function computeVolumeFromBoundingBox(bb: BoundingBoxMinMaxType): number {
+  const shape = computeShapeFromBoundingBox(bb);
+  return shape[0] * shape[1] * shape[2];
+}
+
 export function aggregateBoundingBox(
   boundingBoxes: Array<BoundingBoxObject>,
 ): BoundingBoxMinMaxType {

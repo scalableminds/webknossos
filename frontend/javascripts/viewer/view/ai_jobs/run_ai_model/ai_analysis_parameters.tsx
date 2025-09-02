@@ -17,6 +17,7 @@ import type { FormProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
+import { type APIDataLayer, APIJobType } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
 import {
@@ -29,7 +30,6 @@ import {
 } from "viewer/view/action-bar/ai_job_modals/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
-import { type APIDataLayer, APIJobType } from "types/api_types";
 
 export const AiAnalysisParameters: React.FC = () => {
   const {

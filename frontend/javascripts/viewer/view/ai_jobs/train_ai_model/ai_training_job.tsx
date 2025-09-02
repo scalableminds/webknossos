@@ -1,9 +1,9 @@
 import { Flex } from "antd";
 import { TrainingCreditInformation } from "../credit_information";
+import { AiTrainingDataSection } from "./ai_training_data_selector";
 import { AiTrainingJobContextProvider } from "./ai_training_job_context";
 import { AiTrainingModelSelector } from "./ai_training_model_selector";
 import { AiTrainingParameters } from "./ai_training_parameters";
-import { AiTrainingDataSection } from "./ai_training_data_selector";
 
 export const AiModelTrainingJob = () => {
   return (

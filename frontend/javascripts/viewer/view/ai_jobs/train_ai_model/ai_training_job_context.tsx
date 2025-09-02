@@ -7,15 +7,22 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIAnnotation, APIJobType } from "types/api_types";
+import { type APIAnnotation, APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
+import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
-import { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
+
+export interface AiTrainingAnnotationSelection {
+  annotationId: string;
+  imageDataLayer?: string;
+  groundTruthLayer?: string;
+  magnification?: Vector3;
+}
 
 interface AiTrainingJobContextType {
   handleStartAnalysis: () => void;
@@ -31,6 +38,13 @@ interface AiTrainingJobContextType {
   setComments: (comments: string) => void;
   maxDistanceNm: number;
   setMaxDistanceNm: (dist: number) => void;
+
+  annotationInfos: AnnotationInfoForAITrainingJob<APIAnnotation>[];
+  selections: AiTrainingAnnotationSelection[];
+  handleSelectionChange: (
+    annotationId: string,
+    newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
+  ) => void;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -45,29 +59,82 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const [annotationInfos, setAnnotationInfos] = useState<
     AnnotationInfoForAITrainingJob<APIAnnotation>[]
   >([]);
+  const [selections, setSelections] = useState<AiTrainingAnnotationSelection[]>([]);
   const [comments, setComments] = useState("");
   const [maxDistanceNm, setMaxDistanceNm] = useState(1000.0);
 
   const dispatch = useDispatch();
 
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const selectedBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+
+  useEffect(() => {
+    // Initialize with current annotation if nothing is selected
+    if (annotationInfos.length === 0 && userBoundingBoxes) {
+      if (dataset) {
+        setAnnotationInfos([
+          {
+            annotation: annotation as unknown as APIAnnotation,
+            dataset,
+            volumeTracings: annotation.volumes,
+            volumeTracingMags: [],
+            userBoundingBoxes,
+          },
+        ]);
+      }
+    }
+  }, [annotation, dataset, userBoundingBoxes, annotationInfos.length]);
+
+  useEffect(() => {
+    if (annotationInfos) {
+      setSelections(
+        annotationInfos.map((info) => ({
+          annotationId: "id" in info.annotation ? info.annotation.id : info.annotation.annotationId,
+        })),
+      );
+    }
+  }, [annotationInfos]);
+
+  const handleSelectionChange = useCallback(
+    (
+      annotationId: string,
+      newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
+    ) => {
+      setSelections((prev) => {
+        const newSelections = [...prev];
+        const index = newSelections.findIndex((s) => s.annotationId === annotationId);
+        if (index > -1) {
+          newSelections[index] = { ...newSelections[index], ...newValues };
+          // When a layer changes, reset magnification
+          if (newValues.imageDataLayer || newValues.groundTruthLayer) {
+            delete newSelections[index].magnification;
+          }
+        }
+        return newSelections;
+      });
+    },
+    [],
+  );
 
   const handleStartAnalysis = useCallback(async () => {
-    if (!modelName || !selectedJobType || !imageDataLayer || !groundTruthLayer || !magnification) {
+    if (!modelName || !selectedJobType) {
       Toast.error("Please fill all required fields.");
       return;
     }
 
-    const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = annotationInfos.map(
-      (annotationInfo) => {
-        return {
-          annotationId: annotationInfo.annotation.annotationId,
-          colorLayerName: annotationInfo.imageDataLayer,
-          segmentationLayerName: annotationInfo.groundTruthLayer,
-          mag: annotationInfo.magnification,
-        };
-      },
+    if (selections.some((s) => !s.imageDataLayer || !s.groundTruthLayer || !s.magnification)) {
+      Toast.error("Please fill all required fields for all annotations.");
+      return;
+    }
+
+    const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = selections.map(
+      (selection) => ({
+        annotationId: selection.annotationId,
+        colorLayerName: selection.imageDataLayer!,
+        segmentationLayerName: selection.groundTruthLayer!,
+        mag: selection.magnification!,
+      }),
     );
 
     const commonJobArgmuments = {
@@ -95,37 +162,23 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       console.error(error);
       Toast.error("Failed to start training.");
     }
-  }, [
-    modelName,
-    selectedJobType,
-    imageDataLayer,
-    groundTruthLayer,
-    magnification,
-    comments,
-    maxDistanceNm,
-    annotationId,
-    dispatch,
-  ]);
+  }, [modelName, selectedJobType, selections, comments, maxDistanceNm, dispatch]);
 
   const value = {
     selectedJobType,
     selectedTask,
-    selectedBoundingBoxes,
     setSelectedJobType,
     setSelectedTask,
     handleStartAnalysis,
     modelName,
     setModelName,
-    imageDataLayer,
-    setImageDataLayer,
-    groundTruthLayer,
-    setGroundTruthLayer,
-    magnification,
-    setMagnification,
     comments,
     setComments,
     maxDistanceNm,
     setMaxDistanceNm,
+    annotationInfos,
+    selections,
+    handleSelectionChange,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

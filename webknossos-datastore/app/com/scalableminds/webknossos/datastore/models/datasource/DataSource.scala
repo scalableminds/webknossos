@@ -32,12 +32,12 @@ object DataSource {
   implicit def dataSourceFormat: Format[DataSource] =
     new Format[DataSource] {
       def reads(json: JsValue): JsResult[DataSource] =
-        UsableDataSource.dataSourceFormat.reads(json).orElse(UnusableDataSource.unusableDataSourceFormat.reads(json))
+        UnusableDataSource.jsonFormat.reads(json).orElse(UsableDataSource.jsonFormat.reads(json))
 
       def writes(ds: DataSource): JsValue =
         ds match {
-          case ds: UsableDataSource   => UsableDataSource.dataSourceFormat.writes(ds)
-          case ds: UnusableDataSource => UnusableDataSource.unusableDataSourceFormat.writes(ds)
+          case ds: UsableDataSource   => UsableDataSource.jsonFormat.writes(ds)
+          case ds: UnusableDataSource => UnusableDataSource.jsonFormat.writes(ds)
         }
     }
 }
@@ -62,8 +62,7 @@ case class UnusableDataSource(id: DataSourceId,
 }
 
 object UnusableDataSource {
-  implicit def unusableDataSourceFormat: Format[UnusableDataSource] =
-    Json.format[UnusableDataSource]
+  implicit def jsonFormat: Format[UnusableDataSource] = Json.format[UnusableDataSource]
 }
 
 case class UsableDataSource(id: DataSourceId,
@@ -108,7 +107,7 @@ case class UsableDataSource(id: DataSourceId,
 }
 
 object UsableDataSource {
-  implicit def dataSourceFormat: Format[UsableDataSource] = Json.format[UsableDataSource]
+  implicit def jsonFormat: Format[UsableDataSource] = Json.format[UsableDataSource]
 
   val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
 }

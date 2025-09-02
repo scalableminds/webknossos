@@ -644,7 +644,7 @@ class DataSourceController @Inject()(
 
   def validatePaths(): Action[List[UPath]] =
     Action.async(validateJson[List[UPath]]) { implicit request =>
-      {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- Fox.successful(())
           pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)

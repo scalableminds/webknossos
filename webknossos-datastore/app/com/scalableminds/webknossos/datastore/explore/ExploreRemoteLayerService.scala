@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
@@ -108,9 +109,13 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
 
   private def assertLocalPathInWhitelist(upath: UPath)(implicit ec: ExecutionContext): Fox[Unit] =
     if (upath.isLocal) {
-      Fox.fromBool(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
-        upath.toLocalPathUnsafe.toString
-          .startsWith(whitelistEntry))) ?~> s"Absolute path $upath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
+      Fox.fromBool(
+        dataStoreConfig.Datastore.localDirectoryWhitelist.exists(
+          whitelistEntry =>
+            upath.toLocalPathUnsafe.normalize.toAbsolutePath.startsWith(Path
+              .of(whitelistEntry)
+              .normalize
+              .toAbsolutePath))) ?~> s"Absolute path $upath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 3

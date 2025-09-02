@@ -440,16 +440,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       exists <- r.headOption.toFox
     } yield exists
 
-  def doesDatasetDirectoryNameExistInOrganization(directoryName: String, organizationId: String): Fox[Boolean] =
-    for {
-      r <- run(q"""SELECT EXISTS(SELECT 1
-                   FROM $existingCollectionName
-                   WHERE directoryName = $directoryName
-                   AND _organization = $organizationId
-                   LIMIT 1)""".as[Boolean])
-      exists <- r.headOption.toFox
-    } yield exists
-
   // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
   // Thus, interpreting the name as the directory name should work, as changing the directory name is not possible.
   // This way of looking up datasets should only be used for backwards compatibility.
@@ -1087,9 +1077,6 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     } yield attachments
 
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
-    if (datasetId.toString == "68aebaded50000a4245670eb") {
-      logger.error(Json.toJson(dataLayers).toString)
-    }
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
         q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)

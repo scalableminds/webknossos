@@ -8,7 +8,7 @@ object Dependencies {
       Resolver.typesafeRepo("releases"),
       "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
       "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
-      "Atlassian Releases" at "https://maven.atlassian.com/public/",
+      "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
       "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
     )
 

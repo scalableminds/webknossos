@@ -70,7 +70,7 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
     val datasetIds = layersToLink.map(_.datasetId).toSet
     for {
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
-      referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore)
+      referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore).distinct
       _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
       dataStore <- referencedDatastoreNames.headOption match {
         case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)

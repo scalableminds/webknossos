@@ -7,7 +7,7 @@ ALTER TABLE webknossos.dataStores ADD COLUMN allowsManualUpload BOOLEAN NOT NULL
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 
 
-ALTER TABLE webknossos.dataset_layer_attachments ADD COLUMN manualUploadIsPending BOOLEAN NOT NULL;
+ALTER TABLE webknossos.dataset_layer_attachments ADD COLUMN manualUploadIsPending BOOLEAN NOT NULL DEFAULT FALSE;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 140;
 

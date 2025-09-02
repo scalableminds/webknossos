@@ -95,6 +95,7 @@ object ElementClass extends ExtendedEnumeration {
     elementClass match {
       case ElementClass.uint8  => Full(ElementClassProto.uint8)
       case ElementClass.uint16 => Full(ElementClassProto.uint16)
+      case ElementClass.uint24 => Full(ElementClassProto.uint24)
       case ElementClass.uint32 => Full(ElementClassProto.uint32)
       case ElementClass.uint64 => Full(ElementClassProto.uint64)
       case ElementClass.int8   => Full(ElementClassProto.int8)
@@ -106,11 +107,11 @@ object ElementClass extends ExtendedEnumeration {
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.uint8  => 1L << 8L
+    case ElementClass.uint8  => (1L << 8L) - 1
     case ElementClass.int8   => Byte.MaxValue
-    case ElementClass.uint16 => 1L << 16L
+    case ElementClass.uint16 => (1L << 16L) - 1
     case ElementClass.int16  => Short.MaxValue
-    case ElementClass.uint32 => 1L << 32L
+    case ElementClass.uint32 => (1L << 32L) - 1
     case ElementClass.int32  => Int.MaxValue
     case ElementClass.uint64 | ElementClass.int64 =>
       (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1

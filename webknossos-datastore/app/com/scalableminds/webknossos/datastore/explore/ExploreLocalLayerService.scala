@@ -112,9 +112,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       explored <- exploreLocalLayer(
         layers =>
           layers.map(l =>
-            l.mapped(magMapping = m =>
-              m.copy(path = m.path.map(p =>
-                UPath.fromStringUnsafe(p.toString.stripPrefix(path.toAbsolutePath.toUri.toString)))))),
+            l.mapped(magMapping = m => m.copy(path = m.path.map(p => p.relativizedIn(UPath.fromLocalPath(path)))))),
         new N5ArrayExplorer
       )(layerPath, dataSourceId, "")
     } yield explored

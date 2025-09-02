@@ -112,9 +112,9 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def isRemote: Boolean = false
 
-  override def basename: String = nioPath.getFileName.toString
+  override def basename: String = Option(nioPath.getFileName).map(_.toString).getOrElse("")
 
-  override def parent: UPath = UPath.fromLocalPath(nioPath.getParent)
+  override def parent: UPath = Option(nioPath.getParent).map(UPath.fromLocalPath).getOrElse(this)
 
   override def getScheme: Option[String] = None
 

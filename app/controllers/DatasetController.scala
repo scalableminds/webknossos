@@ -591,6 +591,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         attachmentPath <- datasetManualUploadService.reserveManualAttachmentUpload(dataset, request.body)
 
       } yield Ok(Json.toJson(attachmentPath))
@@ -600,6 +601,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- datasetLayerAttachmentsDAO.finishManualUpload(datasetId,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
@@ -628,6 +630,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetManuallyUploaded) ?~> s"Dataset is not in manually uploading state, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)

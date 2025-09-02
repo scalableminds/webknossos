@@ -88,7 +88,7 @@ case class LayerAttachment(name: String,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
                            credentialId: Option[String] = None) {
   // Warning: throws! Use inside of tryo
-  def localPath: Path = path.toLocalPathUnsafe
+  def localPathUnsafe: Path = path.toLocalPathUnsafe
 
   def resolvedPath(dataBaseDir: Path, dataSourceId: DataSourceId): UPath = {
     val datasetPath = UPath.fromLocalPath(dataBaseDir) / dataSourceId.organizationId / dataSourceId.directoryName

@@ -145,16 +145,10 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
               }
             )
             // Write properties back
-            tryo(Files.delete(propertiesPath)) match {
-              case Full(_) =>
-                updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = false)
-              case e => e.toFox
-            }
+            updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = false)
           case _ => Fox.successful(())
         }
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
     })
 
   private def updateMagSymlinks(targetMagPath: Path, linkedMag: DataSourceMagInfo): Unit = {

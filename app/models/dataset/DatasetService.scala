@@ -89,9 +89,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                            user: User): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
-      isDirectoryNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryNameExistInOrganization(datasetName,
-                                                                                            user._organization)
-      _ <- Fox.fromBool(!isDirectoryNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
@@ -401,18 +398,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 
-  def dataSourceFor(dataset: Dataset): Fox[DataSource] =
-    (for {
-      dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
-    } yield {
-      if (dataset.isUsable)
-        for {
-          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
-        } yield UsableDataSource(dataSourceId, dataLayers, scale)
-      else
-        Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
-    }).flatten
+  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
+    val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
+    if (dataset.isUsable)
+      for {
+        voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
+        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
+      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
+    else
+      Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
+  }
 
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {

@@ -71,6 +71,60 @@ class UPathTestSuite extends PlaySpec {
         UPath.fromStringUnsafe("https://remote/without/trailing/slash").basename == "slash"
       )
     }
+
+    "have correct boolean properties" in {
+      val localRelative = UPath.fromStringUnsafe("relative/elsewhere")
+      assert(localRelative.isLocal)
+      assert(!localRelative.isRemote)
+      assert(localRelative.isRelative)
+      assert(!localRelative.isAbsolute)
+      val localAbsolute = UPath.fromStringUnsafe("/absolute/somewhere")
+      assert(localAbsolute.isLocal)
+      assert(!localAbsolute.isRemote)
+      assert(!localAbsolute.isRelative)
+      assert(localAbsolute.isAbsolute)
+      val remote = UPath.fromStringUnsafe("s3://bucket/key")
+      assert(!remote.isLocal)
+      assert(remote.isRemote)
+      assert(!remote.isRelative)
+      assert(remote.isAbsolute)
+    }
+
+    "be correctly resolvedIn" in {
+      assert(
+        UPath
+          .fromStringUnsafe("relative/elsewhere")
+          .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
+          .toString == "/somewhere/relative/elsewhere")
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/elsewhere")
+          .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
+          .toString == "/absolute/elsewhere")
+      assert(
+        UPath
+          .fromStringUnsafe("s3://remote/elsewhere")
+          .resolvedIn(UPath.fromStringUnsafe("/somewhere"))
+          .toString == "s3://remote/elsewhere")
+    }
+
+    "be correctly relativizedIn" in {
+      assert(
+        UPath
+          .fromStringUnsafe("relative/elsewhere")
+          .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
+          .toString == "./relative/elsewhere")
+      assert(
+        UPath
+          .fromStringUnsafe("/absolute/elsewhere")
+          .relativizedIn(UPath.fromStringUnsafe("/absolute"))
+          .toString == "./elsewhere")
+      assert(
+        UPath
+          .fromStringUnsafe("s3://remote/elsewhere")
+          .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
+          .toString == "s3://remote/elsewhere")
+    }
   }
 
 }

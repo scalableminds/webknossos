@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.google.rpc.BadRequest
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -34,7 +33,6 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.libs.Files

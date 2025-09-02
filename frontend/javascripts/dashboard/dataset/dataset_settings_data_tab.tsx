@@ -391,6 +391,7 @@ function SimpleLayerForm({
             ]}
           >
             <Input
+              disabled
               style={{
                 width: LEFT_COLUMN_ITEMS_WIDTH,
               }}

@@ -32,6 +32,44 @@ class UPathTestSuite extends PlaySpec {
       assert(
         (UPath
           .fromStringUnsafe("relative/elsewhere/") / "subdirectory/").toString == "./relative/elsewhere/subdirectory")
+      assert((UPath.fromStringUnsafe("relative/elsewhere/") / "..").toString == "./relative")
+      assert((UPath.fromStringUnsafe("relative/elsewhere/") / ".." / "..").toString == "./")
+    }
+
+    "resolve strings correctly (remote)" in {
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey").toString == "https://hello.com/there/subkey"
+      )
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com/there/") / "subkey").toString == "https://hello.com/there/subkey"
+      )
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/").toString == "https://hello.com/there/subkey/"
+      )
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/" / "subsub").toString == "https://hello.com/there/subkey/subsub"
+      )
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com/there") / "..").toString == "https://hello.com"
+      )
+      assert(
+        (UPath.fromStringUnsafe("https://hello.com") / "..").toString == "https://hello.com"
+      )
+    }
+
+    "yield sensible basename" in {
+      assert(
+        UPath.fromStringUnsafe("/local/with/trailing/slash/").basename == "slash"
+      )
+      assert(
+        UPath.fromStringUnsafe("/local/without/trailing/slash").basename == "slash"
+      )
+      assert(
+        UPath.fromStringUnsafe("https://remote/without/trailing/slash").basename == "slash"
+      )
+      assert(
+        UPath.fromStringUnsafe("https://remote/without/trailing/slash").basename == "slash"
+      )
     }
   }
 

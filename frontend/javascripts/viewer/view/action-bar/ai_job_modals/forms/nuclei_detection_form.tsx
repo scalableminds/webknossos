@@ -13,6 +13,7 @@ const { ThinSpace } = Unicode;
 
 export function NucleiDetectionForm() {
   const dataset = useWkSelector((state) => state.dataset);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const dispatch = useDispatch();
 
   const handleClose = useCallback(
@@ -37,9 +38,15 @@ export function NucleiDetectionForm() {
       if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
         return;
       }
-      return startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+      const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
+      return startNucleiInferralJob(
+        dataset.id,
+        colorLayer.name,
+        newDatasetName,
+        layerConfiguration.isInverted,
+      );
     },
-    [dataset],
+    [dataset, datasetConfiguration],
   );
 
   return (

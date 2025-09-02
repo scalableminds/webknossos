@@ -46,12 +46,12 @@ export const AlignmentCreditInformation: React.FC = () => {
 };
 
 export const TrainingCreditInformation: React.FC = () => {
-  const { selectedTask, selectedJobType, annotationInfos, handleStartAnalysis } =
+  const { selectedTask, selectedJobType, selectedAnnotations, handleStartAnalysis } =
     useAiTrainingJobContext();
 
   // sum all training volumes into a single bounding box
   // This is a shitty way to do it, but it works for now.
-  const totalVolume = annotationInfos.reduce(
+  const totalVolume = selectedAnnotations.reduce(
     (total, { userBoundingBoxes }) =>
       total +
       userBoundingBoxes.reduce(

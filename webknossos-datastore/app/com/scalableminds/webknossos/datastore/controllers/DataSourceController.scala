@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.google.rpc.BadRequest
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -33,6 +34,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.libs.Files
@@ -101,12 +103,6 @@ class DataSourceController @Inject()(
           } else Fox.successful(())
         } yield Ok
       }
-    }
-
-  def reserveManualUploadDeprecated: Action[AnyContent] =
-    Action.async { implicit request =>
-      Fox.failure(
-        "Reserving manual uploads via datastore route /datasets/reserveManualUpload is no longer available in this WEBKNOSSOS server version. This is an exception to the listed API compatibility. Please use a client version that supports API version 11 or newer.")
     }
 
   def getUnfinishedUploads(organizationName: String): Action[AnyContent] =
@@ -332,26 +328,12 @@ class DataSourceController @Inject()(
     }
   }
 
-  // TODO skip vor isVirtual datasets
-  def update(datasetId: ObjectId): Action[UsableDataSource] =
+  def updateOnDisk(datasetId: ObjectId): Action[UsableDataSource] =
     Action.async(validateJson[UsableDataSource]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          existingDataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-          updatedDataSource = dataSourceService.applyDataSourceUpdates(existingDataSource, request.body)
-          changed = updatedDataSource.hashCode() != existingDataSource.hashCode()
-          _ <- if (changed) {
-            logger.info(s"Updating dataSource $datasetId")
-            for {
-              _ <- Fox.runIf(dataSourceService.existsOnDisk(existingDataSource.id)) {
-                // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
-                // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-                dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = true)
-              }
-              _ <- dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
-              _ = datasetCache.invalidateCache(datasetId)
-            } yield ()
-          } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
+          _ <- dataSourceService.updateDataSourceOnDisk(request.body, expectExisting = true, validate = true)
+          _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
       }
     }
@@ -694,14 +676,8 @@ class DataSourceController @Inject()(
           .toUsable
           .toFox
       }
-      _ <- dataSourceFromDir match {
-        case Some(ds) =>
-          for {
-            _ <- dsRemoteWebknossosClient.updateDataSource(ds, datasetId)
-            _ = datasetCache.invalidateCache(datasetId)
-          } yield ()
-        case _ => Fox.successful(())
-      }
+      _ <- Fox.runOptional(dataSourceFromDir)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
+      _ = datasetCache.invalidateCache(datasetId)
       dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
     } yield dataSource
 

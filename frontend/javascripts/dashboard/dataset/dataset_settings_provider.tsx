@@ -3,7 +3,6 @@ import {
   getDataset,
   getDatasetDefaultConfiguration,
   sendAnalyticsEvent,
-  updateDatasetDatasource,
   updateDatasetDefaultConfiguration,
   updateDatasetPartial,
   updateDatasetTeams,
@@ -293,8 +292,20 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
     }
 
-    const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
+    const dataSource = JSON.parse(formValues.dataSourceJson);
+
+    if (dataset != null && didDatasourceChange(dataSource)) {
+      if (didDatasourceIdChange(dataSource)) {
+        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
+      }
+      datasetChangeValues.dataSource = dataSource;
+    }
+
     await updateDatasetPartial(datasetId, datasetChangeValues);
+
+    if (dataset != null && didDatasourceChange(dataSource)) {
+      setSavedDataSourceOnServer(dataSource);
+    }
 
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(
@@ -305,16 +316,8 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       );
     }
 
+    const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
     await updateDatasetTeams(datasetId, teamIds);
-    const dataSource = JSON.parse(formValues.dataSourceJson);
-
-    if (dataset != null && didDatasourceChange(dataSource)) {
-      if (didDatasourceIdChange(dataSource)) {
-        Toast.warning(messages["dataset.settings.updated_datasource_id_warning"]);
-      }
-      await updateDatasetDatasource(dataset.dataStore.url, dataSource, datasetId);
-      setSavedDataSourceOnServer(dataSource);
-    }
 
     const verb = isEditingMode ? "updated" : "imported";
     Toast.success(`Successfully ${verb} ${datasetChangeValues?.name || datasetId}.`);

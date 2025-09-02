@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
@@ -105,11 +106,18 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postJsonWithJsonResponse[Seq[UPath], List[PathValidationResult]](paths)
 
-  def updateDatasetInDSCache(datasetId: String): Fox[Unit] =
+  def invalidateDatasetInDSCache(datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .delete()
+    } yield ()
+
+  def updateDataSourceOnDisk(datasetId: ObjectId, dataSource: UsableDataSource): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .putJson(dataSource)
     } yield ()
 
   def deleteOnDisk(datasetId: ObjectId): Fox[Unit] =

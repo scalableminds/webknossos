@@ -168,7 +168,7 @@ private case class RemotePath(scheme: String, segments: Seq[String]) extends UPa
 
   override def isRemote: Boolean = true
 
-  override def basename: String = segments.last
+  override def basename: String = segments.findLast(_.nonEmpty).getOrElse("")
 
   override def parent: UPath =
     // need to have at least one segment (assumed to be the authority)

@@ -578,7 +578,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       isPublic = Some(isPublic),
       tags = Some(tags),
       metadata = Some(metadata),
-      folderId = Some(folderId)
+      folderId = Some(folderId),
+      dataSource = None
     )
     updatePartial(datasetId, updateParameters)
   }
@@ -1092,7 +1093,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
         q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
-          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, ${attachmentType}::webknossos.LAYER_ATTACHMENT_TYPE,
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
           ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false})"""
       query.asUpdate
     }

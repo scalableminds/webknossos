@@ -44,7 +44,8 @@ case class DatasetUpdateParameters(
     isPublic: Option[Boolean],
     tags: Option[List[String]],
     metadata: Option[JsArray],
-    folderId: Option[ObjectId]
+    folderId: Option[ObjectId],
+    dataSource: Option[UsableDataSource]
 )
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
@@ -378,6 +379,8 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
+        _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
+          datasetService.updateDataSourceFromUserChanges(dataset, dataSourceUpdates))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
@@ -596,12 +599,18 @@ class DatasetController @Inject()(userService: UserService,
   def finishManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
     sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
       for {
-        _ <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- datasetLayerAttachmentsDAO.finishManualUpload(datasetId,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
                                                            request.body.attachmentType)
-        // TODO on disk too if isVirtual=false
+        _ <- Fox.runIf(!dataset.isVirtual) {
+          for {
+            updatedDataSource <- datasetService.usableDataSourceFor(dataset)
+            dataStoreClient <- datasetService.clientFor(dataset)
+            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+          } yield ()
+        }
       } yield Ok
     }
 

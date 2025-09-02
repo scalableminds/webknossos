@@ -9,7 +9,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
   DataSourceStatus,
+  StaticColorLayer,
   StaticLayer,
+  StaticSegmentationLayer,
   UnusableDataSource,
   UsableDataSource
 }
@@ -262,6 +264,107 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
     }
 
+  def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Unit] =
+    for {
+      existingDataSource <- usableDataSourceFor(dataset)
+      datasetId = dataset._id
+      dataStoreClient <- clientFor(dataset)
+      updatedDataSource = applyDataSourceUpdates(existingDataSource, dataSourceUpdates)
+      isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
+      _ <- if (isChanged) {
+        logger.info(s"Updating dataSource of $datasetId")
+        for {
+          _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
+          _ = dataStoreClient.invalidateDatasetInDSCache(datasetId)
+          _ <- datasetDAO.updateDataSource(datasetId,
+                                           dataset._dataStore,
+                                           updatedDataSource.hashCode(),
+                                           updatedDataSource,
+                                           isUsable = true)(GlobalAccessContext)
+        } yield ()
+      } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
+    } yield ()
+
+  private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
+                                     updates: UsableDataSource): UsableDataSource = {
+    val updatedLayers = existingDataSource.dataLayers.flatMap { existingLayer =>
+      val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
+      layerUpdatesOpt match {
+        case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
+        case None               => None
+      }
+    }
+    existingDataSource.copy(
+      dataLayers = updatedLayers,
+      scale = updates.scale
+    )
+  }
+
+  private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
+    /*
+  Taken from the new layer are only those properties:
+   - category (so Color may become Segmentation and vice versa)
+   - boundingBox
+   - coordinatesTransformations
+   - defaultViewConfiguration
+   - adminViewConfiguration
+   - largestSegmentId (segmentation only)
+     */
+
+    existingLayer match {
+      case e: StaticColorLayer =>
+        layerUpdates match {
+          case u: StaticColorLayer =>
+            e.copy(
+              boundingBox = u.boundingBox,
+              coordinateTransformations = u.coordinateTransformations,
+              defaultViewConfiguration = u.defaultViewConfiguration,
+              adminViewConfiguration = u.adminViewConfiguration
+            )
+          case u: StaticSegmentationLayer =>
+            StaticSegmentationLayer(
+              e.name,
+              e.dataFormat,
+              u.boundingBox,
+              e.elementClass,
+              e.mags,
+              u.defaultViewConfiguration,
+              u.adminViewConfiguration,
+              u.coordinateTransformations,
+              e.additionalAxes,
+              e.attachments,
+              u.largestSegmentId,
+              None
+            )
+        }
+      case e: StaticSegmentationLayer =>
+        layerUpdates match {
+          case u: StaticSegmentationLayer =>
+            e.copy(
+              boundingBox = u.boundingBox,
+              coordinateTransformations = u.coordinateTransformations,
+              defaultViewConfiguration = u.defaultViewConfiguration,
+              adminViewConfiguration = u.adminViewConfiguration,
+              largestSegmentId = u.largestSegmentId
+            )
+          case u: StaticColorLayer =>
+            StaticColorLayer(
+              e.name,
+              e.dataFormat,
+              u.boundingBox,
+              e.elementClass,
+              e.mags,
+              u.defaultViewConfiguration,
+              u.adminViewConfiguration,
+              u.coordinateTransformations,
+              e.additionalAxes,
+              e.attachments
+            )
+        }
+    }
+
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
     if (conf.WebKnossos.SampleOrganization.enabled) {
       datasetDAO.isEmpty.map { isEmpty =>
@@ -315,7 +418,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
       dataStoreClient <- clientFor(dataset)
-      _ <- dataStoreClient.updateDatasetInDSCache(dataset._id.toString)
+      _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
     } yield ()
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =

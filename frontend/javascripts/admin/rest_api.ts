@@ -978,19 +978,6 @@ export async function getDatasets(
   return datasets;
 }
 
-export async function updateDatasetDatasource(
-  dataStoreUrl: string,
-  datasource: APIDataSource,
-  datasetId: string,
-): Promise<void> {
-  await doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetId}?token=${token}`, {
-      data: datasource,
-      method: "PUT",
-    }),
-  );
-}
-
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
   assertResponseLimit(datasets);
@@ -1036,6 +1023,7 @@ export type DatasetUpdater = {
   tags?: string[];
   folderId?: string;
   metadata?: APIDataset["metadata"];
+  dataSource?: APIDataSource;
 };
 
 export function updateDatasetPartial(

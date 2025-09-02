@@ -38,9 +38,13 @@ class LegacyController @Inject()(
     with Zarr3OutputHelper
     with MissingBucketHeaders {
 
-  // BINARY DATA ROUTES
-
   override def allowRemoteOrigin: Boolean = true
+
+  def reserveManualUploadV10: Action[AnyContent] =
+    Action.async { implicit request =>
+      Fox.failure(
+        "Reserving manual uploads via datastore route /datasets/reserveManualUpload is no longer available in this WEBKNOSSOS server version. This is an exception to the listed API compatibility. Please use a client version that supports API version 11 or newer.")
+    }
 
   def requestViaWebknossosV9(
       organizationId: String,

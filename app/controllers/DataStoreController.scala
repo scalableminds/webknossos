@@ -31,14 +31,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "allowsUpload").readNullable[Boolean] and
       (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromForm _)
 
-  private val dataStorePublicReads: Reads[DataStore] =
-    ((__ \ "name").read[String] and
-      (__ \ "url").read[String] and
-      (__ \ "publicUrl").read[String] and
-      (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean] and
-      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromUpdateForm _)
-
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"

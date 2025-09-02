@@ -5,11 +5,7 @@ import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import {
-  computeArrayFromBoundingBox,
-  computeShapeFromBoundingBox,
-  computeVolumeFromBoundingBox,
-} from "libs/utils";
+import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { APIJobType, type AiModel } from "types/api_types";

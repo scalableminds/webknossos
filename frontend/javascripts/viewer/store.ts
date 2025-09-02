@@ -81,7 +81,7 @@ import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
-import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
+import type { StartAiJobDrawerState } from "./view/action-bar/ai_job_modals/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 
@@ -494,7 +494,7 @@ type UiInformation = {
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
   readonly showAddScriptModal: boolean;
-  readonly aIJobModalState: StartAIJobModalState;
+  readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly activeUserBoundingBoxId: number | null | undefined;

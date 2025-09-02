@@ -101,9 +101,9 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_AI_JOB_MODAL_STATE": {
+    case "SET_AI_JOB_DRAWER_STATE": {
       return updateKey(state, "uiInformation", {
-        aIJobModalState: action.state,
+        aIJobDrawerState: action.state,
       });
     }
 

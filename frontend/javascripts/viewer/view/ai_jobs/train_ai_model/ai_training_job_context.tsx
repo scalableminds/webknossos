@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { type APIAnnotation, APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
@@ -157,7 +157,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
         });
       }
       Toast.success("The training has successfully started.");
-      dispatch(setAIJobModalStateAction("invisible"));
+      dispatch(setAIJobDrawerStateAction("invisible"));
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start training.");

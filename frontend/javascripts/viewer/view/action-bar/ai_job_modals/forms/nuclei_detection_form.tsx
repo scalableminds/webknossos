@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { Unicode } from "viewer/constants";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
 import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
@@ -16,7 +16,7 @@ export function NucleiDetectionForm() {
   const dispatch = useDispatch();
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
   const jobApiCall = useCallback(

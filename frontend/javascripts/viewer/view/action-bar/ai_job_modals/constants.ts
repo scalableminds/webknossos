@@ -1,12 +1,11 @@
 import { APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 
-export type ModalJobTypes =
-  | APIJobType.INFER_NEURONS
-  | APIJobType.INFER_NUCLEI
-  | APIJobType.INFER_MITOCHONDRIA;
-
-export type StartAIJobModalState = ModalJobTypes | "invisible";
+export type StartAiJobDrawerState =
+  | "open_ai_training"
+  | "open_ai_inference"
+  | "open_ai_alignment"
+  | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
 export const jobNameToImagePath = {

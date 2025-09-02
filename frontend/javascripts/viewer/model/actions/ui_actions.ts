@@ -1,7 +1,7 @@
 import type { OrthoView, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
-import type { StartAIJobModalState } from "viewer/view/action-bar/ai_job_modals/constants";
+import type { StartAiJobDrawerState } from "viewer/view/action-bar/ai_job_modals/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -18,7 +18,7 @@ type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAc
 type SetIsWkReadyAction = ReturnType<typeof setIsWkReadyAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
-type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
+type SetaIJobDrawerStateAction = ReturnType<typeof setAIJobDrawerStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
@@ -53,7 +53,7 @@ export type UiAction =
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
-  | SetAIJobModalStateAction
+  | SetaIJobDrawerStateAction
   | SetRenderAnimationModalVisibilityAction
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
@@ -133,9 +133,9 @@ export const setShareModalVisibilityAction = (visible: boolean) =>
     type: "SET_SHARE_MODAL_VISIBILITY",
     visible,
   }) as const;
-export const setAIJobModalStateAction = (state: StartAIJobModalState) =>
+export const setAIJobDrawerStateAction = (state: StartAiJobDrawerState) =>
   ({
-    type: "SET_AI_JOB_MODAL_STATE",
+    type: "SET_AI_JOB_DRAWER_STATE",
     state,
   }) as const;
 export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>

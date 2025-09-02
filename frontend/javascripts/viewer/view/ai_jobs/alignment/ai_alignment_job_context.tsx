@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { useDispatch } from "react-redux";
 import type { APIJobType } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import { getBoundingBoxesForLayers } from "viewer/view/action-bar/ai_job_modals/utils";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
@@ -57,7 +57,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         shouldUseManualMatches ? annotationId : undefined,
       );
       Toast.success("Alignment started successfully!");
-      dispatch(setAIJobModalStateAction("invisible"));
+      dispatch(setAIJobDrawerStateAction("invisible"));
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start alignment.");

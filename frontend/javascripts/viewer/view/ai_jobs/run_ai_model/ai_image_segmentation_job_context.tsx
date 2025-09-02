@@ -21,7 +21,7 @@ import {
   getTaskBoundingBoxes,
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
@@ -197,7 +197,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         }
       }
       Toast.success("Analysis started successfully!");
-      dispatch(setAIJobModalStateAction("invisible"));
+      dispatch(setAIJobDrawerStateAction("invisible"));
     } catch (error) {
       console.error(error);
       Toast.error("Failed to start analysis.");

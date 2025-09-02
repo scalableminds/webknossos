@@ -13,7 +13,7 @@ import {
   getTaskBoundingBoxes,
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import {
   CollapsibleSplitMergerEvaluationSettings,
   type SplitMergerEvaluationSettings,
@@ -35,7 +35,7 @@ export function NeuronSegmentationForm() {
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
   const jobApiCall = useCallback(

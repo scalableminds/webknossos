@@ -5,7 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
 export function AlignSectionsForm() {
@@ -14,7 +14,7 @@ export function AlignSectionsForm() {
   const { alignmentCostPerGVx } = features();
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
   const jobApiCall = useCallback(

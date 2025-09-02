@@ -2,7 +2,7 @@ import { Card, Radio, Row, Space, Switch, Tooltip } from "antd";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 
 import { useWkSelector } from "libs/react_hooks";
 import { jobNameToImagePath } from "../constants";
@@ -12,7 +12,7 @@ import { MitochondriaSegmentationForm } from "../forms/mitochondria_segmentation
 import { NeuronSegmentationForm } from "../forms/neuron_segmentation_form";
 import { NucleiDetectionForm } from "../forms/nuclei_detection_form";
 
-export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
+export function RunAiModelTab({ aIJobDrawerState }: { aIJobDrawerState: string }) {
   const centerImageStyle = {
     margin: "auto",
     width: 220,
@@ -65,8 +65,8 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
           <Space align="center">
             <Radio.Button
               className="aIJobSelection"
-              checked={aIJobModalState === APIJobType.INFER_NEURONS}
-              onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
+              checked={aIJobDrawerState === APIJobType.INFER_NEURONS}
+              onClick={() => dispatch(setAIJobDrawerStateAction(APIJobType.INFER_NEURONS))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
@@ -85,8 +85,8 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
               <Radio.Button
                 className="aIJobSelection"
                 disabled={!isSuperUser}
-                checked={aIJobModalState === APIJobType.INFER_MITOCHONDRIA}
-                onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
+                checked={aIJobDrawerState === APIJobType.INFER_MITOCHONDRIA}
+                onClick={() => dispatch(setAIJobDrawerStateAction(APIJobType.INFER_MITOCHONDRIA))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
@@ -106,8 +106,8 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
               <Radio.Button
                 className="aIJobSelection"
                 disabled
-                checked={aIJobModalState === APIJobType.INFER_NUCLEI}
-                onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NUCLEI))}
+                checked={aIJobDrawerState === APIJobType.INFER_NUCLEI}
+                onClick={() => dispatch(setAIJobDrawerStateAction(APIJobType.INFER_NUCLEI))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
@@ -124,12 +124,12 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
               </Radio.Button>
             </Tooltip>
           </Space>
-          {aIJobModalState === APIJobType.INFER_NEURONS ? <NeuronSegmentationForm /> : null}
-          {aIJobModalState === APIJobType.INFER_NUCLEI ? <NucleiDetectionForm /> : null}
-          {aIJobModalState === APIJobType.INFER_MITOCHONDRIA ? (
+          {aIJobDrawerState === APIJobType.INFER_NEURONS ? <NeuronSegmentationForm /> : null}
+          {aIJobDrawerState === APIJobType.INFER_NUCLEI ? <NucleiDetectionForm /> : null}
+          {aIJobDrawerState === APIJobType.INFER_MITOCHONDRIA ? (
             <MitochondriaSegmentationForm />
           ) : null}
-          {aIJobModalState === APIJobType.ALIGN_SECTIONS ? <AlignSectionsForm /> : null}
+          {aIJobDrawerState === APIJobType.ALIGN_SECTIONS ? <AlignSectionsForm /> : null}
         </>
       )}
     </Space>

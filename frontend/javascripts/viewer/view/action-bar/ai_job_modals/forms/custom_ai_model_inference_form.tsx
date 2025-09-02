@@ -13,7 +13,7 @@ import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
@@ -87,7 +87,7 @@ export function CustomAiModelInferenceForm() {
   );
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
 

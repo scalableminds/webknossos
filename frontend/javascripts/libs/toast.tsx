@@ -1,5 +1,6 @@
 import { CloseCircleOutlined } from "@ant-design/icons";
 import { Collapse, notification } from "antd";
+import _ from "lodash";
 import type React from "react";
 import { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
@@ -243,3 +244,16 @@ const Toast = {
   },
 };
 export default Toast;
+
+export const showToastOnce = _.debounce(
+  (
+    type: ToastStyle,
+    message: React.ReactNode,
+    config: ToastConfig = {},
+    details?: string | undefined,
+  ) => {
+    Toast[type](message, config, details);
+  },
+  60000,
+  { leading: true },
+);

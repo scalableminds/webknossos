@@ -26,6 +26,7 @@ export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
   const skeletonAnnotation = useWkSelector((state) => state.annotation.skeleton);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
 
@@ -64,6 +65,7 @@ export function NeuronSegmentationForm() {
       if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NEURONS)) {
         return;
       }
+      const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
 
       if (!doSplitMergerEvaluation) {
         return runPretrainedNeuronInferencelJob(
@@ -71,6 +73,7 @@ export function NeuronSegmentationForm() {
           colorLayer.name,
           bbox,
           newDatasetName,
+          layerConfiguration.isInverted,
           doSplitMergerEvaluation,
         );
       }
@@ -98,15 +101,20 @@ export function NeuronSegmentationForm() {
         colorLayer.name,
         bbox,
         newDatasetName,
+        layerConfiguration.isInverted,
         doSplitMergerEvaluation,
         annotationId,
-        splitMergerEvaluationSettings?.useSparseTracing,
-        splitMergerEvaluationSettings?.maxEdgeLength,
-        splitMergerEvaluationSettings?.sparseTubeThresholdInNm,
-        splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
+        splitMergerEvaluationSettings,
       );
     },
-    [dataset, doSplitMergerEvaluation, userBoundingBoxCount, taskBoundingBoxes, skeletonAnnotation],
+    [
+      dataset,
+      doSplitMergerEvaluation,
+      userBoundingBoxCount,
+      taskBoundingBoxes,
+      skeletonAnnotation,
+      datasetConfiguration,
+    ],
   );
 
   return (

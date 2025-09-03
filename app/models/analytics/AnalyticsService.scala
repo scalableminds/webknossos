@@ -9,7 +9,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
-import controllers.ReleaseInformationDAO
 import org.apache.pekko.actor.ActorSystem
 import play.api.http.Status.UNAUTHORIZED
 import play.api.inject.ApplicationLifecycle
@@ -85,7 +84,7 @@ class AnalyticsService @Inject()(rpc: RPC,
     Fox.successful(())
   }
 
-  override protected def tickerInterval: FiniteDuration = 12 seconds
+  override protected def tickerInterval: FiniteDuration = 24 hours
 
   override protected def tick(): Fox[_] =
     for {

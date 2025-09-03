@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.mvc.ApiVersioning
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
@@ -12,7 +11,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
-import utils.{BuildInfoService, StoreModules, WkConf}
+import utils.{BuildInfoService, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

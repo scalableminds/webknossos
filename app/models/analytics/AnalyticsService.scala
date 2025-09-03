@@ -8,9 +8,13 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import controllers.ReleaseInformationDAO
+import org.apache.pekko.actor.ActorSystem
 import play.api.http.Status.UNAUTHORIZED
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json._
-import utils.WkConf
+import utils.{BuildInfoService, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -20,8 +24,13 @@ class AnalyticsService @Inject()(rpc: RPC,
                                  wkConf: WkConf,
                                  analyticsLookUpService: AnalyticsLookUpService,
                                  analyticsSessionService: AnalyticsSessionService,
-                                 analyticsDAO: AnalyticsDAO)(implicit ec: ExecutionContext)
+                                 analyticsDAO: AnalyticsDAO,
+                                 userDAO: UserDAO,
+                                 buildInfoService: BuildInfoService,
+                                 val actorSystem: ActorSystem,
+                                 val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
     extends LazyLogging
+    with IntervalScheduler
     with FoxImplicits {
 
   private lazy val conf = wkConf.BackendAnalytics
@@ -75,6 +84,17 @@ class AnalyticsService @Inject()(rpc: RPC,
     }
     Fox.successful(())
   }
+
+  override protected def tickerInterval: FiniteDuration = 12 seconds
+
+  override protected def tick(): Fox[_] =
+    for {
+      oldestUser <- userDAO.findOldestActive
+      buildInfoJson <- Fox.fromFuture(buildInfoService.buildInfoJson)
+      event = WebknossosHeartbeatAnalyticsEvent(oldestUser, buildInfoJson)
+      _ = track(event)
+    } yield ()
+
 }
 
 class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)

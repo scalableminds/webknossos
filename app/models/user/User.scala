@@ -168,6 +168,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findIdsByMultiUserId(multiUserId: ObjectId): Fox[Seq[ObjectId]] =
     run(q"SELECT _id FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[ObjectId])
 
+  def findOldestActive: Fox[User] =
+    for {
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE NOT isDeactivated ORDER BY created LIMIT 1".as[UsersRow])
+      parsed <- parseFirst(r, "oldestActive")
+    } yield parsed
+
   def buildSelectionPredicates(isEditableOpt: Option[Boolean],
                                isTeamManagerOrAdminOpt: Option[Boolean],
                                isAdminOpt: Option[Boolean],

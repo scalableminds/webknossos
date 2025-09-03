@@ -1,5 +1,6 @@
 import {
   APIAiModelCategory,
+  type BaseCustomModelInferenceParameters,
   runCustomInstanceModelInferenceJob,
   runCustomNeuronModelInferenceJob,
   runPretrainedMitochondriaInferenceJob,
@@ -81,6 +82,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -115,32 +117,33 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
-    if (userBoundingBoxCount > 1) {
-      Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
-      return;
+    if (isEvaluationActive) {
+      if (userBoundingBoxCount > 1) {
+        Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
+        return;
+      }
+
+      if (Object.values(taskBoundingBoxes).length + userBoundingBoxCount !== 1) {
+        Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
+        return;
+      }
+
+      if (skeletonAnnotation == null || skeletonAnnotation.trees.size() === 0) {
+        Toast.error("Please ensure that a skeleton tree exists within the selected bounding box.");
+        return;
+      }
+      if (skeletonAnnotation && hasEmptyTrees(skeletonAnnotation.trees)) {
+        Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
+        return;
+      }
     }
 
-    if (Object.values(taskBoundingBoxes).length + userBoundingBoxCount !== 1) {
-      Toast.error(messages["jobs.wrongNumberOfBoundingBoxes"]);
-      return;
-    }
-
-    if (
-      isEvaluationActive &&
-      (skeletonAnnotation == null || skeletonAnnotation.trees.size() === 0)
-    ) {
-      Toast.error("Please ensure that a skeleton tree exists within the selected bounding box.");
-      return;
-    }
-    if (isEvaluationActive && skeletonAnnotation && hasEmptyTrees(skeletonAnnotation.trees)) {
-      Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
-      return;
-    }
+    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
 
     try {
       if ("trainingJob" in selectedModel) {
         // Custom models
-        const commonInferenceArgs = {
+        const commonInferenceArgs: BaseCustomModelInferenceParameters = {
           ...maybeAnnotationId,
           aiModelId: selectedModel.id as string,
           datasetDirectoryName: dataset.directoryName,
@@ -148,6 +151,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           colorLayerName: selectedLayer.name,
           boundingBox,
           newDatasetName: newDatasetName,
+          invertColorLayer: isColorLayerInverted,
         };
 
         if (selectedModel.category === APIAiModelCategory.EM_NUCLEI) {
@@ -169,16 +173,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
               selectedLayer.name,
               boundingBox,
               newDatasetName,
+              isColorLayerInverted,
               isEvaluationActive,
               isEvaluationActive ? annotationId : undefined,
-              isEvaluationActive ? splitMergerEvaluationSettings.useSparseTracing : undefined,
-              isEvaluationActive ? splitMergerEvaluationSettings.maxEdgeLength : undefined,
-              isEvaluationActive
-                ? splitMergerEvaluationSettings.sparseTubeThresholdInNm
-                : undefined,
-              isEvaluationActive
-                ? splitMergerEvaluationSettings.minimumMergerPathLengthInNm
-                : undefined,
+              isEvaluationActive ? splitMergerEvaluationSettings : undefined,
             );
             break;
           case APIJobType.INFER_MITOCHONDRIA:
@@ -190,7 +188,12 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             );
             break;
           case APIJobType.INFER_NUCLEI:
-            await runPretrainedNucleiInferenceJob(dataset.id, selectedLayer.name, newDatasetName);
+            await runPretrainedNucleiInferenceJob(
+              dataset.id,
+              selectedLayer.name,
+              newDatasetName,
+              isColorLayerInverted,
+            );
             break;
           default:
             throw new Error(`Unsupported job type: ${selectedJobType}`);
@@ -217,6 +220,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     userBoundingBoxCount,
     taskBoundingBoxes,
     skeletonAnnotation,
+    datasetConfiguration,
     dispatch,
   ]);
 

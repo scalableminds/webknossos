@@ -114,6 +114,13 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     (state) => state.activeOrganization?.creditBalance || "0",
   );
 
+  const boundingBoxVolume = useMemo(() => {
+    if (selectedBoundingBox) {
+      return new BoundingBox(selectedBoundingBox.boundingBox).getVolume();
+    }
+    return 0;
+  }, [selectedBoundingBox]);
+
   const { data: jobCreditCostInfo, isFetching } = useQuery<JobCreditCostInfo>({
     queryKey: [
       "jobCreditCost",
@@ -130,11 +137,10 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
 
   const getBoundingBoxinVoxels = useCallback((): string => {
     if (selectedBoundingBox) {
-      const bbVolumeInVx = new BoundingBox(selectedBoundingBox.boundingBox).getVolume();
-      return formatVoxels(bbVolumeInVx);
+      return formatVoxels(boundingBoxVolume);
     }
     return "-";
-  }, [selectedBoundingBox]);
+  }, [selectedBoundingBox, boundingBoxVolume]);
 
   const costInCredits = jobCreditCostInfo?.costInCredits;
 
@@ -201,7 +207,12 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         block
         size="large"
         style={{ marginTop: "24px" }}
-        disabled={!selectedModel || !selectedBoundingBox || !jobCreditCostInfo?.hasEnoughCredits}
+        disabled={
+          !selectedModel ||
+          !selectedBoundingBox ||
+          !jobCreditCostInfo?.hasEnoughCredits ||
+          boundingBoxVolume === 0
+        }
         onClick={handleStartAnalysis}
       >
         {startButtonTitle}

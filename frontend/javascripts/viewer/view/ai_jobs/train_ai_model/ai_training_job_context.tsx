@@ -65,6 +65,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const annotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Initialize only once
   useEffect(() => {
     // Initialize with current annotation if nothing is selected
     if (userBoundingBoxes && selectedAnnotations.length === 0) {

@@ -12,10 +12,10 @@ import {
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
-import type { StoreAnnotation } from "viewer/store";
-import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
-import { AiTrainingAnnotationSelection, useAiTrainingJobContext } from "./ai_training_job_context";
-import { Store } from "antd/es/form/interface";
+import {
+  type AiTrainingAnnotationSelection,
+  useAiTrainingJobContext,
+} from "./ai_training_job_context";
 import { useWkSelector } from "libs/react_hooks";
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {

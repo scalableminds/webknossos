@@ -5,6 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerAttachments,
@@ -46,7 +47,7 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
       _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
-      dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName, organization._id, newDatasetId)
+      dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName, organization._id)
       dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
@@ -57,12 +58,11 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         None,
         isVirtual = true
       )
-
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
-    } yield dataSourceWithPaths
+    } yield dataSourceWithPaths // Note: not returning the one with layersToLink.
 
   private def findReferencedDataStore(
       layersToLink: Seq[LinkedLayerIdentifier])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {
@@ -92,7 +92,7 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         } yield (fromDatastoreBaseFolder / ".manualUploads").toAbsolute
     }
 
-  private def addPathsToDatasource(dataSource: UsableDataSource, organizationId: String, datasetId: ObjectId)(
+  private def addPathsToDatasource(dataSource: UsableDataSource, organizationId: String)(
       implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
@@ -126,25 +126,32 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
           Some(
             attachments.copy(
               meshes = attachments.meshes.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.mesh, layerPath)),
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.mesh, layerPath)),
               agglomerates = attachments.agglomerates.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.agglomerate, layerPath)),
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.agglomerate, layerPath)),
               segmentIndex = attachments.segmentIndex.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.segmentIndex, layerPath)),
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.segmentIndex, layerPath)),
               connectomes = attachments.connectomes.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.connectome, layerPath)),
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.connectome, layerPath)),
               cumsum = attachments.cumsum.map(attachment =>
-                addPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)),
+                addGeneratedPathToAttachment(attachment, LayerAttachmentType.cumsum, layerPath)),
             )))
     }
 
-  private def addPathToAttachment(attachment: LayerAttachment,
-                                  attachmentType: LayerAttachmentType,
-                                  layerPath: UPath): LayerAttachment = {
+  private def addGeneratedPathToAttachment(attachment: LayerAttachment,
+                                           attachmentType: LayerAttachmentType,
+                                           layerPath: UPath): LayerAttachment =
+    attachment.copy(path = generateAttachmentPath(attachment.name, attachment.dataFormat, attachmentType, layerPath))
+
+  private def generateAttachmentPath(attachmentName: String,
+                                     attachmentDataformat: LayerAttachmentDataformat,
+                                     attachmentType: LayerAttachmentType,
+                                     layerPath: UPath): UPath = {
     val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
-    val suffix = LayerAttachmentDataformat.suffixFor(attachment.dataFormat)
-    val path = layerPath / defaultDirName / (attachment.name + suffix)
-    attachment.copy(path = path)
+    val suffix = LayerAttachmentDataformat.suffixFor(attachmentDataformat)
+    val safeAttachmentName =
+      TextUtils.normalizeStrong(attachmentName).getOrElse(s"$attachmentType-${ObjectId.generate}")
+    layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 
   private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
@@ -153,7 +160,9 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-    } yield dataSource.copy(dataLayers = dataSource.dataLayers ++ linkedLayers)
+      allLayers = linkedLayers ++ dataSource.dataLayers
+      _ <- Fox.fromBool(allLayers.length == allLayers.map(_.name).distinct.length) ?~> "dataset.duplicateLayerNames"
+    } yield dataSource.copy(dataLayers = allLayers)
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
                                                                      ec: ExecutionContext,
@@ -197,11 +206,10 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName
-      attachmentPath = datasetPath / parameters.layerName / LayerAttachmentType.defaultDirectoryNameFor(
-        parameters.attachmentType) / (TextUtils
-        .normalizeStrong(parameters.attachmentName)
-        .getOrElse("") + "-" + ObjectId.generate.toString + LayerAttachmentDataformat.suffixFor(
-        parameters.attachmentDataformat))
+      attachmentPath = generateAttachmentPath(parameters.attachmentName,
+                                              parameters.attachmentDataformat,
+                                              parameters.attachmentType,
+                                              datasetPath / parameters.layerName)
       _ <- datasetLayerAttachmentsDAO.insertPending(dataset._id,
                                                     parameters.layerName,
                                                     parameters.attachmentName,

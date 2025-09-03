@@ -116,7 +116,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     object Datasets {
       val manualUploadPrefix: Option[String] = getOptional[String]("webKnossos.datasets.manualUploadPrefix")
     }
-    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }
 
   object SingleSignOn {

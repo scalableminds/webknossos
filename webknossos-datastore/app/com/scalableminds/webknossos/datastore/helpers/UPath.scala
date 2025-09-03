@@ -16,11 +16,7 @@ trait UPath {
   def /(other: UPath): UPath =
     this / other.toString
 
-  def toAbsolute: Box[UPath] =
-    if (isAbsolute)
-      Full(this)
-    else
-      UPath.fromString(toLocalPathUnsafe.toAbsolutePath.toString)
+  def toAbsolute: UPath
 
   def toLocalPath: Box[Path]
 
@@ -131,6 +127,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def hashCode(): Int =
     new HashCodeBuilder(19, 29).append(nioPath).toHashCode
+
+  override def toAbsolute: UPath = UPath.fromLocalPath(nioPath.toAbsolutePath)
 }
 
 private case class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
@@ -182,4 +180,6 @@ private case class RemotePath(scheme: String, segments: Seq[String]) extends UPa
 
   override def hashCode(): Int =
     new HashCodeBuilder(19, 29).append(scheme).append(segments).toHashCode
+
+  override def toAbsolute: UPath = this
 }

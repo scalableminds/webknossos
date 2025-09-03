@@ -75,7 +75,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
-    } yield (responseBytesObject.asByteArray(), if (encoding == null) "" else encoding)
+      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retreival, can be ignored.
+      encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
+    } yield (responseBytesObject.asByteArray(), encodingNormalized)
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =

@@ -8,7 +8,6 @@ import { useDispatch } from "react-redux";
 import { APIJobType, type AiModel } from "types/api_types";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
-import { Store } from "viewer/singletons";
 
 const { Title, Text } = Typography;
 
@@ -101,7 +100,7 @@ export const AiModelSelector: React.FC = () => {
   const filteredCustomModels = useMemo(() => filterModels([]), [searchTerm, customModels]);
 
   const switchToTraininButton = (
-    <Button onClick={() => Store.dispatch(setAIJobDrawerStateAction("open_ai_training"))}>
+    <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))}>
       Train an AI Model on your data
     </Button>
   );

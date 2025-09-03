@@ -29,8 +29,8 @@ import {
   isDatasetOrBoundingBoxTooSmall,
 } from "viewer/view/action-bar/ai_job_modals/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
-import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
+import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 export const AiAnalysisParameters: React.FC = () => {
   const {

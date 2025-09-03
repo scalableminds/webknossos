@@ -1,5 +1,5 @@
 import { FolderOutlined } from "@ant-design/icons";
-import { Card, Col, Form, Row, Select, Space, Statistic } from "antd";
+import { Alert, Card, Col, Form, Row, Select, Space, Statistic } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
@@ -13,11 +13,12 @@ import {
   getSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { colorLayerMustNotBeUint24Rule } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
-import { colorLayerMustNotBeUint24Rule } from "../utils";
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);
@@ -46,12 +47,15 @@ const getIntersectingMagList = (
 
 const AiTrainingDataSelector = ({
   selectedAnnotation,
-}: { selectedAnnotation: AiTrainingAnnotationSelection }) => {
+}: {
+  selectedAnnotation: AiTrainingAnnotationSelection;
+}) => {
   const dataset = useWkSelector((state) => state.dataset);
   const { handleSelectionChange } = useAiTrainingJobContext();
 
-  const annotation = selectedAnnotation.annotation;
-  const annotationId = selectedAnnotation.annotation.annotationId;
+  const { annotation, imageDataLayer, groundTruthLayer, magnification, userBoundingBoxes } =
+    selectedAnnotation;
+  const annotationId = annotation.annotationId;
 
   // Gather layer names from dataset. Omit the layers that are also present
   // in annotationLayers.
@@ -78,36 +82,106 @@ const AiTrainingDataSelector = ({
   const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
 
   const availableMagnifications = useMemo(() => {
-    if (selectedAnnotation?.imageDataLayer && selectedAnnotation?.groundTruthLayer) {
-      return (
-        getIntersectingMagList(
-          annotation,
-          dataset,
-          selectedAnnotation.groundTruthLayer,
-          selectedAnnotation.imageDataLayer,
-        ) || []
-      );
+    if (imageDataLayer && groundTruthLayer) {
+      return getIntersectingMagList(annotation, dataset, groundTruthLayer, imageDataLayer) || [];
     }
     return [];
-  }, [
-    selectedAnnotation?.imageDataLayer,
-    selectedAnnotation?.groundTruthLayer,
-    annotation,
-    dataset,
-  ]);
+  }, [imageDataLayer, groundTruthLayer, annotation, dataset]);
 
-  const boundingBoxCount = useMemo(
-    () => selectedAnnotation.userBoundingBoxes.length,
-    [selectedAnnotation.userBoundingBoxes],
-  );
+  const boundingBoxCount = useMemo(() => userBoundingBoxes.length, [userBoundingBoxes]);
   const boundingBoxVolume = useMemo(
     () =>
-      selectedAnnotation.userBoundingBoxes.reduce(
+      userBoundingBoxes.reduce(
         (sum, box) => sum + computeVolumeFromBoundingBox(box.boundingBox),
         0,
       ),
-    [selectedAnnotation?.userBoundingBoxes],
+    [userBoundingBoxes],
   );
+
+  const shouldValidate = useMemo(
+    () => !!(imageDataLayer && groundTruthLayer && magnification),
+    [imageDataLayer, groundTruthLayer, magnification],
+  );
+
+  const layerValidationError = useMemo(() => {
+    if (!shouldValidate) {
+      return undefined;
+    }
+    if (imageDataLayer && groundTruthLayer && imageDataLayer === groundTruthLayer) {
+      return "Image Data and Ground Truth layers must be different.";
+    }
+    return undefined;
+  }, [shouldValidate, imageDataLayer, groundTruthLayer]);
+
+  const magnificationValidationError = useMemo(() => {
+    if (!shouldValidate) {
+      return undefined;
+    }
+    if (imageDataLayer && groundTruthLayer && availableMagnifications.length === 0) {
+      return "No common magnification found for the selected layers.";
+    }
+    return undefined;
+  }, [shouldValidate, imageDataLayer, groundTruthLayer, availableMagnifications]);
+
+  const { bboxErrors, bboxWarnings } = useMemo(() => {
+    if (!shouldValidate) {
+      return { bboxErrors: [], bboxWarnings: [] };
+    }
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (userBoundingBoxes.length === 0) {
+      errors.push("At least one bounding box is required for training.");
+      return { bboxErrors: errors, bboxWarnings: warnings };
+    }
+
+    if (boundingBoxVolume === 0) {
+      errors.push("Total volume of bounding boxes cannot be zero.");
+    }
+
+    const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
+    const tooSmallBoxes: string[] = [];
+    const notMagAlignedBoundingBoxes: string[] = [];
+
+    userBoundingBoxes.forEach((box) => {
+      const boundingBox = new BoundingBox(box.boundingBox);
+      let effectiveBbox = boundingBox;
+      if (magnification) {
+        const alignedBoundingBox = boundingBox.alignFromMag1ToMag(magnification, "shrink");
+        if (!alignedBoundingBox.equals(boundingBox)) {
+          notMagAlignedBoundingBoxes.push(box.name);
+        }
+        effectiveBbox = alignedBoundingBox;
+      }
+
+      const [width, height, depth] = effectiveBbox.getSize();
+      if (
+        width < MIN_BBOX_EXTENT_IN_EACH_DIM ||
+        height < MIN_BBOX_EXTENT_IN_EACH_DIM ||
+        depth < MIN_BBOX_EXTENT_IN_EACH_DIM
+      ) {
+        tooSmallBoxes.push(box.name);
+      }
+    });
+
+    if (tooSmallBoxes.length > 0) {
+      warnings.push(
+        `The following bounding boxes are too small. They should be at least ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx in each dimension: ${tooSmallBoxes.join(
+          ", ",
+        )}`,
+      );
+    }
+
+    if (notMagAlignedBoundingBoxes.length > 0) {
+      warnings.push(
+        `The following bounding boxes are not aligned with the selected magnification and will be automatically shrunk: ${notMagAlignedBoundingBoxes.join(
+          ", ",
+        )}`,
+      );
+    }
+
+    return { bboxErrors: errors, bboxWarnings: warnings };
+  }, [shouldValidate, userBoundingBoxes, magnification, boundingBoxVolume]);
 
   return (
     <Card style={{ marginBottom: "24px" }}>
@@ -123,7 +197,7 @@ const AiTrainingDataSelector = ({
           >
             <Select
               options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
-              value={selectedAnnotation?.imageDataLayer}
+              value={imageDataLayer}
               onChange={(value) => handleSelectionChange(annotationId, { imageDataLayer: value })}
             />
           </Form.Item>
@@ -136,10 +210,12 @@ const AiTrainingDataSelector = ({
                 message: "Please select a source for the ground truth segmentation",
               },
             ]}
+            validateStatus={layerValidationError ? "error" : undefined}
+            help={layerValidationError}
           >
             <Select
               options={segmentationAndColorLayers.map((l) => ({ value: l, label: l }))}
-              value={selectedAnnotation?.groundTruthLayer}
+              value={groundTruthLayer}
               onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
             />
           </Form.Item>
@@ -149,16 +225,16 @@ const AiTrainingDataSelector = ({
             label="Magnification"
             required
             rules={[{ required: true, message: "Please select a magnification" }]}
+            validateStatus={magnificationValidationError ? "error" : undefined}
+            help={magnificationValidationError}
           >
             <Select
-              disabled={
-                !selectedAnnotation?.imageDataLayer || !selectedAnnotation?.groundTruthLayer
-              }
+              disabled={!imageDataLayer || !groundTruthLayer}
               options={availableMagnifications.map((m, index) => ({
                 value: index,
                 label: `${m[0]}-${m[1]}-${m[2]}`,
               }))}
-              value={selectedAnnotation?.magnification}
+              value={magnification}
               onChange={(index: number) =>
                 handleSelectionChange(annotationId, {
                   magnification: availableMagnifications[index],
@@ -172,6 +248,12 @@ const AiTrainingDataSelector = ({
           </Space>
         </Col>
       </Row>
+      {bboxErrors.map((error) => (
+        <Alert key={error} message={error} type="error" showIcon style={{ marginTop: 12 }} />
+      ))}
+      {bboxWarnings.map((warning) => (
+        <Alert key={warning} message={warning} type="warning" showIcon style={{ marginTop: 12 }} />
+      ))}
     </Card>
   );
 };

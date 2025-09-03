@@ -264,6 +264,8 @@ class JobService @Inject()(wkConf: WkConf,
       case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
       case JobCommand.infer_nuclei       => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
       case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.train_neuron_model => Fox.successful(0)
+      case JobCommand.train_instance_model => Fox.successful(0)
       case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
       case _                             => Fox.failure(s"Unsupported job command $jobCommand")
     }

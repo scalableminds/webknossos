@@ -30,6 +30,7 @@ import {
 } from "viewer/view/action-bar/ai_job_modals/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
+import { colorLayerMustNotBeUint24Rule } from "../utils";
 
 export const AiAnalysisParameters: React.FC = () => {
   const {
@@ -126,18 +127,7 @@ export const AiAnalysisParameters: React.FC = () => {
               label="Image Data Layer"
               rules={[
                 { required: true, message: "Please select an image data layer" },
-                {
-                  validator: (_, value: APIDataLayer) => {
-                    if (value && value.elementClass === "uint24") {
-                      return Promise.reject(
-                        new Error(
-                          "The selected layer of type uint24 is not supported. Please select a different one.",
-                        ),
-                      );
-                    }
-                    return Promise.resolve();
-                  },
-                },
+                colorLayerMustNotBeUint24Rule,
               ]}
             >
               <Select

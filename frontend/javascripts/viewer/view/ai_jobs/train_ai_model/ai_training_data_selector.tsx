@@ -2,6 +2,7 @@ import { FolderOutlined } from "@ant-design/icons";
 import { Card, Col, Form, Row, Select, Space, Statistic } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import _ from "lodash";
 import { useMemo } from "react";
@@ -16,7 +17,7 @@ import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
-import { useWkSelector } from "libs/react_hooks";
+import { colorLayerMustNotBeUint24Rule } from "../utils";
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);
@@ -109,13 +110,16 @@ const AiTrainingDataSelector = ({
   );
 
   return (
-    <Card title={`Annotation: ${annotationId}`} style={{ marginBottom: "24px" }}>
+    <Card style={{ marginBottom: "24px" }}>
       <Row gutter={24}>
         <Col span={12}>
           <Form.Item
             label="Image Data Layer"
             required
-            rules={[{ required: true, message: "Please select an image data layer" }]}
+            rules={[
+              { required: true, message: "Please select a source for the image data." },
+              colorLayerMustNotBeUint24Rule,
+            ]}
           >
             <Select
               options={colorLayers.map((l) => ({ value: l.name, label: l.name }))}
@@ -126,7 +130,12 @@ const AiTrainingDataSelector = ({
           <Form.Item
             label="Ground Truth Layer"
             required
-            rules={[{ required: true, message: "Please select a ground truth layer" }]}
+            rules={[
+              {
+                required: true,
+                message: "Please select a source for the ground truth segmentation",
+              },
+            ]}
           >
             <Select
               options={segmentationAndColorLayers.map((l) => ({ value: l, label: l }))}

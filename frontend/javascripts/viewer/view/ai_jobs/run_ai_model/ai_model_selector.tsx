@@ -1,11 +1,14 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
-import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
+import { Avatar, Button, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import { APIJobType, type AiModel } from "types/api_types";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
+import { Store } from "viewer/singletons";
 
 const { Title, Text } = Typography;
 
@@ -51,6 +54,7 @@ const mapCategoryToJobType = (category: APIAiModelCategory): APIJobType => {
 };
 
 export const AiModelSelector: React.FC = () => {
+  const dispatch = useDispatch();
   const { selectedModel, setSelectedModel, setSelectedJobType } = useRunAiModelJobContext();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -86,15 +90,20 @@ export const AiModelSelector: React.FC = () => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return models.filter(
       (model) =>
-        model.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-        (model.comment && model.comment.toLowerCase().includes(lowerCaseSearchTerm)),
+        model.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        model.comment?.toLowerCase().includes(lowerCaseSearchTerm),
     );
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
   const filteredPreTrainedModels = useMemo(() => filterModels(preTrainedModels), [searchTerm]);
-  const filteredCustomModels = useMemo(
-    () => filterModels(customModels),
-    [searchTerm, customModels],
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
+  const filteredCustomModels = useMemo(() => filterModels([]), [searchTerm, customModels]);
+
+  const switchToTraininButton = (
+    <Button onClick={() => Store.dispatch(setAIJobDrawerStateAction("open_ai_training"))}>
+      Train an AI Model on your data
+    </Button>
   );
 
   return (
@@ -118,6 +127,7 @@ export const AiModelSelector: React.FC = () => {
       <List
         itemLayout="horizontal"
         dataSource={filteredPreTrainedModels}
+        locale={{ emptyText: "No pre-trained models match your search." }}
         renderItem={(item) => (
           <List.Item
             style={{
@@ -155,6 +165,10 @@ export const AiModelSelector: React.FC = () => {
         <List
           itemLayout="horizontal"
           dataSource={filteredCustomModels}
+          locale={{
+            emptyText:
+              searchTerm.length > 0 ? "No models match your search." : switchToTraininButton,
+          }}
           renderItem={(item) => (
             <List.Item
               style={{

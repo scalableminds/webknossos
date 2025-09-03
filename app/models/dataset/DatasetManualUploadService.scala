@@ -44,6 +44,9 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       organization <- organizationDAO.findOne(requestingUser._organization)
       _ <- Fox.runIf(parameters.requireUniqueName)(
         datasetService.checkNameAvailable(parameters.datasetName, organization._id))
+      _ <- datasetService.assertValidDatasetName(parameters.datasetName)
+      _ <- Fox.serialCombined(parameters.dataSource.dataLayers)(layer =>
+        datasetService.assertValidLayerNameLax(layer.name))
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
       _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"

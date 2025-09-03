@@ -47,6 +47,8 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       _ <- datasetService.assertValidDatasetName(parameters.datasetName)
       _ <- Fox.serialCombined(parameters.dataSource.dataLayers)(layer =>
         datasetService.assertValidLayerNameLax(layer.name))
+      _ <- Fox.serialCombined(parameters.layersToLink.flatMap(_.newLayerName))(newLayerName =>
+        datasetService.assertValidLayerNameLax(newLayerName))
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
       _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"

@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LegacyLinkedLayerIdentifier,

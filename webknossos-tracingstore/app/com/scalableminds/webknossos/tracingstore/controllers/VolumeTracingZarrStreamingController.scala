@@ -27,7 +27,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
@@ -49,6 +49,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
+import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
 class VolumeTracingZarrStreamingController @Inject()(
@@ -274,13 +275,21 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          layerName = tracingName.getOrElse(tracingId)
           zarrLayer = StaticSegmentationLayer(
-            name = tracingName.getOrElse(tracingId),
+            name = layerName,
             dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.mags.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+            mags = tracing.mags.toList.map(
+              m =>
+                MagLocator(m,
+                           Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
+                           None,
+                           Some(AxisOrder.cxyz),
+                           None,
+                           None)),
             mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))

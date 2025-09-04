@@ -28,11 +28,11 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: StaticSegmentationLayer =>
           for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+            mags <- adaptMags(l.mags, remotePath, l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
         case l: StaticColorLayer =>
           for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+            mags <- adaptMags(l.mags, remotePath, l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
           } yield l.copy(mags = mags)
         case layer =>
           Fox.failure(
@@ -42,21 +42,24 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
     } yield zarrLayersWithScale
 
   private def adaptMags(mags: List[MagLocator],
-                        remoteLayerPath: VaultPath,
+                        remoteDatasetPath: VaultPath,
+                        layerName: String,
                         headerFilename: String,
                         credentialId: Option[String])(implicit tc: TokenContext): Fox[List[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
-        magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
+        magPath <- fixRemoteMagPath(m, remoteDatasetPath, layerName, headerFilename)
       } yield m.copy(path = magPath, credentialId = credentialId))
 
-  private def fixRemoteMagPath(mag: MagLocator, remoteLayerPath: VaultPath, headerFilename: String)(
-      implicit tc: TokenContext): Fox[Option[UPath]] =
+  private def fixRemoteMagPath(mag: MagLocator,
+                               remoteDatasetPath: VaultPath,
+                               layerName: String,
+                               headerFilename: String)(implicit tc: TokenContext): Fox[Option[UPath]] =
     mag.path match {
-      case Some(path) => Fox.successful(Some(path))
+      case Some(path) => Fox.successful(Some(path.resolvedIn(remoteDatasetPath.toUPath)))
       case None       =>
         // Only scalar mag paths are attempted for now
-        val magPath = remoteLayerPath / mag.mag.toMagLiteral(allowScalar = true)
+        val magPath = remoteDatasetPath / layerName / mag.mag.toMagLiteral(allowScalar = true)
         val magHeaderPath = magPath / headerFilename
         for {
           _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"

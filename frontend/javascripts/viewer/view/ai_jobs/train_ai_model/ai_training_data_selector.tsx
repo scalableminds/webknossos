@@ -184,7 +184,7 @@ const AiTrainingDataSelector = ({
   }, [shouldValidate, userBoundingBoxes, magnification, boundingBoxVolume]);
 
   return (
-    <Card style={{ marginBottom: "24px" }}>
+    <Card style={{ marginBottom: "24px" }} type="inner">
       <Row gutter={24}>
         <Col span={12}>
           <Form.Item
@@ -243,7 +243,7 @@ const AiTrainingDataSelector = ({
             />
           </Form.Item>
           <Space size={"middle"}>
-            <Statistic title="Bounding\n Boxes" value={boundingBoxCount} />
+            <Statistic title="Bounding Boxes" value={boundingBoxCount} />
             <Statistic title="Volume" value={formatVoxels(boundingBoxVolume)} />
           </Space>
         </Col>

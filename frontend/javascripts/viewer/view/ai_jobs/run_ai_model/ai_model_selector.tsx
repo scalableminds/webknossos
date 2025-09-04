@@ -100,9 +100,12 @@ export const AiModelSelector: React.FC = () => {
   const filteredCustomModels = useMemo(() => filterModels([]), [searchTerm, customModels]);
 
   const switchToTraininButton = (
-    <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))}>
-      Train an AI Model on your data
-    </Button>
+    <>
+      You don't have any custom models yet.
+      <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))} type="link">
+        Train an AI Model on your data
+      </Button>
+    </>
   );
 
   return (

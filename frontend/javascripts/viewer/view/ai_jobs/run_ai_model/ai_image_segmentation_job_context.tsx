@@ -10,6 +10,7 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
+import { every } from "lodash";
 import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -103,9 +104,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
   const areParametersValid = useMemo(
     () =>
-      Boolean(
-        selectedModel && selectedJobType && selectedBoundingBox && newDatasetName && selectedLayer,
-      ),
+      every([selectedModel, selectedJobType, selectedBoundingBox, newDatasetName, selectedLayer]),
     [selectedModel, selectedJobType, selectedBoundingBox, newDatasetName, selectedLayer],
   );
 

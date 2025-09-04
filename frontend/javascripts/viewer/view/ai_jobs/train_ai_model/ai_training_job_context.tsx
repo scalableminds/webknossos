@@ -15,6 +15,7 @@ import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_ac
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import type { AiTrainingTask } from "./ai_training_model_selector";
+import { every } from "lodash";
 
 export interface AiTrainingAnnotationSelection {
   annotation: StoreAnnotation;
@@ -101,17 +102,12 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   );
 
   const areParametersValid = useMemo(() => {
-    const areSelectionsValid = _.every(
+    const areSelectionsValid = every(
       selectedAnnotations,
       (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
     );
 
-    return _.every([
-      modelName,
-      selectedJobType,
-      areSelectionsValid,
-      selectedAnnotations.length > 0,
-    ]);
+    return every([modelName, selectedJobType, areSelectionsValid, selectedAnnotations.length > 0]);
   }, [modelName, selectedJobType, selectedAnnotations]);
 
   const handleStartAnalysis = useCallback(async () => {

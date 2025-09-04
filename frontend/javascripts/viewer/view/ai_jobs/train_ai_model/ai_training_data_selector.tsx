@@ -4,7 +4,6 @@ import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { computeVolumeFromBoundingBox } from "libs/utils";
-import _ from "lodash";
 import { useMemo } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import {
@@ -98,35 +97,21 @@ const AiTrainingDataSelector = ({
     [userBoundingBoxes],
   );
 
-  const shouldValidate = useMemo(
-    () => _.every([imageDataLayer, groundTruthLayer, magnification]),
-    [imageDataLayer, groundTruthLayer, magnification],
-  );
-
   const layerValidationError = useMemo(() => {
-    if (!shouldValidate) {
-      return undefined;
-    }
     if (imageDataLayer && groundTruthLayer && imageDataLayer === groundTruthLayer) {
       return "Image Data and Ground Truth layers must be different.";
     }
     return undefined;
-  }, [shouldValidate, imageDataLayer, groundTruthLayer]);
+  }, [imageDataLayer, groundTruthLayer]);
 
   const magnificationValidationError = useMemo(() => {
-    if (!shouldValidate) {
-      return undefined;
-    }
     if (imageDataLayer && groundTruthLayer && availableMagnifications.length === 0) {
       return "No common magnification found for the selected layers.";
     }
     return undefined;
-  }, [shouldValidate, imageDataLayer, groundTruthLayer, availableMagnifications]);
+  }, [imageDataLayer, groundTruthLayer, availableMagnifications]);
 
   const { bboxErrors, bboxWarnings } = useMemo(() => {
-    if (!shouldValidate) {
-      return { bboxErrors: [], bboxWarnings: [] };
-    }
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -181,7 +166,7 @@ const AiTrainingDataSelector = ({
     }
 
     return { bboxErrors: errors, bboxWarnings: warnings };
-  }, [shouldValidate, userBoundingBoxes, magnification, boundingBoxVolume]);
+  }, [userBoundingBoxes, magnification, boundingBoxVolume]);
 
   return (
     <Card style={{ marginBottom: "24px" }} type="inner">

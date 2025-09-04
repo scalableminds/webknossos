@@ -67,7 +67,8 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
-    } yield dataSourceWithPaths // Note: not returning the one with layersToLink.
+    } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
+    yield dataSourceWithPaths
 
   private def findReferencedDataStore(
       layersToLink: Seq[LinkedLayerIdentifier])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {

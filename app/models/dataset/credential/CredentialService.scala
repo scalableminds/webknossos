@@ -2,9 +2,9 @@ package models.dataset.credential
 
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
-  DataVaultService,
   GoogleServiceAccountCredential,
   HttpBasicAuthCredential,
   S3AccessKeyCredential
@@ -23,7 +23,7 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                           userId: Option[ObjectId],
                           organizationId: Option[String]): Option[DataVaultCredential] =
     uri.getScheme match {
-      case DataVaultService.schemeHttps | DataVaultService.schemeHttp =>
+      case PathSchemes.schemeHttps | PathSchemes.schemeHttp =>
         credentialIdentifier.map(
           username =>
             HttpBasicAuthCredential(uri.toString,
@@ -31,13 +31,13 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
                                     credentialSecret.getOrElse(""),
                                     userId.map(_.toString),
                                     organizationId))
-      case DataVaultService.schemeS3 =>
+      case PathSchemes.schemeS3 =>
         (credentialIdentifier, credentialSecret) match {
           case (Some(keyId), Some(secretKey)) =>
             Some(S3AccessKeyCredential(uri.toString, keyId, secretKey, userId.map(_.toString), organizationId))
           case _ => None
         }
-      case DataVaultService.schemeGS =>
+      case PathSchemes.schemeGS =>
         for {
           secret <- credentialSecret
           secretJson <- JsonHelper.parseAs[JsValue](secret).toOption

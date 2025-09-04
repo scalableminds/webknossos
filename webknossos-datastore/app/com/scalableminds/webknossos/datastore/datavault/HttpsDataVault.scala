@@ -34,7 +34,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
-    val uri = path.toUri
+    val uri = path.toRemoteUriUnsafe
     for {
       response <- range match {
         case StartEnd(r)          => getWithRange(uri, r)

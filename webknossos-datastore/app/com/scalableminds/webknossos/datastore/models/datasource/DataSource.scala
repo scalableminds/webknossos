@@ -1,81 +1,113 @@
-package com.scalableminds.webknossos.datastore.models
+package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
-import play.api.libs.json._
+import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
-package object datasource {
+object DatasetViewConfiguration {
+  type DatasetViewConfiguration = Map[String, JsValue]
+  implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
+}
 
-  case class DataSourceId(directoryName: String, organizationId: String) {
-    override def toString: String = s"$organizationId/$directoryName"
-  }
+trait DataSource {
+  def id: DataSourceId
+  def withUpdatedId(newId: DataSourceId): DataSource
 
-  object DataSourceId {
-    // The legacy names for the directory name and organization id are "name" and "team".
-    // We keep the old names in serialization and deserialization for backwards compatibility.
-    implicit object DataSourceIdFormat extends Format[DataSourceId] {
-      override def reads(json: JsValue): JsResult[DataSourceId] =
-        (json \ "name").validate[String] flatMap { nameRenamedToPath =>
-          (json \ "team").validate[String].map { teamRenamedToOrganization =>
-            DataSourceId(nameRenamedToPath, teamRenamedToOrganization)
-          }
+  def toUsable: Option[UsableDataSource]
+
+  def isUsable: Boolean = toUsable.isDefined
+
+  def voxelSizeOpt: Option[VoxelSize]
+
+  def statusOpt: Option[String]
+
+  def defaultViewConfiguration: Option[DatasetViewConfiguration]
+
+  def allLayers: List[StaticLayer]
+}
+
+object DataSource {
+  implicit def dataSourceFormat: Format[DataSource] =
+    new Format[DataSource] {
+      def reads(json: JsValue): JsResult[DataSource] =
+        UnusableDataSource.jsonFormat.reads(json).orElse(UsableDataSource.jsonFormat.reads(json))
+
+      def writes(ds: DataSource): JsValue =
+        ds match {
+          case ds: UsableDataSource   => UsableDataSource.jsonFormat.writes(ds)
+          case ds: UnusableDataSource => UnusableDataSource.jsonFormat.writes(ds)
         }
-
-      override def writes(datasetId: DataSourceId): JsValue =
-        Json.obj(
-          "name" -> datasetId.directoryName,
-          "team" -> datasetId.organizationId,
-        )
     }
+}
+
+case class UnusableDataSource(id: DataSourceId,
+                              dataLayers: Option[List[StaticLayer]] = None,
+                              status: String,
+                              scale: Option[VoxelSize] = None,
+                              existingDataSourceProperties: Option[JsValue] = None)
+    extends DataSource {
+  val toUsable: Option[UsableDataSource] = None
+
+  val voxelSizeOpt: Option[VoxelSize] = scale
+
+  val statusOpt: Option[String] = Some(status)
+
+  val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
+
+  def withUpdatedId(newId: DataSourceId): UnusableDataSource = copy(id = newId)
+
+  def allLayers: List[StaticLayer] = dataLayers.getOrElse(List.empty)
+}
+
+object UnusableDataSource {
+  implicit def jsonFormat: Format[UnusableDataSource] = Json.format[UnusableDataSource]
+}
+
+case class UsableDataSource(id: DataSourceId,
+                            dataLayers: List[StaticLayer],
+                            scale: VoxelSize,
+                            defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+                            statusOpt: Option[String] = None)
+    extends DataSource {
+
+  val toUsable: Option[UsableDataSource] = Some(this)
+
+  val voxelSizeOpt: Option[VoxelSize] = Some(scale)
+
+  def getDataLayer(name: String): Option[StaticLayer] =
+    dataLayers.find(_.name == name)
+
+  val center: Vec3Int = boundingBox.center
+
+  lazy val boundingBox: BoundingBox =
+    BoundingBox.union(dataLayers.map(_.boundingBox))
+
+  def segmentationLayers: List[SegmentationLayer] = dataLayers.flatMap {
+    case layer: SegmentationLayer => Some(layer)
+    case _                        => None
   }
 
-  object DatasetViewConfiguration {
-    type DatasetViewConfiguration = Map[String, JsValue]
-    implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
-  }
+  def additionalAxesUnion: Option[Seq[AdditionalAxis]] =
+    AdditionalAxis.merge(dataLayers.map(_.additionalAxes))
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
-                                                    dataLayers: List[T],
-                                                    scale: VoxelSize,
-                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
-      extends GenericInboxDataSource[T] {
+  def withUpdatedId(newId: DataSourceId): UsableDataSource = copy(id = newId)
 
-    val toUsable: Option[GenericDataSource[T]] = Some(this)
+  def allExplicitPaths: Seq[UPath] = dataLayers.flatMap(_.allExplicitPaths)
 
-    val voxelSizeOpt: Option[VoxelSize] = Some(scale)
+  def allLayers: List[StaticLayer] = dataLayers
 
-    val statusOpt: Option[String] = None
+  def toUnusableWithStatus(status: String): UnusableDataSource = UnusableDataSource(
+    id,
+    Some(dataLayers),
+    status,
+    Some(scale)
+  )
+}
 
-    def getDataLayer(name: String): Option[T] =
-      dataLayers.find(_.name == name)
+object UsableDataSource {
+  implicit def jsonFormat: Format[UsableDataSource] = Json.format[UsableDataSource]
 
-    val center: Vec3Int = boundingBox.center
-
-    lazy val boundingBox: BoundingBox =
-      BoundingBox.union(dataLayers.map(_.boundingBox))
-
-    def segmentationLayers: List[SegmentationLayer] = dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
-      case _                        => None
-    }
-
-    def additionalAxesUnion: Option[Seq[AdditionalAxis]] =
-      AdditionalAxis.merge(dataLayers.map(_.additionalAxes))
-
-    def withUpdatedId(newId: DataSourceId): GenericDataSource[T] = copy(id = newId)
-
-    def allExplicitPaths: Seq[String] = dataLayers.flatMap(_.allExplicitPaths)
-  }
-
-  object GenericDataSource {
-    implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] =
-      Json.format[GenericDataSource[T]]
-
-    val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
-  }
-
-  type DataSource = GenericDataSource[DataLayer]
-  type DataSourceLike = GenericDataSource[DataLayerLike]
-  type DataSourceWithMagLocators = GenericDataSource[DataLayerWithMagLocators]
+  val FILENAME_DATASOURCE_PROPERTIES_JSON: String = "datasource-properties.json"
 }

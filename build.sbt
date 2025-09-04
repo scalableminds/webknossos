@@ -35,7 +35,7 @@ scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*t
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(
-  resolvers ++= DependencyResolvers.dependencyResolvers,
+  resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
 )

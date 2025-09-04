@@ -15,17 +15,18 @@ import com.scalableminds.webknossos.datastore.explore.{
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
+  PathSchemes,
   SegmentIndexData,
-  SegmentStatisticsParameters
+  SegmentStatisticsParameters,
+  UPath
 }
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -45,7 +46,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 case class PathValidationResult(
-    path: String,
+    path: UPath,
     valid: Boolean
 )
 
@@ -75,14 +76,6 @@ class DataSourceController @Inject()(
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
-
-  def readInboxDataSource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-      for {
-        dataSource <- refreshDataSource(datasetId)
-      } yield Ok(Json.toJson(dataSource))
-    }
-  }
 
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
@@ -119,34 +112,6 @@ class DataSourceController @Inject()(
             uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads))
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
-      }
-    }
-
-  // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
-  // and it can be put in a webknossos folder where they have access
-  def reserveManualUpload(): Action[ReserveManualUploadInformation] =
-    Action.async(validateJson[ReserveManualUploadInformation]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDataSources(request.body.organization)) {
-        for {
-          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
-            ReserveUploadInformation(
-              "aManualUpload",
-              request.body.datasetName,
-              request.body.organization,
-              0,
-              Some(List.empty),
-              None,
-              None,
-              request.body.initialTeamIds,
-              request.body.folderId,
-              Some(request.body.requireUniqueName)
-            )
-          ) ?~> "dataset.upload.validation.failed"
-        } yield
-          Ok(
-            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
-                     "directoryName" -> reservedDatasetInfo.directoryName))
       }
     }
 
@@ -361,18 +326,12 @@ class DataSourceController @Inject()(
     }
   }
 
-  def update(datasetId: ObjectId): Action[DataSource] =
-    Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+  def updateOnDisk(datasetId: ObjectId): Action[UsableDataSource] =
+    Action.async(validateJson[UsableDataSource]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-          updatedDataSource = request.body.copy(id = dataSource.id)
-          // While some data sources are still stored on disk, we need to update the data source on disk if it exists.
-          // If no datasource were on disk, it would make sense to remove this route and let the frontend directly call WK.
-          _ <- if (dataSourceService.existsOnDisk(dataSource.id.organizationId, dataSource.id.directoryName)) {
-            dataSourceService.updateDataSourceOnDisk(updatedDataSource, expectExisting = true, preventNewPaths = true)
-          } else
-            dsRemoteWebknossosClient.updateDataSource(updatedDataSource, datasetId)
+          _ <- dataSourceService.updateDataSourceOnDisk(request.body, expectExisting = true, validate = true)
+          _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
       }
     }
@@ -406,7 +365,7 @@ class DataSourceController @Inject()(
       }
     }
 
-  private def clearCachesOfDataSource(dataSource: InboxDataSource, layerName: Option[String]): Unit = {
+  private def clearCachesOfDataSource(dataSource: DataSource, layerName: Option[String]): Unit = {
     val dataSourceId = dataSource.id
     val organizationId = dataSourceId.organizationId
     val datasetDirectoryName = dataSourceId.directoryName
@@ -430,8 +389,8 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
         for {
-          inboxDataSource <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
-          _ = clearCachesOfDataSource(inboxDataSource, layerName)
+          dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+          _ = clearCachesOfDataSource(dataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -443,7 +402,7 @@ class DataSourceController @Inject()(
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- if (dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
+          _ <- if (dataSourceService.existsOnDisk(dataSourceId)) {
             for {
               _ <- dataSourceService.deleteOnDisk(
                 dataSourceId.organizationId,
@@ -657,10 +616,10 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organizationId)) {
         val reportMutable = ListBuffer[String]()
-        val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
-          new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)
+        val hasLocalFilesystemRequest =
+          request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)
         for {
-          dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
+          dataSourceBox: Box[UsableDataSource] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
             .futureBox
           // Remove report of recursive exploration in case of exploring the local file system to avoid information exposure.
@@ -683,9 +642,9 @@ class DataSourceController @Inject()(
       }
     }
 
-  def validatePaths(): Action[List[String]] =
-    Action.async(validateJson[List[String]]) { implicit request =>
-      {
+  def validatePaths(): Action[List[UPath]] =
+    Action.async(validateJson[List[UPath]]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- Fox.successful(())
           pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)
@@ -703,12 +662,11 @@ class DataSourceController @Inject()(
     }
   }
 
-  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =
+  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
     for {
-      inboxDataSourceInDB <- dsRemoteWebknossosClient.getDataset(datasetId) ~> NOT_FOUND
-      dataSourceId = inboxDataSourceInDB.id
-      dataSourceFromDir <- Fox.runIf(
-        dataSourceService.existsOnDisk(dataSourceId.organizationId, dataSourceId.directoryName)) {
+      dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
+      dataSourceId = dataSourceFromDB.id
+      dataSourceFromDir <- Fox.runIf(dataSourceService.existsOnDisk(dataSourceId)) {
         dataSourceService
           .dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
@@ -716,14 +674,8 @@ class DataSourceController @Inject()(
           .toUsable
           .toFox
       }
-      _ <- dataSourceFromDir match {
-        case Some(ds) =>
-          for {
-            _ <- dsRemoteWebknossosClient.updateDataSource(ds, datasetId, allowNewPaths = true)
-            _ = datasetCache.invalidateCache(datasetId)
-          } yield ()
-        case _ => Fox.successful(())
-      }
+      _ <- Fox.runOptional(dataSourceFromDir)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
+      _ = datasetCache.invalidateCache(datasetId)
       dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
     } yield dataSource
 

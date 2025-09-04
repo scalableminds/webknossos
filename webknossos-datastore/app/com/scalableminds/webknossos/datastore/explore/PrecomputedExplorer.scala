@@ -4,21 +4,19 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  PrecomputedDataLayer,
-  PrecomputedLayer,
-  PrecomputedSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  DatasetLayerAttachments,
+  DataFormat,
+  DataLayerAttachments,
   ElementClass,
   LayerAttachment,
-  LayerAttachmentDataformat
+  LayerAttachmentDataformat,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.services.mesh.{NeuroglancerMesh, NeuroglancerPrecomputedMeshInfo}
 
@@ -28,7 +26,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(PrecomputedLayer, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- infoPath
@@ -39,7 +37,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   private def layerFromPrecomputedHeader(
       precomputedHeader: PrecomputedHeader,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit tc: TokenContext): Fox[(PrecomputedLayer, VoxelSize)] =
+      credentialId: Option[String])(implicit tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
@@ -52,17 +50,18 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
         getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox)
       meshAttachments <- exploreMeshesForLayer(remotePath / precomputedHeader.meshPath, credentialId)
-      attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DatasetLayerAttachments(meshes = meshAttachments))
+      attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DataLayerAttachments(meshes = meshAttachments))
       else None
       layer = if (precomputedHeader.describesSegmentationLayer) {
-        PrecomputedSegmentationLayer(name,
-                                     boundingBox,
-                                     elementClass,
-                                     mags,
-                                     largestSegmentId = None,
-                                     attachments = attachmentsGrouped)
+        StaticSegmentationLayer(name,
+                                DataFormat.neuroglancerPrecomputed,
+                                boundingBox,
+                                elementClass,
+                                mags,
+                                largestSegmentId = None,
+                                attachments = attachmentsGrouped)
       } else
-        PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
+        StaticColorLayer(name, DataFormat.neuroglancerPrecomputed, boundingBox, elementClass, mags)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Option[ElementClass.Value] =
@@ -87,7 +86,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       // Neuroglancer precomputed specification does not specify axis order, but uses x,y,z implicitly.
       // https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/volume.md#unsharded-chunk-storage
       axisOrder = AxisOrder.xyz(0, 1, 2)
-    } yield MagLocator(mag, Some(path.toString), None, Some(axisOrder), channelIndex = None, credentialId)
+    } yield MagLocator(mag, Some(path.toUPath), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 
   private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
@@ -100,7 +99,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       } yield
         Seq(
           LayerAttachment(NeuroglancerMesh.meshName,
-                          meshPath.toUri,
+                          meshPath.toUPath,
                           LayerAttachmentDataformat.neuroglancerPrecomputed,
                           credentialId))
     // If mesh exploration at this path failed, continue but return no meshes.

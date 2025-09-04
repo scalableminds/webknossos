@@ -218,7 +218,8 @@ class AnnotationController @Inject()(
     }
 
   private def finishAnnotation(typ: String, id: ObjectId, issuingUser: User, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
@@ -416,7 +417,7 @@ class AnnotationController @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       dataSource <- if (annotation._task.isDefined)
-        datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox).map(Some(_))
+        datasetService.usableDataSourceFor(dataset).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationId = ObjectId.generate

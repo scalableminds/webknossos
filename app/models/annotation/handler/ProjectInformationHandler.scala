@@ -10,6 +10,7 @@ import models.user.{User, UserService}
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
 import models.task.TaskDAO
+import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -25,8 +26,8 @@ class ProjectInformationHandler @Inject()(
     extends AnnotationInformationHandler
     with FoxImplicits {
 
-  override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
+                                                                             mp: MessagesProvider): Fox[Annotation] =
     for {
       project <- projectDAO.findOne(projectId) ?~> "project.notFound"
       user <- userOpt.toFox ?~> "user.notAuthorised"

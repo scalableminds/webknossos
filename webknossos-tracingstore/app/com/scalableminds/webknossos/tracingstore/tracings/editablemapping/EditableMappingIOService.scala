@@ -3,21 +3,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   IntCompressionSetting,
   StringCompressionSetting
-}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BloscCodecConfiguration,
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  EmptyZarr3GroupHeader,
-  Zarr3ArrayHeader,
-  Zarr3DataType
 }
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.typesafe.scalalogging.LazyLogging
@@ -126,9 +116,9 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
 
   private lazy val compressorConfiguration =
     BloscCodecConfiguration(
-      BloscCompressor.defaultCname,
+      BloscCompressor.defaultCname.getValue,
       BloscCompressor.defaultCLevel,
-      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
+      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle.getValue)),
       Some(BloscCompressor.defaultTypesize),
       BloscCompressor.defaultBlocksize
     )
@@ -136,9 +126,9 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
   private lazy val compressor =
     new BloscCompressor(
       Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
         BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
         BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
         BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
       ))

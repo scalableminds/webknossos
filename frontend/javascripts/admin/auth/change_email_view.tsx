@@ -1,5 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { logoutUser, updateUser } from "admin/rest_api";
+import { logoutUserEverywhere, updateUser } from "admin/rest_api";
 import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -18,7 +18,7 @@ const PASSWORD_FIELD_KEY = "password";
 function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
-  useNavigate();
+  const navigate = useNavigate();
 
   async function changeEmail(newEmail: string, password: string) {
     const newUser = Object.assign({}, activeUser, {
@@ -36,9 +36,9 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
       .then(async () => {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
-        await logoutUser();
+        await logoutUserEverywhere();
         Store.dispatch(logoutUserAction());
-        window.location.href = "/auth/login";
+        navigate("/auth/login");
       })
       .catch((error) => {
         const errorMsg = "An unexpected error occurred while changing the email address.";

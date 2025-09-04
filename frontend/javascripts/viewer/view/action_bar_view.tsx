@@ -205,11 +205,12 @@ function CreateAnnotationButton() {
   const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
     AsyncButton,
   );
+
   return (
     <div
-      onKeyDownCapture={(e) => {
+      onKeyDown={(e: React.KeyboardEvent) => {
         // Prevent closing the modal upon pressing some keys.
-        if (e.ctrlKey || e.metaKey || e.key === "AltGraph") {
+        if (e.ctrlKey || e.metaKey || e.key === "AltGraph" || e.getModifierState("AltGraph")) {
           e.stopPropagation();
         }
       }}

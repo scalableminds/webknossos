@@ -38,22 +38,22 @@ class UPathTestSuite extends PlaySpec {
 
     "resolve strings correctly (remote)" in {
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey").toString == "https://hello.com/there/subkey"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey").toString == "https://example.com/key/subkey"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there/") / "subkey").toString == "https://hello.com/there/subkey"
+        (UPath.fromStringUnsafe("https://example.com/key/") / "subkey").toString == "https://example.com/key/subkey"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/").toString == "https://hello.com/there/subkey/"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/").toString == "https://example.com/key/subkey/"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/" / "subsub").toString == "https://hello.com/there/subkey/subsub"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "..").toString == "https://hello.com"
+        (UPath.fromStringUnsafe("https://example.com/key") / "..").toString == "https://example.com"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com") / "..").toString == "https://hello.com"
+        (UPath.fromStringUnsafe("https://example.com") / "..").toString == "https://example.com"
       )
     }
 

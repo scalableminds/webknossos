@@ -47,6 +47,14 @@ trait DataSourceValidation {
       check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
         "Layer names must be unique. At least two layers have the same name."
+      ),
+      check(
+        dataSource.dataLayers.map(_.name).forall(!_.contains("/")),
+        "Layer names must not contain forward slash."
+      ),
+      check(
+        dataSource.dataLayers.map(_.name).forall(!_.startsWith(".")),
+        "Layer names must not start with dot."
       )
     ).flatten
 

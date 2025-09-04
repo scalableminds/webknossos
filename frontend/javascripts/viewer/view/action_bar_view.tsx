@@ -209,7 +209,7 @@ function CreateAnnotationButton() {
     <div
       onKeyDownCapture={(e) => {
         // Prevent closing the modal upon pressing some keys.
-        if (e.ctrlKey || e.key === "AltGraph") {
+        if (e.ctrlKey || e.metaKey || e.key === "AltGraph") {
           e.stopPropagation();
         }
       }}

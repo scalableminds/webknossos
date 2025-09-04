@@ -208,7 +208,7 @@ function CreateAnnotationButton() {
 
   return (
     <div
-      onKeyDown={(e: React.KeyboardEvent) => {
+      onKeyDownCapture={(e: React.KeyboardEvent) => {
         // Prevent closing the modal upon pressing some keys.
         if (e.ctrlKey || e.metaKey || e.key === "AltGraph" || e.getModifierState("AltGraph")) {
           e.stopPropagation();

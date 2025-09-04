@@ -1,13 +1,15 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
   StaticColorLayer,
   StaticLayer,
   StaticSegmentationLayer,
@@ -28,11 +30,13 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: StaticSegmentationLayer =>
           for {
-            mags <- adaptMags(l.mags, remotePath, l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+            headerFilename <- headerFilename(l).toFox
+            mags <- adaptMags(l.mags, remotePath, l.name, headerFilename, credentialId)
           } yield l.copy(mags = mags)
         case l: StaticColorLayer =>
           for {
-            mags <- adaptMags(l.mags, remotePath, l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+            headerFilename <- headerFilename(l).toFox
+            mags <- adaptMags(l.mags, remotePath, l.name, headerFilename, credentialId)
           } yield l.copy(mags = mags)
         case layer =>
           Fox.failure(
@@ -40,6 +44,13 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale
+
+  private def headerFilename(layer: StaticLayer): Box[String] =
+    layer.dataFormat match {
+      case DataFormat.zarr  => Full(ZarrHeader.FILENAME_DOT_ZARRAY)
+      case DataFormat.zarr3 => Full(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+      case _                => Failure(s"Invalid layer dataformat ${layer.dataFormat}, can only explore zarr, zarr3 as WebknossosZarr")
+    }
 
   private def adaptMags(mags: List[MagLocator],
                         remoteDatasetPath: VaultPath,

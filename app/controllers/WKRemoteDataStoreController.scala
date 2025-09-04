@@ -302,13 +302,16 @@ class WKRemoteDataStoreController @Inject()(
 
     }
 
-  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[UsableDataSource] =
-    Action.async(validateJson[UsableDataSource]) { implicit request =>
+  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- datasetDAO.updateDataSource(datasetId, name, request.body.hashCode(), request.body, isUsable = true)(
-            GlobalAccessContext)
+          _ <- datasetDAO.updateDataSource(datasetId,
+                                           name,
+                                           request.body.hashCode(),
+                                           request.body,
+                                           isUsable = request.body.toUsable.isDefined)(GlobalAccessContext)
         } yield Ok
       }
     }

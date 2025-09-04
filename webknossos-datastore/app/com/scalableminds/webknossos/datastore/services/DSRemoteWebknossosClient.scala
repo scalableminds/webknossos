@@ -135,7 +135,7 @@ class DSRemoteWebknossosClient @Inject()(
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
-  def updateDataSource(dataSource: UsableDataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryString("key" -> dataStoreKey)
       .withTokenFromContext

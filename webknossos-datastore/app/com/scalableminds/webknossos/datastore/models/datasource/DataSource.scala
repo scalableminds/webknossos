@@ -31,8 +31,9 @@ trait DataSource {
 object DataSource {
   implicit def dataSourceFormat: Format[DataSource] =
     new Format[DataSource] {
-      def reads(json: JsValue): JsResult[DataSource] =
+      def reads(json: JsValue): JsResult[DataSource] = {
         UnusableDataSource.jsonFormat.reads(json).orElse(UsableDataSource.jsonFormat.reads(json))
+      }
 
       def writes(ds: DataSource): JsValue =
         ds match {

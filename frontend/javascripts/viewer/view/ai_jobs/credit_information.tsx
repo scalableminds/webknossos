@@ -18,8 +18,13 @@ import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_contex
 const { Title, Text } = Typography;
 
 export const RunAiModelCreditInformation: React.FC = () => {
-  const { selectedModel, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
-    useRunAiModelJobContext();
+  const {
+    selectedModel,
+    selectedJobType,
+    selectedBoundingBox,
+    handleStartAnalysis,
+    areParametersValid,
+  } = useRunAiModelJobContext();
   return (
     <CreditInformation
       selectedModel={selectedModel}
@@ -27,13 +32,19 @@ export const RunAiModelCreditInformation: React.FC = () => {
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Analysis"
+      areParametersValid={areParametersValid}
     />
   );
 };
 
 export const AlignmentCreditInformation: React.FC = () => {
-  const { selectedTask, selectedJobType, selectedBoundingBox, handleStartAnalysis } =
-    useAlignmentJobContext();
+  const {
+    selectedTask,
+    selectedJobType,
+    selectedBoundingBox,
+    handleStartAnalysis,
+    areParametersValid,
+  } = useAlignmentJobContext();
   return (
     <CreditInformation
       selectedModel={selectedTask}
@@ -41,13 +52,19 @@ export const AlignmentCreditInformation: React.FC = () => {
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Alignment"
+      areParametersValid={areParametersValid}
     />
   );
 };
 
 export const TrainingCreditInformation: React.FC = () => {
-  const { selectedTask, selectedJobType, selectedAnnotations, handleStartAnalysis } =
-    useAiTrainingJobContext();
+  const {
+    selectedTask,
+    selectedJobType,
+    selectedAnnotations,
+    handleStartAnalysis,
+    areParametersValid,
+  } = useAiTrainingJobContext();
 
   // sum all training volumes into a single bounding box
   // This is a shitty way to do it, but it works for now.
@@ -78,6 +95,7 @@ export const TrainingCreditInformation: React.FC = () => {
       selectedBoundingBox={trainingBoundingBox as UserBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Training"
+      areParametersValid={areParametersValid}
     />
   );
 };
@@ -88,6 +106,7 @@ interface CreditInformationProps {
   selectedBoundingBox: UserBoundingBox | null;
   handleStartAnalysis: () => void;
   startButtonTitle: string;
+  areParametersValid: boolean;
 }
 
 export const CreditInformation: React.FC<CreditInformationProps> = ({
@@ -96,6 +115,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   selectedBoundingBox,
   handleStartAnalysis,
   startButtonTitle,
+  areParametersValid,
 }) => {
   const jobTypeToCreditCostPerGVx: Partial<Record<APIJobType, number>> = useMemo(
     () => ({
@@ -211,7 +231,8 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           !selectedModel ||
           !selectedBoundingBox ||
           !jobCreditCostInfo?.hasEnoughCredits ||
-          boundingBoxVolume === 0
+          boundingBoxVolume === 0 ||
+          !areParametersValid
         }
         onClick={handleStartAnalysis}
       >

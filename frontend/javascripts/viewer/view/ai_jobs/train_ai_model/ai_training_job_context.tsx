@@ -7,7 +7,7 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -43,6 +43,7 @@ interface AiTrainingJobContextType {
     annotationId: string,
     newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
   ) => void;
+  areParametersValid: boolean;
 }
 
 const AiTrainingJobContext = createContext<AiTrainingJobContextType | undefined>(undefined);
@@ -99,15 +100,22 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     [],
   );
 
-  const handleStartAnalysis = useCallback(async () => {
-    if (!modelName || !selectedJobType) {
-      Toast.error("Please fill all required fields.");
-      return;
-    }
+  const areParametersValid = useMemo(() => {
+    const areSelectionsValid = _.every(
+      selectedAnnotations,
+      (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
+    );
 
-    if (
-      selectedAnnotations.some((s) => !s.imageDataLayer || !s.groundTruthLayer || !s.magnification)
-    ) {
+    return _.every([
+      modelName,
+      selectedJobType,
+      areSelectionsValid,
+      selectedAnnotations.length > 0,
+    ]);
+  }, [modelName, selectedJobType, selectedAnnotations]);
+
+  const handleStartAnalysis = useCallback(async () => {
+    if (!areParametersValid) {
       Toast.error("Please fill all required fields for all annotations.");
       return;
     }
@@ -146,7 +154,15 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       console.error(error);
       Toast.error("Failed to start training.");
     }
-  }, [modelName, selectedJobType, selectedAnnotations, comments, maxDistanceNm, dispatch]);
+  }, [
+    areParametersValid,
+    modelName,
+    selectedJobType,
+    selectedAnnotations,
+    comments,
+    maxDistanceNm,
+    dispatch,
+  ]);
 
   const value = {
     selectedJobType,
@@ -162,6 +178,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     setMaxDistanceNm,
     selectedAnnotations,
     handleSelectionChange,
+    areParametersValid,
   };
 
   return <AiTrainingJobContext.Provider value={value}>{children}</AiTrainingJobContext.Provider>;

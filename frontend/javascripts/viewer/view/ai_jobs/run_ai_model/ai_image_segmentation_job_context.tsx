@@ -12,7 +12,7 @@ import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import messages from "messages";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, APIJobType, type AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -45,6 +45,7 @@ interface RunAiModelJobContextType {
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   handleStartAnalysis: () => void;
+  areParametersValid: boolean;
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -100,21 +101,23 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     }
   }, [colorLayers]);
 
+  const areParametersValid = useMemo(
+    () =>
+      Boolean(
+        selectedModel && selectedJobType && selectedBoundingBox && newDatasetName && selectedLayer,
+      ),
+    [selectedModel, selectedJobType, selectedBoundingBox, newDatasetName, selectedLayer],
+  );
+
   const handleStartAnalysis = useCallback(async () => {
-    if (
-      !selectedModel ||
-      !selectedJobType ||
-      !selectedBoundingBox ||
-      !newDatasetName ||
-      !selectedLayer
-    ) {
+    if (!areParametersValid) {
       Toast.error("Please select a model, bounding box, and provide a dataset name.");
       return;
     }
 
     await Model.ensureSavedState();
 
-    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox!.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
     if (isEvaluationActive) {
@@ -138,23 +141,23 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       }
     }
 
-    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
+    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer!.name].isInverted;
 
     try {
-      if ("trainingJob" in selectedModel) {
+      if ("trainingJob" in selectedModel!) {
         // Custom models
         const commonInferenceArgs: BaseCustomModelInferenceParameters = {
           ...maybeAnnotationId,
-          aiModelId: selectedModel.id as string,
+          aiModelId: selectedModel!.id as string,
           datasetDirectoryName: dataset.directoryName,
           organizationId: dataset.owningOrganization,
-          colorLayerName: selectedLayer.name,
+          colorLayerName: selectedLayer!.name,
           boundingBox,
           newDatasetName: newDatasetName,
           invertColorLayer: isColorLayerInverted,
         };
 
-        if (selectedModel.category === APIAiModelCategory.EM_NUCLEI) {
+        if (selectedModel!.category === APIAiModelCategory.EM_NUCLEI) {
           await runCustomInstanceModelInferenceJob({
             ...commonInferenceArgs,
             seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
@@ -170,7 +173,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           case APIJobType.INFER_NEURONS:
             await runPretrainedNeuronInferencelJob(
               dataset.id,
-              selectedLayer.name,
+              selectedLayer!.name,
               boundingBox,
               newDatasetName,
               isColorLayerInverted,
@@ -182,7 +185,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           case APIJobType.INFER_MITOCHONDRIA:
             await runPretrainedMitochondriaInferenceJob(
               dataset.id,
-              selectedLayer.name,
+              selectedLayer!.name,
               boundingBox,
               newDatasetName,
             );
@@ -190,7 +193,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           case APIJobType.INFER_NUCLEI:
             await runPretrainedNucleiInferenceJob(
               dataset.id,
-              selectedLayer.name,
+              selectedLayer!.name,
               newDatasetName,
               isColorLayerInverted,
             );
@@ -206,6 +209,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       Toast.error("Failed to start analysis.");
     }
   }, [
+    areParametersValid,
     selectedModel,
     selectedJobType,
     selectedBoundingBox,
@@ -242,6 +246,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
     handleStartAnalysis,
+    areParametersValid,
   };
 
   return <RunAiModelJobContext.Provider value={value}>{children}</RunAiModelJobContext.Provider>;

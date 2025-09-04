@@ -99,7 +99,7 @@ const AiTrainingDataSelector = ({
   );
 
   const shouldValidate = useMemo(
-    () => !!(imageDataLayer && groundTruthLayer && magnification),
+    () => _.every([imageDataLayer, groundTruthLayer, magnification]),
     [imageDataLayer, groundTruthLayer, magnification],
   );
 

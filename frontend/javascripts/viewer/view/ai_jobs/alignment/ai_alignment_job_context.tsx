@@ -2,7 +2,7 @@ import { startAlignSectionsJob } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIJobType } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
@@ -22,6 +22,7 @@ interface AlignmentJobContextType {
   setNewDatasetName: (name: string) => void;
   shouldUseManualMatches: boolean;
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
+  areParametersValid: boolean;
 }
 
 const AlignmentJobContext = createContext<AlignmentJobContextType | undefined>(undefined);
@@ -47,6 +48,11 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
       setNewDatasetName(`${dataset.name}_${selectedTask.name?.replace(/\s/g, "_")}`);
     }
   }, [dataset, selectedTask]);
+
+  const areParametersValid = useMemo(
+    () => Boolean(selectedTask && selectedJobType && newDatasetName),
+    [selectedTask, selectedJobType, newDatasetName],
+  );
 
   const handleStartAnalysis = useCallback(async () => {
     try {
@@ -75,6 +81,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
     handleStartAnalysis,
     shouldUseManualMatches,
     setShouldUseManualMatches,
+    areParametersValid,
   };
 
   return <AlignmentJobContext.Provider value={value}>{children}</AlignmentJobContext.Provider>;

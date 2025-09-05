@@ -14,6 +14,7 @@ import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
@@ -60,6 +61,10 @@ import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
+import {
+  exportEdgesAsCSV as getTreeEdgesAsCSV,
+  exportTreesAsCSV as getTreesAsCSV,
+} from "viewer/model/helpers/csv_helpers";
 import {
   NmlParseError,
   getNmlName,
@@ -554,6 +559,32 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
+  handleCSVDownload = async (applyTransforms: boolean) => {
+    const { skeletonTracing, annotationId } = this.props;
+
+    if (!skeletonTracing) {
+      return;
+    }
+
+    this.setState({
+      isDownloading: true,
+    });
+
+    const treesCsv = getTreesAsCSV(annotationId, skeletonTracing);
+    const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
+
+    const blobWriter = new Zip.BlobWriter("application/zip");
+    const writer = new Zip.ZipWriter(blobWriter);
+    await writer.add("trees.csv", new Zip.TextReader(treesCsv));
+    await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+    await writer.close();
+    saveAs(await blobWriter.getData(), "tree_export.zip");
+
+    this.setState({
+      isDownloading: false,
+    });
+  };
+
   showModalConfirmWarning(title: string, content: string, onConfirm: () => void) {
     Modal.confirm({
       title,
@@ -749,7 +780,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
           key: "handleNmlDownload",
           onClick: () => this.handleNmlDownload(false),
           icon: <DownloadOutlined />,
-          label: "Download Visible Trees",
+          label: "Download Visible Trees NML",
           title: "Download Visible Trees as NML",
         },
         this.props.isSkeletonLayerTransformed
@@ -757,7 +788,23 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
               key: "handleNmlDownloadTransformed",
               onClick: () => this.handleNmlDownload(true),
               icon: <DownloadOutlined />,
-              label: "Download Visible Trees (Transformed)",
+              label: "Download Visible Trees NML (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
+          : null,
+        {
+          key: "handleCSVDownload",
+          onClick: () => this.handleCSVDownload(false),
+          icon: <DownloadOutlined />,
+          label: "Download Visible Trees CSV",
+          title: "Download Visible Trees as CSV",
+        },
+        this.props.isSkeletonLayerTransformed
+          ? {
+              key: "handleCSVDownloadTransformed",
+              onClick: () => this.handleCSVDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed) CSV",
               title: "The currently active transformation will be applied to each node.",
             }
           : null,
@@ -991,6 +1038,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: state.annotation.restrictions.allowUpdate,
   skeletonTracing: state.annotation.skeleton,
+  annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: areGeometriesTransformed(state),
   isAnnotationLockedByUser: state.annotation.isLockedByOwner,

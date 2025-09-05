@@ -9,12 +9,13 @@ import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
+import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 const { RangePicker } = DatePicker;
@@ -115,22 +116,15 @@ function TimeTrackingOverview() {
     if (filteredTimeEntries?.length === null) {
       return;
     }
-    const timeEntriesAsString = filteredTimeEntries
-      .map((row) => {
-        return transformToCSVRow([
-          row.user.id,
-          row.user.firstName,
-          row.user.lastName,
-          Math.round(row.timeMillis / 1000),
-        ]);
-      })
-      .join("\n");
-    const csv = [TIMETRACKING_CSV_HEADER_PER_USER, timeEntriesAsString].join("\n");
-    const filename = "timetracking-export.csv";
-    const blob = new Blob([csv], {
-      type: "text/plain;charset=utf-8",
+    const timeEntries = filteredTimeEntries.map((row) => {
+      return transformToCSVRow([
+        row.user.id,
+        row.user.firstName,
+        row.user.lastName,
+        Math.round(row.timeMillis / 1000),
+      ]);
     });
-    saveAs(blob, filename);
+    saveAsCSV(TIMETRACKING_CSV_HEADER_PER_USER, timeEntries, "timetracking-export.csv");
   };
 
   const rangePresets: TimeRangePickerProps["presets"] = [

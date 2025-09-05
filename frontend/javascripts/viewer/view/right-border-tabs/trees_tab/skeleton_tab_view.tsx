@@ -570,12 +570,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isDownloading: true,
     });
 
-    const treesCsv = getTreesAsCSV(
-      annotationId,
-      skeletonTracing,
-      applyTransforms,
-      applyTransforms ? Store.getState() : undefined,
-    );
+    const treesCsv = getTreesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
     const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
     const blobWriter = new Zip.BlobWriter("application/zip");

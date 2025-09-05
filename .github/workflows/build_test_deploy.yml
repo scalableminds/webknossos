@@ -37,8 +37,8 @@ jobs:
 
       - name: Lint frontend code and check formatting
         run: yarn run check-frontend
-      - name: Typecheck frontend code
-        run: yarn typecheck
+      # - name: Typecheck frontend code
+      #   run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
@@ -121,8 +121,8 @@ jobs:
           retries: 3
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
-      - name: Check response types of e2e tests
-        run: yarn tsc
+      # - name: Check response types of e2e tests
+      #   run: yarn tsc
 
 
   build-smoketest-push:

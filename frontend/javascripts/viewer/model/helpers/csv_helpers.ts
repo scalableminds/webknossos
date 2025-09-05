@@ -1,31 +1,45 @@
 import saveAs from "file-saver";
-import type { SkeletonTracing } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
 export function exportTreesAsCSV(
   annotationId: string,
   tracing: SkeletonTracing,
-  ///applyTransform: boolean,
+  applyTransform: boolean,
+  state?: WebknossosState,
 ) {
   const visibleTrees = tracing.trees
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
   const csvHeader = [
-    "annotationId,treeId,nodeId,nodeRradius,x,y,z,rotX,rotY,rotZ,inVp,inMag,bitDepth,interpolation,time",
+    "annotationId,treeId,nodeId,nodeRradius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time",
   ];
+
   const csvLines = visibleTrees.flatMap((tree) =>
     tree.nodes.map((node) => {
+      const position = (
+        applyTransform && state != null ? getNodePosition(node, state) : node.untransformedPosition
+      ).map(Math.floor);
+      const additionalCoordinates =
+        node.additionalCoordinates != null && node.additionalCoordinates.length > 0
+          ? getAdditionalCoordinatesAsString(node.additionalCoordinates, ";")
+          : "null";
+
+      console.log(node.additionalCoordinates);
       const row = [
         annotationId,
         tree.treeId,
         node.id,
         node.radius,
-        node.untransformedPosition[0],
-        node.untransformedPosition[1],
-        node.untransformedPosition[2],
+        position[0],
+        position[1],
+        position[2],
         node.rotation[0],
         node.rotation[1],
         node.rotation[2],
+        additionalCoordinates,
         node.viewport,
         node.mag,
         node.bitDepth,

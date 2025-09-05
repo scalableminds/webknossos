@@ -3,7 +3,6 @@ package models.organization
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
@@ -31,6 +30,15 @@ case class Organization(
     lastTermsOfServiceAcceptanceVersion: Int = 0,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
+)
+
+case class ArtifactStorageReport(
+    _organizationId: String,
+    _datasetId: ObjectId,
+    // Left for mags, right for attachments
+    _artifactId: Either[ObjectId, ObjectId],
+    path: String,
+    usedStorageBytes: Long
 )
 
 class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -170,30 +178,41 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       _ <- run(q"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId".asUpdate)
     } yield ()
 
-  def upsertUsedStorage(organizationId: String,
-                        dataStoreName: String,
-                        usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
-    val queries = usedStorageEntries.map(entry => q"""
-               WITH ds AS (
-                 SELECT _id
-                 FROM webknossos.datasets_
-                 WHERE _organization = $organizationId
-                 AND name = ${entry.datasetName}
-                 LIMIT 1
-               )
-               INSERT INTO webknossos.organization_usedStorage(
-                  _organization, _dataStore, _dataset, layerName,
-                  magOrDirectoryName, usedStorageBytes, lastUpdated)
-               SELECT
-                $organizationId, $dataStoreName, ds._id, ${entry.layerName},
-                ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW()
-               FROM ds
-               ON CONFLICT (_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
-               DO UPDATE
-                 SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
-               """.asUpdate)
+  def upsertUsedStorage(
+      organizationId: String,
+      usedStorageEntries: List[ArtifactStorageReport]
+  ): Fox[Unit] = {
+    val reportUpsetQueries = usedStorageEntries.map { r =>
+      r._artifactId match {
+        case Left(magId) =>
+          q"""
+          INSERT INTO webknossos.organization_usedStorage (
+            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+          )
+          VALUES (${organizationId}, ${r._datasetId}, ${magId}, NULL, ${r.path}, ${r.usedStorageBytes}, NOW())
+          ON CONFLICT ON CONSTRAINT unique_dataset_mag
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate
+        case Right(attachmentId) =>
+          q"""
+          INSERT INTO webknossos.organization_usedStorage (
+            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+          )
+          VALUES (${organizationId}, ${r._datasetId}, NULL, ${attachmentId}, ${r.path}, ${r.usedStorageBytes}, NOW())
+          ON CONFLICT ON CONSTRAINT unique_layer_attachment
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate
+      }
+    }
+
     for {
-      _ <- Fox.serialCombined(queries)(q => run(q))
+      _ <- Fox.serialCombined(reportUpsetQueries)(q => run(q))
     } yield ()
   }
 

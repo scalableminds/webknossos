@@ -4,7 +4,6 @@ import { Button, Card, DatePicker, Select, Spin, Table, type TimeRangePickerProp
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
-import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -87,8 +86,8 @@ function TimeTrackingOverview() {
       projectIds,
     );
     const timeEntriesAsString = timeSpans
-      .map((row) => {
-        return transformToCSVRow([
+      .map((row) =>
+        transformToCSVRow([
           row.userId,
           row.userEmail,
           row.datasetOrganization,
@@ -101,15 +100,10 @@ function TimeTrackingOverview() {
           row.projectName,
           row.taskTypeId,
           row.taskTypeSummary,
-        ]);
-      })
-      .join("\n"); // rows starting on new lines
-    const csv = [TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString].join("\n");
+        ])
+      )
     const filename = `timetracking-user-export-${userId}.csv`;
-    const blob = new Blob([csv], {
-      type: "text/plain;charset=utf-8",
-    });
-    saveAs(blob, filename);
+    saveAsCSV(TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString, filename);
   };
 
   const exportToCSV = () => {

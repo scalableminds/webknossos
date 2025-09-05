@@ -1,6 +1,5 @@
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
-import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -13,7 +12,7 @@ import {
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
-import { transformToCSVRow } from "viewer/model/helpers/csv_helpers";
+import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
@@ -66,7 +65,7 @@ const exportStatisticsToCSV = (
   hasAdditionalCoords: boolean,
   voxelSize: VoxelSize,
 ) => {
-  const segmentStatisticsAsString = segmentInformation
+  const segmentStatisticsAsRows = segmentInformation
     .map((row) => {
       const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
       return transformToCSVRow([
@@ -80,21 +79,16 @@ const exportStatisticsToCSV = (
         ...row.boundingBoxTopLeft,
         ...row.boundingBoxPosition,
       ]);
-    })
-    .join("\n");
+    });
 
   const csv_header = hasAdditionalCoords
     ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(voxelSize.unit)].join(",")
     : getSegmentStatisticsCSVHeader(voxelSize.unit);
-  const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
       ? `segmentStatistics_${tracingIdOrDatasetName}.csv`
       : `segmentStatistics_${tracingIdOrDatasetName}_group-${groupIdToExport}.csv`;
-  const blob = new Blob([csv], {
-    type: "text/plain;charset=utf-8",
-  });
-  saveAs(blob, filename);
+  saveAsCSV([csv_header], segmentStatisticsAsRows, filename);
 };
 
 export function SegmentStatisticsModal({

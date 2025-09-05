@@ -13,14 +13,14 @@ export function exportTreesAsCSV(
     .filter((tree) => tree.isVisible)
     .toArray();
   const csvHeader = [
-    "annotationId,treeId,nodeId,nodeRradius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time",
+    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time",
   ];
   const { annotationId } = state.annotation;
 
   const csvLines = visibleTrees.flatMap((tree) =>
     tree.nodes.map((node) => {
       const position = (
-        applyTransform && state != null ? getNodePosition(node, state) : node.untransformedPosition
+        applyTransform ? getNodePosition(node, state) : node.untransformedPosition
       ).map(Math.floor);
       const additionalCoordinates =
         node.additionalCoordinates != null && node.additionalCoordinates.length > 0
@@ -69,7 +69,7 @@ export function transformToCSVRow(dataRow: any[]) {
   return dataRow
     .map(String) // convert every value to String
     .map((v) => v.replaceAll('"', '""')) // escape double quotes
-    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+    .map((v) => (/[,"\r\n]/.test(v) ? `"${v}"` : v)) // quote commas, quotes, and newlines
     .join(","); // comma-separated
 }
 

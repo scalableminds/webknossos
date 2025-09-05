@@ -39,6 +39,7 @@ const initialState: WebknossosState = update(defaultSkeletonState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     annotationType: { $set: "Explorational" },
   },
   dataset: {

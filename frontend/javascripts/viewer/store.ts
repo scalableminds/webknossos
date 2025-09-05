@@ -116,7 +116,7 @@ export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
+export type Restrictions = APIRestrictions;
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
@@ -145,8 +145,8 @@ export type Annotation = {
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly blockedByUser: APIUserCompact | null | undefined;
   readonly isLockedByOwner: boolean;
+  readonly isUpdatingCurrentlyAllowed: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -196,6 +196,11 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  // The position of the "proofreading marker" (a cross) is stored separately.
+  // In earlier versions, the anchor position of the current segment was simply used.
+  // However, the anchor position can be updated by another user (in collab mode) which
+  // leads to unexpected jumping of the marker.
+  readonly proofreadingMarkerPosition: Vector3 | undefined;
   readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
@@ -413,11 +418,25 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
+
+export type AnnotationMutexInformation = {
+  readonly hasAnnotationMutex: boolean;
+  readonly blockedByUser: APIUserCompact | null | undefined;
+};
+
+export type RebaseRelevantAnnotationState = {
+  readonly annotationVersion: number;
+  readonly annotationDescription: string;
+  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+  readonly skeleton: SkeletonTracing | null | undefined;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
+  readonly mutexState: AnnotationMutexInformation;
+  readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
 };
 export type Flycam = {
   readonly zoomStep: number;
@@ -597,13 +616,14 @@ export const combinedReducer = reduceReducers(
   SkeletonTracingReducer,
   VolumeTracingReducer,
   TaskReducer,
-  SaveReducer,
   FlycamReducer,
   FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,
   UiReducer,
+  // SaveReducer needs to be behind Settings and Volumetracing reducer to react to changes SET MAPPING changes.
+  SaveReducer,
   ConnectomeReducer,
   OrganizationReducer,
 ) as Reducer;

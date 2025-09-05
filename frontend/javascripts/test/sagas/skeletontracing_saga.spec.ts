@@ -102,6 +102,7 @@ const initialState = update(defaultState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     skeleton: {
       $set: skeletonTracing,
     },

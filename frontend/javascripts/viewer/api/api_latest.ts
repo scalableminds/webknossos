@@ -2210,7 +2210,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.restrictions.allowUpdate;
+    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates

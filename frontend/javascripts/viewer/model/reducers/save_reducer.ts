@@ -181,6 +181,112 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_IS_MUTEX_ACQUIRED": {
+      const { isMutexAcquired } = action;
+      return updateKey2(state, "save", "mutexState", {
+        hasAnnotationMutex: isMutexAcquired,
+      });
+    }
+
+    case "SET_USER_HOLDING_MUTEX": {
+      const { blockedByUser } = action;
+      return updateKey2(state, "save", "mutexState", {
+        blockedByUser,
+      });
+    }
+
+    case "SET_MAPPING": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
+
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.layerName]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "PREPARE_REBASING": {
+      const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      return update(state, {
+        annotation: {
+          version: {
+            $set: rebaseInfo.annotationVersion,
+          },
+          description: {
+            $set: rebaseInfo.annotationDescription,
+          },
+          skeleton: {
+            $set: rebaseInfo.skeleton,
+          },
+        },
+        temporaryConfiguration: {
+          activeMappingByLayer: {
+            $set: rebaseInfo.activeMappingByLayer,
+          },
+        },
+      });
+    }
+
+    case "UPDATE_MAPPING_REBASE_INFORMATION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.volumeLayerIdToUpdate];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.volumeLayerIdToUpdate]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.layerName]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "DONE_SAVING": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationDescription: {
+              $set: state.annotation.description,
+            },
+            annotationVersion: {
+              $set: state.annotation.version,
+            },
+            activeMappingByLayer: {
+              $set: state.temporaryConfiguration.activeMappingByLayer,
+            },
+            skeleton: {
+              $set: state.annotation.skeleton,
+            },
+          },
+        },
+      });
+    }
+
     default:
       return state;
   }

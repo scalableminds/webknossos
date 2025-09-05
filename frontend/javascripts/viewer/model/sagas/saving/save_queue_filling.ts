@@ -51,7 +51,7 @@ export function* setupSavingForAnnotation(
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const flycam = yield* select((state) => state.flycam);
@@ -104,6 +104,7 @@ export function* setupSavingForTracingType(
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
     "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
   );
+  let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
 
   while (true) {
     // Prioritize consumption of tracingActionChannel since we don't want to
@@ -113,20 +114,19 @@ export function* setupSavingForTracingType(
       yield* take(tracingActionChannel);
     } else {
       // Wait for either a user action or the "ensureAction".
-      const { ensureAction } = yield* race({
+      const actions = yield* race({
         _tracingAction: take(tracingActionChannel),
         ensureAction: take(ensureDiffedChannel),
       });
-      if (ensureAction != null) {
-        ensureAction.callback(tracingId);
-        continue;
+      if (actions.ensureAction != null) {
+        ensureAction = actions.ensureAction;
       }
     }
 
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
@@ -144,6 +144,9 @@ export function* setupSavingForTracingType(
     }
 
     prevTracing = tracing;
+    if (ensureAction != null) {
+      ensureAction.callback(tracingId);
+    }
   }
 }
 

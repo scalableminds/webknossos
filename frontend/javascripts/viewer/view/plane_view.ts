@@ -348,7 +348,7 @@ class PlaneView {
         (activeUnmappedSegmentId) =>
           // Note that this code is responsible for highlighting the *active*
           // (not necessarily hovered) segment.
-          segmentMeshController.highlightActiveUnmappedSegmentId(activeUnmappedSegmentId),
+          segmentMeshController.updateActiveUnmappedSegmentIdHighlighting(activeUnmappedSegmentId),
         true,
       ),
     );

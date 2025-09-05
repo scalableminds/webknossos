@@ -21,7 +21,7 @@ import type { UserBoundingBox } from "viewer/store";
 import { BoundingBoxSelectionFormItem } from "../components/bounding_box_selection_form_item";
 import { CollapsibleWorkflowYamlEditor } from "../components/collapsible_workflow_yaml_editor";
 import { JobCreditCostInformation } from "../components/job_credit_cost_information";
-import { ShouldUseTreesFormItem } from "../components/should_use_trees_form_item";
+import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useCurrentlySelectedBoundingBox } from "../hooks/use_currently_selected_bounding_box";
 import DEFAULT_PREDICT_WORKFLOW from "../templates/default-predict-workflow-template";
 import { getBoundingBoxesForLayers } from "../utils";
@@ -239,7 +239,7 @@ export function StartJobForm(props: StartJobFormProps) {
         showVolume={jobCreditCostPerGVx != null}
       />
       {jobSpecificInputFields}
-      {isSkeletonSelectable && <ShouldUseTreesFormItem />}
+      {isSkeletonSelectable && <ShouldUseManualMatchesFormItem />}
       {props.showWorkflowYaml ? (
         <CollapsibleWorkflowYamlEditor
           isActive={useCustomWorkflow}

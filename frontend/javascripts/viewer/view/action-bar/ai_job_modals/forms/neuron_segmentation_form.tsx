@@ -1,4 +1,4 @@
-import { startNeuronInferralJob } from "admin/rest_api";
+import { runPretrainedNeuronInferencelJob } from "admin/rest_api";
 import { type FormInstance, Row, Space } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -13,7 +13,7 @@ import {
   getTaskBoundingBoxes,
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import {
   CollapsibleSplitMergerEvaluationSettings,
   type SplitMergerEvaluationSettings,
@@ -36,7 +36,7 @@ export function NeuronSegmentationForm() {
   const taskBoundingBoxes = useWkSelector(getTaskBoundingBoxes);
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
   const jobApiCall = useCallback(
@@ -68,7 +68,7 @@ export function NeuronSegmentationForm() {
       const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
 
       if (!doSplitMergerEvaluation) {
-        return startNeuronInferralJob(
+        return runPretrainedNeuronInferencelJob(
           dataset.id,
           colorLayer.name,
           bbox,
@@ -96,7 +96,7 @@ export function NeuronSegmentationForm() {
         Toast.error("Please ensure that all skeleton trees in this annotation have some nodes.");
         return;
       }
-      return startNeuronInferralJob(
+      return runPretrainedNeuronInferencelJob(
         dataset.id,
         colorLayer.name,
         bbox,

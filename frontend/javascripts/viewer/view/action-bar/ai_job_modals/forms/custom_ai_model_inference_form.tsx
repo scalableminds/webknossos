@@ -1,9 +1,9 @@
 import {
   APIAiModelCategory,
-  type BaseModelInferenceParameters,
+  type BaseCustomModelInferenceParameters,
   getAiModels,
-  runInstanceModelInferenceWithAiModelJob,
-  runNeuronModelInferenceWithAiModelJob,
+  runCustomInstanceModelInferenceJob,
+  runCustomNeuronModelInferenceJob,
 } from "admin/rest_api";
 import { Form, type FormInstance, InputNumber, Row, Select, Space } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
@@ -13,7 +13,7 @@ import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobType } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
 import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
@@ -57,7 +57,7 @@ export function CustomAiModelInferenceForm() {
       const maybeAnnotationId = isViewMode ? {} : { annotationId };
       const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
 
-      const commonInferenceArgs: BaseModelInferenceParameters = {
+      const commonInferenceArgs: BaseCustomModelInferenceParameters = {
         ...maybeAnnotationId,
         aiModelId: form.getFieldValue("aiModel"),
         workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
@@ -70,12 +70,12 @@ export function CustomAiModelInferenceForm() {
       };
 
       if (isInstanceModelSelected) {
-        return runInstanceModelInferenceWithAiModelJob({
+        return runCustomInstanceModelInferenceJob({
           ...commonInferenceArgs,
           seedGeneratorDistanceThreshold: form.getFieldValue("seedGeneratorDistanceThreshold"),
         });
       }
-      return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
+      return runCustomNeuronModelInferenceJob(commonInferenceArgs);
     },
     [dataset, isViewMode, annotationId, isInstanceModelSelected, datasetConfiguration],
   );
@@ -90,7 +90,7 @@ export function CustomAiModelInferenceForm() {
   );
 
   const handleClose = useCallback(
-    () => dispatch(setAIJobModalStateAction("invisible")),
+    () => dispatch(setAIJobDrawerStateAction("invisible")),
     [dispatch],
   );
 

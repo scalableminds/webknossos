@@ -6,6 +6,7 @@ import {
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import every from "lodash/every";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -15,7 +16,6 @@ import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_ac
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import type { AiTrainingTask } from "./ai_training_model_selector";
-import { every } from "lodash";
 
 export interface AiTrainingAnnotationSelection {
   annotation: StoreAnnotation;

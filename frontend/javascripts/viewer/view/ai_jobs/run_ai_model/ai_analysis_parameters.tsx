@@ -17,7 +17,7 @@ import type { FormProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { type APIDataLayer, APIJobType } from "types/api_types";
+import type { APIDataLayer } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
 import {
@@ -147,10 +147,11 @@ export const AiAnalysisParameters: React.FC = () => {
               validator: (_, value: UserBoundingBox) => {
                 if (value && selectedLayer && selectedJobType) {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
+
                   const mag = getBestFittingMagComparedToTrainingDS(
                     selectedLayer,
                     dataset.dataSource.scale,
-                    selectedJobType || APIJobType.INFER_NEURONS,
+                    selectedJobType,
                   );
                   if (
                     isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)

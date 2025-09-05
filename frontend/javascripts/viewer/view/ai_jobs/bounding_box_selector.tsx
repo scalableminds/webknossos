@@ -24,7 +24,7 @@ export const BoundingBoxSelector: React.FC<BoundingBoxSelectorProps> = ({ value,
 
   const handleChange = (id: number | null) => {
     const selected = allBoundingBoxes.find((bb) => bb.id === id) || null;
-    onChange(selected);
+    onChange?.(selected);
   };
 
   return (

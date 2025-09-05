@@ -10,7 +10,7 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import { every } from "lodash";
+import every from "lodash/every";
 import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -30,14 +30,20 @@ import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_jo
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;
-  selectedJobType: APIJobType | null;
+  selectedJobType:
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI
+    | APIJobType.INFER_MITOCHONDRIA
+    | null;
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
   selectedLayer: APIDataLayer | null;
   seedGeneratorDistanceThreshold: number;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
-  setSelectedJobType: (jobType: APIJobType) => void;
+  setSelectedJobType: (
+    jobType: APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA,
+  ) => void;
   setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
@@ -62,7 +68,9 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   children,
 }) => {
   const [selectedModel, setSelectedModel] = useState<AiModel | Partial<AiModel> | null>(null);
-  const [selectedJobType, setSelectedJobType] = useState<APIJobType | null>(null);
+  const [selectedJobType, setSelectedJobType] = useState<
+    APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA | null
+  >(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [selectedLayer, setSelectedLayer] = useState<APIDataLayer | null>(null);

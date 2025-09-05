@@ -4,6 +4,7 @@ import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { computeVolumeFromBoundingBox } from "libs/utils";
+import uniq from "lodash/uniq";
 import { useMemo } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
 import {
@@ -72,7 +73,7 @@ const AiTrainingDataSelector = ({
     .filter((layer) => layer.typ === "Volume")
     .map((layer) => layer.name);
 
-  const segmentationAndColorLayers: Array<string> = _.uniq([
+  const segmentationAndColorLayers: Array<string> = uniq([
     ...segmentationLayerNames,
     ...annotationLayerNames,
   ]);
@@ -219,7 +220,7 @@ const AiTrainingDataSelector = ({
                 value: index,
                 label: `${m[0]}-${m[1]}-${m[2]}`,
               }))}
-              value={magnification}
+              value={availableMagnifications.findIndex((m) => V3.equals(m, magnification!))}
               onChange={(index: number) =>
                 handleSelectionChange(annotationId, {
                   magnification: availableMagnifications[index],

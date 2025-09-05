@@ -11,11 +11,16 @@ import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
-const preTrainedModels: (Partial<AiModel> & {
+type PretrainedModel = {
+  name: string;
+  comment: string;
+  id: string;
   jobType: APIJobType;
   image: string;
   disabled?: boolean;
-})[] = [
+};
+
+const preTrainedModels: PretrainedModel[] = [
   {
     name: "Neuron Segmentation",
     comment: "Advanced neuron segmentation for EM data",
@@ -40,7 +45,9 @@ const preTrainedModels: (Partial<AiModel> & {
   },
 ];
 
-const mapCategoryToJobType = (category: APIAiModelCategory): APIJobType => {
+const mapCategoryToJobType = (
+  category: APIAiModelCategory,
+): APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA => {
   switch (category) {
     case APIAiModelCategory.EM_NEURONS:
       return APIJobType.INFER_NEURONS;
@@ -69,7 +76,7 @@ export const AiModelSelector: React.FC = () => {
     "Could not load model list.",
   );
 
-  const onSelectModel = (model: AiModel | (Partial<AiModel> & { jobType?: APIJobType })) => {
+  const onSelectModel = (model: AiModel | PretrainedModel) => {
     let jobType: APIJobType;
     if ("category" in model) {
       jobType = mapCategoryToJobType(model.category as APIAiModelCategory);
@@ -79,10 +86,11 @@ export const AiModelSelector: React.FC = () => {
     }
 
     setSelectedModel(model);
-    setSelectedJobType(jobType as APIJobType);
+    // @ts-ignore jobType covers move possible job type then expected for selectedJob
+    setSelectedJobType(jobType);
   };
 
-  const filterModels = (models: (AiModel | (Partial<AiModel> & { jobType?: APIJobType }))[]) => {
+  const filterModels = <T extends AiModel | PretrainedModel>(models: T[]) => {
     if (!searchTerm) {
       return models;
     }
@@ -97,7 +105,10 @@ export const AiModelSelector: React.FC = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
   const filteredPreTrainedModels = useMemo(() => filterModels(preTrainedModels), [searchTerm]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
-  const filteredCustomModels = useMemo(() => filterModels([]), [searchTerm, customModels]);
+  const filteredCustomModels = useMemo(
+    () => filterModels(customModels),
+    [searchTerm, customModels],
+  );
 
   const switchToTraininButton = (
     <>
@@ -144,7 +155,11 @@ export const AiModelSelector: React.FC = () => {
           >
             <List.Item.Meta
               avatar={
-                <Avatar shape="square" size={64} src={<img src={item.image} alt={item.name} />} />
+                <Avatar
+                  shape="square"
+                  size={64}
+                  src={<img src={(item as PretrainedModel).image} alt={item.name} />}
+                />
               }
               title={
                 <Space>
@@ -185,14 +200,16 @@ export const AiModelSelector: React.FC = () => {
               <List.Item.Meta
                 avatar={
                   <Avatar shape="square" size={64}>
-                    {item.name.charAt(0)}
+                    {item.name!.charAt(0)}
                   </Avatar>
                 }
                 title={
                   <Space>
                     <Text strong>{item.name}</Text>
                     <Tag>
-                      {item.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}
+                      {(item as AiModel).category === APIAiModelCategory.EM_NEURONS
+                        ? "NEURONS"
+                        : "INSTANCES"}
                     </Tag>
                   </Space>
                 }

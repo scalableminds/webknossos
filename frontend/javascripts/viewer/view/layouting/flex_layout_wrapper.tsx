@@ -133,6 +133,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.toggleMaximize();
       }),
     );
+    this.unbindListeners.push(
+      layoutEmitter.on("showSkeletonTab", () => {
+        console.log("showSkeletonTab event received");
+        const model = this.loadCurrentModel();
+        model.doAction(FlexLayout.Actions.selectTab(BorderTabs.SkeletonTabView.id));
+      }),
+    );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
   }
 

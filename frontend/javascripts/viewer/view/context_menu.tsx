@@ -146,6 +146,7 @@ import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -617,7 +618,10 @@ function getNodeContextMenuOptions({
     {
       key: "set-node-active",
       disabled: isTheSameNode,
-      onClick: () => Store.dispatch(setActiveNodeAction(clickedNodeId)),
+      onClick: () => {
+        Store.dispatch(setActiveNodeAction(clickedNodeId));
+        layoutEmitter.emit("showSkeletonTab");
+      },
       label: "Select this Node",
     },
     activeTreeId === clickedTree.treeId
@@ -626,6 +630,7 @@ function getNodeContextMenuOptions({
           onClick: () => {
             Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
             Store.dispatch(focusTreeAction(clickedTree));
+            layoutEmitter.emit("showSkeletonTab");
           },
           label: "Focus Tree in Skeleton Tab",
         }
@@ -998,6 +1003,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
+    layoutEmitter.emit("showSkeletonTab");
   };
 
   const onlyShowSegment = () => {

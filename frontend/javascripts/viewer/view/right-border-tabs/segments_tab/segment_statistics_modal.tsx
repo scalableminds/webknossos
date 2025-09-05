@@ -4,7 +4,7 @@ import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import { pluralize, transformToCSVRow } from "libs/utils";
+import { pluralize } from "libs/utils";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getMagInfo, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -13,6 +13,7 @@ import {
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import { transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";

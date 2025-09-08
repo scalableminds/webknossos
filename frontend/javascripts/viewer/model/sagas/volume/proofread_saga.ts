@@ -1,5 +1,5 @@
 import {
-  MinCutTargetEdge,
+  type MinCutTargetEdge,
   type NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
@@ -20,6 +20,7 @@ import {
   getLayerByName,
   getMagInfo,
   getMappingInfo,
+  getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
   areGeometriesTransformed,
@@ -47,6 +48,7 @@ import {
   type ProofreadAtPositionAction,
   type ProofreadMergeAction,
   resetMultiCutToolPartitionsAction,
+  type ToggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
@@ -86,6 +88,7 @@ import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
 import { ensureWkReady } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
+import messages from "messages";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -136,6 +139,7 @@ export default function* proofreadRootSaga(): Saga<void> {
     runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
+  yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(
@@ -156,6 +160,27 @@ function* clearMinCutPartitionsOnMultiCutDeselect(
   } else if (action.type === "ESCAPE") {
     // Clearing on all escape actions should be fine as in case the multi split isn't active, this clearing should also be fine.
     yield* put(resetMultiCutToolPartitionsAction());
+  }
+}
+
+function* showToastIfSegmentOfOtherAgglomerateWasSelected(
+  action: ToggleSegmentInPartitionAction,
+): Saga<void> {
+  const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+  const layerName = visibleSegmentationLayer?.name;
+  if (!layerName) {
+    return;
+  }
+  const layerData = yield* select((state) => state.localSegmentationData[layerName]);
+  if (!layerData || !layerData.minCutPartitions) {
+    return;
+  }
+  const minCutPartitions = layerData.minCutPartitions;
+  if (
+    minCutPartitions.agglomerateId != null &&
+    minCutPartitions.agglomerateId !== action.agglomerateId
+  ) {
+    Toast.info(messages["proofreading.multi_cut.different_agglomerate_selected"]);
   }
 }
 
@@ -635,13 +660,15 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   const partitions = yield* select(
     (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
   );
+  const agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
-    Toast.error(
-      "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
-    );
+    Toast.error(messages["proofreading.multi_cut.empty_partition"]);
     return;
   }
-  const agglomerateId = partitions.agglomerateId;
+  if (agglomerateId == null) {
+    Toast.error(messages["proofreading.multi_cut.no_valid_agglomerate"]);
+    return;
+  }
   const volumeTracingId = preparation.volumeTracing.tracingId;
   const { agglomerateFileMag, activeMapping } = preparation;
   const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));

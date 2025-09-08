@@ -102,6 +102,7 @@ trait StaticLayer extends DataLayer {
   def mapped(
       boundingBoxMapping: BoundingBox => BoundingBox = b => b,
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+      newMags: Option[List[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
       magMapping: MagLocator => MagLocator = m => m,
       name: String = this.name,
       coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
@@ -110,7 +111,7 @@ trait StaticLayer extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          mags = l.mags.map(magMapping),
+          mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -118,7 +119,7 @@ trait StaticLayer extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          mags = l.mags.map(magMapping),
+          mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
           coordinateTransformations = coordinateTransformations
         )

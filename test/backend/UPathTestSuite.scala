@@ -125,6 +125,18 @@ class UPathTestSuite extends PlaySpec {
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
           .toString == "s3://remote/elsewhere")
     }
+
+    "correctly answer startsWith" in {
+      assert(UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("relative")))
+      assert(!UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("elsewhere")))
+      assert(UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/absolute")))
+      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/elsewhere")))
+      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("https://example.com")))
+      assert(
+        UPath
+          .fromStringUnsafe("https://example.com/path/somewhere")
+          .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
+    }
   }
 
 }

@@ -79,15 +79,6 @@ trait DataSourceToDiskWriter extends PathUtils with FoxImplicits {
     val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
     val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
 
-    def pathOk(path: UPath): Boolean =
-      if (path.isRemote) true
-      else {
-        val absoluteWithinDataset =
-          organizationDir.resolve(dataSource.id.directoryName).resolve(path.toLocalPathUnsafe).toAbsolutePath
-        val allowedParent = organizationDir.toAbsolutePath
-        if (absoluteWithinDataset.startsWith(allowedParent)) true else false
-      }
-
     val errors = List(
       Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),
       Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
@@ -108,10 +99,6 @@ trait DataSourceToDiskWriter extends PathUtils with FoxImplicits {
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
         "Layer names must be unique. At least two layers have the same name."
-      ),
-      Check(
-        dataSource.dataLayers.flatMap(_.mags).flatMap(_.path).forall(pathOk),
-        "Mags with explicit paths must stay within the organization directory."
       )
     ).flatten
 

@@ -43,6 +43,8 @@ trait UPath {
 
   def getScheme: Option[String]
 
+  def startsWith(other: UPath): Boolean
+
   override def equals(obj: Any): Boolean = obj match {
     case other: UPath => other.toString == this.toString
     case _            => false
@@ -132,6 +134,12 @@ private case class LocalUPath(nioPath: Path) extends UPath {
   override def hashCode(): Int = hashCodeCached
 
   override def toAbsolute: UPath = UPath.fromLocalPath(nioPath.toAbsolutePath)
+
+  override def startsWith(other: UPath): Boolean = other match {
+    case otherLocal: LocalUPath =>
+      this.nioPath.normalize.toAbsolutePath.startsWith(otherLocal.nioPath.normalize.toAbsolutePath)
+    case _ => false
+  }
 }
 
 private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UPath {
@@ -145,7 +153,7 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
     RemoteUPath(scheme, ownSegments ++ otherSegments).normalize
   }
 
-  def normalize: UPath = {
+  def normalize: RemoteUPath = {
     val collectedSegmentsMutable = scala.collection.mutable.ArrayBuffer[String]()
     segments.foreach { segment =>
       if (segment == ".") {
@@ -186,4 +194,11 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def hashCode(): Int = hashCodeCached
 
   override def toAbsolute: UPath = this
+
+  def startsWith(other: UPath): Boolean = other match {
+    case otherRemote: RemoteUPath =>
+      this.normalize.toString.startsWith(otherRemote.normalize.toString)
+    case _ => false
+  }
+
 }

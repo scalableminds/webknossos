@@ -75,7 +75,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
-      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retreival, can be ignored.
+      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
       encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
     } yield (responseBytesObject.asByteArray(), encodingNormalized)
   }

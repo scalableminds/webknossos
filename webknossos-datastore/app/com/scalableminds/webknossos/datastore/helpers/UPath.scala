@@ -67,7 +67,7 @@ object UPath {
             s"Trying to construct relative UPath $nioPath. Must either be absolute or have no scheme.")
         fromLocalPath(nioPath)
       case Some(scheme) =>
-        RemotePath(
+        RemoteUPath(
           scheme,
           segments = literal.drop(s"$scheme://".length).split(separator.toString, splitKeepLastIfEmpty).toSeq).normalize
     }
@@ -79,12 +79,12 @@ object UPath {
     override def reads(json: JsValue): JsResult[UPath] =
       for {
         asString <- json.validate[String]
-        uPath <- fromString(asString) match {
+        upath <- fromString(asString) match {
           case Full(parsed) => JsSuccess(parsed)
           case f: Failure   => JsError(f"Invalid UPath: $f")
           case Empty        => JsError(f"Invalid UPath")
         }
-      } yield uPath
+      } yield upath
 
     override def writes(o: UPath): JsValue = JsString(o.toString)
   }
@@ -131,7 +131,7 @@ private case class LocalUPath(nioPath: Path) extends UPath {
   override def toAbsolute: UPath = UPath.fromLocalPath(nioPath.toAbsolutePath)
 }
 
-private case class RemotePath(scheme: String, segments: Seq[String]) extends UPath {
+private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UPath {
 
   override def isAbsolute: Boolean = true
 
@@ -139,7 +139,7 @@ private case class RemotePath(scheme: String, segments: Seq[String]) extends UPa
     val otherSegments = other.split(UPath.separator.toString, UPath.splitKeepLastIfEmpty)
     // if last own segment is emptystring, drop it
     val ownSegments = if (segments.lastOption.exists(_.isEmpty)) segments.dropRight(1) else segments
-    RemotePath(scheme, ownSegments ++ otherSegments).normalize
+    RemoteUPath(scheme, ownSegments ++ otherSegments).normalize
   }
 
   def normalize: UPath = {
@@ -155,7 +155,7 @@ private case class RemotePath(scheme: String, segments: Seq[String]) extends UPa
         collectedSegmentsMutable.addOne(segment)
       }
     }
-    RemotePath(scheme, collectedSegmentsMutable.toSeq)
+    RemoteUPath(scheme, collectedSegmentsMutable.toSeq)
   }
 
   override def toLocalPathUnsafe: Path = throw new Exception(s"Called toLocalPathUnsafe on RemotePath $this")
@@ -170,7 +170,7 @@ private case class RemotePath(scheme: String, segments: Seq[String]) extends UPa
 
   override def parent: UPath =
     // need to have at least one segment (assumed to be the authority)
-    if (segments.length < 2) this else RemotePath(scheme, segments.dropRight(1))
+    if (segments.length < 2) this else RemoteUPath(scheme, segments.dropRight(1))
 
   override def getScheme: Option[String] = Some(scheme)
 

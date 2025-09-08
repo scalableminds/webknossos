@@ -143,7 +143,6 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-import _ from "lodash";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -407,10 +406,10 @@ function getMultiCutToolOptions(
   segmentIdLabel: string | number,
 ): MenuItemType[] {
   // Multi split min cut tool options
-  const isSegmentInPartitionOne = minCutPartitions[1].includes(unmappedSegmentId);
-  const isSegmentInPartitionTwo = minCutPartitions[2].includes(unmappedSegmentId);
-  const togglePartitionOneVerb = isSegmentInPartitionOne ? "remove" : "add";
-  const togglePartitionTwoVerb = isSegmentInPartitionTwo ? "remove" : "add";
+  const isSegmentInPartition1 = minCutPartitions[1].includes(unmappedSegmentId);
+  const isSegmentInPartition2 = minCutPartitions[2].includes(unmappedSegmentId);
+  const togglePartition1Verb = isSegmentInPartition1 ? "Remove" : "Add";
+  const togglePartition2Verb = isSegmentInPartition2 ? "Remove" : "Add";
   const doBothPartitionsHaveEntries =
     minCutPartitions[1].length > 0 && minCutPartitions[2].length > 0;
   return [
@@ -420,8 +419,8 @@ function getMultiCutToolOptions(
         Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 1, mappedSegmentId)),
       label: (
         <>
-          {_.capitalize(togglePartitionOneVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
-          Partition 1 {shortcutBuilder(["Ctrl", "leftMouse"])}
+          {togglePartition1Verb} {segmentOrSuperVoxel} ({segmentIdLabel}) to Partition 1{" "}
+          {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
         </>
       ),
     },
@@ -431,8 +430,8 @@ function getMultiCutToolOptions(
         Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, 2, mappedSegmentId)),
       label: (
         <>
-          {_.capitalize(togglePartitionTwoVerb)} {segmentOrSuperVoxel} ({segmentIdLabel}) to
-          Partition 2 {shortcutBuilder(["Shift", "leftMouse"])}
+          {togglePartition2Verb} {segmentOrSuperVoxel} ({segmentIdLabel}) to Partition 2{" "}
+          {shortcutBuilder([CtrlOrCmdKey, "Shift", "leftMouse"])}
         </>
       ),
     },

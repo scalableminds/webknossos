@@ -56,8 +56,8 @@ case class FallbackDataKey(
 )
 
 case class MinCutParameters(
-    partitionOne: List[Long],
-    partitionTwo: List[Long],
+    partition1: List[Long],
+    partition2: List[Long],
     mag: Vec3Int,
     agglomerateId: Long
 )
@@ -455,29 +455,24 @@ class EditableMappingService @Inject()(
                                                                version,
                                                                parameters.agglomerateId,
                                                                remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
-      edgesToCut <- minCut(agglomerateGraph, parameters.partitionOne, parameters.partitionTwo).toFox ?~> "Could not calculate min-cut on agglomerate graph."
+      edgesToCut <- minCut(agglomerateGraph, parameters.partition1, parameters.partition2).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
 
   private def minCut(agglomerateGraph: AgglomerateGraph,
-                     partitionOne: List[Long],
-                     partitionTwo: List[Long]): Box[List[(Long, Long)]] = {
-    val firstPartitionRootId = -1
-    val secondPartitionRootId = -2
-    val partitionOneUnique = partitionOne.distinct
-    val partitionTwoUnique = partitionTwo.distinct
-
+                     partition1: List[Long],
+                     partition2: List[Long]): Box[List[(Long, Long)]] = {
+    // Create graph.
+    val partition1Unique = partition1.distinct
+    val partition2Unique = partition2.distinct
     tryo {
-      if ((partitionOneUnique ++ partitionTwoUnique).distinct.length != partitionOneUnique.length + partitionTwoUnique.length) {
+      if ((partition1Unique ++ partition2Unique).distinct.length != partition1Unique.length + partition2Unique.length) {
         throw new Exception("Segments must only be part of one partition.")
       }
       val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
       agglomerateGraph.segments.foreach { segmentId =>
         g.addVertex(segmentId)
       }
-      // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
-      g.addVertex(firstPartitionRootId)
-      g.addVertex(secondPartitionRootId)
       agglomerateGraph.edges.zip(agglomerateGraph.affinities).foreach {
         case (edge, affinity) =>
           val e = g.addEdge(edge.source, edge.target)
@@ -486,17 +481,24 @@ class EditableMappingService @Inject()(
           }
           g.setEdgeWeight(e, affinity)
       }
-      partitionOneUnique.foreach(segmentId => {
-        val e = g.addEdge(firstPartitionRootId, segmentId)
+
+      // Add artificial root nodes which will force the two given partitions to stay connected during the min-cut.
+      val partition1RootId = -1
+      val partition2RootId = -2
+      g.addVertex(partition1RootId)
+      g.addVertex(partition2RootId)
+      partition1Unique.foreach(segmentId => {
+        val e = g.addEdge(partition1RootId, segmentId)
         g.setEdgeWeight(e, Double.MaxValue)
       })
-      partitionTwoUnique.foreach(segmentId => {
-        val e = g.addEdge(secondPartitionRootId, segmentId)
+      partition2Unique.foreach(segmentId => {
+        val e = g.addEdge(partition2RootId, segmentId)
         g.setEdgeWeight(e, Double.MaxValue)
       })
 
+      // Perform min-cut.
       val minCutImpl = new PushRelabelMFImpl(g)
-      minCutImpl.calculateMinCut(firstPartitionRootId, secondPartitionRootId)
+      minCutImpl.calculateMinCut(partition1RootId, partition2RootId)
       val sourcePartition: util.Set[Long] = minCutImpl.getSourcePartition
       val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
       minCutEdges.asScala.toList.map(e =>

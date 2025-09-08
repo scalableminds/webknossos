@@ -587,8 +587,8 @@ function* performMinCut(
 
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
-    partitionOne: sourceSegmentIds,
-    partitionTwo: targetSegmentIds,
+    partition1: sourceSegmentIds,
+    partition2: targetSegmentIds,
     mag: agglomerateFileMag,
     agglomerateId: sourceAgglomerateId,
     editableMappingId: volumeTracingId,
@@ -722,12 +722,12 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   const newMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
   );
-  const newAgglomerateIdFromPartitionOne = yield* call(
+  const newAgglomerateIdFromPartition1 = yield* call(
     preparation.mapSegmentId,
     partitions[1][0],
     newMapping,
   );
-  const newAgglomerateIdFromPartitionTwo = yield* call(
+  const newAgglomerateIdFromPartition2 = yield* call(
     preparation.mapSegmentId,
     partitions[2][0],
     newMapping,
@@ -737,7 +737,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     // Assign custom name to split-off target.
     yield* put(
       updateSegmentAction(
-        Number(newAgglomerateIdFromPartitionTwo),
+        Number(newAgglomerateIdFromPartition2),
         { name: agglomerate.name },
         volumeTracingId,
       ),
@@ -752,25 +752,25 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     edgesToRemove[0].segmentId1,
     newMapping,
   );
-  const meshLoadingPositionForPartitionOne =
-    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartitionOne
+  const meshLoadingPositionForPartition1 =
+    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition1
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
-  const meshLoadingPositionForPartitionTwo =
-    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartitionTwo
+  const meshLoadingPositionForPartition2 =
+    firstEdgeFirstSegmentNewAgglomerate === newAgglomerateIdFromPartition2
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: agglomerateId,
-      newAgglomerateId: newAgglomerateIdFromPartitionOne,
-      nodePosition: meshLoadingPositionForPartitionOne,
+      newAgglomerateId: newAgglomerateIdFromPartition1,
+      nodePosition: meshLoadingPositionForPartition1,
     },
     {
       agglomerateId: agglomerateId,
-      newAgglomerateId: newAgglomerateIdFromPartitionTwo,
-      nodePosition: meshLoadingPositionForPartitionTwo,
+      newAgglomerateId: newAgglomerateIdFromPartition2,
+      nodePosition: meshLoadingPositionForPartition2,
     },
   ]);
 }

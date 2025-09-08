@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJsonHelper}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceStatus,
@@ -65,7 +66,8 @@ case class ReserveManualUploadRequest(
     dataSource: UsableDataSource,
     folderId: Option[ObjectId],
     initialTeamIds: Seq[ObjectId] = Seq.empty,
-    requireUniqueName: Boolean = false
+    requireUniqueName: Boolean = false,
+    pathPrefix: Option[UPath],
 )
 
 object ReserveManualUploadRequest {
@@ -76,7 +78,8 @@ case class ReserveManualAttachmentUploadRequest(
     layerName: String,
     attachmentName: String,
     attachmentType: LayerAttachmentType.Value,
-    attachmentDataformat: LayerAttachmentDataformat.Value
+    attachmentDataformat: LayerAttachmentDataformat.Value,
+    pathPrefix: Option[UPath]
 )
 
 object ReserveManualAttachmentUploadRequest {

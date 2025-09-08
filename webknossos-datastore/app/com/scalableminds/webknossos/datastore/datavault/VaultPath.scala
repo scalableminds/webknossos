@@ -85,8 +85,9 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
     case _                => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(upath.toString).append(dataVault).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(upath).append(dataVault).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
 
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {

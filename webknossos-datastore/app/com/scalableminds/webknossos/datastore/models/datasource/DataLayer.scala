@@ -41,15 +41,14 @@ trait DataLayer {
 
   def attachments: Option[DataLayerAttachments]
 
-  // Datasets that are not in the WKW format use mags
-  def magsOpt: Option[List[MagLocator]] = this match {
-    case layer: StaticLayer => Some(layer.mags)
-    case _                  => None
+  def allExplicitPaths: Seq[UPath] = {
+    val magPaths = this match {
+      case s: StaticLayer => s.mags.flatMap(_.path)
+      case _              => Seq.empty
+    }
+    val attachmentPaths = attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
+    magPaths ++ attachmentPaths
   }
-
-  def allExplicitPaths: Seq[UPath] =
-    magsOpt.map(_.flatMap(_.path)).getOrElse(Seq.empty) ++
-      attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
 
   def containsMag(mag: Vec3Int): Boolean = resolutions.contains(mag)
 

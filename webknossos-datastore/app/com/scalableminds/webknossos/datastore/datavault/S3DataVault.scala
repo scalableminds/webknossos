@@ -147,8 +147,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     case _                  => false
   }
 
-  override def hashCode(): Int =
+  private lazy val hashCodeCached =
     new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object S3DataVault {

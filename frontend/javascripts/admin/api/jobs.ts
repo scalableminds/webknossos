@@ -11,6 +11,7 @@ import type {
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
@@ -191,13 +192,16 @@ export function startNucleiInferralJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
+  invertColorLayer: boolean,
 ): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${datasetId}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
-  );
+  const urlParams = new URLSearchParams({
+    layerName,
+    newDatasetName,
+    invertColorLayer: invertColorLayer.toString(),
+  });
+  return Request.receiveJSON(`/api/jobs/run/inferNuclei/${datasetId}?${urlParams.toString()}`, {
+    method: "POST",
+  });
 }
 
 export function startNeuronInferralJob(
@@ -205,35 +209,42 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  invertColorLayer: boolean,
   doSplitMergerEvaluation: boolean,
   annotationId?: string,
-  useSparseTracing?: boolean,
-  evalMaxEdgeLength?: number,
-  evalSparseTubeThresholdNm?: number,
-  evalMinMergerPathLengthNm?: number,
+  splitMergerEvaluationSettings?: SplitMergerEvaluationSettings,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
     doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
+    invertColorLayer: invertColorLayer.toString(),
   });
   if (doSplitMergerEvaluation) {
     if (!annotationId) {
       throw new Error("annotationId is required when doSplitMergerEvaluation is true");
     }
     urlParams.append("annotationId", `${annotationId}`);
-    if (useSparseTracing != null) {
-      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
-    }
-    if (evalMaxEdgeLength != null) {
-      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
-    }
-    if (evalSparseTubeThresholdNm != null) {
-      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
-    }
-    if (evalMinMergerPathLengthNm != null) {
-      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    if (splitMergerEvaluationSettings != null) {
+      const {
+        useSparseTracing,
+        maxEdgeLength,
+        sparseTubeThresholdInNm,
+        minimumMergerPathLengthInNm,
+      } = splitMergerEvaluationSettings;
+      if (useSparseTracing != null) {
+        urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+      }
+      if (maxEdgeLength != null) {
+        urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
+      }
+      if (sparseTubeThresholdInNm != null) {
+        urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
+      }
+      if (minimumMergerPathLengthInNm != null) {
+        urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
+      }
     }
   }
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
@@ -351,7 +362,11 @@ export function startAlignSectionsJob(
   });
 }
 
-type AiModelCategory = "em_neurons" | "em_nuclei";
+// This enum needs to be kept in sync with the backend/database
+export enum APIAiModelCategory {
+  EM_NEURONS = "em_neurons",
+  EM_NUCLEI = "em_nuclei",
+}
 
 type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
@@ -360,22 +375,38 @@ type AiModelTrainingAnnotationSpecification = {
   mag: Vector3;
 };
 
-type RunTrainingParameters = {
-  trainingAnnotations: Array<AiModelTrainingAnnotationSpecification>;
+type RunNeuronModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
+  aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
-  aiModelCategory?: AiModelCategory;
   workflowYaml?: string;
 };
 
-export function runNeuronTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
+export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronModelTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });
 }
 
-type RunInferenceParameters = {
+type RunInstanceModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
+  name: string;
+  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  maxDistanceNm: number;
+  comment?: string;
+  workflowYaml?: string;
+};
+
+export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runInstanceModelTraining", {
+    method: "POST",
+    data: JSON.stringify(params),
+  });
+}
+
+export type BaseModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -384,11 +415,26 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
+  invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
+type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
 
-export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
+type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+  seedGeneratorDistanceThreshold: number;
+};
+
+export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
+    method: "POST",
+    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
+  });
+}
+
+export function runInstanceModelInferenceWithAiModelJob(
+  params: RunInstanceModelInferenceParameters,
+) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });

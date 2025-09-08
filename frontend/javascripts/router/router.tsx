@@ -32,6 +32,7 @@ import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
+  redirect,
 } from "react-router-dom";
 
 import AccountSettingsView from "admin/account/account_settings_view";
@@ -46,8 +47,8 @@ import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
-import AccountPasswordView from "admin/account/account_password_view";
 import AccountProfileView from "admin/account/account_profile_view";
+import AccountSecurityView from "admin/account/account_security_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
@@ -169,7 +170,7 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/reports/openTasks" element={<Navigate to="/reports/availableTasks" />} />
+    <Route path="/reports/openTasks" element={<Navigate to="/reports/availableTasks" replace />} />
     <Route
       path="/reports/availableTasks"
       element={
@@ -275,7 +276,7 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="data" />} />
+      <Route index element={<Navigate to="data" replace />} />
       <Route path="data" element={<DatasetSettingsDataTab />} />
       <Route path="sharing" element={<DatasetSettingsSharingTab />} />
       <Route path="metadata" element={<DatasetSettingsMetadataTab />} />
@@ -354,7 +355,10 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     />
-    <Route path="/organizations/:organizationId" element={<Navigate to="/organization" />} />
+    <Route
+      path="/organizations/:organizationId"
+      element={<Navigate to="/organization" replace />}
+    />
     <Route
       path="/organization"
       element={
@@ -363,30 +367,31 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="overview" />} />
+      <Route index element={<Navigate to="overview" replace />} />
       <Route path="overview" element={<OrganizationOverviewView />} />
       <Route path="notifications" element={<OrganizationNotificationsView />} />
       <Route path="delete" element={<OrganizationDangerZoneView />} />
     </Route>
     <Route
       path="/help/keyboardshortcuts"
-      element={<Navigate to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />}
+      loader={() => redirect("https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html")}
     />
     {/* Backwards compatibility for old auth token URLs */}
-    <Route path="/auth/token" element={<Navigate to="/account/token" />} />
+    <Route path="/auth/token" element={<Navigate to="/account/token" replace />} />
     {/* Backwards compatibility for old password change URLs */}
-    <Route path="/auth/changePassword" element={<Navigate to="/account/password" />} />
-    <Route path="/login" element={<Navigate to="/auth/login" />} />
+    <Route path="/auth/changePassword" element={<Navigate to="/account/security" replace />} />
+    <Route path="/account/password" element={<Navigate to="/account/security" replace />} />
+    <Route path="/login" element={<Navigate to="/auth/login" replace />} />
 
     <Route path="/invite/:token" element={<AcceptInviteView />} />
 
     <Route path="/verifyEmail/:token" element={<VerifyEmailView />} />
     {/* Backwards compatibility for signup URLs */}
-    <Route path="/signup" element={<Navigate to="/auth/signup" />} />
+    <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
     {/* Backwards compatibility for register URLs */}
-    <Route path="/register" element={<Navigate to="/auth/signup" />} />
+    <Route path="/register" element={<Navigate to="/auth/signup" replace />} />
     {/* Backwards compatibility for register URLs */}
-    <Route path="/auth/register" element={<Navigate to="/auth/signup" />} />
+    <Route path="/auth/register" element={<Navigate to="/auth/signup" replace />} />
     <Route path="/auth/login" element={<LoginView />} />
     <Route path="/auth/signup" element={<RegistrationView />} />
 
@@ -426,7 +431,10 @@ const routes = createRoutesFromElements(
     />
     <Route path="/datasets/:datasetNameAndId" element={<TracingViewModeRouteWrapper />} />
     <Route path="/publications/:id" element={<PublicationDetailView />} />
-    <Route path="/publication/:id" element={<Navigate to="/publications/:id" />} />
+    <Route
+      path="/publication/:id"
+      loader={({ params }) => redirect(`/publications/${params.id}`)}
+    />
     <Route
       path="/workflows"
       element={
@@ -463,9 +471,9 @@ const routes = createRoutesFromElements(
         </SecuredRoute>
       }
     >
-      <Route index element={<Navigate to="profile" />} />
+      <Route index element={<Navigate to="profile" replace />} />
       <Route path="profile" element={<AccountProfileView />} />
-      <Route path="password" element={<AccountPasswordView />} />
+      <Route path="security" element={<AccountSecurityView />} />
       <Route path="token" element={<AccountAuthTokenView />} />
     </Route>
     <Route path="*" element={<PageNotFoundView />} />

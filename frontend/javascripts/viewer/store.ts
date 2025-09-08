@@ -82,7 +82,7 @@ import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
-import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 

@@ -90,7 +90,7 @@ function ensureNonConflictingHandlers(
 
   if (conflictingHandlers.length > 0) {
     throw new Error(
-      `There are unsolved conflicts between skeleton and volume controller: ${conflictingHandlers.join(
+      `There are unsolved conflicts between skeleton, volume and proofread controller: ${conflictingHandlers.join(
         ", ",
       )}`,
     );

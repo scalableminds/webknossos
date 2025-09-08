@@ -495,7 +495,7 @@ export function ProofreadingComponents() {
         active={isMultiSplitActive}
         title={`${
           isMultiSplitActive ? "Disable" : "Enable"
-        } multi splitting. When enabled, two partitions can be selected in the 3D viewport to split more accurately.`}
+        } multi splitting. When enabled, two partitions can be selected in the orthogonal or 3D viewports to split more accurately.`}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleIsMultiSplitActive(!isMultiSplitActive)}
       >

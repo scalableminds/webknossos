@@ -194,6 +194,7 @@ class DatasetController @Inject()(userService: UserService,
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
+        _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
         newDataset <- datasetService.createVirtualDataset(
           request.body.datasetName,
           dataStore,

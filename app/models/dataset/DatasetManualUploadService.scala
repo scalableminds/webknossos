@@ -192,23 +192,14 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
+      isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
       existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
         dataset._id,
         parameters.layerName,
-        Some(parameters.attachmentName),
+        if (isSingletonAttachment) None else Some(parameters.attachmentName),
         parameters.attachmentType)
-      _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> "attachment.name.taken"
-      _ <- Fox.runIf(LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)) {
-        for {
-          existingSingletonAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
-            dataset._id,
-            parameters.layerName,
-            None,
-            parameters.attachmentType
-          )
-          _ <- Fox.fromBool(existingSingletonAttachmentsCount == 0) ?~> "attachment.singleton.alreadyFilled"
-        } yield ()
-      }
+      existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
+      _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
       manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName

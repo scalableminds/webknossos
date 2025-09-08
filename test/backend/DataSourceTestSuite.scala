@@ -74,6 +74,10 @@ class DataSourceTestSuite extends PlaySpec {
         VoxelSize(Vec3Double(1, 3, 5.3), LengthUnit.micrometer)
       )
       assert(dataSource.hashCode() == dataSourceCopyPastedFromAbove.hashCode())
+
+      val notEqualDataSource = dataSourceCopyPastedFromAbove.copy(
+        id = dataSourceCopyPastedFromAbove.id.copy(directoryName = "testLayerChanged"))
+      assert(dataSource.hashCode() != notEqualDataSource.hashCode())
     }
   }
 

@@ -95,14 +95,18 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         for {
           datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
           fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-        } yield (fromDatastoreBaseFolder / ".manualUploads").toAbsolute
+        } yield fromDatastoreBaseFolder.toAbsolute
     }
+
+  private lazy val manualUploadInfoxOpt: Option[String] = conf.WebKnossos.Datasets.manualUploadInfix
 
   private def addPathsToDatasource(dataSource: UsableDataSource, organizationId: String)(
       implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
-      datasetPath = manualUploadPrefix / organizationId / dataSource.id.directoryName
+      orgaDir = manualUploadPrefix / organizationId
+      datasetParent = manualUploadInfoxOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
+      datasetPath = datasetParent / dataSource.id.directoryName
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
 

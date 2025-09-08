@@ -305,9 +305,10 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- datasetDAO.updateDataSource(datasetId, name, request.body.hashCode(), request.body, isUsable = true)(
-            GlobalAccessContext)
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- Fox.runIf(!dataset.isVirtual)(
+            datasetDAO.updateDataSource(datasetId, name, request.body.hashCode(), request.body, isUsable = true)(
+              GlobalAccessContext))
         } yield Ok
       }
     }

@@ -123,11 +123,17 @@ General Shortcuts:
 | Key Binding            | Operation                                       |
 |------------------------|-------------------------------------------------|
 | ++m++                  | Toggle Multi Cut Tool                           |
-| ++Enter++              | Perform Multi Cut (if Multi Cut Tool is active) |
-| ++Escape++             | Clear Partition Selection of Multi Cut Tool     |
 
+If Multi Cut Tool is activated, the following shortcuts are available:
 
-#### Orthogonal Viewport Shortcuts:
+| Key Binding                                 | Operation                                   |
+|---------------------------------------------|---------------------------------------------|
+| ++Enter++                                   | Perform Multi Cut                           |
+| ++Escape++                                  | Clear Partition Selection of Multi Cut Tool |
+| ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut  |
+| ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut  |
+
+#### Orthogonal Viewport:
 
 | Key Binding                     | Operation                                                |
 |---------------------------------|----------------------------------------------------------|
@@ -136,26 +142,13 @@ General Shortcuts:
 | ++shift++ + Left Click          | Merge with Active Segment                                |
 | ++ctrl++ / ++cmd++ + Left Click | Split from Active Segment                                |
 
-If Multi Cut Tool is activated, the following shortcuts are available:
 
-| Key Binding                                 | Operation                                  |
-|---------------------------------------------|--------------------------------------------|
-| ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut |
-| ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut |
-
-#### 3D Viewport Interactions:
+#### 3D Viewport:
 
 
-| Key Binding                     | Operation                                                    |
-|---------------------------------|--------------------------------------------------------------|
-| ++ctrl++ / ++cmd++ + Left Click | Activate Super Voxel of Agglomerate for Proofreading Actions |
-
-If Multi Cut Tool is activated, the following shortcuts are available:
-
-| Key Binding                                 | Operation                                  |
-|---------------------------------------------|--------------------------------------------|
-| ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut |
-| ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut |
+| Key Binding                     | Operation                                                |
+|---------------------------------|----------------------------------------------------------|
+| ++ctrl++ / ++cmd++ + Left Click | Activate Segment of Agglomerate for Proofreading Actions |
 
 ## Tool Switching Shortcuts
 

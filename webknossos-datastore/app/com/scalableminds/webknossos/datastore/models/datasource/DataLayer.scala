@@ -87,12 +87,16 @@ trait StaticLayer extends DataLayer {
     this match {
       case l: StaticSegmentationLayer =>
         l.copy(
-          attachments =
-            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
+          attachments = l.attachments
+            .map(_.mergeWithPrecedence(attachments))
+            .orElse(Some(attachments))
+            .map(_.resolvedIn(dataSourcePath)))
       case l: StaticColorLayer =>
         l.copy(
-          attachments =
-            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
+          attachments = l.attachments
+            .map(_.mergeWithPrecedence(attachments))
+            .orElse(Some(attachments))
+            .map(_.resolvedIn(dataSourcePath)))
     }
 
   def mapped(

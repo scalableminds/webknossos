@@ -475,7 +475,11 @@ function getMeshItems(
   const { activeUnmappedSegmentId } = volumeTracing;
   const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
   const { isMultiSplitActive } = state.userConfiguration;
-  const minCutPartitions = state.localSegmentationData[volumeTracing.tracingId].minCutPartitions;
+  const layerId = volumeTracing.tracingId;
+  const minCutPartitions =
+    layerId in state.localSegmentationData
+      ? state.localSegmentationData[layerId].minCutPartitions
+      : undefined;
   // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
   // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
   // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
@@ -510,7 +514,7 @@ function getMeshItems(
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
 
   const proofreadingMultiSplitToolActions =
-    isProofreadingActive && isMultiSplitActive && maybeUnmappedSegmentId != null
+    isProofreadingActive && isMultiSplitActive && minCutPartitions && maybeUnmappedSegmentId != null
       ? getMultiCutToolOptions(
           maybeUnmappedSegmentId,
           clickedMeshId,
@@ -1027,7 +1031,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
   const { isMultiSplitActive } = state.userConfiguration;
   const maybeMinCutPartitions = volumeTracing
-    ? state.localSegmentationData[volumeTracing.tracingId].minCutPartitions
+    ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions
     : null;
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
   const segmentIdLabel =

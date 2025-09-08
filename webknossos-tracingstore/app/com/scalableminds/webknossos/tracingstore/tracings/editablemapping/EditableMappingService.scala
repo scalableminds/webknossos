@@ -469,6 +469,9 @@ class EditableMappingService @Inject()(
       if ((partition1Unique ++ partition2Unique).distinct.length != partition1Unique.length + partition2Unique.length) {
         throw new Exception("Segments must only be part of one partition.")
       }
+      if (partition1Unique.isEmpty || partition2Unique.isEmpty) {
+        throw new Exception("Both partitions must contain at least one segment.")
+      }
       val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
       agglomerateGraph.segments.foreach { segmentId =>
         g.addVertex(segmentId)

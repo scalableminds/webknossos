@@ -1086,6 +1086,10 @@ export class ProofreadToolController {
     if (isMultiSplitActive && ctrlOrMetaKey) {
       const unmappedSegmentId = VolumeHandlers.getUnmappedSegmentIdForPosition(globalPosition);
       const mappedSegmentId = VolumeHandlers.getSegmentIdForPosition(globalPosition);
+      if (unmappedSegmentId === 0 || mappedSegmentId === 0) {
+        // No valid ids were found, ignore action.
+        return;
+      }
       const partition = event.shiftKey ? 1 : 2;
       Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
       return;

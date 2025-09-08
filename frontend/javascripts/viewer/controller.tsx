@@ -21,6 +21,7 @@ import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { wkReadyAction } from "viewer/model/actions/actions";
 import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
@@ -29,7 +30,6 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { AnnotationTool } from "./model/accessors/tool_accessor";
 import type DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";

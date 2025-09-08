@@ -667,10 +667,9 @@ export default class SegmentMeshController {
 
       const highlightRanges: HighlightState = [];
       if (vertexSegmentMapping && minCutPartitions) {
-        for (const partitionNumber of [1, 2]) {
-          const partition = partitionNumber as 1 | 2;
-          const partitionColor = PARTITION_COLORS[partition];
-          for (const segmentId of minCutPartitions[partition]) {
+        for (const partitionNumber of [1, 2] as const) {
+          const partitionColor = PARTITION_COLORS[partitionNumber];
+          for (const segmentId of minCutPartitions[partitionNumber]) {
             const containsSegmentId = vertexSegmentMapping.containsSegmentId(segmentId);
             if (containsSegmentId) {
               const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(segmentId);

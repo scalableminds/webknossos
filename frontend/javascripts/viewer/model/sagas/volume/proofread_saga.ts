@@ -11,6 +11,7 @@ import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
+import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
 import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -47,8 +48,8 @@ import {
   type MinCutPartitionsAction,
   type ProofreadAtPositionAction,
   type ProofreadMergeAction,
-  resetMultiCutToolPartitionsAction,
   type ToggleSegmentInPartitionAction,
+  resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
@@ -88,7 +89,6 @@ import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
 import { ensureWkReady } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
-import messages from "messages";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -662,10 +662,12 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   );
   const agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
+    console.error(messages["proofreading.multi_cut.empty_partition"]);
     Toast.error(messages["proofreading.multi_cut.empty_partition"]);
     return;
   }
   if (agglomerateId == null) {
+    console.error(messages["proofreading.multi_cut.no_valid_agglomerate"]);
     Toast.error(messages["proofreading.multi_cut.no_valid_agglomerate"]);
     return;
   }
@@ -686,7 +688,9 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     null,
     items,
   );
-  if (hasErrored) {
+  if (hasErrored || edgesToRemove.length < 0) {
+    console.error(messages["proofreading.multi_cut.split_failed"]);
+    Toast.error(messages["proofreading.multi_cut.split_failed"]);
     return;
   }
 

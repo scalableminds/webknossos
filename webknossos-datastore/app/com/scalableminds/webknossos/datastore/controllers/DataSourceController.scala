@@ -662,21 +662,24 @@ class DataSourceController @Inject()(
     }
   }
 
-  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
+  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
-      dataSourceFromDir <- Fox.runIf(dataSourceService.existsOnDisk(dataSourceId)) {
-        dataSourceService
-          .dataSourceFromDir(
+      dataSourceFromDirOpt = if (dataSourceService.existsOnDisk(dataSourceId)) {
+        Some(
+          dataSourceService.dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
-            dataSourceId.organizationId)
-          .toUsable
-          .toFox
-      }
-      _ <- Fox.runOptional(dataSourceFromDir)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
+            dataSourceId.organizationId))
+      } else None
+      _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)
-      dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
-    } yield dataSource
+      newUsableFromDBBox <- datasetCache.getById(datasetId).shiftBox
+      dataSourceToReturn <- (newUsableFromDBBox, dataSourceFromDirOpt) match {
+        case (Full(newUsableFromDB), _)   => Fox.successful(newUsableFromDB)
+        case (_, Some(dataSourceFromDir)) => Fox.successful(dataSourceFromDir)
+        case _                            => Fox.failure("DataSource not found") ~> NOT_FOUND
+      }
+    } yield dataSourceToReturn
 
 }

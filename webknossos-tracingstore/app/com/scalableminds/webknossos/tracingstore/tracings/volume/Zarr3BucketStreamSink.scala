@@ -7,19 +7,14 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  BloscCompressor,
-  IntCompressionSetting,
-  StringCompressionSetting
-}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataLayer,
   DataSourceId,
   GenericDataSource
 }
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
 
 import scala.concurrent.ExecutionContext
@@ -42,7 +37,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
 
     val header = Zarr3ArrayHeader.fromDataLayer(layer,
                                                 mags.headOption.getOrElse(Vec3Int.ones),
-                                                additionalCodecs = Seq(compressorConfiguration))
+                                                additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput))
     bucketStream.flatMap {
       case (bucket, data) =>
         val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
@@ -117,23 +112,6 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private def zarrHeaderFilePath(layerName: String, mag: Vec3Int): String =
     s"$layerName/${mag.toMagLiteral(allowScalar = true)}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
 
-  private lazy val compressorConfiguration =
-    BloscCodecConfiguration(
-      BloscCompressor.defaultCname.getValue,
-      BloscCompressor.defaultCLevel,
-      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle.getValue)),
-      Some(BloscCompressor.defaultTypesize),
-      BloscCompressor.defaultBlocksize
-    )
-
-  private lazy val compressor =
-    new BloscCompressor(
-      Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
-        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
-        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
-        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+  private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor
 
 }

@@ -463,6 +463,9 @@ function* maybeLoadMeshChunk(
   const { segmentMeshController } = getSceneController();
 
   const cubeSize = marchingCubeSizeInTargetMag();
+  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
+  const paddedPositionWithinLayer =
+    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -473,7 +476,7 @@ function* maybeLoadMeshChunk(
         },
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
-          position: clippedPosition,
+          positionWithPadding: paddedPositionWithinLayer,
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,

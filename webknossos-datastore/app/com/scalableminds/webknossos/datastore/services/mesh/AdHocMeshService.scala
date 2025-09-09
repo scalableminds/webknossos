@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
@@ -52,6 +53,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
     case _ =>
       sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
+
 }
 
 class AdHocMeshService(binaryDataService: BinaryDataService,
@@ -63,6 +65,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     with LazyLogging {
 
   implicit val timeout: Timeout = Timeout(adHocMeshTimeout)
+
+  private val marchingCubesChunkSize = 32
 
   private val actor: ActorRef =
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
@@ -97,7 +101,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request: AdHocMeshRequest,
       dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyMapping(data: Array[T]): Fox[Array[T]] =
+    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
@@ -186,38 +190,45 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
 
-    val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
-    val scale = Vec3Double(cuboid.topLeft.mag) * request.voxelSizeFactor
+    val offset = Vec3Float(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
+    val scale = Vec3Float(cuboid.topLeft.mag) * Vec3Float(request.voxelSizeFactor)
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
-    val vertexBuffer = mutable.ArrayBuffer[Vec3Double]()
+    val vertexBuffer = mutable.ArrayBuffer[Float]()
 
     for {
+      beforeDataLoading <- Instant.nowFox
       data <- binaryDataService.handleDataRequest(dataRequest)
+      _ = Instant.logSince(beforeDataLoading, "load data")
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
-      mappedData <- applyMapping(typedData)
-      mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
+      mappedData <- applyJsonMappingIfNeeded(typedData)
+      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
+      _ = Instant.logSince(beforeDataLoading, s"load + type ${data.length} bytes")
       neighbors = if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) } else {
         List()
       }
 
     } yield {
+      val beforeAll = Instant.now
       for {
-        x <- 0 until dataDimensions.x by 32
-        y <- 0 until dataDimensions.y by 32
-        z <- 0 until dataDimensions.z by 32
+        x <- 0 until dataDimensions.x by marchingCubesChunkSize
+        y <- 0 until dataDimensions.y by marchingCubesChunkSize
+        z <- 0 until dataDimensions.z by marchingCubesChunkSize
       } {
-        val boundingBox = BoundingBox(Vec3Int(x, y, z),
-                                      math.min(dataDimensions.x - x, 33),
-                                      math.min(dataDimensions.y - y, 33),
-                                      math.min(dataDimensions.z - z, 33))
+        val boundingBox = BoundingBox(
+          Vec3Int(x, y, z),
+          math.min(dataDimensions.x - x, marchingCubesChunkSize + 1),
+          math.min(dataDimensions.y - y, marchingCubesChunkSize + 1),
+          math.min(dataDimensions.z - z, marchingCubesChunkSize + 1)
+        )
         if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
           MarchingCubes
             .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
         }
       }
-      (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
+      Instant.logSince(beforeAll, s"marching cubes for whole data request. neighbors=$neighbors")
+      (vertexBuffer.toArray, neighbors)
     }
   }
 }

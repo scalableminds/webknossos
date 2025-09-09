@@ -466,6 +466,10 @@ function* maybeLoadMeshChunk(
   const paddedPositionWithinLayer =
     layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
+  if (paddedPosition[0] != paddedPositionWithinLayer[0] || paddedPosition[1] != paddedPositionWithinLayer[1] || paddedPosition[2] != paddedPositionWithinLayer[2] ) {
+    return [];
+  }
+
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mcubes
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 
 import scala.collection.mutable
 
@@ -10,9 +10,9 @@ object MarchingCubes {
                        dataDimensions: Vec3Int,
                        boundingBox: BoundingBox,
                        segmentId: T,
-                       offset: Vec3Double,
-                       scale: Vec3Double,
-                       vertexBuffer: mutable.ArrayBuffer[Vec3Double]): Unit = {
+                       offset: Vec3Float,
+                       scale: Vec3Float,
+                       vertexBuffer: mutable.ArrayBuffer[Float]): Unit = {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))
@@ -49,9 +49,10 @@ object MarchingCubes {
       if (getVoxelData(x, y + 1, z + 1) == segmentId) cubeIndex |= 128
       if (getVoxelData(x + 1, y + 1, z + 1) == segmentId) cubeIndex |= 64
 
-      val position = Vec3Double(x, y, z)
       MarchingCubesTable.triangleTable(cubeIndex).foreach { edgeDelta =>
-        vertexBuffer += (position + edgeDelta + offset) * scale
+        vertexBuffer += (x + edgeDelta.x + offset.x) * scale.x
+        vertexBuffer += (y + edgeDelta.y + offset.y) * scale.y
+        vertexBuffer += (z + edgeDelta.z + offset.z) * scale.z
       }
     }
   }

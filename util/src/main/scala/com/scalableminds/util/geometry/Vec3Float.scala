@@ -25,6 +25,12 @@ case class Vec3Float(x: Float, y: Float, z: Float) {
 }
 
 object Vec3Float {
+  def apply(p: Vec3Int): Vec3Float =
+    Vec3Float(p.x, p.y, p.z)
+
+  def apply(p: Vec3Double): Vec3Float =
+    Vec3Float(p.x.toFloat, p.y.toFloat, p.z.toFloat)
+
   implicit object Vec3FloatReads extends Reads[Vec3Float] {
     def reads(json: JsValue): JsResult[Vec3Float] = json match {
       case JsArray(ts) if ts.size == 3 =>

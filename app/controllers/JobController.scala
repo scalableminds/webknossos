@@ -378,7 +378,6 @@ class JobController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.exportTiff.notAllowed.organization" ~> FORBIDDEN
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
@@ -496,7 +495,6 @@ class JobController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {

@@ -583,8 +583,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     } catch (e) {
       Toast.error("Could not export trees. See the console for details.");
       console.error(e);
-    }
-    finally {
+    } finally {
       this.setState({
         isDownloading: false,
       });
@@ -599,7 +598,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       cancelText: "No",
       autoFocusButton: "cancel",
       icon: <WarningOutlined />,
-      onCancel: () => { },
+      onCancel: () => {},
       onOk: () => {
         onConfirm();
       },
@@ -791,12 +790,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         this.props.isSkeletonLayerTransformed
           ? {
-            key: "handleNmlDownloadTransformed",
-            onClick: () => this.handleNmlDownload(true),
-            icon: <DownloadOutlined />,
-            label: "Download Visible Trees NML (Transformed)",
-            title: "The currently active transformation will be applied to each node.",
-          }
+              key: "handleNmlDownloadTransformed",
+              onClick: () => this.handleNmlDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees NML (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
           : null,
         {
           key: "handleCSVDownload",
@@ -807,12 +806,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         this.props.isSkeletonLayerTransformed
           ? {
-            key: "handleCSVDownloadTransformed",
-            onClick: () => this.handleCSVDownload(true),
-            icon: <DownloadOutlined />,
-            label: "Download Visible Trees (Transformed) CSV",
-            title: "The currently active transformation will be applied to each node.",
-          }
+              key: "handleCSVDownloadTransformed",
+              onClick: () => this.handleCSVDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed) CSV",
+              title: "The currently active transformation will be applied to each node.",
+            }
           : null,
         {
           key: "importNml",

@@ -85,23 +85,22 @@ function TimeTrackingOverview() {
       selectedState,
       projectIds,
     );
-    const timeEntriesAsString = timeSpans
-      .map((row) =>
-        transformToCSVRow([
-          row.userId,
-          row.userEmail,
-          row.datasetOrganization,
-          row.datasetName,
-          row.annotationId,
-          row.annotationState,
-          row.timeSpanCreated,
-          Math.ceil(row.timeSpanTimeMillis / 1000),
-          row.taskId,
-          row.projectName,
-          row.taskTypeId,
-          row.taskTypeSummary,
-        ])
-      )
+    const timeEntriesAsString = timeSpans.map((row) =>
+      transformToCSVRow([
+        row.userId,
+        row.userEmail,
+        row.datasetOrganization,
+        row.datasetName,
+        row.annotationId,
+        row.annotationState,
+        row.timeSpanCreated,
+        Math.ceil(row.timeSpanTimeMillis / 1000),
+        row.taskId,
+        row.projectName,
+        row.taskTypeId,
+        row.taskTypeSummary,
+      ]),
+    );
     const filename = `timetracking-user-export-${userId}.csv`;
     saveAsCSV(TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString, filename);
   };

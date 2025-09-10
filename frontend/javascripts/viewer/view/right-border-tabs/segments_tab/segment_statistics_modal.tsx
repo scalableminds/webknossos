@@ -65,21 +65,20 @@ const exportStatisticsToCSV = (
   hasAdditionalCoords: boolean,
   voxelSize: VoxelSize,
 ) => {
-  const segmentStatisticsAsRows = segmentInformation
-    .map((row) => {
-      const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
-      return transformToCSVRow([
-        ...maybeAdditionalCoords,
-        row.segmentId,
-        row.segmentName,
-        row.groupId,
-        row.groupName,
-        row.volumeInVoxel,
-        row.volumeInUnit3,
-        ...row.boundingBoxTopLeft,
-        ...row.boundingBoxPosition,
-      ]);
-    });
+  const segmentStatisticsAsRows = segmentInformation.map((row) => {
+    const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
+    return transformToCSVRow([
+      ...maybeAdditionalCoords,
+      row.segmentId,
+      row.segmentName,
+      row.groupId,
+      row.groupName,
+      row.volumeInVoxel,
+      row.volumeInUnit3,
+      ...row.boundingBoxTopLeft,
+      ...row.boundingBoxPosition,
+    ]);
+  });
 
   const csv_header = hasAdditionalCoords
     ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(voxelSize.unit)].join(",")

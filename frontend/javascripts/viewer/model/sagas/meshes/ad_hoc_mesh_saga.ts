@@ -341,6 +341,13 @@ function* loadFullAdHocMesh(
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.hasEditableMapping &&
     visibleSegmentationLayer?.tracingId != null;
+
+  // TODO: also use segment index if there is no volume tracing, but a static segmentation layer that has a segment index file.
+  //       build requestUrl to go to the dataset’s datastore instead.
+  //       use hasSegmentIndexInDataStore from rest_api. (should probably be cached)
+  //       let’s skip the volumeTracing+editableMapping case for this issue,
+  //       even though it could also be added by combining the segment index entries for the oversegment ids
+
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
         tracingStoreHost,

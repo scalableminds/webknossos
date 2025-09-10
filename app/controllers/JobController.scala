@@ -31,7 +31,7 @@ object MovieResolutionSetting extends ExtendedEnumeration {
 }
 
 object CameraPositionSetting extends ExtendedEnumeration {
-  val MOVING, STATIC_XZ, STATIC_YZ = Value
+  val MOVING, STATIC_ISOMETRIC, STATIC_XY, STATIC_XZ, STATIC_YZ = Value
 }
 
 case class AnimationJobOptions(

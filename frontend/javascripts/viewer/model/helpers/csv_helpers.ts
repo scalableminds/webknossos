@@ -3,7 +3,7 @@ import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
-export function exportTreesAsCSV(
+export function getTreeNodesAsCSV(
   state: WebknossosState,
   tracing: SkeletonTracing,
   applyTransform: boolean,
@@ -13,7 +13,7 @@ export function exportTreesAsCSV(
     .filter((tree) => tree.isVisible)
     .toArray();
   const csvHeader = [
-    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time",
+    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time,comment",
   ];
   const { annotationId } = state.annotation;
 
@@ -43,6 +43,7 @@ export function exportTreesAsCSV(
         node.bitDepth,
         node.interpolation,
         node.timestamp,
+        tree.comments.find((c) => c.nodeId === node.id)?.content ?? "",
       ];
       return transformToCSVRow(row);
     }),
@@ -50,7 +51,7 @@ export function exportTreesAsCSV(
   return [csvHeader.join(","), ...csvLines].join("\n");
 }
 
-export function exportEdgesAsCSV(annotationId: string, tracing: SkeletonTracing) {
+export function getTreeEdgesAsCSV(annotationId: string, tracing: SkeletonTracing) {
   const visibleTrees = tracing.trees
     .values()
     .filter((tree) => tree.isVisible)

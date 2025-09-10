@@ -428,8 +428,8 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
+  const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
   const paddedPositionWithinLayer =
     layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);

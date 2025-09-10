@@ -14,6 +14,14 @@ There are several ways for downloading your annotations:
 
 ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
 
+The NML or CSV files will contain the following information:
+- All nodes with their corresponding annotation and tree
+- The node's position and rotation (x,y,z)
+    - For ND datasets: additional coordinates
+- The magnification, interpolation, radius, bitdepth and viewport information of the node
+- The time the node was added
+- All edges with their corresponding tree, source and target node
+
 ## Import Skeleton Annotations
 Importing a skeleton annotation can be achieved using one of two ways:
 

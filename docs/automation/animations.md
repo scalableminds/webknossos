@@ -12,7 +12,7 @@ Creating an animation is easy:
 2. Optionally, load some [3D meshes](../meshes/index.md) for any segments that you wish to highlight.
 3. For larger datasets, use the bounding box tool to create a bounding box around your area of interest. Smaller datasets can be used in their entirety.
 4. From the `Menu` dropdown in navbar at the top of the screen, select "Create Animation".
-5. Configure the animation options as desired, i.e. camera movement or resolution.
+5. Configure the animation options as desired, i.e. camera movement and positioning or video resolution.
 6. Click the `Start animation` button to launch the animation creation.
 
 

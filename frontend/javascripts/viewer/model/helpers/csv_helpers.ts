@@ -13,7 +13,7 @@ export function getTreeNodesAsCSV(
     .filter((tree) => tree.isVisible)
     .toArray();
   const csvHeader = [
-    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,inVp,inMag,bitDepth,interpolation,time,comment",
+    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment",
   ];
   const { annotationId } = state.annotation;
 

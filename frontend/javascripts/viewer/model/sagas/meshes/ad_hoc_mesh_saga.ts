@@ -428,13 +428,9 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const mag = magInfo.getMagByIndexOrThrow(zoomStep);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
-  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
-  const paddedPositionWithinLayer =
-    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
-  if (threeDMap.get(paddedPositionWithinLayer)) {
+  if (threeDMap.get(clippedPosition)) {
     return [];
   }
 
@@ -443,7 +439,7 @@ function* maybeLoadMeshChunk(
   }
 
   batchCounterPerSegment[segmentId]++;
-  threeDMap.set(paddedPositionWithinLayer, true);
+  threeDMap.set(clippedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const datasetId = yield* select((state) => state.dataset.id);
@@ -452,6 +448,8 @@ function* maybeLoadMeshChunk(
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
+
+  const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
@@ -464,6 +462,9 @@ function* maybeLoadMeshChunk(
   const { segmentMeshController } = getSceneController();
 
   const cubeSize = marchingCubeSizeInTargetMag();
+  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
+  const paddedPositionWithinLayer =
+    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {

@@ -504,7 +504,6 @@ function* maybeLoadMeshChunk(
         meshExtraInfo.opacity,
         additionalCoordinates,
       );
-      window.addBox(clippedPosition);
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, magInfo),
       );

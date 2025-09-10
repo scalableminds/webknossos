@@ -185,22 +185,6 @@ class SceneController {
       return cube;
     };
 
-    window.addBox = (position: Vector3) => {
-      const bucketSize = [64, 64, 64];
-      const boxGeometry = new BoxGeometry(...bucketSize);
-      const edgesGeometry = new EdgesGeometry(boxGeometry);
-      const material = new LineBasicMaterial({
-        color: 0xff00ff,
-        linewidth: 1,
-      });
-      const cube = new LineSegments(edgesGeometry, material);
-      cube.position.x = position[0] + 64 / 2;
-      cube.position.y = position[1] + 64 / 2;
-      cube.position.z = position[2] + 64 / 2;
-      this.rootNode.add(cube);
-      return cube;
-    };
-
     // @ts-ignore
     window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
       // Shrink voxels a bit so that it's easier to identify individual voxels.

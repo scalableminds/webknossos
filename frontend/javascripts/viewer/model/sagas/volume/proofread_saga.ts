@@ -688,7 +688,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     null,
     items,
   );
-  if (hasErrored || edgesToRemove.length < 0) {
+  if (hasErrored || edgesToRemove.length === 0) {
     console.error(messages["proofreading.multi_cut.split_failed"]);
     Toast.error(messages["proofreading.multi_cut.split_failed"]);
     return;

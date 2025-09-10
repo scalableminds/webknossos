@@ -50,6 +50,12 @@ object MagPathInfo {
   implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
 }
 
+case class DataSourceRegistrationInfo(dataSource: DataSource, folderId: Option[String], dataStoreName: String)
+
+object DataSourceRegistrationInfo {
+  implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
+}
+
 trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
 }
@@ -143,6 +149,19 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("allowNewPaths" -> allowNewPaths.toString)
       .withTokenFromContext
       .putJson(dataSource)
+
+  def registerDataSource(dataSource: DataSource, dataSourceId: DataSourceId, folderId: Option[String])(
+      implicit tc: TokenContext): Fox[ObjectId] =
+    for {
+      _ <- Fox.successful(())
+      info = DataSourceRegistrationInfo(dataSource, folderId, dataStoreName)
+      response <- rpc(
+        s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}")
+        .addQueryString("key" -> dataStoreKey)
+        .withTokenFromContext
+        .postJson[DataSourceRegistrationInfo](info)
+      datasetId <- ObjectId.fromString(response.body)
+    } yield datasetId
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")

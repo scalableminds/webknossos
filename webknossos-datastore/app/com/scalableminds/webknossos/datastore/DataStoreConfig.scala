@@ -60,6 +60,13 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
+    object S3Upload {
+      val enabled: Boolean = get[Boolean]("datastore.s3Upload.enabled")
+      val endpoint: String = get[String]("datastore.s3Upload.endpoint")
+      val bucketName: String = get[String]("datastore.s3Upload.bucketName")
+      val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
+      val credentialName: String = get[String]("datastore.s3Upload.credentialName")
+    }
     val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton)
   }
 

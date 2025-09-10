@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLink
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceRegistrationInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -317,6 +317,14 @@ class WKRemoteDataStoreController @Inject()(
             "organization.notFound",
             organizationId) ~> NOT_FOUND
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          existingDatasetOpt <- Fox.fromFuture(
+            datasetDAO
+              .findOneByDirectoryNameAndOrganization(directoryName, organization._id)(GlobalAccessContext)
+              .toFutureOption)
+          // Uploading creates an unusable dataset first, here we delete it if it exists.
+          _ <- existingDatasetOpt
+            .map(existingDataset => datasetDAO.deleteDataset(existingDataset._id, onlyMarkAsDeleted = false))
+            .getOrElse(Fox.successful(()))
           dataset <- datasetService.createVirtualDataset(
             directoryName,
             dataStore,

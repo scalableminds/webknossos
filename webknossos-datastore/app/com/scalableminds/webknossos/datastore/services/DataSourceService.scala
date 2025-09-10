@@ -365,6 +365,54 @@ class DataSourceService @Inject()(
     }
   }
 
+  // Replace relative paths with absolute paths
+  // TODO: Rename method
+  def replacePaths(dataSource: InboxDataSource, newBasePath: String): Fox[DataSource] = {
+    val replaceUri = (uri: URI) => {
+      val isRelativeFilePath = (uri.getScheme == null || uri.getScheme.isEmpty || uri.getScheme == DataVaultService.schemeFile) && !uri.isAbsolute
+      uri.getPath match {
+        // TODO: Does this make sense?
+        case pathStr if isRelativeFilePath =>
+          new URI(uri.getScheme,
+                  uri.getUserInfo,
+                  uri.getHost,
+                  uri.getPort,
+                  newBasePath + pathStr,
+                  uri.getQuery,
+                  uri.getFragment)
+        case _ => uri
+      }
+    }
+
+    dataSource.toUsable match {
+      case Some(usableDataSource) =>
+        val updatedDataLayers = usableDataSource.dataLayers.map {
+          case layerWithMagLocators: DataLayerWithMagLocators =>
+            layerWithMagLocators.mapped(
+              identity,
+              identity,
+              mag =>
+                mag.path match {
+                  case Some(pathStr) => mag.copy(path = Some(replaceUri(new URI(pathStr)).toString))
+                  case _             => mag
+              },
+              attachmentMapping = attachment =>
+                DatasetLayerAttachments(
+                  attachment.meshes.map(a => a.copy(path = replaceUri(a.path))),
+                  attachment.agglomerates.map(a => a.copy(path = replaceUri(a.path))),
+                  attachment.segmentIndex.map(a => a.copy(path = replaceUri(a.path))),
+                  attachment.connectomes.map(a => a.copy(path = replaceUri(a.path))),
+                  attachment.cumsum.map(a => a.copy(path = replaceUri(a.path)))
+              )
+            )
+          case layer => layer
+        }
+        Fox.successful(usableDataSource.copy(dataLayers = updatedDataLayers))
+      case None =>
+        Fox.failure("Cannot replace paths of unusable datasource")
+    }
+  }
+
   private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)

@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.layers._
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
@@ -19,14 +21,36 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
-import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentialConfigReader,
+  DataStoreRedisStore,
+  RemoteSourceDescriptorService,
+  S3AccessKeyCredential
+}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.core.async.AsyncRequestBody
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.{
+  CompleteMultipartUploadRequest,
+  CompletedMultipartUpload,
+  CompletedPart,
+  CreateMultipartUploadRequest,
+  PutObjectRequest,
+  UploadPartRequest
+}
 
 import java.io.{File, RandomAccessFile}
+import java.net.URI
+import java.util
 import java.nio.file.{Files, Path}
+import java.util.stream.{Collectors, StreamSupport}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.IterableHasAsJava
+import scala.jdk.FutureConverters._
 
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -110,6 +134,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               datasetSymlinkService: DatasetSymlinkService,
+                              dataStoreConfig: DataStoreConfig,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
@@ -146,6 +171,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
+  private def redisKeyForS3MultipartUploadId(uploadId: String, fileName: String): String =
+    s"upload___${uploadId}___file___${fileName}___s3MultipartUploadId"
+  private def redisKeyForS3PartETag(uploadId: String, fileName: String, partNumber: Long): String =
+    s"upload___${uploadId}___file___${fileName}___partETag___$partNumber"
 
   cleanUpOrphanUploads()
 
@@ -160,6 +189,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def uploadDirectory(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
+
+  private def s3UploadDirectory(organizationId: String, uploadId: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadToS3Dir).resolve(uploadId)
 
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
@@ -306,6 +338,169 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } else Fox.successful(())
   }
 
+  lazy val s3UploadCredentialsOpt: Option[(String, String)] = dataStoreConfig.Datastore.DataVaults.credentials.flatMap {
+    credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+  }.map {
+    case S3AccessKeyCredential(name, accessKeyId, secretAccessKey, _, _) =>
+      (name, accessKeyId, secretAccessKey)
+    case _ => ("INVALID", "", "") // TODO: This is not very nice.
+    // TODO: Does it make sense to reuse the DataVault global credential here?
+  }.filter(c => dataStoreConfig.Datastore.S3Upload.credentialName == c._1).map(c => (c._2, c._3)).headOption
+
+  private lazy val s3Client: S3AsyncClient = S3AsyncClient
+    .builder()
+    .credentialsProvider(
+      StaticCredentialsProvider.create(
+        AwsBasicCredentials.builder
+          .accessKeyId(s3UploadCredentialsOpt.getOrElse(("", ""))._1)
+          .secretAccessKey(s3UploadCredentialsOpt.getOrElse(("", ""))._2)
+          .build()
+      ))
+    .crossRegionAccessEnabled(true)
+    .forcePathStyle(true)
+    .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
+    .region(Region.US_EAST_1)
+    .build()
+
+  def handleUploadChunkAws(
+      uploadFileId: String,
+      chunkSize: Long,
+      currentChunkSize: Long,
+      totalChunkCount: Long,
+      currentChunkNumber: Long,
+      chunkFile: File,
+      bucketName: String,
+      objectKey: String
+  ): Fox[Unit] = {
+    val uploadId = extractDatasetUploadId(uploadFileId)
+
+    def getAllPartETags(uploadId: String, filePath: String, totalChunkCount: Long): Fox[Vector[(Int, String)]] =
+      for {
+        possibleEtags <- Fox.combined(
+          (1L to totalChunkCount).map(i =>
+            runningUploadMetadataStore.find(redisKeyForS3PartETag(uploadId, filePath, i)))
+        )
+        etagsWithIndex = possibleEtags.zipWithIndex
+        foundEtags = etagsWithIndex.collect {
+          case (Some(etag), idx) => (idx + 1, etag) // partNumber starts at 1
+        }
+      } yield foundEtags.toVector
+
+    for {
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
+
+      isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+
+      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+        runningUploadMetadataStore
+          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
+          .flatMap(newTotalFileSizeInBytesOpt => {
+            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
+                Fox.failure("dataset.upload.moreBytesThanReserved"))
+            } else Fox.successful(())
+          })
+      }
+
+      // Initialize multipart upload on first chunk
+      _ <- Fox.runIf(!isFileKnown) {
+        for {
+          _ <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
+          _ <- runningUploadMetadataStore.insert(
+            redisKeyForFileChunkCount(uploadId, filePath),
+            String.valueOf(totalChunkCount)
+          )
+          // Start multipart upload
+          createResp <- Fox.fromFuture {
+            s3Client
+              .createMultipartUpload(
+                CreateMultipartUploadRequest.builder().bucket(bucketName).key(objectKey).build()
+              )
+              .asScala
+          }
+          _ <- runningUploadMetadataStore.insert(
+            redisKeyForS3MultipartUploadId(uploadId, filePath),
+            createResp.uploadId()
+          )
+        } yield ()
+      }
+
+      isNewChunk <- runningUploadMetadataStore.insertIntoSet(
+        redisKeyForFileChunkSet(uploadId, filePath),
+        String.valueOf(currentChunkNumber)
+      )
+
+    } yield {
+      if (isNewChunk) {
+        try {
+          val bytes = Files.readAllBytes(chunkFile.toPath)
+          for {
+            s3UploadIdOpt <- runningUploadMetadataStore.find(redisKeyForS3MultipartUploadId(uploadId, filePath))
+            s3UploadId <- s3UploadIdOpt.toFox ?~> s"No multipart uploadId found for $filePath"
+
+            // Upload part to S3
+            uploadResp <- Fox.fromFuture {
+              s3Client
+                .uploadPart(
+                  UploadPartRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .uploadId(s3UploadId)
+                    .partNumber(currentChunkNumber.toInt)
+                    .contentLength(currentChunkSize)
+                    .build(),
+                  software.amazon.awssdk.core.async.AsyncRequestBody.fromBytes(bytes)
+                )
+                .asScala
+            }
+
+            // Store ETag for later completion
+            _ <- runningUploadMetadataStore.insert(
+              redisKeyForS3PartETag(uploadId, filePath, currentChunkNumber),
+              uploadResp.eTag()
+            )
+
+            // Complete multipart upload if all chunks uploaded
+            _ <- Fox.runIf(currentChunkNumber == totalChunkCount) {
+              for {
+                eTags <- getAllPartETags(uploadId, filePath, totalChunkCount)
+                completedParts: util.List[CompletedPart] = StreamSupport
+                  .stream(eTags.map {
+                    case (partNum, etag) =>
+                      CompletedPart.builder().partNumber(partNum).eTag(etag).build()
+                  }.asJava.spliterator(), false)
+                  .collect(Collectors.toList())
+                completeReq = CompleteMultipartUploadRequest
+                  .builder()
+                  .bucket(bucketName)
+                  .key(objectKey)
+                  .uploadId(s3UploadId)
+                  .multipartUpload(
+                    CompletedMultipartUpload.builder().parts(completedParts).build()
+                  )
+                  .build()
+                _ <- Fox.fromFuture(s3Client.completeMultipartUpload(completeReq).asScala)
+              } yield ()
+            }
+          } yield Fox.successful(())
+
+        } catch {
+          case e: Exception =>
+            runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                     String.valueOf(currentChunkNumber))
+            val errorMsg =
+              s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.directoryName}: ${e.getMessage}"
+            logger.warn(errorMsg)
+            Fox.failure(errorMsg)
+        }
+      } else Fox.successful(())
+    }
+  }
+
   def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {
     val uploadId = cancelUploadInformation.uploadId
     for {
@@ -324,14 +519,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       }
   }
 
-  def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true): Fox[(DataSourceId, Long)] = {
+  def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true)(
+      implicit tc: TokenContext): Fox[(DataSourceId, Long)] = {
     val uploadId = uploadInformation.uploadId
 
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
-      unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+      uploadToS3 = dataStoreConfig.Datastore.S3Upload.enabled
+
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map(actualFileSize =>
@@ -344,6 +541,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ = logger.info(
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
+
+      unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion, uploadToS3)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
       linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
@@ -356,13 +555,36 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                             unpackToDir,
                                                             dataSourceId,
                                                             linkedLayerInfo.layersToLink).shiftBox
+      // Post-processing needs to be handled differently for s3 uploads?
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.organizationId)
-      _ <- remoteWebknossosClient.reportDataSource(dataSource)
-      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
+      datasetSizeBytes: Long <- if (uploadToS3) {
+        for {
+          _ <- Fox.successful(())
+
+          s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${uploadId}/"
+          _ <- uploadDirectoryToS3(unpackToDir, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
+          endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
+          s3DataSource <- dataSourceService.replacePaths(
+            dataSource,
+            newBasePath = s"s3://$endPointHost/${dataStoreConfig.Datastore.S3Upload.bucketName}/$s3ObjectKey")
+          // TODO: Handle folder id
+          _ <- remoteWebknossosClient.registerDataSource(s3DataSource, dataSourceId, None)
+          // TODO: Is uploaded dataset size the same as local dataset size?
+          datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
+          _ = this.synchronized {
+            PathUtils.deleteDirectoryRecursively(unpackToDir)
+          }
+        } yield datasetSize
+      } else {
+        for {
+          _ <- remoteWebknossosClient.reportDataSource(dataSource)
+          datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
+        } yield datasetSize
+      }
     } yield (dataSourceId, datasetSizeBytes)
   }
 
@@ -438,6 +660,39 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
 
+  private def uploadDirectoryToS3(
+      dataDir: Path,
+      bucketName: String,
+      prefix: String
+  ): Fox[Unit] =
+    for {
+      files <- PathUtils.listFilesRecursive(dataDir, silent = false, maxDepth = 20).toFox
+      uploadFoxes = files.map(filePath => {
+        val relPath = dataDir.relativize(filePath).toString.replace("\\", "/")
+        val s3Key = s"$prefix$relPath"
+
+        // TODO: For large files, consider using multipart upload
+        logger.info("Uploading file to S3: " + filePath)
+        val bytes = Files.readAllBytes(filePath)
+        logger.info(s"Dataset Upload: Uploading ${bytes.length} bytes to s3://$bucketName/$s3Key")
+        val startTime = System.currentTimeMillis()
+        logger.info(s"Starting upload of $filePath to S3 at $startTime")
+
+        for {
+          _ <- Fox.fromFuture {
+            s3Client
+              .putObject(
+                PutObjectRequest.builder().bucket(bucketName).key(s3Key).build(),
+                AsyncRequestBody.fromBytes(bytes)
+              )
+              .asScala
+          } ?~> s"Failed to upload file $filePath to S3"
+        } yield ()
+      })
+      _ <- Fox.combined(uploadFoxes.toList)
+      _ = logger.info(s"Finished uploading directory to S3 at ${System.currentTimeMillis()}")
+    } yield ()
+
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,
                                   datasetNeedsConversion: Boolean,
@@ -483,12 +738,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- Fox.fromBool(list.forall(identity))
     } yield ()
 
-  private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
-    val dataSourceDir =
-      if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
-      else
-        dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+  private def dataSourceDirFor(dataSourceId: DataSourceId,
+                               datasetNeedsConversion: Boolean,
+                               uploadToS3: Boolean): Path = {
+    val dataSourceDir = {
+      if (uploadToS3)
+        s3UploadDirectory(dataSourceId.organizationId, dataSourceId.directoryName)
+      else {
+        if (datasetNeedsConversion)
+          dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
+        else
+          dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+      }
+    }
     dataSourceDir
   }
 

@@ -12,11 +12,12 @@ object Encoding extends ExtendedEnumeration {
   // List of possible entries: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
   def fromRfc7231String(s: String): Box[Encoding] =
     s match {
-      case "gzip"     => Full(gzip)
-      case "x-gzip"   => Full(gzip)
-      case "br"       => Full(brotli)
-      case "identity" => Full(identity)
-      case ""         => Full(identity)
-      case _          => Failure(s"Unsupported encoding: $s")
+      case "gzip"        => Full(gzip)
+      case "x-gzip"      => Full(gzip)
+      case "br"          => Full(brotli)
+      case "identity"    => Full(identity)
+      case ""            => Full(identity)
+      case "aws-chunked" => Full(identity) // TODO: Does this work?
+      case _             => Failure(s"Unsupported encoding: $s")
     }
 }

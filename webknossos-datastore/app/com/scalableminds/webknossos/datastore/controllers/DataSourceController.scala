@@ -7,6 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
   ExploreRemoteDatasetResponse,
@@ -196,6 +197,17 @@ class DataSourceController @Inject()(
                                                          totalChunkCount,
                                                          chunkNumber,
                                                          new File(chunkFile.ref.path.toString))
+
+                    /*_ <- uploadService.handleUploadChunkAws(
+                      uploadFileId,
+                      chunkSize,
+                      currentChunkSize,
+                      totalChunkCount,
+                      chunkNumber,
+                      new File(chunkFile.ref.path.toString),
+                      "webknossos-test",
+                      s"upload-tests/upload-test-${uploadFileId}",
+                    )*/
                   } yield Ok
                 }
               } yield result

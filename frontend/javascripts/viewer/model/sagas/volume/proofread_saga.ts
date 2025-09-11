@@ -568,6 +568,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   ]);
 }
 
+// Returns a tuple of whether the min cut failed and if successful a list of edges removed by the min cut.
 function* performMinCut(
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
@@ -972,6 +973,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       items,
     );
     if (hasErrored) {
+      console.error(messages["proofreading.multi_cut.split_failed"]);
+      Toast.error(messages["proofreading.multi_cut.split_failed"]);
       return;
     }
   }

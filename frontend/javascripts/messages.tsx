@@ -311,8 +311,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
     "The annotation was successfully locked. Reloading this annotation ...",
-  "proofreading.multi_cut.different_agglomerate_selected": `The selected segment belongs to a different agglomerate that is currently partitioned via selections. If you want to split this agglomerate please clear your current selection with "ESC" first.`,
-
+  "proofreading.multi_cut.different_agglomerate_selected": `The selected segment belongs to a different agglomerate than the one that is currently partitioned via selections. If you want to split this other agglomerate please clear your current selection with "ESC" first.`,
   "proofreading.multi_cut.empty_partition":
     "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
   "proofreading.multi_cut.no_valid_agglomerate":

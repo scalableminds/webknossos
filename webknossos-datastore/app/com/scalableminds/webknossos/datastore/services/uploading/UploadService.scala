@@ -63,7 +63,8 @@ case class ReserveUploadInformation(
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String],
-    requireUniqueName: Option[Boolean])
+    requireUniqueName: Option[Boolean],
+    isVirtual: Option[Boolean])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
@@ -170,6 +171,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___file___${fileName}___chunkSet"
   private def redisKeyForUploadId(datasourceId: DataSourceId): String =
     s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
+  private def redisKeyForDatasetId(uploadId: String): String =
+    s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
   private def redisKeyForS3MultipartUploadId(uploadId: String, fileName: String): String =
@@ -197,6 +200,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
+  def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
+    getObjectFromRedis[ObjectId](redisKeyForDatasetId(uploadId))
+
   def reserveUpload(reserveUploadInfo: ReserveUploadInformation,
                     reserveUploadAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
@@ -216,6 +222,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(
           Json.toJson(DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)))
+      )
+      _ <- runningUploadMetadataStore.insert(
+        redisKeyForDatasetId(reserveUploadInfo.uploadId),
+        Json.stringify(Json.toJson(reserveUploadAdditionalInfo.newDatasetId))
       )
       _ <- runningUploadMetadataStore.insert(
         redisKeyForUploadId(DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)),
@@ -339,16 +349,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } else Fox.successful(())
   }
 
-  lazy val s3UploadCredentialsOpt: Option[(String, String)] = dataStoreConfig.Datastore.DataVaults.credentials.flatMap {
-    credentialConfig =>
+  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
+    dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
       new CredentialConfigReader(credentialConfig).getCredential
-  }.map {
-    case S3AccessKeyCredential(name, accessKeyId, secretAccessKey, _, _) =>
-      (name, accessKeyId, secretAccessKey)
-    case _ => ("INVALID", "", "") // TODO: This is not very nice.
-    // TODO: Does it make sense to reuse the DataVault global credential here?
-  }.filter(c => dataStoreConfig.Datastore.S3Upload.credentialName == c._1).map(c => (c._2, c._3)).headOption
-
+    }.collectFirst {
+      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
+          if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
+        (accessKeyId, secretAccessKey)
+    }
   private lazy val s3Client: S3AsyncClient = S3AsyncClient
     .builder()
     .credentialsProvider(
@@ -362,6 +370,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     .forcePathStyle(true)
     .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
     .region(Region.US_EAST_1)
+    // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
     .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
     .build()
 
@@ -548,6 +557,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
       linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
+      datasetId <- getDatasetIdByUploadId(uploadId)
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             dataSourceId,
@@ -567,14 +577,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         for {
           _ <- Fox.successful(())
 
-          s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${uploadId}/"
+          s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
           _ <- uploadDirectoryToS3(unpackToDir, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
           endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
           s3DataSource <- dataSourceService.replacePaths(
             dataSource,
             newBasePath = s"s3://$endPointHost/${dataStoreConfig.Datastore.S3Upload.bucketName}/$s3ObjectKey")
-          // TODO: Handle folder id
-          _ <- remoteWebknossosClient.registerDataSource(s3DataSource, dataSourceId, None)
+          _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId, allowNewPaths = true)
           // TODO: Is uploaded dataset size the same as local dataset size?
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
           _ = this.synchronized {
@@ -691,7 +700,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           } ?~> s"Failed to upload file $filePath to S3"
         } yield ()
       })
-      _ <- Fox.combined(uploadFoxes.toList)
+      // TODO: Limit number of concurrent uploads?
+      _ <- Fox.combined(uploadFoxes)
       _ = logger.info(s"Finished uploading directory to S3 at ${System.currentTimeMillis()}")
     } yield ()
 
@@ -973,6 +983,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       _ <- runningUploadMetadataStore.remove(redisKeyForDataSourceId(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForDatasetId(uploadId))
+      // TODO: Remove S3 multipart upload if present
       _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))

@@ -150,19 +150,6 @@ class DSRemoteWebknossosClient @Inject()(
       .withTokenFromContext
       .putJson(dataSource)
 
-  def registerDataSource(dataSource: DataSource, dataSourceId: DataSourceId, folderId: Option[String])(
-      implicit tc: TokenContext): Fox[ObjectId] =
-    for {
-      _ <- Fox.successful(())
-      info = DataSourceRegistrationInfo(dataSource, folderId, dataStoreName)
-      response <- rpc(
-        s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}")
-        .addQueryString("key" -> dataStoreKey)
-        .withTokenFromContext
-        .postJson[DataSourceRegistrationInfo](info)
-      datasetId <- ObjectId.fromString(response.body)
-    } yield datasetId
-
   def deleteDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
       .addQueryString("key" -> dataStoreKey)

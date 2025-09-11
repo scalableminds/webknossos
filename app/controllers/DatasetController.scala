@@ -11,7 +11,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
-import models.dataset.explore.{ExploreAndAddRemoteDatasetParameters, WKExploreRemoteLayerParameters, WKExploreRemoteLayerService}
+import models.dataset.explore.{
+  ExploreAndAddRemoteDatasetParameters,
+  WKExploreRemoteLayerParameters,
+  WKExploreRemoteLayerService
+}
 import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}

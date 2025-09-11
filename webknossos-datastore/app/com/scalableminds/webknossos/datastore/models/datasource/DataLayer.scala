@@ -413,8 +413,7 @@ trait DataLayerWithMagLocators extends DataLayer {
              magMapping: MagLocator => MagLocator = m => m,
              name: String = this.name,
              coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations,
-             attachmentMapping: DatasetLayerAttachments => DatasetLayerAttachments = a => a)
-    : DataLayerWithMagLocators =
+             attachmentMapping: DatasetLayerAttachments => DatasetLayerAttachments = a => a): DataLayerWithMagLocators =
     this match {
       case l: ZarrDataLayer =>
         l.copy(

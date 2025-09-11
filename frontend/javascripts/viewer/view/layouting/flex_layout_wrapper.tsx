@@ -11,7 +11,7 @@ import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { OrthoView } from "viewer/constants";
+import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
@@ -135,17 +135,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     );
     this.unbindListeners.push(
       layoutEmitter.on("showSkeletonTab", () => {
-        const rightBorderId = "right-border-tab-container";
-        const { model } = this.state;
-        const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
-
-        if (rightBorderModel == null || model == null) {
-          return;
-        }
-
-        // Tab exists, but shouldn't. Delete it.
-        rightBorderModel.doAction(FlexLayout.Actions.selectTab(BorderTabs.SkeletonTabView.id));
-        console.log("showSkeletonTab event received");
+        this.openRightBorderTabById(BorderTabs.SkeletonTabView);
       }),
     );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
@@ -160,6 +150,15 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
     return model;
+  }
+
+  openRightBorderTabById(tabType: BorderTabType) {
+    const rightBorderId = "right-border-tab-container";
+    const node = this.state.model.getNodeById(rightBorderId);
+    if (!node || node.getType() !== "tab") return;
+    const rightBorderModel = (node as TabNode).getExtraData().model;
+    if (rightBorderModel == null) return;
+    rightBorderModel.doAction(FlexLayout.Actions.selectTab(tabType.id));
   }
 
   adaptModelToConditionalTabs(model: Model) {

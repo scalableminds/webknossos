@@ -620,7 +620,6 @@ function getNodeContextMenuOptions({
       disabled: isTheSameNode,
       onClick: () => {
         Store.dispatch(setActiveNodeAction(clickedNodeId));
-        layoutEmitter.emit("showSkeletonTab");
       },
       label: "Select this Node",
     },

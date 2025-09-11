@@ -22,6 +22,7 @@ vi.mock("libs/toast", () => ({
     success: vi.fn(),
     info: vi.fn(),
   },
+  showToastOnce: vi.fn(),
 }));
 
 vi.mock("libs/user_local_storage", () => ({

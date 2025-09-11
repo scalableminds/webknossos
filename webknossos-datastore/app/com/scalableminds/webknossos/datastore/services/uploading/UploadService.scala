@@ -34,23 +34,13 @@ import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCrede
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.services.s3.model.{
-  CompleteMultipartUploadRequest,
-  CompletedMultipartUpload,
-  CompletedPart,
-  CreateMultipartUploadRequest,
-  UploadPartRequest
-}
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
 import java.net.URI
-import java.util
 import java.nio.file.{Files, Path}
-import java.util.stream.{Collectors, StreamSupport}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.IterableHasAsJava
 import scala.jdk.FutureConverters._
 
 case class ReserveUploadInformation(
@@ -175,10 +165,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
-  private def redisKeyForS3MultipartUploadId(uploadId: String, fileName: String): String =
-    s"upload___${uploadId}___file___${fileName}___s3MultipartUploadId"
-  private def redisKeyForS3PartETag(uploadId: String, fileName: String, partNumber: Long): String =
-    s"upload___${uploadId}___file___${fileName}___partETag___$partNumber"
 
   cleanUpOrphanUploads()
 
@@ -349,169 +335,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } else Fox.successful(())
   }
 
-  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
-    dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-      new CredentialConfigReader(credentialConfig).getCredential
-    }.collectFirst {
-      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
-          if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
-        (accessKeyId, secretAccessKey)
-    }
-  private lazy val s3Client: S3AsyncClient = S3AsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(
-        AwsBasicCredentials.builder
-          .accessKeyId(s3UploadCredentialsOpt.getOrElse(("", ""))._1)
-          .secretAccessKey(s3UploadCredentialsOpt.getOrElse(("", ""))._2)
-          .build()
-      ))
-    .crossRegionAccessEnabled(true)
-    .forcePathStyle(true)
-    .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
-    .region(Region.US_EAST_1)
-    // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-    .build()
-
-  def handleUploadChunkAws(
-      uploadFileId: String,
-      chunkSize: Long,
-      currentChunkSize: Long,
-      totalChunkCount: Long,
-      currentChunkNumber: Long,
-      chunkFile: File,
-      bucketName: String,
-      objectKey: String
-  ): Fox[Unit] = {
-    val uploadId = extractDatasetUploadId(uploadFileId)
-
-    def getAllPartETags(uploadId: String, filePath: String, totalChunkCount: Long): Fox[Vector[(Int, String)]] =
-      for {
-        possibleEtags <- Fox.combined(
-          (1L to totalChunkCount).map(i =>
-            runningUploadMetadataStore.find(redisKeyForS3PartETag(uploadId, filePath, i)))
-        )
-        etagsWithIndex = possibleEtags.zipWithIndex
-        foundEtags = etagsWithIndex.collect {
-          case (Some(etag), idx) => (idx + 1, etag) // partNumber starts at 1
-        }
-      } yield foundEtags.toVector
-
-    for {
-      dataSourceId <- getDataSourceIdByUploadId(uploadId)
-      (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
-
-      isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
-
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        runningUploadMetadataStore
-          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
-          .flatMap(newTotalFileSizeInBytesOpt => {
-            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-                Fox.failure("dataset.upload.moreBytesThanReserved"))
-            } else Fox.successful(())
-          })
-      }
-
-      // Initialize multipart upload on first chunk
-      _ <- Fox.runIf(!isFileKnown) {
-        for {
-          _ <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
-          _ <- runningUploadMetadataStore.insert(
-            redisKeyForFileChunkCount(uploadId, filePath),
-            String.valueOf(totalChunkCount)
-          )
-          // Start multipart upload
-          createResp <- Fox.fromFuture {
-            s3Client
-              .createMultipartUpload(
-                CreateMultipartUploadRequest.builder().bucket(bucketName).key(objectKey).build()
-              )
-              .asScala
-          }
-          _ <- runningUploadMetadataStore.insert(
-            redisKeyForS3MultipartUploadId(uploadId, filePath),
-            createResp.uploadId()
-          )
-        } yield ()
-      }
-
-      isNewChunk <- runningUploadMetadataStore.insertIntoSet(
-        redisKeyForFileChunkSet(uploadId, filePath),
-        String.valueOf(currentChunkNumber)
-      )
-
-    } yield {
-      if (isNewChunk) {
-        try {
-          val bytes = Files.readAllBytes(chunkFile.toPath)
-          for {
-            s3UploadIdOpt <- runningUploadMetadataStore.find(redisKeyForS3MultipartUploadId(uploadId, filePath))
-            s3UploadId <- s3UploadIdOpt.toFox ?~> s"No multipart uploadId found for $filePath"
-
-            // Upload part to S3
-            uploadResp <- Fox.fromFuture {
-              s3Client
-                .uploadPart(
-                  UploadPartRequest
-                    .builder()
-                    .bucket(bucketName)
-                    .key(objectKey)
-                    .uploadId(s3UploadId)
-                    .partNumber(currentChunkNumber.toInt)
-                    .contentLength(currentChunkSize)
-                    .build(),
-                  software.amazon.awssdk.core.async.AsyncRequestBody.fromBytes(bytes)
-                )
-                .asScala
-            }
-
-            // Store ETag for later completion
-            _ <- runningUploadMetadataStore.insert(
-              redisKeyForS3PartETag(uploadId, filePath, currentChunkNumber),
-              uploadResp.eTag()
-            )
-
-            // Complete multipart upload if all chunks uploaded
-            _ <- Fox.runIf(currentChunkNumber == totalChunkCount) {
-              for {
-                eTags <- getAllPartETags(uploadId, filePath, totalChunkCount)
-                completedParts: util.List[CompletedPart] = StreamSupport
-                  .stream(eTags.map {
-                    case (partNum, etag) =>
-                      CompletedPart.builder().partNumber(partNum).eTag(etag).build()
-                  }.asJava.spliterator(), false)
-                  .collect(Collectors.toList())
-                completeReq = CompleteMultipartUploadRequest
-                  .builder()
-                  .bucket(bucketName)
-                  .key(objectKey)
-                  .uploadId(s3UploadId)
-                  .multipartUpload(
-                    CompletedMultipartUpload.builder().parts(completedParts).build()
-                  )
-                  .build()
-                _ <- Fox.fromFuture(s3Client.completeMultipartUpload(completeReq).asScala)
-              } yield ()
-            }
-          } yield Fox.successful(())
-
-        } catch {
-          case e: Exception =>
-            runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
-                                                     String.valueOf(currentChunkNumber))
-            val errorMsg =
-              s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.directoryName}: ${e.getMessage}"
-            logger.warn(errorMsg)
-            Fox.failure(errorMsg)
-        }
-      } else Fox.successful(())
-    }
-  }
-
   def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {
     val uploadId = cancelUploadInformation.uploadId
     for {
@@ -567,7 +390,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                             unpackToDir,
                                                             dataSourceId,
                                                             linkedLayerInfo.layersToLink).shiftBox
-      // Post-processing needs to be handled differently for s3 uploads?
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,
@@ -580,7 +402,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
           _ <- uploadDirectoryToS3(unpackToDir, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
           endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
-          s3DataSource <- dataSourceService.replacePaths(
+          s3DataSource <- dataSourceService.prependAllPaths(
             dataSource,
             newBasePath = s"s3://$endPointHost/${dataStoreConfig.Datastore.S3Upload.bucketName}/$s3ObjectKey")
           _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId, allowNewPaths = true)
@@ -669,6 +491,31 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       path <- Fox.runIf(combinedLayers.nonEmpty)(
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
+
+  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
+    dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }.collectFirst {
+      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
+          if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
+        (accessKeyId, secretAccessKey)
+    }
+  private lazy val s3Client: S3AsyncClient = S3AsyncClient
+    .builder()
+    .credentialsProvider(
+      StaticCredentialsProvider.create(
+        AwsBasicCredentials.builder
+          .accessKeyId(s3UploadCredentialsOpt.getOrElse(("", ""))._1)
+          .secretAccessKey(s3UploadCredentialsOpt.getOrElse(("", ""))._2)
+          .build()
+      ))
+    .crossRegionAccessEnabled(true)
+    .forcePathStyle(true)
+    .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
+    .region(Region.US_EAST_1)
+    // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
+    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+    .build()
 
   private lazy val transferManager = S3TransferManager.builder().s3Client(s3Client).build()
 
@@ -967,7 +814,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       _ <- runningUploadMetadataStore.remove(redisKeyForDataSourceId(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForDatasetId(uploadId))
-      // TODO: Remove S3 multipart upload if present
       _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))

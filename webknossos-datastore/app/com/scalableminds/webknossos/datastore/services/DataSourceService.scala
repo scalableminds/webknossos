@@ -365,13 +365,11 @@ class DataSourceService @Inject()(
     }
   }
 
-  // Replace relative paths with absolute paths
-  // TODO: Rename method
-  def replacePaths(dataSource: InboxDataSource, newBasePath: String): Fox[DataSource] = {
+  // Prepend newBasePath to all (relative) paths in mags and attachments of the data source.
+  def prependAllPaths(dataSource: InboxDataSource, newBasePath: String): Fox[DataSource] = {
     val replaceUri = (uri: URI) => {
       val isRelativeFilePath = (uri.getScheme == null || uri.getScheme.isEmpty || uri.getScheme == DataVaultService.schemeFile) && !uri.isAbsolute
       uri.getPath match {
-        // TODO: Does this make sense?
         case pathStr if isRelativeFilePath =>
           new URI(uri.getScheme,
                   uri.getUserInfo,

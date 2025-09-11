@@ -13,6 +13,10 @@ import getDefaultLayouts, {
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 export const layoutEmitter = createNanoEvents();
+export const layoutEvents = {
+  showSkeletonTab: "showSkeletonTab",
+  showSegmentsTab: "showSegmentsTab",
+};
 // For debugging purposes:
 const disableLayoutPersistance = false;
 const localStorageKeys = {

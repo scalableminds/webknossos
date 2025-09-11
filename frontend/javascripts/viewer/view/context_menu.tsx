@@ -146,7 +146,7 @@ import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import { layoutEmitter } from "./layouting/layout_persistence";
+import { layoutEmitter, layoutEvents } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -627,7 +627,7 @@ function getNodeContextMenuOptions({
           onClick: () => {
             Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
             Store.dispatch(focusTreeAction(clickedTree));
-            layoutEmitter.emit("showSkeletonTab");
+            layoutEmitter.emit(layoutEvents.showSkeletonTab);
           },
           label: "Focus Tree in Skeleton Tab",
         }
@@ -1000,7 +1000,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
-    layoutEmitter.emit("showSegmentTab");
+    layoutEmitter.emit(layoutEvents.showSegmentsTab);
   };
 
   const onlyShowSegment = () => {

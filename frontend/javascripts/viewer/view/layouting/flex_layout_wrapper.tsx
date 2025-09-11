@@ -43,7 +43,7 @@ import {
   getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { getLayoutConfig, layoutEmitter } from "./layout_persistence";
+import { getLayoutConfig, layoutEmitter, layoutEvents } from "./layout_persistence";
 
 const { Footer } = Layout;
 
@@ -134,12 +134,12 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("showSkeletonTab", () => {
+      layoutEmitter.on(layoutEvents.showSkeletonTab, () => {
         this.openRightBorderTabById(BorderTabs.SkeletonTabView);
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("showSegmentTab", () => {
+      layoutEmitter.on(layoutEvents.showSegmentsTab, () => {
         this.openRightBorderTabById(BorderTabs.SegmentsView);
       }),
     );

@@ -135,9 +135,17 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     );
     this.unbindListeners.push(
       layoutEmitter.on("showSkeletonTab", () => {
+        const rightBorderId = "right-border-tab-container";
+        const { model } = this.state;
+        const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
+
+        if (rightBorderModel == null || model == null) {
+          return;
+        }
+
+        // Tab exists, but shouldn't. Delete it.
+        rightBorderModel.doAction(FlexLayout.Actions.selectTab(BorderTabs.SkeletonTabView.id));
         console.log("showSkeletonTab event received");
-        const model = this.loadCurrentModel();
-        model.doAction(FlexLayout.Actions.selectTab(BorderTabs.SkeletonTabView.id));
       }),
     );
     this.unbindListeners.push(this.attachKeyboardShortcuts());

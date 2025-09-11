@@ -73,10 +73,9 @@ export const validateUrlStateJSON = (value: string) => {
   const json = validateWithSchemaSync("types::UrlManagerState", value);
   return _.cloneDeepWith(json, (value, key) => {
     if (key === "mappingType") {
-      if (value === "JSON" || value === null) {
-        return value;
-      }
-      return "HDF5";
+      if (value == null) return "HDF5";
+      const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
+      return caseFixed === "JSON" ? "JSON" : "HDF5";
     }
     // let lodash handle everything else
     return undefined;

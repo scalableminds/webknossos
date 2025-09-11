@@ -31,7 +31,7 @@ export default {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
     "types::MappingType": {
-      type: "string",
+      type: ["string", "null"],
       default: "HDF5",
       description: "If value is 'JSON', it is kept. Any other string is treated as 'HDF5'.",
     },
@@ -118,7 +118,7 @@ export default {
               },
             },
             additionalProperties: false,
-            required: ["mappingName", "mappingType"],
+            required: ["mappingName"],
           },
           meshInfo: {
             type: "object",

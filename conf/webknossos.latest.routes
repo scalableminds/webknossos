@@ -32,7 +32,8 @@ POST          /auth/sendInvites                                                 
 POST          /auth/startResetPassword                                                          controllers.AuthenticationController.handleStartResetPassword()
 POST          /auth/changePassword                                                              controllers.AuthenticationController.changePassword()
 POST          /auth/resetPassword                                                               controllers.AuthenticationController.handleResetPassword()
-GET           /auth/logout                                                                      controllers.AuthenticationController.logout()
+POST          /auth/logout                                                                      controllers.AuthenticationController.logout()
+POST          /auth/logoutEverywhere                                                            controllers.AuthenticationController.logoutEverywhere()
 GET           /auth/sso                                                                         controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
 GET           /auth/oidc/login                                                                  controllers.AuthenticationController.loginViaOpenIdConnect()
 

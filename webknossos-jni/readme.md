@@ -14,8 +14,8 @@ This subproject provides C++ functions for use in webknossos, using JNI
  - run `sbt` in interactive mode
  - in it, run `project webknossosDatastore` to switch to the datastore subproject
  - then, still in sbt, run `javah` to run the header generation
- - this should generate a header file in `webknossos-native/src/include/`
- - Implement the function defined in the header file in a cpp file also in `webknossos-native/src`
+ - this should generate a header file in `webknossos-jni/src/include/`
+ - Implement the function defined in the header file in a cpp file also in `webknossos-jni/src`
  - compile with `sbt compile`
  - Note that moving the scala definition to a different package also requires this step, as the full name changes.
  - On trouble, `./clean` may help

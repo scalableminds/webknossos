@@ -8,6 +8,8 @@ import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat
+import slick.dbio.DBIO
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -32,13 +34,25 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-case class ArtifactStorageReport(
-    _organizationId: String,
-    _datasetId: ObjectId,
-    // Left for mags, right for attachments
-    _artifactId: Either[ObjectId, ObjectId],
+case class DatasetMagStorageReport(
+    _dataset: ObjectId,
+    layerName: String,
+    mag: String,
     path: String,
-    usedStorageBytes: Long
+    _organization: String,
+    usedStorageBytes: Long,
+    lastUpdated: Instant = Instant.now,
+)
+
+case class DataLayerAttachmentStorageReport(
+    _dataset: ObjectId,
+    layerName: String,
+    name: String,
+    path: String,
+    `type`: LayerAttachmentDataformat.LayerAttachmentDataformat,
+    _organization: String,
+    usedStorageBytes: Long,
+    lastUpdated: Instant = Instant.now,
 )
 
 class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -163,14 +177,23 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()
 
+  // Note that storage reports are separated into two tables; one for dataset mags and one for attachments.
   def deleteUsedStorage(organizationId: String): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId".asUpdate)
+      _ <- run(
+        DBIO.sequence(Seq(
+          q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
+          q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
+        )))
     } yield ()
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".asUpdate)
+      _ <- run(
+        DBIO.sequence(Seq(
+          q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
+          q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
+        )))
     } yield ()
 
   def updateLastStorageScanTime(organizationId: String, time: Instant): Fox[Unit] =
@@ -179,40 +202,36 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield ()
 
   def upsertUsedStorage(
-      organizationId: String,
-      usedStorageEntries: List[ArtifactStorageReport]
+      datasetMagReports: List[DatasetMagStorageReport],
+      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport],
   ): Fox[Unit] = {
-    val reportUpsetQueries = usedStorageEntries.map { r =>
-      r._artifactId match {
-        case Left(magId) =>
-          q"""
-          INSERT INTO webknossos.organization_usedStorage (
-            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+    val datasetMagReportsQueries = datasetMagReports.map(r => q"""
+          INSERT INTO webknossos.organization_usedStorage_mags (
+            _dataset, layerName, mag, path, _organization, usedStorageBytes, lastUpdated
           )
-          VALUES (${organizationId}, ${r._datasetId}, ${magId}, NULL, ${r.path}, ${r.usedStorageBytes}, NOW())
-          ON CONFLICT ON CONSTRAINT unique_dataset_mag
+          VALUES (${r._dataset}, ${r.layerName}, ${r.mag}, ${r.path}, ${r._organization}, ${r.usedStorageBytes}, ${r.lastUpdated})
+          ON CONFLICT (_dataset, dataLayerName, mag)
           DO UPDATE SET
             path = EXCLUDED.path,
+            _organization = EXCLUDED._organization,
             usedStorageBytes = EXCLUDED.usedStorageBytes,
             lastUpdated = EXCLUDED.lastUpdated;
-          """.asUpdate
-        case Right(attachmentId) =>
-          q"""
-          INSERT INTO webknossos.organization_usedStorage (
-            _organization, _dataset, _dataset_mag, _layer_attachment, path, usedStorageBytes, lastUpdated
+          """.asUpdate)
+    val dataLayerAttachmentReportsQueries = dataLayerAttachmentReports.map(r => q"""
+          INSERT INTO webknossos.organization_usedStorage_attachments (
+            _dataset, layerName, name, path, type, _organization, usedStorageBytes, lastUpdated
           )
-          VALUES (${organizationId}, ${r._datasetId}, NULL, ${attachmentId}, ${r.path}, ${r.usedStorageBytes}, NOW())
-          ON CONFLICT ON CONSTRAINT unique_layer_attachment
+          VALUES (${r._dataset}, ${r.layerName}, ${r.name}, ${r.path}, ${r.`type`}, ${r._organization}, ${r.usedStorageBytes}, ${r.lastUpdated})
+          ON CONFLICT  (_dataset, layerName, name, type)
           DO UPDATE SET
             path = EXCLUDED.path,
+            _organization = EXCLUDED._organization,
             usedStorageBytes = EXCLUDED.usedStorageBytes,
             lastUpdated = EXCLUDED.lastUpdated;
-          """.asUpdate
-      }
-    }
+          """.asUpdate)
 
     for {
-      _ <- Fox.serialCombined(reportUpsetQueries)(q => run(q))
+      _ <- run(DBIO.sequence(datasetMagReportsQueries ++ dataLayerAttachmentReportsQueries))
     } yield ()
   }
 

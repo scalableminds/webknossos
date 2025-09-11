@@ -18,12 +18,11 @@ import models.dataset.{
   DatasetLayerAttachmentsDAO,
   DatasetMagsDAO,
   DatasetService,
+  StorageRelevantDataLayerAttachment,
   WKRemoteDataStoreClient
 }
-import models.organization.{ArtifactStorageReport, Organization, OrganizationDAO}
+import models.organization.{DataLayerAttachmentStorageReport, DatasetMagStorageReport, Organization, OrganizationDAO}
 import com.scalableminds.util.tools.{Failure, Full}
-import models.dataset.DatasetDAO
-import com.scalableminds.webknossos.schema.Tables.DatasetLayerAttachmentsRow
 import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 import utils.sql.SqlEscaping
@@ -38,7 +37,6 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
-                                   datasetDAO: DatasetDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    datasetMagDAO: DatasetMagsDAO,
                                    datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
@@ -88,15 +86,19 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       storageReportsByDataStore <- Fox.serialCombined(dataStores)(dataStore =>
         getNewestStorageReports(dataStore, organization)) ?~> "Failed to fetch used storage reports"
       _ <- organizationDAO.deleteUsedStorage(organization._id) ?~> "Failed to delete outdated used storage entries"
-      allStorageReports = storageReportsByDataStore.flatten
-      _ <- Fox.runIfNonEmpty(allStorageReports)(organizationDAO.upsertUsedStorage(organization._id, allStorageReports)) ?~> "Failed to upsert used storage reports into db"
+      allMagReports = storageReportsByDataStore.flatMap(reports => reports._1)
+      allAttachmentReports = storageReportsByDataStore.flatMap(reports => reports._2)
+      _ <- Fox.runIf(allMagReports.nonEmpty || allAttachmentReports.nonEmpty)(
+        organizationDAO
+          .upsertUsedStorage(allMagReports, allAttachmentReports)) ?~> "Failed to upsert used storage reports into db"
       _ <- organizationDAO.updateLastStorageScanTime(organization._id, Instant.now) ?~> "Failed to update last storage scan time in db"
       _ = Thread.sleep(pauseAfterEachOrganization.toMillis)
     } yield ()
 
   private def getNewestStorageReports(dataStore: DataStore,
                                       organization: Organization,
-                                      datasetIdOpt: Option[ObjectId] = None): Fox[List[ArtifactStorageReport]] =
+                                      datasetIdOpt: Option[ObjectId] = None)
+    : Fox[(List[DatasetMagStorageReport], List[DataLayerAttachmentStorageReport])] =
     for {
       relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id,
                                                                                   dataStore.name,
@@ -111,7 +113,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,
                                                                                           dataStore.name,
                                                                                           datasetIdOpt)
-      relevantAttachmentsWithResolvedPaths <- Fox.serialCombined(relevantAttachments)(resolveAttachmentPath)
+      relevantAttachmentsWithResolvedPaths = relevantAttachments.map(resolveAttachmentPath)
       pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths,
                                                               relevantAttachmentsWithResolvedPaths)
       relevantAttachmentPaths = relevantAttachmentsWithResolvedPaths.map(_.path)
@@ -147,32 +149,30 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
         }
     }
 
-  private def resolveAttachmentPath(attachment: DatasetLayerAttachmentsRow): Fox[DatasetLayerAttachmentsRow] = {
+  private def resolveAttachmentPath(
+      attachment: StorageRelevantDataLayerAttachment): StorageRelevantDataLayerAttachment = {
     val uri = new URI(attachment.path)
     if (uri.getScheme == null) {
-      for {
-        // TODOM: optimize this. Not for each attachment a query, instead bulk it.
-        dataset <- datasetDAO.findOne(ObjectId(attachment._Dataset))
-        datasetPath = Paths.get(dataset.directoryName)
-        attachmentPath = datasetPath.resolve(attachment.path).normalize()
-      } yield attachment.copy(path = attachmentPath.toString)
+      val datasetPath = Paths.get(attachment.datasetDirectoryName)
+      val attachmentPath = datasetPath.resolve(attachment.path).normalize()
+      attachment.copy(path = attachmentPath.toString)
     } else {
-      Fox.successful(attachment)
+      attachment
     }
   }
 
   private def buildPathToStorageArtifactMap(
       magsWithValidPaths: List[(DataSourceMagRow, List[String])],
-      relevantAttachments: List[DatasetLayerAttachmentsRow]
-  ): Map[String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow]] = {
+      relevantAttachments: List[StorageRelevantDataLayerAttachment]
+  ): Map[String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment]] = {
 
-    val magEntries: List[(String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow])] =
+    val magEntries: List[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
       magsWithValidPaths.flatMap {
         case (mag, paths) =>
           paths.map(path => path -> Left(mag))
       }
 
-    val attachmentEntries: List[(String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow])] =
+    val attachmentEntries: List[(String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment])] =
       relevantAttachments.map(att => att.path -> Right(att))
 
     (magEntries ++ attachmentEntries).toMap
@@ -193,33 +193,39 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private def buildStorageReportsForPathReports(
       organizationId: String,
       pathReports: List[PathStorageReport],
-      pathToArtifactMap: Map[String, Either[DataSourceMagRow, DatasetLayerAttachmentsRow]])
-    : List[ArtifactStorageReport] =
-    pathReports.flatMap(pathReport => {
-      pathToArtifactMap.get(pathReport.path) match {
-        case Some(Left(mag)) =>
-          Some(
-            ArtifactStorageReport(organizationId,
-                                  mag._dataset,
-                                  Left(mag._id),
-                                  pathReport.path,
-                                  pathReport.usedStorageBytes))
-        case Some(Right(attachment)) =>
-          val attachmentId = ObjectId.fromStringSync(attachment._Id)
-          attachmentId.flatMap(
-            id =>
-              Some(
-                ArtifactStorageReport(organizationId,
-                                      ObjectId(attachment._Dataset),
-                                      Right(id),
-                                      pathReport.path,
-                                      pathReport.usedStorageBytes)))
-        case None =>
-          logger.warn(s"Could not find artifact for path ${pathReport.path} in pathToArtifactMap")
-          None
-
-      }
-    })
+      pathToArtifactMap: Map[String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment]])
+    : (List[DatasetMagStorageReport], List[DataLayerAttachmentStorageReport]) = {
+    val reports: List[Either[DatasetMagStorageReport, DataLayerAttachmentStorageReport]] =
+      pathReports.flatMap(pathReport => {
+        pathToArtifactMap.get(pathReport.path) match {
+          case Some(Left(mag)) =>
+            Some(
+              Left(
+                DatasetMagStorageReport(mag._dataset,
+                                        mag.dataLayerName,
+                                        mag.mag,
+                                        pathReport.path,
+                                        organizationId,
+                                        pathReport.usedStorageBytes)))
+          case Some(Right(attachment)) =>
+            Some(
+              Right(
+                DataLayerAttachmentStorageReport(attachment._dataset,
+                                                 attachment.layerName,
+                                                 attachment.name,
+                                                 pathReport.path,
+                                                 attachment.`type`,
+                                                 organizationId,
+                                                 pathReport.usedStorageBytes)))
+          case None =>
+            logger.warn(s"Could not find artifact for path ${pathReport.path} in pathToArtifactMap")
+            None
+        }
+      })
+    val magReports = reports.collect { case Left(r)         => r }
+    val attachmentReports = reports.collect { case Right(r) => r }
+    (magReports, attachmentReports)
+  }
 
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
@@ -230,7 +236,9 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
           organization <- organizationDAO.findOne(dataset._organization)
           reports <- getNewestStorageReports(dataStore, organization, Some(dataset._id))
           _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
-          _ <- Fox.runIfNonEmpty(reports)(organizationDAO.upsertUsedStorage(organization._id, reports)) ?~> "Failed to upsert used storage reports into db"
+          _ <- Fox.runIf(reports._1.nonEmpty || reports._2.nonEmpty)(
+            organizationDAO
+              .upsertUsedStorage(reports._1, reports._2)) ?~> "Failed to upsert used storage reports into db"
         } yield ()
       } else Fox.successful(())
     } yield ()

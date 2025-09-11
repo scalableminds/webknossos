@@ -8,7 +8,7 @@ import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import slick.dbio.DBIO
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -49,7 +49,7 @@ case class DataLayerAttachmentStorageReport(
     layerName: String,
     name: String,
     path: String,
-    `type`: LayerAttachmentDataformat.LayerAttachmentDataformat,
+    `type`: LayerAttachmentType.LayerAttachmentType,
     _organization: String,
     usedStorageBytes: Long,
     lastUpdated: Instant = Instant.now,
@@ -210,7 +210,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
             _dataset, layerName, mag, path, _organization, usedStorageBytes, lastUpdated
           )
           VALUES (${r._dataset}, ${r.layerName}, ${r.mag}, ${r.path}, ${r._organization}, ${r.usedStorageBytes}, ${r.lastUpdated})
-          ON CONFLICT (_dataset, dataLayerName, mag)
+          ON CONFLICT (_dataset, layerName, mag)
           DO UPDATE SET
             path = EXCLUDED.path,
             _organization = EXCLUDED._organization,
@@ -237,16 +237,37 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def getUsedStorage(organizationId: String): Fox[Long] =
     for {
-      rows <- run(
-        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
-          .as[Long])
+      rows <- run(q"""SELECT COALESCE(SUM(usedStorageBytes), 0) AS totalStorage
+              FROM (
+                SELECT usedStorageBytes
+                  FROM webknossos.organization_usedStorage_mags
+                WHERE _organization = $organizationId
+
+                UNION ALL
+
+                SELECT usedStorageBytes
+                FROM webknossos.organization_usedStorage_attachments
+                WHERE _organization = $organizationId
+              ) AS combined;
+      """.as[Long])
       firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
     for {
-      rows <- run(
-        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long])
+      rows <- run(q"""SELECT COALESCE(SUM(usedStorageBytes), 0) AS totalStorage
+              FROM (
+                SELECT usedStorageBytes
+                  FROM webknossos.organization_usedStorage_mags
+                WHERE _dataset = $datasetId
+
+                UNION ALL
+
+                SELECT usedStorageBytes
+                FROM webknossos.organization_usedStorage_attachments
+                WHERE _dataset = $datasetId
+              ) AS combined;
+      """.as[Long])
       firstRow <- rows.headOption.toFox
     } yield firstRow
 

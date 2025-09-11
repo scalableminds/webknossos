@@ -732,8 +732,7 @@ case class MagWithPaths(layerName: String,
                         realPath: Option[String],
                         hasLocalData: Boolean)
 
-case class DataSourceMagRow(_id: ObjectId,
-                            _dataset: ObjectId,
+case class DataSourceMagRow(_dataset: ObjectId,
                             dataLayerName: String,
                             mag: String,
                             path: Option[String],
@@ -773,7 +772,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       storageRelevantMags <- run(q"""SELECT *
             FROM (
-              SELECT mag._id, ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+              SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
                      ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
               FROM webknossos.dataset_mags AS mag
               JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
@@ -790,16 +789,16 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       layer.magsOpt match {
         case Some(mags) =>
           mags.map(mag => {
-            q"""INSERT INTO webknossos.dataset_mags(_id, _dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
-                VALUES(${ObjectId.generate}, $datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(
-              Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
+                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder
+              .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
           })
         case None =>
           layer.resolutions.distinct.map { mag: Vec3Int =>
             {
-              q"""INSERT INTO webknossos.dataset_mags(_id, _dataset, dataLayerName, mag)
-                    VALUES(${ObjectId.generate}, $datasetId, ${layer.name}, $mag)""".asUpdate
+              q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+                    VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
             }
           }
       }
@@ -830,17 +829,14 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     GetResult(
       r =>
-        DataSourceMagRow(
-          ObjectId(r.nextString()),
-          ObjectId(r.nextString()),
-          r.nextString(),
-          r.nextString(),
-          r.nextStringOption(),
-          r.nextStringOption(),
-          r.nextBoolean(),
-          r.nextString(),
-          r.nextString()
-      ))
+        DataSourceMagRow(ObjectId(r.nextString()),
+                         r.nextString(),
+                         r.nextString(),
+                         r.nextStringOption(),
+                         r.nextStringOption(),
+                         r.nextBoolean(),
+                         r.nextString(),
+                         r.nextString()))
 
   private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): Fox[List[DataSourceMagInfo]] =
     for {
@@ -854,10 +850,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
     for {
-      rows <- run(
-        q"""SELECT dm._id, dm._dataset, dm.dataLayerName, dm.mag, dm.path, dm.realPath, dm.hasLocalData, ds._organization, ds.directoryName
-            FROM webknossos.dataset_mags dm
-            INNER JOIN webknossos.datasets ds ON dm._dataset = ds._id
+      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+            FROM webknossos.dataset_mags
+            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE _dataset = $datasetId
             AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
       magInfos <- rowsToMagInfos(rows)
@@ -865,10 +860,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
     for {
-      rows <- run(
-        q"""SELECT  dm._id, dm._dataset, dm.dataLayerName, dm.mag, dm.path, dm.realPath, dm.hasLocalData, ds._organization, ds.directoryName
-            FROM webknossos.dataset_mags dm
-            INNER JOIN webknossos.datasets ds ON dm._dataset = ds._id
+      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+            FROM webknossos.dataset_mags
+            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE realPath = $realPath""".as[DataSourceMagRow])
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos
@@ -893,7 +887,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
     for {
       rows <- run(
-        q"""SELECT _id, _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
            FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
       mags <- Fox.combined(rows.map(parseMagLocator))
     } yield rows.map(r => r.datalayername).zip(mags)
@@ -1085,7 +1079,7 @@ case class StorageRelevantDataLayerAttachment(
     layerName: String,
     name: String,
     path: String,
-    `type`: LayerAttachmentDataformat.LayerAttachmentDataformat,
+    `type`: LayerAttachmentType.LayerAttachmentType,
     _organization: String,
     datasetDirectoryName: String,
 )
@@ -1119,7 +1113,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _id, _dataset, layerName, name, path, type, dataFormat
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
@@ -1127,8 +1121,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_id, _dataset, layerName, name, path, type, dataFormat)
-          VALUES(${ObjectId.generate}, $datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
           ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT)""".asUpdate
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
@@ -1162,7 +1156,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
           r.nextString(),
           r.nextString(), {
             val format = r.nextString()
-            LayerAttachmentDataformat
+            LayerAttachmentType
               .fromString(format)
               .getOrElse(
                 // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.

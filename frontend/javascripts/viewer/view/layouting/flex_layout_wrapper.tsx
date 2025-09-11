@@ -138,6 +138,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.openRightBorderTabById(BorderTabs.SkeletonTabView);
       }),
     );
+    this.unbindListeners.push(
+      layoutEmitter.on("showSegmentTab", () => {
+        this.openRightBorderTabById(BorderTabs.SegmentsView);
+      }),
+    );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
   }
 

@@ -618,9 +618,7 @@ function getNodeContextMenuOptions({
     {
       key: "set-node-active",
       disabled: isTheSameNode,
-      onClick: () => {
-        Store.dispatch(setActiveNodeAction(clickedNodeId));
-      },
+      onClick: () => Store.dispatch(setActiveNodeAction(clickedNodeId)),
       label: "Select this Node",
     },
     activeTreeId === clickedTree.treeId
@@ -1002,7 +1000,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
-    layoutEmitter.emit("showSkeletonTab");
+    layoutEmitter.emit("showSegmentTab");
   };
 
   const onlyShowSegment = () => {

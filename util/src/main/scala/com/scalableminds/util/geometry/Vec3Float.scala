@@ -26,7 +26,7 @@ case class Vec3Float(x: Float, y: Float, z: Float) {
 
 object Vec3Float {
   def apply(p: Vec3Int): Vec3Float =
-    Vec3Float(p.x, p.y, p.z)
+    Vec3Float(p.x.toFloat, p.y.toFloat, p.z.toFloat)
 
   def apply(p: Vec3Double): Vec3Float =
     Vec3Float(p.x.toFloat, p.y.toFloat, p.z.toFloat)

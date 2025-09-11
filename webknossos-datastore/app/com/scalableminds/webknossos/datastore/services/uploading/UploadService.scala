@@ -32,6 +32,7 @@ import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.core.async.AsyncRequestBody
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.{
@@ -361,6 +362,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     .forcePathStyle(true)
     .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
     .region(Region.US_EAST_1)
+    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
     .build()
 
   def handleUploadChunkAws(

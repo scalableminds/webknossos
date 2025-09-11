@@ -16,6 +16,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
+import slick.dbio.DBIO
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -131,8 +132,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       _ <- run(insertOneQuery(annotationId, annotationLayer))
     } yield ()
 
-  def insertLayerQueries(annotationId: ObjectId,
-                         layers: List[AnnotationLayer]): List[SqlAction[Int, NoStream, Effect]] =
+  def insertLayerQueries(annotationId: ObjectId, layers: Seq[AnnotationLayer]): Seq[SqlAction[Int, NoStream, Effect]] =
     layers.map { annotationLayer =>
       insertOneQuery(annotationId, annotationLayer)
     }
@@ -161,13 +161,20 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       head <- rList.headOption.toFox
     } yield head
 
-  def updateName(annotationId: ObjectId, tracingId: String, newName: String): Fox[Unit] =
+  def updateLayers(annotationId: ObjectId,
+                   newLayers: Seq[AnnotationLayer],
+                   updatedLayers: Seq[AnnotationLayer]): Fox[Unit] = {
+    val insertQueries = insertLayerQueries(annotationId, newLayers)
+    val updateQueries = updatedLayers.map { updatedLayer =>
+      q"""UPDATE webknossos.annotation_layers
+                         SET name = ${updatedLayer.name}
+                         WHERE _annotation = $annotationId
+                         AND tracingId = ${updatedLayer.tracingId}""".asUpdate
+    }
     for {
-      _ <- run(q"""UPDATE webknossos.annotation_layers
-                   SET name = $newName
-                   WHERE _annotation = $annotationId
-                   AND tracingId = $tracingId""".asUpdate)
+      _ <- run(DBIO.sequence(insertQueries ++ updateQueries).transactionally)
     } yield ()
+  }
 
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate

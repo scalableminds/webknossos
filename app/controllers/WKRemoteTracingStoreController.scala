@@ -61,11 +61,11 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
           layerIdsToInsert = newLayerIds.diff(existingLayerIds)
           _ <- Fox.serialCombined(layerIdsToDelete.toList)(annotationLayerDAO.deleteOneByTracingId(annotationId, _))
-          _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
-            annotationLayerDAO.insertOne(annotationId, AnnotationLayer.fromProto(layerProto))
-          }
-          _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
-            annotationLayerDAO.updateName(annotationId, l.tracingId, l.name))
+          _ <- annotationLayerDAO.updateLayers(
+            annotationId,
+            newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId)).map(AnnotationLayer.fromProto),
+            newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)).map(AnnotationLayer.fromProto)
+          )
           // Layer stats are ignored here, they are sent eagerly when saving updates
           _ <- annotationDAO.updateDescription(annotationId, request.body.description)
         } yield Ok

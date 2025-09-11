@@ -442,10 +442,9 @@ function* maybeLoadMeshChunk(
   threeDMap.set(clippedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
-  const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
-  const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
+  const datasetId = yield* select((state) => state.dataset.id);
   const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
@@ -463,6 +462,9 @@ function* maybeLoadMeshChunk(
   const { segmentMeshController } = getSceneController();
 
   const cubeSize = marchingCubeSizeInTargetMag();
+  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
+  const paddedPositionWithinLayer =
+    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -473,7 +475,7 @@ function* maybeLoadMeshChunk(
         },
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
-          position: clippedPosition,
+          positionWithPadding: paddedPositionWithinLayer,
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,

@@ -31,7 +31,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
-import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -40,9 +39,10 @@ import software.amazon.awssdk.services.s3.model.{
   CompletedMultipartUpload,
   CompletedPart,
   CreateMultipartUploadRequest,
-  PutObjectRequest,
   UploadPartRequest
 }
+import software.amazon.awssdk.transfer.s3.S3TransferManager
+import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
 import java.net.URI
@@ -584,7 +584,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             dataSource,
             newBasePath = s"s3://$endPointHost/${dataStoreConfig.Datastore.S3Upload.bucketName}/$s3ObjectKey")
           _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId, allowNewPaths = true)
-          // TODO: Is uploaded dataset size the same as local dataset size?
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
           _ = this.synchronized {
             PathUtils.deleteDirectoryRecursively(unpackToDir)
@@ -671,38 +670,22 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
 
+  private lazy val transferManager = S3TransferManager.builder().s3Client(s3Client).build()
+
   private def uploadDirectoryToS3(
       dataDir: Path,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
     for {
-      files <- PathUtils.listFilesRecursive(dataDir, silent = false, maxDepth = 20).toFox
-      uploadFoxes = files.map(filePath => {
-        val relPath = dataDir.relativize(filePath).toString.replace("\\", "/")
-        val s3Key = s"$prefix$relPath"
-
-        // TODO: For large files, consider using multipart upload
-        logger.info("Uploading file to S3: " + filePath)
-        val bytes = Files.readAllBytes(filePath)
-        logger.info(s"Dataset Upload: Uploading ${bytes.length} bytes to s3://$bucketName/$s3Key")
-        val startTime = System.currentTimeMillis()
-        logger.info(s"Starting upload of $filePath to S3 at $startTime")
-
-        for {
-          _ <- Fox.fromFuture {
-            s3Client
-              .putObject(
-                PutObjectRequest.builder().bucket(bucketName).key(s3Key).build(),
-                AsyncRequestBody.fromBytes(bytes)
-              )
-              .asScala
-          } ?~> s"Failed to upload file $filePath to S3"
-        } yield ()
-      })
-      // TODO: Limit number of concurrent uploads?
-      _ <- Fox.combined(uploadFoxes)
-      _ = logger.info(s"Finished uploading directory to S3 at ${System.currentTimeMillis()}")
+      _ <- Fox.successful(())
+      directoryUpload = transferManager.uploadDirectory(
+        UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
+      )
+      completedUpload <- Fox.fromFuture(directoryUpload.completionFuture().asScala)
+      failedTransfers = completedUpload.failedTransfers()
+      _ <- Fox.fromBool(failedTransfers.isEmpty) ?~>
+        s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
 
   private def cleanUpOnFailure[T](result: Box[T],

@@ -5,6 +5,7 @@ object Dependencies {
   private val silhouetteVersion = "10.0.3"
   private val brotliVersion = "1.19.0"
   private val slickVersion = "3.5.2"
+  private val awsVersion = "2.32.24"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -55,7 +56,9 @@ object Dependencies {
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
-    "software.amazon.awssdk" % "s3" % "2.32.24",
+    "software.amazon.awssdk" % "s3" % awsVersion,
+    // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
+    "software.amazon.awssdk" % "s3-transfer-manager" % awsVersion,
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
     "com.google.cloud" % "google-cloud-storage" % "2.55.0",
     // Blosc compression. import dev.zarr.bloscjava

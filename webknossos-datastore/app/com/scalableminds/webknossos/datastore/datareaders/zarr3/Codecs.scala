@@ -130,6 +130,15 @@ class BloscCodec(cname: String, clevel: Int, shuffle: CompressionSetting, typesi
   override def decode(bytes: Array[Byte]): Array[Byte] = compressor.decompress(bytes)
 }
 
+object BloscCodec {
+  def fromConfiguration(configuration: BloscCodecConfiguration): BloscCodec =
+    new BloscCodec(configuration.cname,
+                   configuration.clevel,
+                   configuration.shuffle,
+                   configuration.typesize,
+                   configuration.blocksize)
+}
+
 class GzipCodec(level: Int) extends BytesToBytesCodec {
 
   // https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/v1.0.html
@@ -236,12 +245,21 @@ object BloscCodecConfiguration {
   implicit val jsonFormat: OFormat[BloscCodecConfiguration] = Json.format[BloscCodecConfiguration]
   val name = "blosc"
 
-  def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
+  private def shuffleSettingFromInt(shuffle: Int): String = shuffle match {
     case 0 => "noshuffle"
     case 1 => "shuffle"
     case 2 => "bitshuffle"
     case _ => ???
   }
+
+  lazy val defaultForWKZarrOutput: BloscCodecConfiguration =
+    BloscCodecConfiguration(
+      BloscCompressor.defaultCname.getValue,
+      BloscCompressor.defaultCLevel,
+      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle.getValue)),
+      Some(BloscCompressor.defaultTypesize),
+      BloscCompressor.defaultBlocksize
+    )
 }
 
 final case class GzipCodecConfiguration(level: Int) extends CodecConfiguration {
@@ -319,13 +337,12 @@ object CodecTreeExplorer {
   def findOne(condition: Function[CodecConfiguration, Boolean])(
       codecs: Seq[CodecConfiguration]): Option[CodecConfiguration] = {
     val results: Seq[Option[CodecConfiguration]] = codecs.map {
-      case s: ShardingCodecConfiguration => {
+      case s: ShardingCodecConfiguration =>
         if (condition(s)) {
           Some(s)
         } else {
           findOne(condition)(s.codecs)
         }
-      }
       case c: CodecConfiguration => Some(c).filter(condition)
     }
     results.flatten.headOption

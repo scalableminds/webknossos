@@ -7,7 +7,7 @@ import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
-import { layoutEmitter } from "viewer/view/layouting/layout_persistence";
+import { layoutEmitter, layoutEvents } from "viewer/view/layouting/layout_persistence";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
@@ -49,7 +49,7 @@ export function FloatingMobileControls() {
           type="primary"
           shape="circle"
           style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit("toggleBorder", "left")}
+          onClick={() => layoutEmitter.emit(layoutEvents.toggleBorder, "left")}
           icon={
             <img
               alt="Toggle left sidebar"
@@ -63,7 +63,7 @@ export function FloatingMobileControls() {
           type="primary"
           shape="circle"
           style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit("toggleBorder", "right")}
+          onClick={() => layoutEmitter.emit(layoutEvents.toggleBorder, "right")}
           icon={
             <img
               alt="Toggle right sidebar"
@@ -95,7 +95,7 @@ export function FloatingMobileControls() {
           type="primary"
           shape="circle"
           style={BUTTON_STYLE}
-          onClick={() => layoutEmitter.emit("toggleMaximize")}
+          onClick={() => layoutEmitter.emit(layoutEvents.toggleMaximize)}
           icon={<ExpandAltOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
         />
         {viewMode === "orthogonal" && (

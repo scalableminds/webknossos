@@ -40,6 +40,7 @@ import {
   deleteLayout,
   getLayoutConfig,
   layoutEmitter,
+  layoutEvents,
 } from "viewer/view/layouting/layout_persistence";
 import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
 import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
@@ -273,7 +274,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   handleResetLayout = () => {
     layoutEmitter.emit(
-      "resetLayout",
+      layoutEvents.resetLayout,
       this.props.layoutProps.layoutKey,
       this.props.layoutProps.activeLayout,
     );

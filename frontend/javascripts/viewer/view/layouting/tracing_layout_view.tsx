@@ -39,6 +39,7 @@ import {
   getLastActiveLayout,
   getLayoutConfig,
   layoutEmitter,
+  layoutEvents,
   setActiveLayout,
   storeLayoutConfig,
 } from "viewer/view/layouting/layout_persistence";
@@ -186,10 +187,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // Simply assume mobile.
       const { left, right } = Store.getState().uiInformation.borderOpenStatus;
       if (left) {
-        layoutEmitter.emit("toggleBorder", "left");
+        layoutEmitter.emit(layoutEvents.toggleBorder, "left");
       }
       if (right) {
-        layoutEmitter.emit("toggleBorder", "right");
+        layoutEmitter.emit(layoutEvents.toggleBorder, "right");
       }
       // Immediately show mobile buttons
       this.handleTouch();

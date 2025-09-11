@@ -118,18 +118,18 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   addListeners() {
     this.unbindListeners.push(
-      layoutEmitter.on("resetLayout", () => {
+      layoutEmitter.on(layoutEvents.resetLayout, () => {
         resetDefaultLayouts();
         this.rebuildLayout();
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("toggleBorder", (side) => {
+      layoutEmitter.on(layoutEvents.toggleBorder, (side) => {
         this.toggleBorder(side);
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("toggleMaximize", () => {
+      layoutEmitter.on(layoutEvents.toggleMaximize, () => {
         this.toggleMaximize();
       }),
     );

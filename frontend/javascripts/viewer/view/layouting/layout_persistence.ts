@@ -16,6 +16,10 @@ export const layoutEmitter = createNanoEvents();
 export const layoutEvents = {
   showSkeletonTab: "showSkeletonTab",
   showSegmentsTab: "showSegmentsTab",
+  resetLayout: "resetLayout",
+  toggleLayout: "toggleLayout",
+  toggleBorder: "toggleBorder",
+  toggleMaximize: "toggleMaximize",
 };
 // For debugging purposes:
 const disableLayoutPersistance = false;
@@ -96,7 +100,7 @@ function persistLayoutConfigs() {
   );
 }
 
-layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
+layoutEmitter.on(layoutEvents.resetLayout, (layoutKey: LayoutKeys, activeLayout: string) => {
   storeLayoutConfig(getDefaultLayouts()[layoutKey], layoutKey, activeLayout);
 });
 

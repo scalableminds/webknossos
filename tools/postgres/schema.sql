@@ -389,7 +389,7 @@ CREATE TABLE webknossos.organization_usedStorage_mags (
     _organization   TEXT               NOT NULL,
     usedStorageBytes BIGINT            NOT NULL,
     lastUpdated     TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (_dataset, dataLayerName, mag)
+    PRIMARY KEY (_dataset, layerName, mag)
 );
 
 CREATE TABLE webknossos.organization_usedStorage_attachments (

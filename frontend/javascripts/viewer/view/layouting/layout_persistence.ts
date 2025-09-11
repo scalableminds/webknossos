@@ -14,12 +14,11 @@ import getDefaultLayouts, {
 } from "./default_layout_configs";
 export const layoutEmitter = createNanoEvents();
 export const layoutEvents = {
-  showSkeletonTab: "showSkeletonTab",
-  showSegmentsTab: "showSegmentsTab",
   resetLayout: "resetLayout",
-  toggleLayout: "toggleLayout",
   toggleBorder: "toggleBorder",
   toggleMaximize: "toggleMaximize",
+  showSkeletonTab: "showSkeletonTab",
+  showSegmentsTab: "showSegmentsTab",
 };
 // For debugging purposes:
 const disableLayoutPersistance = false;

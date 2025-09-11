@@ -135,8 +135,10 @@ export function convertServerAnnotationToFrontendAnnotation(
   const restrictions = {
     ...annotation.restrictions,
     ...annotation.settings,
-    initialAllowUpdate: annotation.restrictions.allowUpdate,
   };
+  const isUpdatingCurrentlyAllowed = annotation.restrictions.allowUpdate;
+  // TODOM: consider setting to false if othersMayEdit is true -> must be reenabled by the mutex saga.
+  //!annotation.othersMayEdit && annotation.restrictions.allowUpdate;
   return {
     annotationId,
     restrictions,
@@ -155,7 +157,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     contributors,
     othersMayEdit,
     annotationLayers,
-    blockedByUser: null,
+    isUpdatingCurrentlyAllowed,
   };
 }
 
@@ -177,7 +179,7 @@ export function isToolAvailable(
   if (isDisabled) {
     return false;
   }
-  if (!state.annotation.restrictions.allowUpdate) {
+  if (!state.annotation.isUpdatingCurrentlyAllowed) {
     return Toolkits.READ_ONLY_TOOLS.includes(tool);
   }
   return true;

@@ -577,7 +577,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

@@ -127,6 +127,7 @@ const createStateWithSegments = (
         segmentGroups,
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
         hideUnregisteredSegments: false,
+        proofreadingMarkerPosition: undefined,
       },
     ],
   },

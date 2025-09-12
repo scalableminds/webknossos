@@ -1280,6 +1280,8 @@ export type FolderUpdater = {
 
 export enum CAMERA_POSITIONS {
   MOVING = "MOVING",
+  STATIC_ISOMETRIC = "STATIC_ISOMETRIC",
+  STATIC_XY = "STATIC_XY",
   STATIC_XZ = "STATIC_XZ",
   STATIC_YZ = "STATIC_YZ",
 }
@@ -1303,4 +1305,8 @@ export type RenderAnimationOptions = {
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
+};
+
+export type ServerErrorMessage = {
+  error: string;
 };

@@ -7,7 +7,7 @@ const { Sider, Content } = Layout;
 
 const BREADCRUMB_LABELS = {
   token: "Auth Token",
-  password: "Password",
+  security: "Security",
   profile: "Profile",
 };
 
@@ -22,9 +22,9 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         label: "Profile",
       },
       {
-        key: "password",
+        key: "security",
         icon: <SafetyOutlined />,
-        label: "Password",
+        label: "Security",
       },
     ],
   },

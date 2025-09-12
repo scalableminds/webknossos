@@ -1,11 +1,12 @@
 package security
 
+import com.scalableminds.util.time.Instant
 import play.silhouette.api._
 import play.silhouette.api.crypto.Base64AuthenticatorEncoder
 import play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import play.silhouette.crypto.{JcaSigner, JcaSignerSettings}
-import play.silhouette.impl.authenticators._
+import play.silhouette.impl.authenticators.{CookieAuthenticator, _}
 import models.user.UserService
 import play.api.mvc._
 import utils.WkConf
@@ -71,9 +72,24 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] =
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(request)
+      optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
       optionToken <- tokenAuthenticatorService.retrieve(request)
     } yield {
-      optionCookie.map(CombinedAuthenticator(_)).orElse { optionToken.map(CombinedAuthenticator(_)) }
+      optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
+        optionToken.map(CombinedAuthenticator(_))
+      }
+    }
+
+  private def cookieUnlessSignedOutEverywhere(
+      optionCookie: Option[CookieAuthenticator]): Future[Option[CookieAuthenticator]] =
+    optionCookie match {
+      case None => Future.successful(None)
+      case Some(cookie) =>
+        for {
+          userOpt <- userService.retrieve(cookie.loginInfo)
+          loggedOutEverywhereTime = userOpt.flatMap(_.loggedOutEverywhereTime).getOrElse(Instant.zero)
+          cookieLastUsedTime = Instant(cookie.lastUsedDateTime.toInstant.toEpochMilli)
+        } yield if (cookieLastUsedTime > loggedOutEverywhereTime) Some(cookie) else None
     }
 
   // only called in token case

@@ -119,9 +119,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
 
   private lazy val compressorConfiguration =
     BloscCodecConfiguration(
-      BloscCompressor.defaultCname,
+      BloscCompressor.defaultCname.getValue,
       BloscCompressor.defaultCLevel,
-      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
+      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle.getValue)),
       Some(BloscCompressor.defaultTypesize),
       BloscCompressor.defaultBlocksize
     )
@@ -129,9 +129,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val compressor =
     new BloscCompressor(
       Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
         BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
         BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
         BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
       ))

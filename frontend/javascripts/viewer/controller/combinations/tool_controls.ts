@@ -44,6 +44,7 @@ import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   hideMeasurementTooltipAction,
@@ -1080,6 +1081,19 @@ export class ProofreadToolController {
 
     const state = Store.getState();
     const globalPosition = calculateGlobalPos(state, pos).rounded;
+    const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
+    const ctrlOrMetaKey = event.ctrlKey || event.metaKey;
+    if (isMultiSplitActive && ctrlOrMetaKey) {
+      const unmappedSegmentId = VolumeHandlers.getUnmappedSegmentIdForPosition(globalPosition);
+      const mappedSegmentId = VolumeHandlers.getSegmentIdForPosition(globalPosition);
+      if (unmappedSegmentId === 0 || mappedSegmentId === 0) {
+        // No valid ids were found, ignore action.
+        return;
+      }
+      const partition = event.shiftKey ? 2 : 1;
+      Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
+      return;
+    }
 
     if (event.shiftKey) {
       Store.dispatch(proofreadMergeAction(globalPosition));
@@ -1095,30 +1109,42 @@ export class ProofreadToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _userConfiguration: UserConfiguration,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
     isTDViewportActive: boolean,
   ): ActionDescriptor {
-    if (isTDViewportActive) {
-      let maybeLeftClick = {};
-      if (shiftKey) {
-        maybeLeftClick = {
-          leftClick: "Jump to point",
-        };
+    const { isMultiSplitActive } = userConfiguration;
+
+    // --- Multi-split additions -----------------------------------------------
+    const multiSplitOverwrites: Partial<ActionDescriptor> = {};
+    if (isMultiSplitActive) {
+      if (shiftKey && ctrlOrMetaKey) {
+        multiSplitOverwrites.leftClick = "Add to Partition 2";
       } else if (ctrlOrMetaKey) {
-        maybeLeftClick = {
-          leftClick: "Activate super-voxel",
-        };
+        multiSplitOverwrites.leftClick = "Add to Partition 1";
+      }
+    }
+
+    // --- TD-viewport viewport -----------------------------------------------------
+    if (isTDViewportActive) {
+      let maybeLeftClick: Partial<ActionDescriptor> = {};
+      if (shiftKey) {
+        maybeLeftClick.leftClick = "Jump to point";
+      } else if (ctrlOrMetaKey) {
+        maybeLeftClick.leftClick = "Activate super-voxel";
       }
 
       return {
         ...maybeLeftClick,
+        ...multiSplitOverwrites,
         leftDrag: "Move",
         rightClick: "Context Menu",
       };
     }
+
+    // --- Default ortho viewports -------------------------------------------
     let leftClick = "Select Segment to Proofread";
     if (shiftKey) {
       leftClick = "Merge with active Segment";
@@ -1128,6 +1154,7 @@ export class ProofreadToolController {
 
     return {
       leftClick,
+      ...multiSplitOverwrites,
       rightClick: "Context Menu",
     };
   }

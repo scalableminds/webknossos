@@ -398,9 +398,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       datasetSizeBytes: Long <- if (uploadToS3) {
         for {
           _ <- Fox.successful(())
-
+          _ = logger.info(
+            s"Starting upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
           s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
           _ <- uploadDirectoryToS3(unpackToDir, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
+          _ = logger.info(
+            s"Finished upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
           endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
           s3DataSource <- dataSourceService.prependAllPaths(
             dataSource,

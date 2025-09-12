@@ -392,7 +392,13 @@ class DataSourceService @Inject()(
               mag =>
                 mag.path match {
                   case Some(pathStr) => mag.copy(path = Some(replaceUri(new URI(pathStr)).toString))
-                  case _             => mag
+                  // If the mag does not have a path, it is an implicit path, we need to make it explicit.
+                  case _ =>
+                    mag.copy(
+                      path = Some(
+                        new URI(newBasePath)
+                          .resolve(List(layerWithMagLocators.name, mag.mag.toMagLiteral(true)).mkString("/"))
+                          .toString))
               },
               attachmentMapping = attachment =>
                 DatasetLayerAttachments(

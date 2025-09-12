@@ -18,8 +18,8 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import type { StoreAnnotation } from "viewer/store";
 import { AnnotationsCsvInput } from "../components/annotations_csv_input";
-import { fetchAnnotationInfos } from "../components/fetch_annotation_infos";
 import { CollapsibleWorkflowYamlEditor } from "../components/collapsible_workflow_yaml_editor";
+import { fetchAnnotationInfos } from "../components/fetch_annotation_infos";
 import {
   type AnnotationInfoForAITrainingJob,
   checkAnnotationsForErrorsAndWarnings,
@@ -128,10 +128,15 @@ const getTrainingAnnotations = (values: any) => {
   });
 };
 
-const AddAnnotations = ({ onAdd }: { onAdd: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void }) => {
+const AddAnnotations = ({
+  onAdd,
+}: { onAdd: (newItems: Array<AnnotationInfoForAITrainingJob<APIAnnotation>>) => void }) => {
   const [csvValue, setCsvValue] = useState("");
   const onAddClick = useCallback(async () => {
-    const lines = csvValue.split("\n").map((line) => line.trim()).filter((line) => line !== "");
+    const lines = csvValue
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
     const newItems = await fetchAnnotationInfos(lines);
     onAdd(newItems);
   }, [csvValue, onAdd]);
@@ -139,10 +144,12 @@ const AddAnnotations = ({ onAdd }: { onAdd: (newItems: Array<AnnotationInfoForAI
   return (
     <>
       <AnnotationsCsvInput value={csvValue} onChange={setCsvValue} />
-      <Button onClick={onAddClick} type="primary">Add</Button>
+      <Button onClick={onAddClick} type="primary">
+        Add
+      </Button>
     </>
   );
-}
+};
 
 export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | StoreAnnotation>({
   getMagsForSegmentationLayer,

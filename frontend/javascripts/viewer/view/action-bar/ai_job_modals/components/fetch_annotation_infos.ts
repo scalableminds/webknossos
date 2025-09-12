@@ -74,9 +74,7 @@ export async function fetchAnnotationInfos(
             undefined,
           );
         } else {
-          throw new Error(
-            `Annotation ${annotation.id} has neither a volume nor a skeleton layer`,
-          );
+          throw new Error(`Annotation ${annotation.id} has neither a volume nor a skeleton layer`);
         }
       }
       if (annotation.task?.boundingBox) {

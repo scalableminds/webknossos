@@ -3,10 +3,10 @@ import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
+import type { StartAiJobDrawerState } from "../action-bar/ai_job_modals/constants";
 import { AiImageAlignmentJob } from "./alignment/ai_image_alignment_job";
 import { AiImageSegmentationJob } from "./run_ai_model/ai_image_segmentation_job";
 import { AiModelTrainingJob } from "./train_ai_model/ai_training_job";
-import type { StartAiJobDrawerState } from "../action-bar/ai_job_modals/constants";
 
 export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const dispatch = useDispatch();

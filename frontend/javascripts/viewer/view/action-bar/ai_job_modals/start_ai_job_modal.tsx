@@ -3,19 +3,19 @@ import { useWkSelector } from "libs/react_hooks";
 import _ from "lodash";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
-import type { StartAIJobModalState } from "./constants";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
+import type { StartAiJobDrawerState } from "./constants";
 import { AlignmentTab } from "./tabs/alignment_tab";
 import { RunAiModelTab } from "./tabs/run_ai_model_tab";
 import { TrainAiModelFromAnnotationTab } from "./tabs/train_ai_model_tab";
 
-export type StartAIJobModalProps = {
-  aIJobModalState: StartAIJobModalState;
+export type StartAIJobDrawerProps = {
+  aIJobDrawerState: StartAiJobDrawerState;
 };
 
-export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
+export function StartAIJobModal({ aIJobDrawerState }: StartAIJobDrawerProps) {
   const dispatch = useDispatch();
-  const onClose = useCallback(() => dispatch(setAIJobModalStateAction("invisible")), [dispatch]);
+  const onClose = useCallback(() => dispatch(setAIJobDrawerStateAction("invisible")), [dispatch]);
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const tabs = useMemo(
     () =>
@@ -23,7 +23,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
         {
           label: "Run a model",
           key: "runModel",
-          children: <RunAiModelTab aIJobModalState={aIJobModalState} />,
+          children: <RunAiModelTab aIJobDrawerState={aIJobDrawerState} />,
         },
         isSuperUser
           ? {
@@ -38,9 +38,9 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           children: <AlignmentTab />,
         },
       ]),
-    [isSuperUser, aIJobModalState, onClose],
+    [isSuperUser, aIJobDrawerState, onClose],
   );
-  return aIJobModalState !== "invisible" ? (
+  return aIJobDrawerState !== "invisible" ? (
     <Modal
       width={875}
       open

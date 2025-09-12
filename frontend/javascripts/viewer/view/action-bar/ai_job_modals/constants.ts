@@ -1,12 +1,11 @@
-import type { APIJobType } from "types/api_types";
+import { APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 
-export type ModalJobTypes =
-  | APIJobType.INFER_NEURONS
-  | APIJobType.INFER_NUCLEI
-  | APIJobType.INFER_MITOCHONDRIA;
-
-export type StartAIJobModalState = ModalJobTypes | "invisible";
+export type StartAiJobDrawerState =
+  | "open_ai_training"
+  | "open_ai_inference"
+  | "open_ai_alignment"
+  | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
 export const jobNameToImagePath = {
@@ -22,13 +21,16 @@ export const jobNameToImagePath = {
 // The following minimal bounding box extents and mean voxel sizes are based on the default model that is used for neuron and mitochondria segmentation.
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
-export const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
-  infer_neurons: [16, 16, 4],
-  infer_nuclei: [4, 4, 4],
-  infer_mitochondria: [4, 4, 4],
+export const MIN_BBOX_EXTENT: Record<
+  APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA,
+  Vector3
+> = {
+  [APIJobType.INFER_NEURONS]: [16, 16, 4],
+  [APIJobType.INFER_NUCLEI]: [4, 4, 4],
+  [APIJobType.INFER_MITOCHONDRIA]: [4, 4, 4],
 };
 
-export const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
+export const MEAN_VX_SIZE: Partial<Record<APIJobType, Vector3>> = {
   infer_neurons: [7.96, 7.96, 31.2],
   infer_nuclei: [179.84, 179.84, 224.0],
   // "infer_mitochondria" infers on finest available mag

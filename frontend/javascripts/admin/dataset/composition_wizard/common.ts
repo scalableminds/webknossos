@@ -45,7 +45,7 @@ export async function tryToFetchDatasetsByNameOrId(
       ...names.map((name) =>
         getDatasetLegacy(activeUser?.organization || "", name, null, { showErrorToast: false }),
       ),
-      ...ids.map((id) => getDataset(id, null, { showErrorToast: false })),
+      ...ids.map((id) => getDataset(id, null, null, { showErrorToast: false })),
     ]);
     return datasets;
   } catch (exception) {

@@ -144,6 +144,7 @@ describe("Dataset API (E2E)", () => {
     const rawDataResponse = await fetch(`/data/zarr/${datasetId}/segmentation/1/0.1.1.0`, {
       headers: new Headers(),
     });
+    expect(rawDataResponse.ok).toBe(true);
     const bytes = await rawDataResponse.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
     expect(base64).toMatchSnapshot();
@@ -166,6 +167,8 @@ describe("Dataset API (E2E)", () => {
         headers: new Headers(),
       },
     );
+
+    expect(rawDataResponse.ok).toBe(true);
     const bytes = await rawDataResponse.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes.slice(-128))));
     expect(base64).toMatchSnapshot();

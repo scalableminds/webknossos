@@ -6,6 +6,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.io.ByteArrayInputStream
@@ -39,7 +40,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
 
-    val objName = path.toUri.getPath.tail
+    val objName = path.toRemoteUriUnsafe.getPath.tail
     val blobId = BlobId.of(bucket, objName)
     for {
       bytes <- try {
@@ -79,12 +80,12 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     tryo({
-      val objName = path.toUri.getPath.tail
+      val objName = path.toRemoteUriUnsafe.getPath.tail
       val blobs =
         storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
       val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems)
       val paths = subDirectories.map(dirBlob =>
-        new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
+        new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
       paths
     }).toFox
 
@@ -96,13 +97,15 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     case _                           => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(uri).append(credential).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(uri).append(credential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object GoogleCloudDataVault {
   def create(remoteSourceDescriptor: RemoteSourceDescriptor): GoogleCloudDataVault = {
     val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new GoogleCloudDataVault(remoteSourceDescriptor.uri, credential)
+    new GoogleCloudDataVault(remoteSourceDescriptor.toUriUnsafe, credential)
   }
 }

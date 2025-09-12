@@ -19,8 +19,8 @@ exports[`Dataset API (E2E) > Dataset Paths 1`] = `
             1,
             1,
           ],
-          "path": "Organization_X/test-dataset/segmentation/1/",
-          "realPath": "Organization_X/test-dataset/segmentation/1/",
+          "path": "Organization_X/test-dataset/segmentation/1",
+          "realPath": "Organization_X/test-dataset/segmentation/1",
         },
       },
     ],
@@ -56,9 +56,20 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
             "width": 100,
           },
           "category": "segmentation",
+          "dataFormat": "wkw",
           "elementClass": "uint32",
           "largestSegmentId": 176,
+          "mags": [
+            {
+              "mag": [
+                1,
+                1,
+                1,
+              ],
+            },
+          ],
           "name": "segmentation",
+          "numChannels": 1,
           "resolutions": [
             [
               1,
@@ -98,7 +109,6 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "metadata": [],
     "name": "test-dataset",
     "owningOrganization": "Organization_X",
-    "publication": null,
     "sortingKey": "sortingKey",
     "tags": [],
     "usedStorageBytes": 0,

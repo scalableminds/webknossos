@@ -30,7 +30,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   def clearCache(predicate: AgglomerateFileKey => Boolean): Int = agglomerateFileCache.clear(predicate)
 
   private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader =
-    HDF5FactoryProvider.get.openForReading(agglomerateFileKey.attachment.localPath.toFile)
+    HDF5FactoryProvider.get.openForReading(agglomerateFileKey.attachment.localPathUnsafe.toFile)
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
     tryo {
@@ -263,7 +263,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
   private def openAsCachedAgglomerateFile(agglomerateFileKey: AgglomerateFileKey) = {
     val cumsumPath =
-      agglomerateFileKey.attachment.localPath.getParent.resolve(cumsumFileName)
+      agglomerateFileKey.attachment.localPathUnsafe.getParent.resolve(cumsumFileName)
 
     val reader = openHdf5(agglomerateFileKey)
 

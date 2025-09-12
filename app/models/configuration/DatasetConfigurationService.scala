@@ -3,9 +3,9 @@ package models.configuration
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 
 import javax.inject.Inject
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO, DatasetService, ThumbnailCachingService}
@@ -35,9 +35,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
-
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
-
       datasetLayers <- datasetService.allLayersFor(dataset)
       layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset)
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
@@ -73,14 +71,13 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     datasetConfiguration + ("layers" -> Json.toJson(layerConfigurations))
 
   private def getAllLayerDefaultViewConfigForDataset(
-      dataLayers: List[DataLayerLike]): Map[String, LayerViewConfiguration] =
+      dataLayers: List[StaticLayer]): Map[String, LayerViewConfiguration] =
     dataLayers.flatMap(dl => dl.defaultViewConfiguration.map(c => (dl.name, c))).toMap
 
-  private def getAllLayerAdminViewConfigForDataset(
-      dataLayers: List[DataLayerLike]): Map[String, LayerViewConfiguration] =
+  private def getAllLayerAdminViewConfigForDataset(dataLayers: List[StaticLayer]): Map[String, LayerViewConfiguration] =
     dataLayers.flatMap(dl => dl.adminViewConfiguration.map(c => (dl.name, c))).toMap
 
-  private def getLayerConfigurations(datasetLayers: List[DataLayerLike],
+  private def getLayerConfigurations(datasetLayers: List[StaticLayer],
                                      requestedVolumeIds: List[String],
                                      dataset: Dataset,
                                      userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {

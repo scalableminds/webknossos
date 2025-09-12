@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.controllers.MergedFromIdsRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, TracingSelector}
@@ -158,7 +158,7 @@ class WKRemoteTracingStoreClient(
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None,
                              datasetId: ObjectId,
-                             dataSource: DataSourceLike): Fox[Unit] = {
+                             dataSource: UsableDataSource): Fox[Unit] = {
     annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
@@ -202,7 +202,7 @@ class WKRemoteTracingStoreClient(
   def mergeVolumeTracingsByContents(newAnnotationId: ObjectId,
                                     newTracingId: String,
                                     tracings: VolumeTracings,
-                                    dataSource: DataSourceLike,
+                                    dataSource: UsableDataSource,
                                     datasetId: ObjectId,
                                     initialData: List[Option[File]]): Fox[Unit] = {
     logger.debug(
@@ -229,7 +229,7 @@ class WKRemoteTracingStoreClient(
                         tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: DataSourceLike,
+                        dataSource: UsableDataSource,
                         datasetId: ObjectId): Fox[Unit] = {
     logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
     annotationDataSourceTemporaryStore.store(annotationId, dataSource, datasetId)

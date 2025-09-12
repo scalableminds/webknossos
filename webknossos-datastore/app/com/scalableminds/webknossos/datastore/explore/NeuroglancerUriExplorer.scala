@@ -6,9 +6,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json._
 
 import java.net.URI
@@ -21,10 +22,10 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   override def name: String = "Neuroglancer URI Explorer"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
-      uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
+      uriFragment <- tryo(remotePath.toRemoteUriUnsafe.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
       spec <- JsonHelper.parseAs[JsObject](uriFragment).toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
       _ <- Fox.fromBool(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
@@ -35,15 +36,15 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def exploreNeuroglancerLayer(layerSpec: JsValue)(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- JsonHelper.as[JsObject](layerSpec).toFox
       source <- JsonHelper.as[JsString](obj \ "source").toFox
       layerType = new URI(source.value).getScheme
-      sourceURI = new URI(source.value.substring(f"$layerType://".length))
       name <- JsonHelper.as[JsString](obj \ "name").toFox
-      remoteSourceDescriptor = RemoteSourceDescriptor(sourceURI, None)
+      upath <- UPath.fromString(source.value.substring(f"$layerType://".length)).toFox
+      remoteSourceDescriptor = RemoteSourceDescriptor(upath, None)
       remotePath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)
@@ -51,7 +52,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield layerWithViewConfiguration
 
   private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
@@ -80,8 +81,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   }
 
   private def assignViewConfiguration(
-      value: List[(DataLayerWithMagLocators, VoxelSize)],
-      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      value: List[(StaticLayer, VoxelSize)],
+      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)

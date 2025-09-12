@@ -33,7 +33,7 @@ class PublicationService @Inject()(datasetService: DatasetService,
     for {
       datasets <- datasetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
       annotations <- annotationDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
-      datasetsJson <- Fox.serialCombined(datasets)(d => datasetService.publicWrites(d, None, None, None))
+      datasetsJson <- Fox.serialCombined(datasets)(d => datasetService.publicWrites(d, None))
       annotationsJson <- Fox.serialCombined(annotations) { annotation =>
         annotationService.writesWithDataset(annotation)
       }

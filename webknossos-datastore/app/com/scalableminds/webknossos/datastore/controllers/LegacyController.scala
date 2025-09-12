@@ -10,8 +10,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, GenericDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -39,9 +38,13 @@ class LegacyController @Inject()(
     with Zarr3OutputHelper
     with MissingBucketHeaders {
 
-  // BINARY DATA ROUTES
-
   override def allowRemoteOrigin: Boolean = true
+
+  def reserveManualUploadV10: Action[AnyContent] =
+    Action.async { implicit request =>
+      Fox.failure(
+        "Reserving manual uploads via datastore route /datasets/reserveManualUpload is no longer available in this WEBKNOSSOS server version. This is an exception to the listed API compatibility. Please use a client version that supports API version 11 or newer.")
+    }
 
   def requestViaWebknossosV9(
       organizationId: String,
@@ -440,11 +443,11 @@ class LegacyController @Inject()(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
         organizationId)
       dataSource match {
-        case GenericDataSource(_, _, _, _) =>
+        case UsableDataSource(_, _, _, _, _) =>
           for {
             _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))
-        case UnusableDataSource(_, status, _, _) =>
+        case UnusableDataSource(_, _, status, _, _) =>
           Fox.failure(s"Dataset not found in DB or in directory: $status, cannot reload.") ~> NOT_FOUND
       }
     }
@@ -458,7 +461,8 @@ class LegacyController @Inject()(
             case Some(datasetId) =>
               // Dataset is present in DB
               for {
-                dataSourceOpt: Option[DataSource] <- Fox.fromFuture(datasetCache.getById(datasetId).toFutureOption)
+                dataSourceOpt: Option[UsableDataSource] <- Fox.fromFuture(
+                  datasetCache.getById(datasetId).toFutureOption)
                 // The dataset may be unusable (in which case dataSourceOpt will be None)
                 r <- dataSourceOpt match {
                   case Some(_) =>

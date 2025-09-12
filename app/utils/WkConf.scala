@@ -112,7 +112,13 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
+
+    object Datasets {
+      val manualUploadPrefixes: Option[Seq[String]] =
+        getOptional[Seq[String]]("webKnossos.datasets.manualUploadPrefixes")
+      val manualUploadInfix: Option[String] = getOptional[String]("webKnossos.datasets.manualUploadInfix")
+    }
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }
 
   object SingleSignOn {
@@ -151,6 +157,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
+    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
   }
 
   object Tracingstore {

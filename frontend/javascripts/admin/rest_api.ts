@@ -151,7 +151,11 @@ export async function loginUser(formValues: {
 }
 
 export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout");
+  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+}
+
+export async function logoutUserEverywhere(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {
@@ -1882,7 +1886,7 @@ window.setMaintenance = setMaintenance;
 // receives too many parameters, since this doesn't play well with the saga typings.
 type MeshRequest = {
   // The position is in voxels in mag 1
-  position: Vector3;
+  positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
@@ -1901,8 +1905,15 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
-    meshRequest;
+  const {
+    positionWithPadding,
+    additionalCoordinates,
+    cubeSize,
+    mappingName,
+    scaleFactor,
+    mag,
+    ...rest
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -1915,7 +1926,7 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
+          position: positionWithPadding, // position is in mag1
           additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)

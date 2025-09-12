@@ -31,7 +31,7 @@ object MovieResolutionSetting extends ExtendedEnumeration {
 }
 
 object CameraPositionSetting extends ExtendedEnumeration {
-  val MOVING, STATIC_XZ, STATIC_YZ = Value
+  val MOVING, STATIC_ISOMETRIC, STATIC_XY, STATIC_XZ, STATIC_YZ = Value
 }
 
 case class AnimationJobOptions(
@@ -202,7 +202,10 @@ class JobController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String): Action[AnyContent] =
+  def runInferNucleiJob(datasetId: ObjectId,
+                        layerName: String,
+                        newDatasetName: String,
+                        invertColorLayer: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -220,7 +223,8 @@ class JobController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
             "layer_name" -> layerName,
-            "new_dataset_name" -> newDatasetName
+            "new_dataset_name" -> newDatasetName,
+            "invert_color_layer" -> invertColorLayer
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -237,7 +241,8 @@ class JobController @Inject()(jobDAO: JobDAO,
                          evalUseSparseTracing: Option[Boolean],
                          evalMaxEdgeLength: Option[Double],
                          evalSparseTubeThresholdNm: Option[Double],
-                         evalMinMergerPathLengthNm: Option[Double]): Action[AnyContent] =
+                         evalMinMergerPathLengthNm: Option[Double],
+                         invertColorLayer: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -267,6 +272,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "eval_max_edge_length" -> evalMaxEdgeLength,
             "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
             "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
+            "invert_color_layer" -> invertColorLayer
           )
           creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
           jobAsJs <- jobService.submitPaidJob(command,
@@ -372,7 +378,6 @@ class JobController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.exportTiff.notAllowed.organization" ~> FORBIDDEN
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
@@ -490,7 +495,6 @@ class JobController @Inject()(jobDAO: JobDAO,
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {

@@ -205,8 +205,16 @@ function CreateAnnotationButton() {
   const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
     AsyncButton,
   );
+
   return (
-    <>
+    <div
+      onKeyDownCapture={(e: React.KeyboardEvent) => {
+        // Prevent closing the modal upon pressing some keys.
+        if (e.ctrlKey || e.metaKey || e.key === "AltGraph" || e.getModifierState("AltGraph")) {
+          e.stopPropagation();
+        }
+      }}
+    >
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
@@ -231,7 +239,7 @@ function CreateAnnotationButton() {
           setSelectedSegmentationLayerName={setSelectedLayerName}
         />
       </Modal>
-    </>
+    </div>
   );
 }
 

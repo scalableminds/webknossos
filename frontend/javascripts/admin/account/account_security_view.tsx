@@ -1,6 +1,6 @@
 import { EditOutlined, LockOutlined } from "@ant-design/icons";
-import { changePassword, logoutUser } from "admin/rest_api";
-import { Alert, Button, Col, Form, Input, Row, Space } from "antd";
+import { changePassword, logoutUserEverywhere } from "admin/rest_api";
+import { Alert, App, Button, Col, Form, Input, Row, Space } from "antd";
 import features from "features";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -8,31 +8,32 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
 import Store from "viewer/store";
-import { SettingsCard } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
 import PasskeysView from "../auth/passkeys_view";
+import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function AccountPasswordView() {
+function AccountSecurityView() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const modal = App.useApp();
+  const confirm = modal.modal.confirm;
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
-  function onFinish(formValues: Record<string, any>) {
-    changePassword(formValues)
-      .then(async () => {
-        Toast.success(messages["auth.reset_pw_confirmation"]);
-        await logoutUser();
-        Store.dispatch(logoutUserAction());
-        navigate("/auth/login");
-      })
-      .catch((error) => {
-        console.error("Password change failed:", error);
-        Toast.error("Failed to change password. Please try again.");
-      });
+  async function onFinish(formValues: Record<string, any>) {
+    try {
+      await changePassword(formValues);
+      Toast.success(messages["auth.reset_pw_confirmation"]);
+      await logoutUserEverywhere();
+      Store.dispatch(logoutUserAction());
+      navigate("/auth/login");
+    } catch (error) {
+      console.error("Password change failed:", error);
+      Toast.error("Failed to change password. Please try again.");
+    }
   }
 
   function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {
@@ -153,31 +154,67 @@ function AccountPasswordView() {
     );
   }
 
+  const handleLogoutEverywhere = () => {
+    confirm({
+      title: "Confirm Logout",
+      content: <p>Are you sure you want to log out on all devices?</p>,
+      onOk: handleLogout,
+    });
+  };
+  const securityItems: SettingsCardProps[] = [
+    {
+      title: "Password",
+      content: getPasswordComponent(),
+      action: (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<EditOutlined />}
+          size="small"
+          onClick={handleResetPassword}
+        />
+      ),
+    },
+    {
+      title: "Log out everywhere",
+      content: (
+        <Button type="default" onClick={handleLogoutEverywhere}>
+          Log out on all devices
+        </Button>
+      ),
+    },
+  ];
+
   function handleResetPassword() {
     setResetPasswordVisible(!isResetPasswordVisible);
+  }
+
+  async function handleLogout() {
+    logoutUserEverywhere()
+      .then(() => {
+        Store.dispatch(logoutUserAction());
+        navigate("/auth/login");
+      })
+      .catch((error) => {
+        Toast.error("Failed to log out. See console for more details");
+        console.error("Logout failed:", error);
+      });
   }
 
   const { passkeysEnabled } = features();
 
   return (
     <div>
-      <SettingsTitle title="Password" description="Manage and update your password" />
+      <SettingsTitle
+        title="Security"
+        description="Manage your password and logins across devices"
+      />
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-        <Col span={12}>
-          <SettingsCard
-            title="Password"
-            content={getPasswordComponent()}
-            action={
-              <Button
-                type="default"
-                shape="circle"
-                icon={<EditOutlined />}
-                size="small"
-                onClick={handleResetPassword}
-              />
-            }
-          />
-        </Col>
+        {securityItems.map((item) => (
+          <Col span={12} key={item.title}>
+            <SettingsCard title={item.title} content={item.content} action={item.action} />
+          </Col>
+        ))}
       </Row>
 
       {passkeysEnabled && (
@@ -194,4 +231,4 @@ function AccountPasswordView() {
   );
 }
 
-export default AccountPasswordView;
+export default AccountSecurityView;

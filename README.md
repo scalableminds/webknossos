@@ -7,7 +7,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/open_source/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)

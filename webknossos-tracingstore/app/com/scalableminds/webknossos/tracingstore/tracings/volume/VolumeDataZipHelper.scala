@@ -1,25 +1,23 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormatHelper, WKWFile}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   IntCompressionSetting,
   StringCompressionSetting
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWFile
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.IOUtils
 
+import java.io.{File, FileOutputStream, InputStream}
 import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -175,9 +173,9 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
   private lazy val compressor =
     new BloscCompressor(
       Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
+        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
         BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
+        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
         BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
         BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
       ))

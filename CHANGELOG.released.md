@@ -7,6 +7,69 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.09.0](https://github.com/scalableminds/webknossos/releases/tag/25.09.0) - 2025-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.1...25.09.0)
+
+### Highlights
+- Added the possibility to rotate the planes in ortho view. While rotated, volume annotation is disabled. [#8614](https://github.com/scalableminds/webknossos/pull/8614)
+- Implement Authentication with Passkeys. [#8393](https://github.com/scalableminds/webknossos/pull/8393)
+- Added support for training and running AI instance segmentation models from WK UI. [#8849](https://github.com/scalableminds/webknossos/pull/8849)
+
+### Added
+- Implement Authentication with Passkeys. [#8393](https://github.com/scalableminds/webknossos/pull/8393)
+- Added the possibility to rotate the planes in ortho view. While rotated, volume annotation is disabled. [#8614](https://github.com/scalableminds/webknossos/pull/8614)
+- A user can now update the email address of their account by themselves. [#8671](https://github.com/scalableminds/webknossos/pull/8671)
+- The dashboard dataset search now supports searching for dataset ids. [#8791](https://github.com/scalableminds/webknossos/pull/8791)
+- Added the config option `features.registerToDefaultOrgaEnabled` (default true) to allow admins to disable the normal registration flow to the default organization. If it is false, SSO or invites are required. [#8807](https://github.com/scalableminds/webknossos/pull/8807)
+- Editable mapping (aka supervoxel proofreading) annotations can now be downloaded and the edited edges are included in a zarr3-based format. Note that re-upload is not yet implemented. [#8816](https://github.com/scalableminds/webknossos/pull/8816)
+- Added support for training and running AI instance segmentation models from WK UI. [#8849](https://github.com/scalableminds/webknossos/pull/8849)
+- Added support for the layersToLink format as the webknossos-libs currently send it (datasetId as datasetName) [#8861](https://github.com/scalableminds/webknossos/pull/8861)
+- Added the config option `silhouette.cookieAuthenticator.sameSite` to control the relevant cookie header in order to allow iframe usage if desired for a particular WEBKNOSSOS instance. [#8862](https://github.com/scalableminds/webknossos/pull/8862)
+- Updated backend dependencies for improved stability and performance. [#8863](https://github.com/scalableminds/webknossos/pull/8863)
+- Add tracingstore route to export agglomerate graph as protobuf, to be used by the python client. [#8872](https://github.com/scalableminds/webknossos/pull/8872)
+
+### Changed
+- Before starting a neuron segmentation with `Evaluation Settings` enabled, it is checked that a useful bounding box was selected and that some skeletons exist within the annotation, preventing the job from failing. [#8678](https://github.com/scalableminds/webknossos/pull/8678)
+- A new directory is no longer created for new remote or composed datasets. [#8708](https://github.com/scalableminds/webknossos/pull/8708)
+- Refactored dataset settings and child tabs as React functional components. [#8719](https://github.com/scalableminds/webknossos/pull/8719)
+- Updated the UI of the dataset settings to be more accessible. [#8732](https://github.com/scalableminds/webknossos/pull/8732)
+- Updated React Router from v5.x to v6.x. [#8739](https://github.com/scalableminds/webknossos/pull/8739)
+- The backend can now return the update actions of an annotation per version in a truncated format to avoid too large responses. This does not impact restoring versions of annotations. [#8757](https://github.com/scalableminds/webknossos/pull/8757)
+- Changed that the d/f switching setting no longer affects movements other than moving via the d/f keyboard shortcuts. [#8786](https://github.com/scalableminds/webknossos/pull/8786)
+- Explicitly scanning datasets on disk is now faster for multi-organization setups. [#8791](https://github.com/scalableminds/webknossos/pull/8791)
+- Integrated "Change Email" functionality into Account Settings [#8840](https://github.com/scalableminds/webknossos/pull/8840)
+- When adding a new dataset from UI modal, the organization's default team is now automatically pre-selected for dataset access permissions. [#8847](https://github.com/scalableminds/webknossos/pull/8847)
+- Zarr streaming a volume annotation will now respond with errors (500) if the underlying data encountered errors. [#8853](https://github.com/scalableminds/webknossos/pull/8853)
+- datasource-properties.jsons with wkwResolutions now do not need the cubeLength parameter anymore. [#8854](https://github.com/scalableminds/webknossos/pull/8854)
+- Added protection against server outages by limiting the number of update actions in an annotation update transaction to 1000000. [#8866](https://github.com/scalableminds/webknossos/pull/8866)
+- Remove left over occurrence of `SELECT *` statement in backend. Added assertions to CI to ensure that the `SELECT *` statement is not used in the backend. [#8867](https://github.com/scalableminds/webknossos/pull/8867)
+
+### Fixed
+- Fixed that the skeleton tab was not always reflecting the active tree. This makes it easier to navigate between comments and trees, for example. [#8689](https://github.com/scalableminds/webknossos/pull/8689)
+- Reject bucket request responses with unexpected size and try to reload those buckets automatically. [#8776](https://github.com/scalableminds/webknossos/pull/8776)
+- Fixed a bug where moving folders in the dashboard would sometimes fail with an SQL error. [#8793](https://github.com/scalableminds/webknossos/pull/8793)
+- Fixed loading meshes for remote neuroglancer datasets if they need credentials. [#8795](https://github.com/scalableminds/webknossos/pull/8795)
+- Fixed a bug where reading large zarr3 layer attachments would sometimes fail for some values due to an integer overflow. [#8798](https://github.com/scalableminds/webknossos/pull/8798)
+- Fixed a bug where the zarr.json included in volume annotation zarr downloads would miss the compression codec even though the chunks were compressed. [#8800](https://github.com/scalableminds/webknossos/pull/8800)
+- When renaming skeletons or skeleton groups, it is now possible to select a part of the name. [#8801](https://github.com/scalableminds/webknossos/pull/8801)
+- The view to change ones email address is now available in the top right dropdown menu of the navbar. [#8806](https://github.com/scalableminds/webknossos/pull/8806)
+- In transformed datasets, the natively rendered layer is now encoded in the sharing link. This prevents jumping to a different position when opening the link. [#8809](https://github.com/scalableminds/webknossos/pull/8809)
+- Fixed viewing a dataset zoomed far out which has rotations configured in the dataset settings Data Source tab. [#8819](https://github.com/scalableminds/webknossos/pull/8819)
+- Fixed that the floodfilling tool in 2D mode and without a bounding box restriction was only filling a slice of the selected area. [#8828](https://github.com/scalableminds/webknossos/pull/8828)
+- Fixed a bug that impacted some proofreading interactions when e.g. splitting an agglomerate. [#8830](https://github.com/scalableminds/webknossos/pull/8830)
+- Fixed a bug where hdf5 attachments explicitly mentioned in the datasource-properties.json would not be readable if they have an absolute path but no `file://` prefix. [#8832](https://github.com/scalableminds/webknossos/pull/8832)
+- Fixed a bug where layer attachments with relative paths would not be read correctly. [#8834](https://github.com/scalableminds/webknossos/pull/8834)
+- Fix loading segment statistics like segment volume and segment bounding box for N-Dimensional datasets and annotations. [#8837](https://github.com/scalableminds/webknossos/pull/8837)
+- WK crashing when changing the color of an empty segment group. [#8868](https://github.com/scalableminds/webknossos/pull/8868)
+
+### Removed
+- An administrator of the organization can no longer update a users email address. This has to be done by the user themselves. [#8671](https://github.com/scalableminds/webknossos/pull/8671)
+
+### Breaking Changes
+- Datasets are now referenced by their ID instead of the combination of the organization and the directory name. [#8708](https://github.com/scalableminds/webknossos/pull/8708)
+- Newly uploaded datasets do not use the `wkwResolutions` property anymore, but instead use `mags` like imported remote datasets. [#8708](https://github.com/scalableminds/webknossos/pull/8708)
+- Interacting with newly created datasets requires libraries to support API version of 10 or higher. [#8708](https://github.com/scalableminds/webknossos/pull/8708)
+
 ## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
 [Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
 

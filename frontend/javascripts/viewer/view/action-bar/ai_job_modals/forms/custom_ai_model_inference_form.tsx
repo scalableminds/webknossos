@@ -19,6 +19,7 @@ import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
 export function CustomAiModelInferenceForm() {
   const dataset = useWkSelector((state) => state.dataset);
+  const datasetConfiguration = useWkSelector((state) => state.datasetConfiguration);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
@@ -54,6 +55,7 @@ export function CustomAiModelInferenceForm() {
 
       const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
       const maybeAnnotationId = isViewMode ? {} : { annotationId };
+      const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
 
       const commonInferenceArgs: BaseModelInferenceParameters = {
         ...maybeAnnotationId,
@@ -63,6 +65,7 @@ export function CustomAiModelInferenceForm() {
         organizationId: dataset.owningOrganization,
         colorLayerName: colorLayer.name,
         boundingBox,
+        invertColorLayer: layerConfiguration.isInverted,
         newDatasetName: newDatasetName,
       };
 
@@ -74,7 +77,7 @@ export function CustomAiModelInferenceForm() {
       }
       return runNeuronModelInferenceWithAiModelJob(commonInferenceArgs);
     },
-    [dataset, isViewMode, annotationId, isInstanceModelSelected],
+    [dataset, isViewMode, annotationId, isInstanceModelSelected, datasetConfiguration],
   );
 
   const handleOnSelect = useCallback(

@@ -1,6 +1,7 @@
 import {
   APIAiModelCategory,
   type AiModelTrainingAnnotationSpecification,
+  getUnversionedAnnotationInformation,
   runInstanceModelTraining,
   runNeuronTraining,
 } from "admin/rest_api";
@@ -10,15 +11,20 @@ import every from "lodash/every";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType } from "types/api_types";
+import {
+  type APIAnnotation,
+  type APIDataset,
+  APIJobType,
+} from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
-import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
+import type { UserBoundingBox } from "viewer/store";
 import type { AiTrainingTask } from "./ai_training_model_selector";
 
 export interface AiTrainingAnnotationSelection {
-  annotation: StoreAnnotation;
+  annotation: APIAnnotation;
+  dataset: APIDataset;
   imageDataLayer?: string;
   groundTruthLayer?: string;
   magnification?: Vector3;
@@ -40,6 +46,7 @@ interface AiTrainingJobContextType {
   setMaxDistanceNm: (dist: number) => void;
 
   selectedAnnotations: AiTrainingAnnotationSelection[];
+  setSelectedAnnotations: React.Dispatch<React.SetStateAction<AiTrainingAnnotationSelection[]>>;
   handleSelectionChange: (
     annotationId: string,
     newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
@@ -64,30 +71,44 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
 
   const dispatch = useDispatch();
 
-  const annotation = useWkSelector((state) => state.annotation);
+  const currentAnnotation = useWkSelector((state) => state.annotation);
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const currentDataset = useWkSelector((state) => state.dataset);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Initialize only once
   useEffect(() => {
-    // Initialize with current annotation if nothing is selected
-    if (userBoundingBoxes && selectedAnnotations.length === 0) {
-      setSelectedAnnotations([
-        {
-          annotation: annotation,
-          userBoundingBoxes: userBoundingBoxes,
-        },
-      ]);
+    if (
+      userBoundingBoxes &&
+      selectedAnnotations.length === 0 &&
+      currentAnnotation.annotationId &&
+      currentDataset
+    ) {
+      const init = async () => {
+        try {
+          const fullAnnotation = await getUnversionedAnnotationInformation(
+            currentAnnotation.annotationId,
+          );
+          setSelectedAnnotations([
+            {
+              annotation: fullAnnotation,
+              userBoundingBoxes: userBoundingBoxes,
+              dataset: currentDataset,
+            },
+          ]);
+        } catch (e) {
+          console.error("Failed to initialize AI training job with current annotation", e);
+          Toast.error("Failed to initialize with current annotation.");
+        }
+      };
+      init();
     }
-  }, [annotation, userBoundingBoxes]);
+  }, [currentAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
 
   const handleSelectionChange = useCallback(
-    (
-      annotationId: string,
-      newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
-    ) => {
+    (annotationId: string, newValues: Partial<Omit<AiTrainingAnnotationSelection, "id">>) => {
       setSelectedAnnotations((prev) => {
         const newSelections = [...prev];
-        const index = newSelections.findIndex((s) => s.annotation.annotationId === annotationId);
+        const index = newSelections.findIndex((s) => s.annotation.id === annotationId);
         if (index > -1) {
           newSelections[index] = { ...newSelections[index], ...newValues };
           // When a layer changes, reset magnification
@@ -118,7 +139,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
 
     const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = selectedAnnotations.map(
       (selection) => ({
-        annotationId: selection.annotation.annotationId,
+        annotationId: selection.annotation.id,
         colorLayerName: selection.imageDataLayer!,
         segmentationLayerName: selection.groundTruthLayer!,
         mag: selection.magnification!,
@@ -173,6 +194,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     maxDistanceNm,
     setMaxDistanceNm,
     selectedAnnotations,
+    setSelectedAnnotations,
     handleSelectionChange,
     areParametersValid,
   };

@@ -1,12 +1,13 @@
-import { FolderOutlined } from "@ant-design/icons";
-import { Alert, Card, Col, Form, Row, Select, Space, Statistic } from "antd";
+import { FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
-import { useWkSelector } from "libs/react_hooks";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import uniq from "lodash/uniq";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
+import { AnnotationsCsvInput } from "../../action-bar/ai_job_modals/components/annotations_csv_input";
+import { fetchAnnotationInfos } from "../../action-bar/ai_job_modals/components/fetch_annotation_infos";
 import {
   getColorLayers,
   getMagInfo,
@@ -50,12 +51,11 @@ const AiTrainingDataSelector = ({
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
-  const dataset = useWkSelector((state) => state.dataset);
   const { handleSelectionChange } = useAiTrainingJobContext();
 
-  const { annotation, imageDataLayer, groundTruthLayer, magnification, userBoundingBoxes } =
+  const { annotation, imageDataLayer, groundTruthLayer, magnification, userBoundingBoxes, dataset } =
     selectedAnnotation;
-  const annotationId = annotation.annotationId;
+  const annotationId = annotation.id;
 
   // Gather layer names from dataset. Omit the layers that are also present
   // in annotationLayers.
@@ -245,7 +245,55 @@ const AiTrainingDataSelector = ({
 };
 
 export const AiTrainingDataSection = () => {
-  const { selectedAnnotations } = useAiTrainingJobContext();
+  const { selectedAnnotations, setSelectedAnnotations } = useAiTrainingJobContext();
+  const [popoverVisible, setPopoverVisible] = useState(false);
+  const [csvValue, setCsvValue] = useState("");
+
+  const handleAdd = async () => {
+    const lines = csvValue
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+
+    if (lines.length === 0) {
+      setPopoverVisible(false);
+      return;
+    }
+
+    const newItems = await fetchAnnotationInfos(lines);
+
+    const newSelections: AiTrainingAnnotationSelection[] = newItems.map((item) => ({
+      annotation: item.annotation,
+      dataset: item.dataset,
+      userBoundingBoxes: item.userBoundingBoxes,
+    }));
+
+    setSelectedAnnotations((prev) => {
+      const existingIds = new Set(prev.map((p) => p.annotation.id));
+      const uniqueNewSelections = newSelections.filter((s) => !existingIds.has(s.annotation.id));
+      return [...prev, ...uniqueNewSelections];
+    });
+
+    setPopoverVisible(false);
+    setCsvValue("");
+  };
+
+  const handleCancel = () => {
+    setPopoverVisible(false);
+    setCsvValue("");
+  };
+
+  const popoverContent = (
+    <div style={{ width: 300 }}>
+      <AnnotationsCsvInput value={csvValue} onChange={setCsvValue} />
+      <Space style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+        <Button onClick={handleCancel}>Cancel</Button>
+        <Button type="primary" onClick={handleAdd}>
+          Add
+        </Button>
+      </Space>
+    </div>
+  );
 
   return (
     <Card
@@ -255,12 +303,23 @@ export const AiTrainingDataSection = () => {
           Training Data
         </Space>
       }
+      extra={
+        <Popover
+          content={popoverContent}
+          title="Add annotations by ID or URL"
+          trigger="click"
+          open={popoverVisible}
+          onOpenChange={setPopoverVisible}
+        >
+          <Button icon={<PlusOutlined />} shape="circle" />
+        </Popover>
+      }
     >
       <Form layout="vertical">
         {selectedAnnotations.map((selectedAnnotation) => {
           return (
             <AiTrainingDataSelector
-              key={selectedAnnotation.annotation.annotationId}
+              key={selectedAnnotation.annotation.id}
               selectedAnnotation={selectedAnnotation}
             />
           );

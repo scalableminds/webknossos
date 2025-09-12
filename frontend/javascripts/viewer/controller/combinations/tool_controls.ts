@@ -1090,7 +1090,7 @@ export class ProofreadToolController {
         // No valid ids were found, ignore action.
         return;
       }
-      const partition = event.shiftKey ? 1 : 2;
+      const partition = event.shiftKey ? 2 : 1;
       Store.dispatch(toggleSegmentInPartitionAction(unmappedSegmentId, partition, mappedSegmentId));
       return;
     }

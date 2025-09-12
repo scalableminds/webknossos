@@ -134,6 +134,7 @@ function* watchForSaveConflicts(): Saga<void> {
       annotationId,
       versionOnClient + 1,
       undefined,
+      false,
       true,
     );
 

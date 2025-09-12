@@ -412,8 +412,8 @@ trait DataLayerWithMagLocators extends DataLayer {
              defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
              magMapping: MagLocator => MagLocator = m => m,
              name: String = this.name,
-             coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations)
-    : DataLayerWithMagLocators =
+             coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations,
+             attachmentMapping: DatasetLayerAttachments => DatasetLayerAttachments = a => a): DataLayerWithMagLocators =
     this match {
       case l: ZarrDataLayer =>
         l.copy(
@@ -421,7 +421,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: ZarrSegmentationLayer =>
         l.copy(
@@ -429,7 +430,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: N5DataLayer =>
         l.copy(
@@ -437,7 +439,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: N5SegmentationLayer =>
         l.copy(
@@ -445,7 +448,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: PrecomputedDataLayer =>
         l.copy(
@@ -453,7 +457,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: PrecomputedSegmentationLayer =>
         l.copy(
@@ -461,7 +466,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: Zarr3DataLayer =>
         l.copy(
@@ -469,7 +475,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: Zarr3SegmentationLayer =>
         l.copy(
@@ -477,7 +484,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: WKWDataLayer =>
         l.copy(
@@ -485,7 +493,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: WKWSegmentationLayer =>
         l.copy(
@@ -493,7 +502,8 @@ trait DataLayerWithMagLocators extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = l.mags.map(magMapping),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case _ => throw new Exception("Encountered unsupported layer format")
     }

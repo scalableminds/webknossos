@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -66,6 +67,7 @@ class DataSourceController @Inject()(
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
+    dataStoreConfig: DataStoreConfig,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -101,10 +103,12 @@ class DataSourceController @Inject()(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
+          shouldBeVirtual = dataStoreConfig.Datastore.S3Upload.enabled
+          reserveUploadInformation = request.body.copy(isVirtual = Some(shouldBeVirtual))
           _ <- if (!isKnownUpload) {
-            (dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed")
+            (dsRemoteWebknossosClient.reserveDataSourceUpload(reserveUploadInformation) ?~> "dataset.upload.validation.failed")
               .flatMap(reserveUploadAdditionalInfo =>
-                uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo))
+                uploadService.reserveUpload(reserveUploadInformation, reserveUploadAdditionalInfo))
           } else Fox.successful(())
         } yield Ok
       }
@@ -140,7 +144,8 @@ class DataSourceController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId,
-              Some(request.body.requireUniqueName)
+              Some(request.body.requireUniqueName),
+              Some(false)
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield

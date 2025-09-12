@@ -143,11 +143,7 @@ Samplecountry
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
   )
   private val defaultDataStore =
-    DataStore(conf.Datastore.name,
-              conf.Http.uri,
-              conf.Datastore.publicUri.getOrElse(conf.Http.uri),
-              conf.Datastore.key,
-              reportUsedStorageEnabled = true) // TODOM: Undo this
+    DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
   private val defaultAiModel = AiModel(
     ObjectId("66544a56d20000af0e42ba0f"),
     defaultOrganization._id,

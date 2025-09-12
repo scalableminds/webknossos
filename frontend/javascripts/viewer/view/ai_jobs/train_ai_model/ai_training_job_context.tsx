@@ -9,13 +9,10 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import every from "lodash/every";
 import type React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import {
-  type APIAnnotation,
-  type APIDataset,
-  APIJobType,
-} from "types/api_types";
+import { type APIAnnotation, type APIDataset, APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
@@ -75,34 +72,28 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   const userBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const currentDataset = useWkSelector((state) => state.dataset);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Initialize only once
+  const { data: initialFullAnnotation } = useQuery({
+    queryKey: ["initialAnnotation", currentAnnotation.annotationId],
+    queryFn: () => getUnversionedAnnotationInformation(currentAnnotation.annotationId!),
+    enabled: !!currentAnnotation.annotationId,
+  });
+
   useEffect(() => {
     if (
+      initialFullAnnotation &&
       userBoundingBoxes &&
-      selectedAnnotations.length === 0 &&
-      currentAnnotation.annotationId &&
-      currentDataset
+      currentDataset &&
+      selectedAnnotations.length === 0
     ) {
-      const init = async () => {
-        try {
-          const fullAnnotation = await getUnversionedAnnotationInformation(
-            currentAnnotation.annotationId,
-          );
-          setSelectedAnnotations([
-            {
-              annotation: fullAnnotation,
-              userBoundingBoxes: userBoundingBoxes,
-              dataset: currentDataset,
-            },
-          ]);
-        } catch (e) {
-          console.error("Failed to initialize AI training job with current annotation", e);
-          Toast.error("Failed to initialize with current annotation.");
-        }
-      };
-      init();
+      setSelectedAnnotations([
+        {
+          annotation: initialFullAnnotation,
+          userBoundingBoxes: userBoundingBoxes,
+          dataset: currentDataset,
+        },
+      ]);
     }
-  }, [currentAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
+  }, [initialFullAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
 
   const handleSelectionChange = useCallback(
     (annotationId: string, newValues: Partial<Omit<AiTrainingAnnotationSelection, "id">>) => {

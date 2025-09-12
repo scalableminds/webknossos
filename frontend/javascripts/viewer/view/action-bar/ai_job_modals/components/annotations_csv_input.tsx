@@ -27,12 +27,11 @@ export function AnnotationsCsvInput({
       label="Annotations or Tasks CSV"
       hasFeedback
       initialValue={value}
-      rules={[{ validator }]
-      }
+      rules={[{ validator }]}
     >
       <TextArea
         className="input-monospace"
-        placeholder="taskOrAnnotationIdOrUrl"
+        placeholder="Enter a annotation/task ID or WEBKNOSSOS URL"
         autoSize={{
           minRows: 6,
         }}

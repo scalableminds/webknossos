@@ -1,21 +1,117 @@
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
-import type { DataTexture } from "three";
+import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "viewer/geometries/materials/node_shader";
-import { SkeletonShader } from "viewer/shaders/skeleton_shader";
+import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
+import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import shaderEditor from "viewer/model/helpers/shader_editor";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "viewer/shaders/thin_plate_spline.glsl";
 import { Store } from "viewer/singletons";
 
-class EdgeShader extends SkeletonShader {
+class EdgeShader {
+  material: RawShaderMaterial;
+  uniforms: Uniforms = {};
+  scaledTps: TPS3D | null = null;
+  oldVertexShaderCode: string | null = null;
+  storePropertyUnsubscribers: Array<() => void> = [];
+
   constructor(treeColorTexture: DataTexture) {
-    super("edge", treeColorTexture);
+    this.setupUniforms(treeColorTexture);
+    this.material = new RawShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
+      transparent: true,
+      glslVersion: GLSL3,
+    });
+    shaderEditor.addMaterial("edge", this.material);
   }
 
-  protected setupCustomUniforms(): void {
-    // EdgeShader only needs the base skeleton uniforms
-    // No additional custom uniforms required
+  setupUniforms(treeColorTexture: DataTexture): void {
+    this.uniforms = {
+      activeTreeId: {
+        value: Number.NaN,
+      },
+      treeColors: {
+        value: treeColorTexture,
+      },
+    };
+
+    const dataset = Store.getState().dataset;
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    this.uniforms["transform"] = {
+      value: M4x4.transpose(
+        getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName).affineMatrix,
+      ),
+    };
+
+    const { additionalCoordinates } = Store.getState().flycam;
+
+    _.each(additionalCoordinates, (_val, idx) => {
+      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+        value: 0,
+      };
+    });
+
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          _.each(additionalCoordinates, (coord, idx) => {
+            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
+          });
+        },
+        true,
+      ),
+
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformsForSkeletonLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (skeletonTransforms) => {
+          const transforms = skeletonTransforms;
+          const { affineMatrix } = transforms;
+
+          const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+
+          if (scaledTps) {
+            this.scaledTps = scaledTps;
+          } else {
+            this.scaledTps = null;
+          }
+
+          this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
+
+          this.recomputeVertexShader();
+        },
+      ),
+    ];
+  }
+
+  getMaterial(): RawShaderMaterial {
+    return this.material;
+  }
+
+  recomputeVertexShader() {
+    const newVertexShaderCode = this.getVertexShader();
+
+    // Comparing to this.material.vertexShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldVertexShaderCode != null && this.oldVertexShaderCode === newVertexShaderCode) {
+      return;
+    }
+
+    this.oldVertexShaderCode = newVertexShaderCode;
+    this.material.vertexShader = newVertexShaderCode;
+    this.material.needsUpdate = true;
   }
 
   getVertexShader(): string {
@@ -106,6 +202,18 @@ void main()
 {
     fragColor = vec4(color, alpha);
 }`;
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+
+    // Avoid memory leaks on tear down.
+    for (const key of Object.keys(this.uniforms)) {
+      this.uniforms[key].value = null;
+    }
   }
 }
 

@@ -1,9 +1,14 @@
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
-import type { DataTexture } from "three";
+import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
+import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
+import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import shaderEditor from "viewer/model/helpers/shader_editor";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
-import { SkeletonShader } from "viewer/shaders/skeleton_shader";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -19,16 +24,29 @@ export const NodeTypes = {
 export const COLOR_TEXTURE_WIDTH = 1024.0;
 export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
-class NodeShader extends SkeletonShader {
+class NodeShader {
+  material: RawShaderMaterial;
+  uniforms: Uniforms = {};
+  scaledTps: TPS3D | null = null;
+  oldVertexShaderCode: string | null = null;
+  storePropertyUnsubscribers: Array<() => void> = [];
+
   constructor(treeColorTexture: DataTexture) {
-    super("node", treeColorTexture);
+    this.setupUniforms(treeColorTexture);
+    this.material = new RawShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
+      transparent: true,
+      glslVersion: GLSL3,
+    });
+    shaderEditor.addMaterial("node", this.material);
   }
 
-  protected setupCustomUniforms(): void {
+  setupUniforms(treeColorTexture: DataTexture): void {
     const state = Store.getState();
-    
-    // Add node-specific uniforms to the existing base uniforms
-    Object.assign(this.uniforms, {
+    const { additionalCoordinates } = state.flycam;
+    this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor
         // which respects the aspect ratio. However, this value is merely used
@@ -48,8 +66,14 @@ class NodeShader extends SkeletonShader {
       overrideNodeRadius: {
         value: true,
       },
+      activeTreeId: {
+        value: Number.NaN,
+      },
       activeNodeId: {
         value: Number.NaN,
+      },
+      treeColors: {
+        value: treeColorTexture,
       },
       isPicking: {
         value: 0,
@@ -63,23 +87,91 @@ class NodeShader extends SkeletonShader {
       viewMode: {
         value: 0,
       },
+    };
+
+    _.each(additionalCoordinates, (_val, idx) => {
+      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+        value: 0,
+      };
     });
 
-    // Set up additional listeners for node-specific properties
-    this.addStoreListener(
-      (_state) => _state.userConfiguration.highlightCommentedNodes,
-      (highlightCommentedNodes) => {
-        this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
-      },
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (_state) => _state.userConfiguration.highlightCommentedNodes,
+        (highlightCommentedNodes) => {
+          this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.temporaryConfiguration.viewMode,
+        (viewMode) => {
+          this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          _.each(additionalCoordinates, (coord, idx) => {
+            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
+          });
+        },
+        true,
+      ),
+    ];
 
-    this.addStoreListener(
-      (storeState) => storeState.temporaryConfiguration.viewMode,
-      (viewMode) => {
-        this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
-      },
-      true,
+    const dataset = Store.getState().dataset;
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+
+    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+    this.uniforms["transform"] = {
+      value: M4x4.transpose(affineMatrix),
+    };
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformsForSkeletonLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (skeletonTransforms) => {
+          const transforms = skeletonTransforms;
+          const { affineMatrix } = transforms;
+
+          const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+
+          if (scaledTps) {
+            this.scaledTps = scaledTps;
+          } else {
+            this.scaledTps = null;
+          }
+
+          this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
+
+          this.recomputeVertexShader();
+        },
+      ),
     );
+  }
+
+  getMaterial(): RawShaderMaterial {
+    return this.material;
+  }
+
+  recomputeVertexShader() {
+    const newVertexShaderCode = this.getVertexShader();
+
+    // Comparing to this.material.vertexShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldVertexShaderCode != null && this.oldVertexShaderCode === newVertexShaderCode) {
+      return;
+    }
+
+    this.oldVertexShaderCode = newVertexShaderCode;
+    this.material.vertexShader = newVertexShaderCode;
+    this.material.needsUpdate = true;
   }
 
   getVertexShader(): string {
@@ -334,6 +426,18 @@ void main()
       }
     }
 }`;
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+
+    // Avoid memory leaks on tear down.
+    for (const key of Object.keys(this.uniforms)) {
+      this.uniforms[key].value = null;
+    }
   }
 }
 

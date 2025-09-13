@@ -38,6 +38,11 @@ import {
   scaleToFloat,
   transDim,
 } from "./utils.glsl";
+import {
+  generateLayerShaderFunction,
+  generateLayerUniforms,
+  type LayerShaderParams,
+} from "./layer_shaders";
 
 export type Params = {
   globalLayerCount: number;
@@ -81,21 +86,8 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
-<% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
-  uniform float <%= name %>_data_texture_width;
-  uniform float <%= name %>_alpha;
-  uniform float <%= name %>_gammaCorrectionValue;
-  uniform float <%= name %>_unrenderable;
-  uniform mat4 <%= name %>_transform;
-  uniform bool <%= name %>_has_transform;
-<% }) %>
-
-<% _.each(colorLayerNames, function(name) { %>
-  uniform vec3 <%= name %>_color;
-  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_min;
-  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_max;
-  uniform float <%= name %>_is_inverted;
+<% _.each(layerUniforms, function(uniformCode) { %>
+<%= uniformCode %>
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -161,8 +153,64 @@ const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 `;
 
+function generateLayerShaderParams(params: Params): LayerShaderParams[] {
+  const result: LayerShaderParams[] = [];
+  
+  // Generate params for color layers
+  params.colorLayerNames.forEach((layerName, index) => {
+    const textureInfo = params.textureLayerInfos[layerName];
+    if (textureInfo) {
+      result.push({
+        layerName: textureInfo.unsanitizedName,
+        sanitizedLayerName: layerName,
+        elementClass: textureInfo.elementClass,
+        packingDegree: textureInfo.packingDegree,
+        isColor: true,
+        isSegmentation: false,
+        layerIndex: index,
+        dataTextureCount: textureInfo.dataTextureCount,
+        isSigned: textureInfo.isSigned,
+        glslPrefix: textureInfo.glslPrefix,
+        hasTransform: true, // Will be set based on actual transform state
+        hasTpsTransform: params.tpsTransformPerLayer[layerName] != null,
+      });
+    }
+  });
+  
+  // Generate params for segmentation layers
+  params.segmentationLayerNames.forEach((layerName, index) => {
+    const textureInfo = params.textureLayerInfos[layerName];
+    if (textureInfo) {
+      result.push({
+        layerName: textureInfo.unsanitizedName,
+        sanitizedLayerName: layerName,
+        elementClass: textureInfo.elementClass,
+        packingDegree: textureInfo.packingDegree,
+        isColor: false,
+        isSegmentation: true,
+        layerIndex: index,
+        dataTextureCount: textureInfo.dataTextureCount,
+        isSigned: textureInfo.isSigned,
+        glslPrefix: textureInfo.glslPrefix,
+        hasTransform: true, // Will be set based on actual transform state
+        hasTpsTransform: params.tpsTransformPerLayer[layerName] != null,
+      });
+    }
+  });
+  
+  return result;
+}
+
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
+  const layerShaderParams = generateLayerShaderParams(params);
+  
+  // Generate uniforms for each layer
+  const layerUniforms = layerShaderParams.map(generateLayerUniforms);
+  
+  // Generate layer shader functions
+  const layerShaderFunctions = layerShaderParams.map(generateLayerShaderFunction);
+
   return _.template(`
 precision highp float;
 
@@ -204,6 +252,10 @@ ${compileShader(
   scaleToFloat,
 )}
 
+<% _.each(layerShaderFunctions, function(shaderFunction) { %>
+<%= shaderFunction %>
+<% }) %>
+
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
 
@@ -217,193 +269,37 @@ void main() {
     gl_FragColor = vec4(bucketPosition, activeMagIdx) / 255.;
     return;
   }
+
   vec4 data_color = vec4(0.0);
 
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    uint <%= segmentationName %>_id_low = 0u;
-    uint <%= segmentationName %>_id_high = 0u;
-    uint <%= segmentationName %>_unmapped_id_low = 0u;
-    uint <%= segmentationName %>_unmapped_id_high = 0u;
-    float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
-
-    // If the opacity is > 0, the segment id for the current voxel is read.
-    // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
-    // is read.
-    if (<%= segmentationName %>_effective_alpha > 0.) {
-      vec4[2] unmapped_segment_id;
-      vec4[2] segment_id;
-      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
-
-      <%
-        const vec4ToSomeIntFn =
-          textureLayerInfos[segmentationName].elementClass.endsWith("int64")
-            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
-            : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
-      %>
-
-      // Temporary vars to which vec4ToSomeIntFn will write
-      highp uint hpv_low;
-      highp uint hpv_high;
-
-      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
-      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
-
-      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
-      <%= segmentationName %>_id_low = uint(hpv_low);
-      <%= segmentationName %>_id_high = uint(hpv_high);
-    }
-
+  // Process color layers using individual layer shaders
+  <% _.each(orderedColorLayerNames, function(name) { %>
+    data_color = processLayer_<%= name %>(worldCoordUVW, data_color);
   <% }) %>
 
-  // Get Color Value(s)
-  vec3 color_value  = vec3(0.0);
-  <% _.each(orderedColorLayerNames, function(name, layerIndex) { %>
-    <% const color_layer_index = colorLayerNames.indexOf(name); %>
-    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
-    if (<%= name %>_effective_alpha > 0.) {
-      // Get grayscale value for <%= textureLayerInfos[name].unsanitizedName %>
-
-      <% if (tpsTransformPerLayer[name] != null) { %>
-        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
-      <% } else { %>
-        vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
-      <% } %>
-
-      if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
-        MaybeFilteredColor maybe_filtered_color =
-          getMaybeFilteredColorOrFallback(
-            <%= formatNumberAsGLSLFloat(color_layer_index) %>,
-            <%= name %>_data_texture_width,
-            <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
-            transformedCoordUVW,
-            false,
-            fallbackGray,
-            !<%= name %>_has_transform
-          );
-        bool used_fallback = maybe_filtered_color.used_fallback_color;
-        float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-
-        // color_value is usually between 0 and 1.
-        color_value = maybe_filtered_color.color.rgb;
-
-        <% const elementClass = textureLayerInfos[name].elementClass %>
-        <% if (elementClass.endsWith("int32")) { %>
-          // Handle 32-bit color layers
-
-          <% if (elementClass === "int32") { %>
-            ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
-            // Combine bytes into an Int32 (assuming little-endian order)
-            highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
-
-            int min = <%= name %>_min;
-            int max = <%= name %>_max;
-            hpv = clamp(hpv, min, max);
-
-            color_value = vec3(
-                scaleIntToFloat(hpv, min, max)
-            );
-          <% } else { %>
-            // Scale from [0,1] to [0,255] so that we can convert to an uint
-            // below.
-            uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
-            highp uint hpv =
-              uint(four_bytes.a) * uint(pow(256., 3.))
-              + uint(four_bytes.b) * uint(pow(256., 2.))
-              + uint(four_bytes.g) * 256u
-              + uint(four_bytes.r);
-
-            uint min = <%= name %>_min;
-            uint max = <%= name %>_max;
-            hpv = clamp(hpv, min, max);
-            color_value = vec3(
-              float(hpv - min) / (float(max - min) + is_max_and_min_equal)
-            );
-          <% } %>
-
-        <% } else { %>
-          <% if (elementClass == "uint24") { %>
-            color_value *= 255.;
-          <% } else { %>
-            color_value = vec3(color_value.x);
-          <% } %>
-
-          // Keep the color in bounds of min and max
-          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-          // Scale the color value according to the histogram settings.
-          color_value = vec3(
-            scaleFloatToFloat(color_value, <%= name %>_min, <%= name %>_max)
-          );
-        <% } %>
-
-        color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
-
-        // Maybe invert the color using the inverting_factor
-        color_value = abs(color_value - <%= name %>_is_inverted);
-        // Catch the case where max == min would causes a NaN value and use black as a fallback color.
-        color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
-        color_value = color_value * <%= name %>_alpha * <%= name %>_color;
-        // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
-        // so the fallback color does not cover other colors.
-        vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
-        // Calculating the cover color for the current layer in case blendMode == 1.0.
-        vec4 additive_color = blendLayersAdditive(data_color, layer_color);
-        // Calculating the cover color for the current layer in case blendMode == 0.0.
-        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
-        // Choose color depending on blendMode.
-        data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
-      }
-    }
-  <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);
   data_color.a = 1.0;
 
   gl_FragColor = data_color;
 
+  // Process segmentation layers using individual layer shaders
   <% if (hasSegmentation) { %>
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+    <% _.each(segmentationLayerNames, function(segmentationName) { %>
+      gl_FragColor = processSegmentationLayer_<%= segmentationName %>(worldCoordUVW, gl_FragColor);
+    <% }) %>
 
-    // Color map (<= to fight rounding mistakes)
-    if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
-      // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;
-      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == <%= segmentationName %>_unmapped_id_low
-        && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
-         && activeCellIdHigh == <%= segmentationName %>_id_high;
-      float alphaIncrement = getSegmentationAlphaIncrement(
-        <%= segmentationName %>_alpha,
-        isHoveredSegment,
-        isHoveredUnmappedSegment,
-        isActiveCell
-      );
-
-      vec4 segmentColor = convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low);
-      gl_FragColor = vec4(mix(
-        data_color.rgb,
-        segmentColor.rgb,
-        <%= segmentationName %>_alpha  * segmentColor.a + alphaIncrement
-      ), 1.0);
-    }
-    vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
+    // This will only have an effect in proofreading mode
+    vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
+    gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
     gl_FragColor.a = 1.0;
-
-  <% }) %>
-
-  // This will only have an effect in proofreading mode
-  vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
-  gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
-  gl_FragColor.a = 1.0;
-
   <% } %>
 }
 
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
+    layerUniforms,
+    layerShaderFunctions,
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

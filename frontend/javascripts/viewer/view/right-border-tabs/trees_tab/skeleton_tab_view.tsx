@@ -103,7 +103,8 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
-  isDownloading: boolean;
+  isDownloadingNML: boolean;
+  isDownloadingCSV: boolean;
   selectedTreeIds: Array<number>;
   groupToDelete: number | null | undefined;
 };
@@ -319,7 +320,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     super(props);
     this.state = {
       isUploading: false,
-      isDownloading: false,
+      isDownloadingNML: false,
+      isDownloadingCSV: false,
       selectedTreeIds:
         props.skeletonTracing?.activeTreeId != null ? [props.skeletonTracing.activeTreeId] : [],
       groupToDelete: null,
@@ -535,7 +537,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     this.setState({
-      isDownloading: true,
+      isDownloadingNML: true,
     });
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
@@ -548,7 +550,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       applyTransforms,
     );
     this.setState({
-      isDownloading: false,
+      isDownloadingNML: false,
     });
     const blob = new Blob([nml], {
       type: "text/plain;charset=utf-8",
@@ -564,7 +566,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     this.setState({
-      isDownloading: true,
+      isDownloadingCSV: true,
     });
 
     try {
@@ -582,7 +584,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       console.error(e);
     } finally {
       this.setState({
-        isDownloading: false,
+        isDownloadingCSV: false,
       });
     }
   };
@@ -878,8 +880,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
 
-    if (this.state.isDownloading) {
+    if (this.state.isDownloadingNML) {
       title = "Preparing NML";
+    } else if (this.state.isDownloadingCSV) {
+      title = "Preparing CSV";
     } else if (this.state.isUploading) {
       title = "Importing NML";
     }
@@ -890,6 +894,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isAnnotationLockedByUser,
       isOwner,
     );
+    const isDownloading = this.state.isDownloadingCSV || this.state.isDownloadingNML;
 
     return (
       <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
@@ -898,7 +903,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             !isVisibleInDom ? null : (
               <React.Fragment>
                 <Modal
-                  open={this.state.isDownloading || this.state.isUploading}
+                  open={isDownloading || this.state.isUploading}
                   title={title}
                   closable={false}
                   footer={null}

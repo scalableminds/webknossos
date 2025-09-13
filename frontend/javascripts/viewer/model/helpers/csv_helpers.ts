@@ -12,9 +12,8 @@ export function getTreeNodesAsCSV(
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
-  const csvHeader = [
-    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment",
-  ];
+  const csvHeader =
+    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment";
   const { annotationId } = state.annotation;
 
   const csvLines = visibleTrees.flatMap((tree) =>
@@ -48,7 +47,7 @@ export function getTreeNodesAsCSV(
       return transformToCSVRow(row);
     }),
   );
-  return [csvHeader.join(","), ...csvLines].join("\n");
+  return [csvHeader, ...csvLines].join("\n");
 }
 
 export function getTreeEdgesAsCSV(annotationId: string, tracing: SkeletonTracing) {
@@ -56,14 +55,14 @@ export function getTreeEdgesAsCSV(annotationId: string, tracing: SkeletonTracing
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
-  const csvHeader = ["annotationId,treeId,sourceNode,targetNode"];
+  const csvHeader = "annotationId,treeId,sourceNode,targetNode";
   const csvLines = visibleTrees.flatMap((tree) =>
     tree.edges.map((edge) => {
       const row = [annotationId, tree.treeId, edge.source, edge.target];
       return transformToCSVRow(row);
     }),
   );
-  return [csvHeader.join(","), ...csvLines].join("\n");
+  return [csvHeader, ...csvLines].join("\n");
 }
 
 export function transformToCSVRow(dataRow: any[]) {

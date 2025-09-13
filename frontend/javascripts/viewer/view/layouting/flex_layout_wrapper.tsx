@@ -43,7 +43,7 @@ import {
   getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { getLayoutConfig, layoutEmitter, layoutEvents } from "./layout_persistence";
+import { LayoutEvents, getLayoutConfig, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 
@@ -118,28 +118,28 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   addListeners() {
     this.unbindListeners.push(
-      layoutEmitter.on(layoutEvents.resetLayout, () => {
+      layoutEmitter.on(LayoutEvents.resetLayout, () => {
         resetDefaultLayouts();
         this.rebuildLayout();
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on(layoutEvents.toggleBorder, (side) => {
+      layoutEmitter.on(LayoutEvents.toggleBorder, (side) => {
         this.toggleBorder(side);
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on(layoutEvents.toggleMaximize, () => {
+      layoutEmitter.on(LayoutEvents.toggleMaximize, () => {
         this.toggleMaximize();
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on(layoutEvents.showSkeletonTab, () => {
+      layoutEmitter.on(LayoutEvents.showSkeletonTab, () => {
         this.openRightBorderTabById(BorderTabs.SkeletonTabView);
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on(layoutEvents.showSegmentsTab, () => {
+      layoutEmitter.on(LayoutEvents.showSegmentsTab, () => {
         this.openRightBorderTabById(BorderTabs.SegmentsView);
       }),
     );

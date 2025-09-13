@@ -36,10 +36,10 @@ import {
   recalculateInputCatcherSizes,
 } from "viewer/view/input_catcher";
 import {
+  LayoutEvents,
   getLastActiveLayout,
   getLayoutConfig,
   layoutEmitter,
-  layoutEvents,
   setActiveLayout,
   storeLayoutConfig,
 } from "viewer/view/layouting/layout_persistence";
@@ -187,10 +187,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // Simply assume mobile.
       const { left, right } = Store.getState().uiInformation.borderOpenStatus;
       if (left) {
-        layoutEmitter.emit(layoutEvents.toggleBorder, "left");
+        layoutEmitter.emit(LayoutEvents.toggleBorder, "left");
       }
       if (right) {
-        layoutEmitter.emit(layoutEvents.toggleBorder, "right");
+        layoutEmitter.emit(LayoutEvents.toggleBorder, "right");
       }
       // Immediately show mobile buttons
       this.handleTouch();

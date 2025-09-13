@@ -4,17 +4,17 @@ import { Button, Card, DatePicker, Select, Spin, Table, type TimeRangePickerProp
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
-import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
+import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 const { RangePicker } = DatePicker;
@@ -85,52 +85,39 @@ function TimeTrackingOverview() {
       selectedState,
       projectIds,
     );
-    const timeEntriesAsString = timeSpans
-      .map((row) => {
-        return transformToCSVRow([
-          row.userId,
-          row.userEmail,
-          row.datasetOrganization,
-          row.datasetName,
-          row.annotationId,
-          row.annotationState,
-          row.timeSpanCreated,
-          Math.ceil(row.timeSpanTimeMillis / 1000),
-          row.taskId,
-          row.projectName,
-          row.taskTypeId,
-          row.taskTypeSummary,
-        ]);
-      })
-      .join("\n"); // rows starting on new lines
-    const csv = [TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString].join("\n");
+    const timeEntriesAsString = timeSpans.map((row) =>
+      transformToCSVRow([
+        row.userId,
+        row.userEmail,
+        row.datasetOrganization,
+        row.datasetName,
+        row.annotationId,
+        row.annotationState,
+        row.timeSpanCreated,
+        Math.ceil(row.timeSpanTimeMillis / 1000),
+        row.taskId,
+        row.projectName,
+        row.taskTypeId,
+        row.taskTypeSummary,
+      ]),
+    );
     const filename = `timetracking-user-export-${userId}.csv`;
-    const blob = new Blob([csv], {
-      type: "text/plain;charset=utf-8",
-    });
-    saveAs(blob, filename);
+    saveAsCSV(TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString, filename);
   };
 
   const exportToCSV = () => {
     if (filteredTimeEntries?.length === null) {
       return;
     }
-    const timeEntriesAsString = filteredTimeEntries
-      .map((row) => {
-        return transformToCSVRow([
-          row.user.id,
-          row.user.firstName,
-          row.user.lastName,
-          Math.round(row.timeMillis / 1000),
-        ]);
-      })
-      .join("\n");
-    const csv = [TIMETRACKING_CSV_HEADER_PER_USER, timeEntriesAsString].join("\n");
-    const filename = "timetracking-export.csv";
-    const blob = new Blob([csv], {
-      type: "text/plain;charset=utf-8",
+    const timeEntries = filteredTimeEntries.map((row) => {
+      return transformToCSVRow([
+        row.user.id,
+        row.user.firstName,
+        row.user.lastName,
+        Math.round(row.timeMillis / 1000),
+      ]);
     });
-    saveAs(blob, filename);
+    saveAsCSV(TIMETRACKING_CSV_HEADER_PER_USER, timeEntries, "timetracking-export.csv");
   };
 
   const rangePresets: TimeRangePickerProps["presets"] = [

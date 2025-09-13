@@ -54,6 +54,7 @@ import getMainFragmentShader, {
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
+import { ShaderOperations } from "viewer/shaders/shader_operations";
 import { Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration } from "viewer/store";
 import Store from "viewer/store";
@@ -992,30 +993,23 @@ class PlaneMaterialFactory {
     if (this.material == null) {
       return;
     }
+    
     const [newFragmentShaderCode, additionalUniforms] = this.getFragmentShaderWithUniforms();
-    for (const [name, value] of Object.entries(additionalUniforms)) {
-      this.uniforms[name] = value;
-    }
+    ShaderOperations.updateUniforms(this.uniforms, additionalUniforms);
 
     const newVertexShaderCode = this.getVertexShader();
 
-    // Comparing to this.material.fragmentShader does not work. The code seems
-    // to be modified by a third party.
-    if (
-      this.oldFragmentShaderCode != null &&
-      this.oldFragmentShaderCode === newFragmentShaderCode &&
-      this.oldVertexShaderCode != null &&
-      this.oldVertexShaderCode === newVertexShaderCode
-    ) {
-      return;
-    }
+    const updateResult = ShaderOperations.updateShaderCode(
+      this.material,
+      newFragmentShaderCode,
+      newVertexShaderCode,
+      this.oldFragmentShaderCode,
+      this.oldVertexShaderCode,
+      () => app.vent.emit("rerender"),
+    );
 
-    this.oldFragmentShaderCode = newFragmentShaderCode;
-    this.oldVertexShaderCode = newVertexShaderCode;
-    this.material.fragmentShader = newFragmentShaderCode;
-    this.material.vertexShader = newVertexShaderCode;
-    this.material.needsUpdate = true;
-    app.vent.emit("rerender");
+    this.oldFragmentShaderCode = updateResult.oldFragmentShaderCode;
+    this.oldVertexShaderCode = updateResult.oldVertexShaderCode;
   }, RECOMPILATION_THROTTLE_TIME);
 
   getLayersToRender(

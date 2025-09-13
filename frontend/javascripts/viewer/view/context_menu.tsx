@@ -621,17 +621,15 @@ function getNodeContextMenuOptions({
       onClick: () => Store.dispatch(setActiveNodeAction(clickedNodeId)),
       label: "Select this Node",
     },
-    activeTreeId === clickedTree.treeId
-      ? {
-          key: "focus-tree",
-          onClick: () => {
-            Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
-            Store.dispatch(focusTreeAction(clickedTree));
-            layoutEmitter.emit(layoutEvents.showSkeletonTab);
-          },
-          label: "Focus Tree in Skeleton Tab",
-        }
-      : null,
+    {
+      key: "focus-tree",
+      onClick: () => {
+        Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
+        Store.dispatch(focusTreeAction(clickedTree));
+        layoutEmitter.emit(layoutEvents.showSkeletonTab);
+      },
+      label: "Focus Tree in Skeleton Tab",
+    },
     getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
     ...(allowUpdate
       ? [

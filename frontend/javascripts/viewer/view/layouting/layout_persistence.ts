@@ -13,13 +13,13 @@ import getDefaultLayouts, {
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 export const layoutEmitter = createNanoEvents();
-export const layoutEvents = {
-  resetLayout: "resetLayout",
-  toggleBorder: "toggleBorder",
-  toggleMaximize: "toggleMaximize",
-  showSkeletonTab: "showSkeletonTab",
-  showSegmentsTab: "showSegmentsTab",
-};
+export enum layoutEvents {
+  resetLayout = "RESET_LAYOUT",
+  toggleBorder = "TOGGLE_BORDER",
+  toggleMaximize = "TOGGLE_MAXIMIZE",
+  showSkeletonTab = "SHOW_SKELETON_TAB",
+  showSegmentsTab = "SHOW_SEGMENTS_TAB",
+}
 // For debugging purposes:
 const disableLayoutPersistance = false;
 const localStorageKeys = {

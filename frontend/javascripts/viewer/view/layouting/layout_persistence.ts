@@ -13,6 +13,13 @@ import getDefaultLayouts, {
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 export const layoutEmitter = createNanoEvents();
+export enum LayoutEvents {
+  resetLayout = "RESET_LAYOUT",
+  toggleBorder = "TOGGLE_BORDER",
+  toggleMaximize = "TOGGLE_MAXIMIZE",
+  showSkeletonTab = "SHOW_SKELETON_TAB",
+  showSegmentsTab = "SHOW_SEGMENTS_TAB",
+}
 // For debugging purposes:
 const disableLayoutPersistance = false;
 const localStorageKeys = {
@@ -92,7 +99,7 @@ function persistLayoutConfigs() {
   );
 }
 
-layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
+layoutEmitter.on(LayoutEvents.resetLayout, (layoutKey: LayoutKeys, activeLayout: string) => {
   storeLayoutConfig(getDefaultLayouts()[layoutKey], layoutKey, activeLayout);
 });
 
@@ -185,8 +192,9 @@ export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
   } else {
-    throw new Error(`Active layout could not be set. The given layout ${layoutKey}  with name ${activeLayout}
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      was not found in layouts for ${mapLayoutKeysToLanguage[layoutKey]}.`);
+    throw new Error(
+      `Active layout could not be set. The given layout ${layoutKey} with name 
+      ${activeLayout} was not found in layouts for ${mapLayoutKeysToLanguage[layoutKey]}.`,
+    );
   }
 }

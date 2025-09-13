@@ -16,6 +16,11 @@ import {
 } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
+  type LayerShaderParams,
+  generateLayerShaderFunction,
+  generateLayerUniforms,
+} from "./layer_shaders";
+import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
@@ -38,11 +43,6 @@ import {
   scaleToFloat,
   transDim,
 } from "./utils.glsl";
-import {
-  generateLayerShaderFunction,
-  generateLayerUniforms,
-  type LayerShaderParams,
-} from "./layer_shaders";
 
 export type Params = {
   globalLayerCount: number;
@@ -155,7 +155,7 @@ const float bucketSize = <%= bucketSize %>;
 
 function generateLayerShaderParams(params: Params): LayerShaderParams[] {
   const result: LayerShaderParams[] = [];
-  
+
   // Generate params for color layers
   params.colorLayerNames.forEach((layerName, index) => {
     const textureInfo = params.textureLayerInfos[layerName];
@@ -176,7 +176,7 @@ function generateLayerShaderParams(params: Params): LayerShaderParams[] {
       });
     }
   });
-  
+
   // Generate params for segmentation layers
   params.segmentationLayerNames.forEach((layerName, index) => {
     const textureInfo = params.textureLayerInfos[layerName];
@@ -197,17 +197,17 @@ function generateLayerShaderParams(params: Params): LayerShaderParams[] {
       });
     }
   });
-  
+
   return result;
 }
 
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
   const layerShaderParams = generateLayerShaderParams(params);
-  
+
   // Generate uniforms for each layer
   const layerUniforms = layerShaderParams.map(generateLayerUniforms);
-  
+
   // Generate layer shader functions
   const layerShaderFunctions = layerShaderParams.map(generateLayerShaderFunction);
 

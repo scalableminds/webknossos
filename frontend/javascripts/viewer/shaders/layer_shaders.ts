@@ -1,6 +1,4 @@
-import _ from "lodash";
 import type { ElementClass } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
 import { formatNumberAsGLSLFloat, glslTypeForElementClass } from "./utils.glsl";
 
 export interface LayerShaderParams {
@@ -39,8 +37,8 @@ uniform float ${sanitizedLayerName}_is_inverted;
   }
 
   getFragmentShaderCode(): string {
-    const { sanitizedLayerName, elementClass, packingDegree, layerIndex } = this.params;
-    
+    const { sanitizedLayerName, packingDegree, layerIndex } = this.params;
+
     return `
 // Color processing for layer: ${this.params.layerName}
 vec4 processLayer_${sanitizedLayerName}(vec3 worldCoordUVW, vec4 currentColor) {
@@ -50,9 +48,10 @@ vec4 processLayer_${sanitizedLayerName}(vec3 worldCoordUVW, vec4 currentColor) {
     return currentColor;
   }
 
-  ${this.params.hasTpsTransform ? 
-    `vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_${sanitizedLayerName});` :
-    `vec3 transformedCoordUVW = transDim((${sanitizedLayerName}_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);`
+  ${
+    this.params.hasTpsTransform
+      ? `vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_${sanitizedLayerName});`
+      : `vec3 transformedCoordUVW = transDim((${sanitizedLayerName}_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);`
   }
 
   if (isOutsideOfBoundingBox(transformedCoordUVW)) {
@@ -93,7 +92,7 @@ vec4 processLayer_${sanitizedLayerName}(vec3 worldCoordUVW, vec4 currentColor) {
 
   private getElementClassProcessing(): string {
     const { sanitizedLayerName, elementClass } = this.params;
-    
+
     if (elementClass.endsWith("int32")) {
       if (elementClass === "int32") {
         return `
@@ -142,10 +141,14 @@ uniform bool ${sanitizedLayerName}_has_transform;
 
   getFragmentShaderCode(): string {
     const { sanitizedLayerName, elementClass } = this.params;
-    
+
     const vec4ToSomeIntFn = elementClass.endsWith("int64")
-      ? (this.params.isSigned ? "int64ToUint64" : "uint64ToUint64")
-      : (this.params.isSigned ? "int32ToUint64" : "uint32ToUint64");
+      ? this.params.isSigned
+        ? "int64ToUint64"
+        : "uint64ToUint64"
+      : this.params.isSigned
+        ? "int32ToUint64"
+        : "uint32ToUint64";
 
     return `
 // Segmentation processing for layer: ${this.params.layerName}

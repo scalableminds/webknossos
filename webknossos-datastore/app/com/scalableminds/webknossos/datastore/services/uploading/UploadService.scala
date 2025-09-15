@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, Directory
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
@@ -401,7 +402,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           _ = logger.info(
             s"Starting upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
           s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
-          _ <- uploadDirectoryToS3(unpackToDir, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
+          _ <- uploadDirectoryToS3(unpackToDir, dataSource, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
           _ = logger.info(
             s"Finished upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
           endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
@@ -524,11 +525,23 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def uploadDirectoryToS3(
       dataDir: Path,
+      dataSource: InboxDataSource,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
     for {
       _ <- Fox.successful(())
+      // Delete all files in the dataDir that are not at a mag path or an attachment path, since we do not need to upload them to S3.
+      filesToDelete <- getNonReferencedFiles(dataDir, dataSource)
+      _ = filesToDelete.foreach(file => {
+        logger.info(s"Deleting file $file before upload to S3.")
+        try {
+          Files.deleteIfExists(file)
+        } catch {
+          case e: Exception =>
+            logger.warn(s"Could not delete file $file before upload to S3: ${e.getMessage}")
+        }
+      })
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )
@@ -537,6 +550,26 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- Fox.fromBool(failedTransfers.isEmpty) ?~>
         s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
+
+  private def getNonReferencedFiles(dataDir: Path, dataSource: InboxDataSource): Fox[List[Path]] =
+    for {
+      usableDataSource <- dataSource.toUsable.toFox ?~> "Data source is not usable"
+      explicitPaths: Set[Path] = usableDataSource.dataLayers
+        .flatMap(layer =>
+          layer.mags.map(mag =>
+            mag.path match {
+              case Some(_) => None
+              case None    => Some(dataDir.resolve(List(layer.name, mag.mag.toMagLiteral(true)).mkString("/")))
+          }))
+        .flatten
+        .toSet
+      neededPaths = usableDataSource.dataLayers
+        .flatMap(layer => layer.allExplicitPaths)
+        .map(dataDir.resolve)
+        .toSet ++ explicitPaths
+      allFiles <- PathUtils.listFilesRecursive(dataDir, silent = true, maxDepth = 10).toFox
+      filesToDelete = allFiles.filterNot(file => neededPaths.exists(neededPath => file.startsWith(neededPath)))
+    } yield filesToDelete
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   dataSourceId: DataSourceId,

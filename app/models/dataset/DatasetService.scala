@@ -66,6 +66,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
+  def assertNewDatasetNameUnique(name: String, organizationId: String): Fox[Unit] =
+    for {
+      exists <- datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)
+      _ <- Fox.fromBool(!exists) ?~> "dataset.name.taken"
+    } yield ()
+
   def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
     for {
       isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)

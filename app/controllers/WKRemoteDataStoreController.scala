@@ -84,6 +84,8 @@ class WKRemoteDataStoreController @Inject()(
           layersToLinkWithDirectoryName <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           newDatasetId = ObjectId.generate
+          _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
+            datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
           dataset <- datasetService.createPreliminaryDataset(newDatasetId,
                                                              uploadInfo.name,
                                                              datasetService.generateDirectoryName(uploadInfo.name,

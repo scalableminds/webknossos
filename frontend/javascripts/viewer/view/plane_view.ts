@@ -273,7 +273,7 @@ class PlaneView {
         sceneController.scene.remove(this.cameras[plane]);
       }
     }
-
+    this.resizeThrottled.cancel();
     window.removeEventListener("resize", this.resizeThrottled);
 
     for (const fn of this.unsubscribeFunctions) {

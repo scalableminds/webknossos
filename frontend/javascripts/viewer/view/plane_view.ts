@@ -253,8 +253,11 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getGroundTruthLayoutRect();
-    getSceneController().renderer.setSize(width, height);
-    this.draw();
+    const sceneController = getSceneControllerOrNull();
+    if (sceneController != null) {
+      sceneController.renderer.setSize(width, height);
+      this.draw();
+    }
   };
 
   getCameras(): OrthoViewMap<OrthographicCamera> {

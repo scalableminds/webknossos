@@ -77,7 +77,8 @@ export const TrainingCreditInformation: React.FC = () => {
       ),
     0,
   );
-  const side = Math.cbrt(totalVolume);
+  // bounding box sizing needs to be integer values
+  const side = Math.round(Math.cbrt(totalVolume));
   const trainingBoundingBox: UserBoundingBoxWithoutId = {
     boundingBox: {
       min: [0, 0, 0],

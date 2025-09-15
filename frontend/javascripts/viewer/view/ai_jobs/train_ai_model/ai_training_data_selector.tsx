@@ -225,7 +225,11 @@ const AiTrainingDataSelector = ({
                 value: index,
                 label: `${m[0]}-${m[1]}-${m[2]}`,
               }))}
-              value={availableMagnifications.findIndex((m) => V3.equals(m, magnification!))}
+              value={
+                magnification
+                  ? availableMagnifications.findIndex((m) => V3.equals(m, magnification))
+                  : undefined
+              }
               onChange={(index: number) =>
                 handleSelectionChange(annotationId, {
                   magnification: availableMagnifications[index],

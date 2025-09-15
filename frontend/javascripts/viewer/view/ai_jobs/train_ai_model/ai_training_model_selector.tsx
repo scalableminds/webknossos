@@ -63,8 +63,12 @@ export const AiTrainingModelSelector: React.FC = () => {
         dataSource={trainingTasks}
         renderItem={(item) => (
           <List.Item
+            className="hoverable-list-item"
             style={{
-              border: selectedTask?.id === item.id ? "1px solid #1890ff" : "1px solid #d9d9d9",
+              border:
+                selectedTask?.id === item.id
+                  ? "1px solid var(--color-wk-blue)"
+                  : "1px solid #d9d9d9",
               borderRadius: "8px",
               marginBottom: "16px",
               padding: "16px",

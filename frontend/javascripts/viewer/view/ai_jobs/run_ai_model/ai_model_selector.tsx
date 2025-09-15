@@ -142,7 +142,10 @@ export const AiModelSelector: React.FC = () => {
         renderItem={(item) => (
           <List.Item
             style={{
-              border: selectedModel?.id === item.id ? "1px solid #1890ff" : "1px solid #d9d9d9",
+              border:
+                selectedModel?.id === item.id
+                  ? "1px solid var(--color-wk-blue)"
+                  : "1px solid #d9d9d9",
               borderRadius: "8px",
               marginBottom: "16px",
               padding: "16px",
@@ -186,6 +189,7 @@ export const AiModelSelector: React.FC = () => {
           }}
           renderItem={(item) => (
             <List.Item
+              className="hoverable-list-item"
               style={{
                 border: selectedModel?.id === item.id ? "1px solid #1890ff" : "1px solid #d9d9d9",
                 borderRadius: "8px",

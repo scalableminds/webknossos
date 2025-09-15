@@ -1,4 +1,5 @@
 import sbt.Keys.{name, sbtVersion, scalaVersion}
+import sbtbuildinfo.BuildInfoOption
 import sbtbuildinfo.BuildInfoPlugin.autoImport.*
 
 import scala.language.postfixOps
@@ -34,7 +35,6 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "version" -> webknossosVersion,
-      "datastoreApiVersion" -> "2.0",
       "certificatePublicKey" -> certificatePublicKey
     ),
     buildInfoPackage := "webknossos",
@@ -51,7 +51,6 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "version" -> webknossosVersion,
-      "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

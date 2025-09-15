@@ -28,8 +28,8 @@ import scala.concurrent.ExecutionContext
 case class LegacyReserveManualUploadInformation(
     datasetName: String,
     organization: String,
-    initialTeamIds: List[String],
-    folderId: Option[String],
+    initialTeamIds: List[ObjectId],
+    folderId: Option[ObjectId],
     requireUniqueName: Boolean = false,
 )
 object LegacyReserveManualUploadInformation {
@@ -53,12 +53,6 @@ class LegacyController @Inject()(
     with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
-
-  def reserveManualUploadV10: Action[AnyContent] =
-    Action.async { implicit request =>
-      Fox.failure(
-        "Reserving manual uploads via datastore route /datasets/reserveManualUpload is no longer available in this WEBKNOSSOS server version. This is an exception to the listed API compatibility. Please use a client version that supports API version 11 or newer.")
-    }
 
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access

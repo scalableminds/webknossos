@@ -2,7 +2,7 @@ import { Flex } from "antd";
 import { AlignmentCreditInformation } from "../credit_information";
 import { AlignmentJobContextProvider } from "./ai_alignment_job_context";
 import { AiAlignmentModelSelector } from "./ai_alignment_model_selector";
-import { AiAlignmentParameters } from "./ai_alignment_parameters";
+import { AiAlignmentSettings } from "./ai_alignment_settings";
 
 export const AiImageAlignmentJob = () => {
   return (
@@ -10,7 +10,7 @@ export const AiImageAlignmentJob = () => {
       <Flex gap={24}>
         <Flex flex="2" vertical gap={24}>
           <AiAlignmentModelSelector />
-          <AiAlignmentParameters />
+          <AiAlignmentSettings />
         </Flex>
         <Flex flex="1" vertical>
           <AlignmentCreditInformation />

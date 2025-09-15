@@ -32,7 +32,7 @@ import { BoundingBoxSelector } from "../bounding_box_selector";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
-export const AiAnalysisParameters: React.FC = () => {
+export const AiAnalysisSettings: React.FC = () => {
   const {
     selectedBoundingBox,
     setSelectedBoundingBox,
@@ -103,10 +103,11 @@ export const AiAnalysisParameters: React.FC = () => {
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <SettingOutlined style={{ color: "#1890ff" }} />
-          Analysis Parameters
+          Analysis Settings
         </Space>
       }
     >

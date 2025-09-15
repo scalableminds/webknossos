@@ -6,7 +6,7 @@ import { ShouldUseManualMatchesFormItem } from "../../action-bar/ai_job_modals/c
 
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
-export const AiAlignmentParameters: React.FC = () => {
+export const AiAlignmentSettings: React.FC = () => {
   const { newDatasetName, setNewDatasetName, shouldUseManualMatches, setShouldUseManualMatches } =
     useAlignmentJobContext();
 
@@ -26,10 +26,11 @@ export const AiAlignmentParameters: React.FC = () => {
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <SettingOutlined style={{ color: "#1890ff" }} />
-          Alignment Parameters
+          Alignment Settings
         </Space>
       }
     >

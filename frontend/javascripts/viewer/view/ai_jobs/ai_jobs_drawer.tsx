@@ -10,6 +10,7 @@ import { AiModelTrainingJob } from "./train_ai_model/ai_training_job";
 
 export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const dispatch = useDispatch();
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
 
   const handleChange = useCallback(
@@ -29,11 +30,15 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
       key: "open_ai_inference",
       children: <AiImageSegmentationJob />,
     },
-    {
-      label: "Model Training",
-      key: "open_ai_training",
-      children: <AiModelTrainingJob />,
-    },
+    ...(isSuperUser
+      ? [
+          {
+            label: "Model Training",
+            key: "open_ai_training",
+            children: <AiModelTrainingJob />,
+          },
+        ]
+      : []),
     {
       label: "Image Alignment",
       key: "open_ai_alignment",
@@ -41,9 +46,20 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     },
   ];
 
+  const activeKey =
+    !isSuperUser && ai_job_drawer_state === "open_ai_training"
+      ? "open_ai_inference"
+      : ai_job_drawer_state;
+
   return (
-    <Drawer title="AI Jobs" placement="right" width={1200} open={isOpen} onClose={handleClose}>
-      <Tabs activeKey={ai_job_drawer_state} items={items} onChange={handleChange} />
+    <Drawer
+      title="Run an AI Job"
+      placement="right"
+      width={1200}
+      open={isOpen}
+      onClose={handleClose}
+    >
+      <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
     </Drawer>
   );
 };

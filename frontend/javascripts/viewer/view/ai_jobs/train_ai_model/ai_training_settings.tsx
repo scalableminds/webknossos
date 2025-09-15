@@ -6,7 +6,7 @@ import { APIJobType } from "types/api_types";
 
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
-export const AiTrainingParameters: React.FC = () => {
+export const AiTrainingSettings: React.FC = () => {
   const {
     modelName,
     setModelName,
@@ -37,10 +37,11 @@ export const AiTrainingParameters: React.FC = () => {
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <SettingOutlined style={{ color: "#1890ff" }} />
-          Training Parameters
+          Training Settings
         </Space>
       }
     >

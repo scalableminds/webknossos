@@ -167,6 +167,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <CreditCardOutlined style={{ color: "#ddbc00" }} />

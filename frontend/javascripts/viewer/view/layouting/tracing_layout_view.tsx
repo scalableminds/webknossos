@@ -28,7 +28,9 @@ import { applyState } from "viewer/model_initialization";
 import { Store } from "viewer/singletons";
 import { Model } from "viewer/singletons";
 import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
+import type { StartAiJobDrawerState } from "viewer/view/action-bar/ai_job_modals/constants";
 import ActionBarView from "viewer/view/action_bar_view";
+import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
@@ -60,6 +62,7 @@ type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
   UITheme: Theme;
+  aIJobDrawerState: StartAiJobDrawerState;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {
@@ -408,6 +411,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   </React.Fragment>
                 ) : null}
               </div>
+              <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
+
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView />
@@ -443,6 +448,7 @@ function mapStateToProps(state: WebknossosState) {
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
     isWkReady: state.uiInformation.isWkReady,
+    aiJobDrawerState: state.uiInformation.aIJobDrawerState,
   };
 }
 

@@ -50,6 +50,7 @@ export const AiAlignmentModelSelector: React.FC = () => {
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <ExperimentOutlined style={{ color: "#1890ff" }} />

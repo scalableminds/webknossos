@@ -41,11 +41,8 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import type { StartAiJobDrawerState } from "./action-bar/ai_job_modals/constants";
 // import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
-import { AiJobsDrawer } from "./ai_jobs/ai_jobs_drawer";
-import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
@@ -64,7 +61,6 @@ type StateProps = {
   showVersionRestore: boolean;
   is2d: boolean;
   viewMode: ViewMode;
-  aiJobDrawerState: StartAiJobDrawerState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -300,17 +296,22 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
+    const isSuperUser = this.props.activeUser?.isSuperUser === true;
     const menuItems = [
       {
         key: "open_ai_inference_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      {
-        key: "open_ai_training_button",
-        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-        label: "Train AI model",
-      },
+      ...(isSuperUser
+        ? [
+            {
+              key: "open_ai_training_button",
+              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+              label: "Train AI model",
+            },
+          ]
+        : []),
       {
         key: "open_ai_alignment_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
@@ -320,18 +321,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
     return (
       <>
-        <ButtonComponent
-          key="ai-job-button"
-          onClick={() => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference"))}
-          style={{ marginLeft: 12, pointerEvents: "auto" }}
-          disabled={disabled}
-          title={tooltipText}
-          icon={<i className="fas fa-magic" />}
-        >
-          AI Analysis
-        </ButtonComponent>
         <Dropdown
-          key="ai-job-dropwn"
+          key="ai-job-drown"
           menu={{
             items: menuItems,
           }}
@@ -341,8 +332,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
             disabled={disabled}
             icon={<i className="fas fa-magic" />}
             style={{ marginLeft: 12 }}
+            title={tooltipText}
           >
-            AI Analysis 2
+            AI Analysis
           </Button>
         </Dropdown>
       </>
@@ -420,7 +412,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
       </React.Fragment>
     );
   }
@@ -433,7 +424,6 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   showVersionRestore: state.uiInformation.showVersionRestore,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
-  aiJobDrawerState: state.uiInformation.aIJobDrawerState,
 });
 
 const connector = connect(mapStateToProps);

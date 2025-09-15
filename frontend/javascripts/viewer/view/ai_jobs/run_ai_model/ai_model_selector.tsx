@@ -1,12 +1,10 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
-import { Avatar, Button, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
+import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
 import { APIJobType, type AiModel } from "types/api_types";
-import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
@@ -60,7 +58,6 @@ const mapCategoryToJobType = (
 };
 
 export const AiModelSelector: React.FC = () => {
-  const dispatch = useDispatch();
   const { selectedModel, setSelectedModel, setSelectedJobType } = useRunAiModelJobContext();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -112,15 +109,16 @@ export const AiModelSelector: React.FC = () => {
 
   const switchToTraininButton = (
     <>
-      You don't have any custom models yet.
-      <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))} type="link">
+      You don't have any custom models yet. Training custom model on your data is coming soon.
+      {/* <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))} type="link">
         Train an AI Model on your data
-      </Button>
+      </Button> */}
     </>
   );
 
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <ExperimentOutlined style={{ color: "#1890ff" }} />

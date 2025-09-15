@@ -3,6 +3,7 @@ import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic 
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
+import groupBy from "lodash/groupBy";
 import uniq from "lodash/uniq";
 import { useMemo, useState } from "react";
 import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
@@ -257,8 +258,96 @@ export const AiTrainingDataSection = () => {
   const { selectedAnnotations } = useAiTrainingJobContext();
   const [popoverVisible, setPopoverVisible] = useState(false);
 
+  const { warningDetails } = useMemo(() => {
+    if (selectedAnnotations.length === 0) {
+      return { warningDetails: null };
+    }
+
+    const allUserBBoxes = selectedAnnotations.flatMap((a) =>
+      a.userBoundingBoxes.map((b) => ({
+        ...b,
+        magnification: a.magnification,
+        annotationId: a.annotation.id,
+      })),
+    );
+
+    if (allUserBBoxes.length < 2) {
+      return { warningDetails: null };
+    }
+
+    const minDimensions = allUserBBoxes.reduce(
+      (min, { boundingBox: box, magnification }) => {
+        let bbox = new BoundingBox(box);
+        if (magnification) {
+          bbox = bbox.alignFromMag1ToMag(magnification, "shrink");
+        }
+        const size = bbox.getSize();
+        return {
+          x: Math.min(min.x, size[0]),
+          y: Math.min(min.y, size[1]),
+          z: Math.min(min.z, size[2]),
+        };
+      },
+      { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY, z: Number.POSITIVE_INFINITY },
+    );
+
+    const nonMultipleBoxes: { name: string; annotationId: string }[] = [];
+    allUserBBoxes.forEach(({ boundingBox: box, name, magnification, annotationId }) => {
+      let bbox = new BoundingBox(box);
+      if (magnification) {
+        bbox = bbox.alignFromMag1ToMag(magnification, "shrink");
+      }
+      const [width, height, depth] = bbox.getSize();
+
+      if (
+        (minDimensions.x > 0 && width % minDimensions.x !== 0) ||
+        (minDimensions.y > 0 && height % minDimensions.y !== 0) ||
+        (minDimensions.z > 0 && depth % minDimensions.z !== 0)
+      ) {
+        nonMultipleBoxes.push({ name, annotationId });
+      }
+    });
+
+    if (nonMultipleBoxes.length > 0) {
+      return {
+        warningDetails: {
+          minDimensions,
+          nonMultipleBoxes,
+        },
+      };
+    }
+
+    return { warningDetails: null };
+  }, [selectedAnnotations]);
+
+  let warningNode = null;
+  if (warningDetails) {
+    const { minDimensions, nonMultipleBoxes } = warningDetails;
+    const groupedBoxes = groupBy(nonMultipleBoxes, "annotationId");
+    warningNode = (
+      <div style={{ whiteSpace: "pre-wrap" }}>
+        {`For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions (${minDimensions.x}x${minDimensions.y}x${minDimensions.z} vx). The following boxes do not fit well:`}
+        {Object.entries(groupedBoxes).map(([annotationId, boxes]) => (
+          <div key={annotationId} style={{ marginTop: "8px" }}>
+            In annotation{" "}
+            <a href={`/annotations/${annotationId}`} target="_blank" rel="noopener noreferrer">
+              {annotationId}
+            </a>
+            :
+            <ul style={{ margin: "4px 0 0 20px", padding: 0, listStyleType: "disc" }}>
+              {boxes.map((box, index) => (
+                <li key={index}>{`'${box.name}'`}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <Card
+      type="inner"
       title={
         <Space align="center">
           <FolderOutlined style={{ color: "#1890ff" }} />
@@ -286,6 +375,9 @@ export const AiTrainingDataSection = () => {
             />
           );
         })}
+        {warningNode && (
+          <Alert message={warningNode} type="warning" showIcon style={{ marginTop: 12 }} />
+        )}
       </Form>
     </Card>
   );

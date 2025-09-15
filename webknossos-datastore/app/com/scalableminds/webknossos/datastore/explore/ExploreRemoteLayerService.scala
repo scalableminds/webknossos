@@ -108,7 +108,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     } yield layersWithVoxelSizes
 
   private def assertLocalPathInWhitelist(upath: UPath)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
+    Fox.fromBool(upath.isRemote || dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
       upath.startsWith(UPath.fromLocalPath(Path.of(whitelistEntry))))) ?~> s"Absolute path $upath in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 3

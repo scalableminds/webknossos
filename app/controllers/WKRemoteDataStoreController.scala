@@ -64,7 +64,6 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  // TODO re-test with libs and layersToLink
   def reserveDatasetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
@@ -306,12 +305,13 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          _ <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          _ <- datasetDAO.updateDataSource(datasetId,
-                                           name,
-                                           request.body.hashCode(),
-                                           request.body,
-                                           isUsable = request.body.toUsable.isDefined)(GlobalAccessContext)
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- Fox.runIf(!dataset.isVirtual)(
+            datasetDAO.updateDataSource(datasetId,
+                                        name,
+                                        request.body.hashCode(),
+                                        request.body,
+                                        isUsable = request.body.toUsable.isDefined)(GlobalAccessContext))
         } yield Ok
       }
     }

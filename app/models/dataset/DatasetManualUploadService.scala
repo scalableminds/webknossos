@@ -2,7 +2,7 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
@@ -54,7 +54,9 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
       _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveManualUpload.noLayers"
-      dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName, organization._id)
+      dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName,
+                                                  organization._id,
+                                                  parameters.pathPrefix)
       dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
       _ <- assertValidateDataSource(dataSourceWithLayersToLink).toFox
       dataStore <- findReferencedDataStore(parameters.layersToLink)
@@ -70,7 +72,8 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
         GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
-    } yield dataSourceWithPaths // Note: not returning the one with layersToLink.
+    } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
+    yield dataSourceWithPaths
 
   private def findReferencedDataStore(
       layersToLink: Seq[LinkedLayerIdentifier])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {
@@ -87,24 +90,41 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
     } yield dataStore
   }
 
-  private lazy val manualUploadPrefixBox: Box[UPath] =
-    conf.WebKnossos.Datasets.manualUploadPrefix match {
-      case Some(fromConfigStr) =>
-        for {
-          fromConfig <- UPath.fromString(fromConfigStr)
-        } yield fromConfig.toAbsolute
+  private lazy val configuredManualUploadPrefixes: Box[Seq[UPath]] =
+    conf.WebKnossos.Datasets.manualUploadPrefixes match {
+      case Some(fromConfigStrs) =>
+        (for {
+          fromConfig <- fromConfigStrs.map(UPath.fromString)
+        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config manualUploadPrefixes")
       case None =>
         for {
           datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
           fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-        } yield (fromDatastoreBaseFolder / ".manualUploads").toAbsolute
+        } yield Seq(fromDatastoreBaseFolder.toAbsolute)
     }
 
-  private def addPathsToDatasource(dataSource: UsableDataSource, organizationId: String)(
-      implicit ec: ExecutionContext): Fox[UsableDataSource] =
+  private def selectPathPrefix(requestedPrefix: Option[UPath]): Box[UPath] =
     for {
-      manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
-      datasetPath = manualUploadPrefix / organizationId / dataSource.id.directoryName
+      configuredPrefixes <- configuredManualUploadPrefixes
+      selectedPrefix <- requestedPrefix match {
+        case Some(requested) =>
+          if (configuredPrefixes.contains(requested)) Full(requested)
+          else Failure("Requested path prefix is not in list of configured ones.")
+        case None => Box(configuredPrefixes.headOption)
+      }
+    } yield selectedPrefix
+
+  private lazy val manualUploadInfoxOpt: Option[String] = conf.WebKnossos.Datasets.manualUploadInfix
+
+  private def addPathsToDatasource(
+      dataSource: UsableDataSource,
+      organizationId: String,
+      requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
+    for {
+      manualUploadPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.manualUpload.noPrefixConfigured"
+      orgaDir = manualUploadPrefix / organizationId
+      datasetParent = manualUploadInfoxOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
+      datasetPath = datasetParent / dataSource.id.directoryName
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
 
@@ -194,24 +214,15 @@ class DatasetManualUploadService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
+      isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
       existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
         dataset._id,
         parameters.layerName,
-        Some(parameters.attachmentName),
+        if (isSingletonAttachment) None else Some(parameters.attachmentName),
         parameters.attachmentType)
-      _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> "attachment.name.taken"
-      _ <- Fox.runIf(LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)) {
-        for {
-          existingSingletonAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
-            dataset._id,
-            parameters.layerName,
-            None,
-            parameters.attachmentType
-          )
-          _ <- Fox.fromBool(existingSingletonAttachmentsCount == 0) ?~> "attachment.singleton.alreadyFilled"
-        } yield ()
-      }
-      manualUploadPrefix <- manualUploadPrefixBox.toFox ?~> "dataset.manualUpload.noPrefixConfigured"
+      existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
+      _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
+      manualUploadPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.manualUpload.noPrefixConfigured"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = manualUploadPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,

@@ -38,22 +38,22 @@ class UPathTestSuite extends PlaySpec {
 
     "resolve strings correctly (remote)" in {
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey").toString == "https://hello.com/there/subkey"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey").toString == "https://example.com/key/subkey"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there/") / "subkey").toString == "https://hello.com/there/subkey"
+        (UPath.fromStringUnsafe("https://example.com/key/") / "subkey").toString == "https://example.com/key/subkey"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/").toString == "https://hello.com/there/subkey/"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/").toString == "https://example.com/key/subkey/"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "subkey/" / "subsub").toString == "https://hello.com/there/subkey/subsub"
+        (UPath.fromStringUnsafe("https://example.com/key") / "subkey/" / "subsub").toString == "https://example.com/key/subkey/subsub"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com/there") / "..").toString == "https://hello.com"
+        (UPath.fromStringUnsafe("https://example.com/key") / "..").toString == "https://example.com"
       )
       assert(
-        (UPath.fromStringUnsafe("https://hello.com") / "..").toString == "https://hello.com"
+        (UPath.fromStringUnsafe("https://example.com") / "..").toString == "https://example.com"
       )
     }
 
@@ -124,6 +124,18 @@ class UPathTestSuite extends PlaySpec {
           .fromStringUnsafe("s3://remote/elsewhere")
           .relativizedIn(UPath.fromStringUnsafe("/somewhere"))
           .toString == "s3://remote/elsewhere")
+    }
+
+    "correctly answer startsWith" in {
+      assert(UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("relative")))
+      assert(!UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("elsewhere")))
+      assert(UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/absolute")))
+      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/elsewhere")))
+      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("https://example.com")))
+      assert(
+        UPath
+          .fromStringUnsafe("https://example.com/path/somewhere")
+          .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
     }
   }
 

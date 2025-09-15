@@ -114,7 +114,9 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val operatorData: String = get[String]("webKnossos.operatorData")
 
     object Datasets {
-      val manualUploadPrefix: Option[String] = getOptional[String]("webKnossos.datasets.manualUploadPrefix")
+      val manualUploadPrefixes: Option[Seq[String]] =
+        getOptional[Seq[String]]("webKnossos.datasets.manualUploadPrefixes")
+      val manualUploadInfix: Option[String] = getOptional[String]("webKnossos.datasets.manualUploadInfix")
     }
     val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }

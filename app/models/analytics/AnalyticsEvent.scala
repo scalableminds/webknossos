@@ -230,3 +230,15 @@ case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties
   override def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(eventProperties ++ Json.obj("is_frontend_event" -> true))
 }
+
+case class WebknossosHeartbeatAnalyticsEvent(user: User, buildInfoJson: JsObject)(implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "webknossos_heartbeat"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(
+      Json.obj(
+        "build_info" -> buildInfoJson,
+      )
+    )
+
+}

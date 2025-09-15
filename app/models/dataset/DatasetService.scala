@@ -487,7 +487,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
       dataset.flatMap {
-        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(dataset) if !dataset.isVirtual =>
+          datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
+          Fox.successful(())
         case Empty => // Dataset reported but ignored (non-existing/forbidden org)
           Fox.successful(())
         case e: EmptyBox =>

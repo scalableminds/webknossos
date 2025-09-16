@@ -80,7 +80,7 @@ export const getBestFittingMagComparedToTrainingDS = (
 
 export const isBBoxTooSmall = (
   bbox: Vector3,
-  segmentationType: APIJobType,
+  segmentationType: APIJobType.INFER_INSTANCES|APIJobType.INFER_MITOCHONDRIA|APIJobType.INFER_NEURONS|APIJobType.INFER_NUCLEI,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -105,7 +105,7 @@ export const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6,
   mag: Vector3,
   colorLayer: APIDataLayer,
-  segmentationType: APIJobType,
+  segmentationType: APIJobType.INFER_INSTANCES|APIJobType.INFER_MITOCHONDRIA|APIJobType.INFER_NEURONS|APIJobType.INFER_NUCLEI,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

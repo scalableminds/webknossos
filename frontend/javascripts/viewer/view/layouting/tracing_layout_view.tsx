@@ -28,7 +28,6 @@ import { applyState } from "viewer/model_initialization";
 import { Store } from "viewer/singletons";
 import { Model } from "viewer/singletons";
 import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
-import type { StartAiJobDrawerState } from "viewer/view/action-bar/ai_job_modals/constants";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu";
@@ -62,7 +61,6 @@ type OwnProps = {
   initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
   UITheme: Theme;
-  aIJobDrawerState: StartAiJobDrawerState;
 };
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = {

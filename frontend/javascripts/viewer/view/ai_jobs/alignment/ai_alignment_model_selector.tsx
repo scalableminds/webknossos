@@ -26,12 +26,13 @@ const alignmentTasks: AlignmentTask[] = [
     image: "/assets/images/align_example.png",
   },
   {
-    name: "Align multiple tiles",
-    comment: "For aligning datasets with multiple tiles per section, please contact us.",
+    name: "Align & stitch multiple tiles",
+    comment:
+      "For stitching and aligning datasets with multiple tiles per section, please contact us via email for a quote.",
     id: "align-tiles",
     disabled: true,
     jobType: null,
-    image: "/assets/images/align_example.png",
+    image: "/assets/images/align_stitching_example.jpg",
   },
 ];
 

@@ -21,21 +21,24 @@ type PretrainedModel = {
 const preTrainedModels: PretrainedModel[] = [
   {
     name: "Neuron Segmentation",
-    comment: "Advanced neuron segmentation for EM data",
+    comment:
+      "Run our pre-trained, advanced neuron segmentation and reconstrution pipeline. Optimized dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "neuron-segmentation",
     jobType: APIJobType.INFER_NEURONS,
     image: "/assets/images/neuron_inferral_example.jpg",
   },
   {
     name: "Mitochondria Detection",
-    comment: "Precise mitochondria detection for EM data",
+    comment:
+      "Run a pre-trained instance segmentation model for mitochondria detection. Optimized for EM data.",
     id: "mitochondria-detection",
     jobType: APIJobType.INFER_MITOCHONDRIA,
     image: "/assets/images/mito_inferral_example.jpg",
   },
   {
     name: "Nuclei Detection",
-    comment: "Multi-scale nuclei detection",
+    comment:
+      "Run a pre-trained instance segmentation model for nuclei detection. Optimized for EM data",
     id: "nuclei-detection",
     disabled: true,
     jobType: APIJobType.INFER_NUCLEI,

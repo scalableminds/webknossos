@@ -3,8 +3,7 @@ import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
-import type { APIDataLayer } from "types/api_types";
-import { APIJobType } from "types/api_types";
+import { APIJobType, type APIDataLayer } from "types/api_types";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,

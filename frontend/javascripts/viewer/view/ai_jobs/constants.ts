@@ -34,7 +34,7 @@ export const MIN_BBOX_EXTENT: Record<
   [APIJobType.INFER_MITOCHONDRIA]: [4, 4, 4],
 };
 
-export const MEAN_VX_SIZE: Partial<Record<APIJobType, Vector3>> = {
+export const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
   infer_neurons: [7.96, 7.96, 31.2],
   infer_nuclei: [179.84, 179.84, 224.0],
   // "infer_mitochondria" infers on finest available mag

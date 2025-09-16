@@ -46,7 +46,9 @@ interface AiTrainingJobContextType {
   setSelectedAnnotations: React.Dispatch<React.SetStateAction<AiTrainingAnnotationSelection[]>>;
   handleSelectionChange: (
     annotationId: string,
-    newValues: Partial<Omit<AiTrainingAnnotationSelection, "annotationId">>,
+    newValues: Partial<
+      Pick<AiTrainingAnnotationSelection, "imageDataLayer" | "groundTruthLayer" | "magnification">
+    >,
   ) => void;
   areParametersValid: boolean;
 }
@@ -96,7 +98,12 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   }, [initialFullAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
 
   const handleSelectionChange = useCallback(
-    (annotationId: string, newValues: Partial<Omit<AiTrainingAnnotationSelection, "id">>) => {
+    (
+      annotationId: string,
+      newValues: Partial<
+        Pick<AiTrainingAnnotationSelection, "imageDataLayer" | "groundTruthLayer" | "magnification">
+      >,
+    ) => {
       setSelectedAnnotations((prev) => {
         const newSelections = [...prev];
         const index = newSelections.findIndex((s) => s.annotation.id === annotationId);

@@ -36,10 +36,8 @@ const AiTrainingDataSelector = ({
   const segmentationLayerNames = getSegmentationLayers(dataset)
     .map((layer) => layer.name)
     .filter(
-      (tracingId) =>
-        !annotation.annotationLayers.find(
-          (annotationLayer) => annotationLayer.tracingId === tracingId,
-        ),
+      (name) =>
+        !annotation.annotationLayers.find((annotationLayer) => annotationLayer.name === name),
     );
 
   // Gather layer names from the annotation

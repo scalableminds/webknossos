@@ -48,12 +48,12 @@ const preTrainedModels: PretrainedModel[] = [
 
 const mapCategoryToJobType = (
   category: APIAiModelCategory,
-): APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA => {
+): APIJobType.INFER_NEURONS | APIJobType.INFER_INSTANCES => {
   switch (category) {
     case APIAiModelCategory.EM_NEURONS:
       return APIJobType.INFER_NEURONS;
     case APIAiModelCategory.EM_NUCLEI:
-      return APIJobType.INFER_NUCLEI;
+      return APIJobType.INFER_INSTANCES;
     default:
       throw new Error(`Unsupported category: ${category}`);
   }

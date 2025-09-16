@@ -1,5 +1,4 @@
 import {
-  APIAiModelCategory,
   type BaseCustomModelInferenceParameters,
   runCustomInstanceModelInferenceJob,
   runCustomNeuronModelInferenceJob,
@@ -34,6 +33,7 @@ interface RunAiModelJobContextType {
     | APIJobType.INFER_NEURONS
     | APIJobType.INFER_NUCLEI
     | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_INSTANCES
     | null;
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
@@ -42,7 +42,11 @@ interface RunAiModelJobContextType {
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
   setSelectedJobType: (
-    jobType: APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA,
+    jobType:
+      | APIJobType.INFER_NEURONS
+      | APIJobType.INFER_NUCLEI
+      | APIJobType.INFER_MITOCHONDRIA
+      | APIJobType.INFER_INSTANCES,
   ) => void;
   setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
@@ -69,7 +73,11 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 }) => {
   const [selectedModel, setSelectedModel] = useState<AiModel | Partial<AiModel> | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
-    APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI | APIJobType.INFER_MITOCHONDRIA | null
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_INSTANCES
+    | null
   >(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
@@ -164,15 +172,20 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           invertColorLayer: isColorLayerInverted,
         };
 
-        if (selectedModel!.category === APIAiModelCategory.EM_NUCLEI) {
-          await runCustomInstanceModelInferenceJob({
-            ...commonInferenceArgs,
-            seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
-          });
-        } else {
-          await runCustomNeuronModelInferenceJob({
-            ...commonInferenceArgs,
-          });
+        switch (selectedJobType) {
+          case APIJobType.INFER_NEURONS:
+            await runCustomInstanceModelInferenceJob({
+              ...commonInferenceArgs,
+              seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
+            });
+            break;
+          case APIJobType.INFER_INSTANCES:
+            await runCustomNeuronModelInferenceJob({
+              ...commonInferenceArgs,
+            });
+            break;
+          default:
+            throw new Error(`Unsupported custom model for job type: ${selectedJobType}`);
         }
       } else {
         // Pre-trained models
@@ -205,8 +218,9 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
               isColorLayerInverted,
             );
             break;
+
           default:
-            throw new Error(`Unsupported job type: ${selectedJobType}`);
+            throw new Error(`Unsupported pretrained model for job type: ${selectedJobType}`);
         }
       }
       Toast.success("Analysis started successfully!");

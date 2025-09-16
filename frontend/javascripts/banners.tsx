@@ -130,8 +130,7 @@ export function MaintenanceBanner() {
   useInterval(pollMaintenances, INTERVAL_TO_FETCH_MAINTENANCES_MS);
 
   const showCurrentMaintenanceBanner = currentMaintenance != null;
-  const showUpcomingMaintenanceBanner =
-    closestUpcomingMaintenance != null && activeUser != null;
+  const showUpcomingMaintenanceBanner = closestUpcomingMaintenance != null && activeUser != null;
 
   useEffect(() => {
     const isBannerVisible = showCurrentMaintenanceBanner || showUpcomingMaintenanceBanner;

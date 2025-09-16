@@ -26,7 +26,7 @@ import {
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
-import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;

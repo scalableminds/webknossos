@@ -3,14 +3,14 @@ import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
-import { APIJobType, type APIDataLayer } from "types/api_types";
+import { type APIDataLayer, APIJobType } from "types/api_types";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { jobNameToImagePath } from "viewer/view/ai_jobs/constants";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import { jobNameToImagePath } from "./constants";
-import { type JobApiCallArgsType, StartJobForm } from "./forms/start_job_form";
+import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
 type Props = {
   handleClose: () => void;

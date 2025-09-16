@@ -59,8 +59,8 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
-import { BoundingBoxSelection } from "viewer/view/action-bar/ai_job_modals/components/bounding_box_selection";
 import { MagSlider } from "viewer/view/action-bar/mag_slider";
+import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";

@@ -8,7 +8,7 @@ import type { APIJobType } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
-import { getBoundingBoxesForLayers } from "viewer/view/action-bar/ai_job_modals/utils";
+import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
 import type { AlignmentTask } from "./ai_alignment_model_selector";
 
 interface AlignmentJobContextType {

@@ -11,8 +11,8 @@ import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_ac
 import { getReadableNameOfVolumeLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
-import { BoundingBoxSelectionFormItem } from "../components/bounding_box_selection_form_item";
-import { getBoundingBoxesForLayers } from "../utils";
+import { BoundingBoxSelectionFormItem } from "viewer/view/ai_jobs/components/bounding_box_selection_form_item";
+import { getBoundingBoxesForLayers } from "viewer/view/ai_jobs/utils";
 
 type Props = {
   handleClose: () => void;

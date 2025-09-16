@@ -1,9 +1,9 @@
 import { Button, Form, Input, Space } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useCallback } from "react";
-import type { AiTrainingAnnotationSelection } from "../../../ai_jobs/train_ai_model/ai_training_job_context";
-import { useAiTrainingJobContext } from "../../../ai_jobs/train_ai_model/ai_training_job_context";
-import { fetchAnnotationInfos } from "./fetch_annotation_infos";
+import { fetchAnnotationInfos } from "../hooks/fetch_annotation_infos";
+import type { AiTrainingAnnotationSelection } from "./ai_training_job_context";
+import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
   const { setSelectedAnnotations } = useAiTrainingJobContext();

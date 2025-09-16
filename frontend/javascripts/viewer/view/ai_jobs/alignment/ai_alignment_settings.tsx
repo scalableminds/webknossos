@@ -2,7 +2,7 @@ import { SettingOutlined } from "@ant-design/icons";
 import { Card, Col, Form, Input, Row, Space } from "antd";
 import type { FormProps } from "antd";
 import type React from "react";
-import { ShouldUseManualMatchesFormItem } from "../../action-bar/ai_job_modals/components/should_use_trees_form_item";
+import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 

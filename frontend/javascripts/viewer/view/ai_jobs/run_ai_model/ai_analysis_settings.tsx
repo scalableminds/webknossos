@@ -23,11 +23,11 @@ import type { UserBoundingBox } from "viewer/store";
 import {
   CollapsibleSplitMergerEvaluationSettings,
   type SplitMergerEvaluationSettings,
-} from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+} from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import {
   getBestFittingMagComparedToTrainingDS,
   isDatasetOrBoundingBoxTooSmall,
-} from "viewer/view/action-bar/ai_job_modals/utils";
+} from "viewer/view/ai_jobs/utils";
 import { BoundingBoxSelector } from "../bounding_box_selector";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";

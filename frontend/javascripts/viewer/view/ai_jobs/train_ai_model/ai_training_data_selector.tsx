@@ -14,12 +14,12 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { AnnotationsCsvInput } from "../../action-bar/ai_job_modals/components/annotations_csv_input";
 import { colorLayerMustNotBeUint24Rule } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
+import { AnnotationsCsvInput } from "./annotations_csv_input";
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);

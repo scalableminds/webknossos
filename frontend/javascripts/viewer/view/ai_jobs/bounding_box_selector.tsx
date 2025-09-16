@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import type { UserBoundingBox } from "viewer/store";
-import { BoundingBoxSelection } from "viewer/view/action-bar/ai_job_modals/components/bounding_box_selection";
-import { getBoundingBoxesForLayers } from "viewer/view/action-bar/ai_job_modals/utils";
+import { BoundingBoxSelection } from "viewer/view//ai_jobs/components/bounding_box_selection";
+import { getBoundingBoxesForLayers } from "viewer/view//ai_jobs/utils";
 
 interface BoundingBoxSelectorProps {
   value?: UserBoundingBox | null;

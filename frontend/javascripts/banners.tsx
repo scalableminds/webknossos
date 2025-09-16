@@ -12,7 +12,7 @@ import { parseCTimeDefaultDate } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import type { MaintenanceInfo } from "types/api_types";
 import constants from "viewer/constants";
 import { setNavbarHeightAction } from "viewer/model/actions/ui_actions";
@@ -100,10 +100,10 @@ export function MaintenanceBanner() {
     undefined,
   );
 
-  async function pollMaintenances() {
+  const pollMaintenances = useCallback(async () => {
     const newScheduledMaintenances = await listCurrentAndUpcomingMaintenances();
 
-    const closestUpcomingMaintenance = newScheduledMaintenances
+    const upcomingMaintenances = newScheduledMaintenances
       .filter((maintenance) => maintenance.startTime > Date.now())
       .filter(
         (maintenance) =>
@@ -112,50 +112,40 @@ export function MaintenanceBanner() {
       .sort((a, b) => a.startTime - b.startTime);
 
     const currentMaintenance = newScheduledMaintenances.find(
-      (maintenance) => maintenance.startTime < Date.now(),
+      (maintenance) => maintenance.startTime < Date.now() && maintenance.endTime > Date.now(),
     );
 
     setCurrentMaintenance(currentMaintenance);
-    setClosestUpcomingMaintenance(_.first(closestUpcomingMaintenance));
-  }
+    setClosestUpcomingMaintenance(_.first(upcomingMaintenances));
+  }, [activeUser]);
 
-  const [shouldShowUpcomingMaintenanceBanner, setShouldShowUpcomingMaintenanceBanner] =
-    useState(false);
-
-  useEffect(() => {
-    const newShouldShowUpcomingMaintenanceBanner =
-      closestUpcomingMaintenance != null && activeUser != null;
-    if (newShouldShowUpcomingMaintenanceBanner !== shouldShowUpcomingMaintenanceBanner) {
-      setShouldShowUpcomingMaintenanceBanner(newShouldShowUpcomingMaintenanceBanner);
-    }
-  }, [closestUpcomingMaintenance, activeUser, shouldShowUpcomingMaintenanceBanner]);
-
-  useEffect(() => {
-    if (currentMaintenance || shouldShowUpcomingMaintenanceBanner) {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
-    }
-
-    if (currentMaintenance == null && closestUpcomingMaintenance == null) {
-      // Reset Navbar height if maintenance is over
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
-    }
-  }, [currentMaintenance, closestUpcomingMaintenance, shouldShowUpcomingMaintenanceBanner]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies(pollMaintenances):
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
     // quickly in case of ongoing maintenances.
-    setTimeout(pollMaintenances, INITIAL_DELAY);
-  }, []);
+    const timerId = setTimeout(pollMaintenances, INITIAL_DELAY);
+    return () => clearTimeout(timerId);
+  }, [pollMaintenances]);
 
   // Also poll regularly.
   useInterval(pollMaintenances, INTERVAL_TO_FETCH_MAINTENANCES_MS);
 
-  if (currentMaintenance) {
+  const showCurrentMaintenanceBanner = currentMaintenance != null;
+  const showUpcomingMaintenanceBanner =
+    closestUpcomingMaintenance != null && activeUser != null;
+
+  useEffect(() => {
+    const isBannerVisible = showCurrentMaintenanceBanner || showUpcomingMaintenanceBanner;
+    const newNavbarHeight = isBannerVisible
+      ? constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT
+      : constants.DEFAULT_NAVBAR_HEIGHT;
+    setNavbarHeight(newNavbarHeight);
+  }, [showCurrentMaintenanceBanner, showUpcomingMaintenanceBanner]);
+
+  if (showCurrentMaintenanceBanner) {
     return <CurrentMaintenanceBanner maintenanceInfo={currentMaintenance} />;
   }
 
-  if (closestUpcomingMaintenance && activeUser !== null) {
+  if (showUpcomingMaintenanceBanner) {
     return <UpcomingMaintenanceBanner maintenanceInfo={closestUpcomingMaintenance} />;
   }
 
@@ -177,48 +167,38 @@ export function UpgradeVersionBanner() {
     minWidth: "fit-content",
     zIndex: 999,
   };
-  const currentDate = dayjs();
 
   const activeUser = useWkSelector((state) => state.activeUser);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const isVersionOutdated = useFetch(
     async () => {
       if (!activeUser) return false;
       await Utils.sleep(INITIAL_DELAY);
-      let buildInfo = await getBuildInfo();
+      const buildInfo = await getBuildInfo();
       const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
-      const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
+      const needsUpdate = dayjs().diff(lastCommitDate, "month") >= 6;
       return needsUpdate;
     },
     false,
     [activeUser],
   );
 
-  const [shouldBannerBeShown, setShouldBannerBeShown] = useState(false);
+  const lastTimeBannerWasClickedAway = localStorage.getItem(
+    UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+  );
+
+  const shouldBannerBeShown =
+    isVersionOutdated &&
+    activeUser != null &&
+    (lastTimeBannerWasClickedAway == null ||
+      dayjs().diff(dayjs(lastTimeBannerWasClickedAway), "day") >= 3);
 
   useEffect(() => {
-    if (!isVersionOutdated || activeUser == null) {
-      setShouldBannerBeShown(false);
-      return;
-    }
-    const lastTimeBannerWasClickedAway = localStorage.getItem(
-      UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
-    );
-    if (lastTimeBannerWasClickedAway == null) {
-      setShouldBannerBeShown(true);
-      return;
-    }
-
-    const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-    setShouldBannerBeShown(currentDate.diff(parsedDate, "day") >= 3);
-  }, [activeUser, isVersionOutdated, currentDate]);
-
-  useEffect(() => {
-    if (shouldBannerBeShown) {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
-    } else {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
-    }
+    const newNavbarHeight = shouldBannerBeShown
+      ? constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT
+      : constants.DEFAULT_NAVBAR_HEIGHT;
+    setNavbarHeight(newNavbarHeight);
   }, [shouldBannerBeShown]);
 
   return shouldBannerBeShown ? (
@@ -255,7 +235,7 @@ export function UpgradeVersionBanner() {
           UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
           dayjs().toISOString(),
         );
-        setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+        forceUpdate();
       }}
       type="info"
       showIcon={false}

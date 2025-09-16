@@ -174,14 +174,14 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
         switch (selectedJobType) {
           case APIJobType.INFER_NEURONS:
-            await runCustomInstanceModelInferenceJob({
+            await runCustomNeuronModelInferenceJob({
               ...commonInferenceArgs,
-              seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
             });
             break;
           case APIJobType.INFER_INSTANCES:
-            await runCustomNeuronModelInferenceJob({
+            await runCustomInstanceModelInferenceJob({
               ...commonInferenceArgs,
+              seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
             });
             break;
           default:

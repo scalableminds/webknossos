@@ -322,7 +322,7 @@ export const AiTrainingDataSection = () => {
       extra={
         <Popover
           content={<AnnotationsCsvInput onClose={() => setPopoverVisible(false)} />}
-          title="Add annotations by ID or URL"
+          title="Add additional training data from other annotations by ID or URL"
           trigger="click"
           open={popoverVisible}
           onOpenChange={setPopoverVisible}

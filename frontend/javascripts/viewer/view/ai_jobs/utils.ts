@@ -46,9 +46,13 @@ export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingB
 export const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
-  jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
+  jobType:
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI
+    | APIJobType.INFER_INSTANCES,
 ) => {
-  if (jobType === APIJobType.INFER_MITOCHONDRIA) {
+  if (jobType === APIJobType.INFER_MITOCHONDRIA || jobType === APIJobType.INFER_INSTANCES) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.resolutions);
     return magInfo.getFinestMag();

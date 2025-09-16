@@ -52,7 +52,7 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div style={{ width: 300 }}>
+    <div>
       <Form form={form} initialValues={{ annotations: "" }} onFinish={handleSubmit}>
         <Form.Item
           name="annotations"

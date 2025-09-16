@@ -307,7 +307,6 @@ class DatasetController @Inject()(userService: UserService,
                 datasetService.publicWrites(
                   d,
                   requestingUser,
-                  includePaths = false,
                   Some(organization),
                   Some(dataStore),
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
@@ -332,8 +331,7 @@ class DatasetController @Inject()(userService: UserService,
 
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
-           sharingToken: Option[String],
-           includePaths: Option[Boolean] = None): Action[AnyContent] =
+           sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -344,11 +342,7 @@ class DatasetController @Inject()(userService: UserService,
             datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
-          js <- datasetService.publicWrites(dataset,
-                                            request.identity,
-                                            includePaths.getOrElse(false),
-                                            Some(organization),
-                                            Some(dataStore))
+          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataset))
             if (dataset.isPublic) {

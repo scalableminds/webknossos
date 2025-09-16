@@ -103,7 +103,7 @@ GET           /datasets/:datasetId/layers/:layer/thumbnail                      
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: ObjectId, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
-GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String], includePaths: Option[Boolean])
+GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveManualAttachmentUpload                                controllers.DatasetController.reserveManualAttachmentUpload(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishManualAttachmentUpload                                 controllers.DatasetController.finishManualAttachmentUpload(datasetId: ObjectId)

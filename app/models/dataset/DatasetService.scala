@@ -564,7 +564,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
-                   includePaths: Boolean = false,
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
@@ -585,16 +584,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      dataSourceFieldsToRemove = Set(Some("credentialId"),
-                                     Some("credentials"),
-                                     if (includePaths) None else Some("path")).flatten
       usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {
       Json.obj(
         "id" -> dataset._id,
         "name" -> dataset.name,
-        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), dataSourceFieldsToRemove),
+        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,

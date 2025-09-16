@@ -1,4 +1,5 @@
 import type { Rule } from "antd/es/form";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import _ from "lodash";
@@ -6,7 +7,8 @@ import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/a
 import { APIJobType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
-import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
@@ -308,4 +310,29 @@ export const colorLayerMustNotBeUint24Rule = {
     }
     return Promise.resolve();
   },
+};
+
+export const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+  const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+};
+
+export const getIntersectingMagList = (
+  annotation: APIAnnotation,
+  dataset: APIDataset,
+  groundTruthLayerName: string,
+  imageDataLayerName: string,
+) => {
+  const colorLayers = getColorLayers(dataset);
+  const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+  const segmentationLayer = getSegmentationLayerByHumanReadableName(
+    dataset,
+    annotation,
+    groundTruthLayerName,
+  );
+  const groundTruthLayerMags = getMagInfo(segmentationLayer.resolutions).getMagList();
+
+  return groundTruthLayerMags?.filter((groundTruthMag) =>
+    dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+  );
 };

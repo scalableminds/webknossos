@@ -215,9 +215,6 @@ function CreateAnnotationButton() {
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
         type="primary"
         onClick={onClick}
       >
@@ -320,7 +317,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     ];
 
     return (
-      <>
+      <div>
         <Dropdown
           key="ai-job-drown"
           menu={{
@@ -328,16 +325,11 @@ class ActionBarView extends React.PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button
-            disabled={disabled}
-            icon={<i className="fas fa-magic" />}
-            style={{ marginLeft: 12 }}
-            title={tooltipText}
-          >
+          <Button disabled={disabled} icon={<i className="fas fa-magic" />} title={tooltipText}>
             AI Analysis
           </Button>
         </Dropdown>
-      </>
+      </div>
     );
   }
 

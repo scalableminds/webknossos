@@ -55,8 +55,7 @@ const mapCategoryToJobType = (
     case APIAiModelCategory.EM_NUCLEI:
       return APIJobType.INFER_NUCLEI;
     default:
-      // Fallback or throw error
-      return APIJobType.INFER_NEURONS;
+      throw new Error(`Unsupported category: ${category}`);
   }
 };
 
@@ -155,6 +154,7 @@ export const AiModelSelector: React.FC = () => {
               opacity: item.disabled ? 0.5 : 1,
               cursor: item.disabled ? "not-allowed" : "pointer",
             }}
+            className="hoverable-list-item"
             onClick={() => !item.disabled && onSelectModel(item)}
           >
             <List.Item.Meta

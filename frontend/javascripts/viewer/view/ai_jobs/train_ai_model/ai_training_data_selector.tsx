@@ -4,47 +4,15 @@ import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import groupBy from "lodash/groupBy";
-import uniq from "lodash/uniq";
 import { useMemo, useState } from "react";
-import type { APIAnnotation, APIDataLayer, APIDataset } from "types/api_types";
-import {
-  getColorLayers,
-  getMagInfo,
-  getSegmentationLayers,
-} from "viewer/model/accessors/dataset_accessor";
-import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
+import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { colorLayerMustNotBeUint24Rule } from "../utils";
+import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
 import { AnnotationsCsvInput } from "./annotations_csv_input";
-
-const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
-  const colorLayer = colorLayers.find((layer) => layer.name === layerName);
-  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
-};
-
-const getIntersectingMagList = (
-  annotation: APIAnnotation,
-  dataset: APIDataset,
-  groundTruthLayerName: string,
-  imageDataLayerName: string,
-) => {
-  const colorLayers = getColorLayers(dataset);
-  const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
-  const segmentationLayer = getSegmentationLayerByHumanReadableName(
-    dataset,
-    annotation,
-    groundTruthLayerName,
-  );
-  const groundTruthLayerMags = getMagInfo(segmentationLayer.resolutions).getMagList();
-
-  return groundTruthLayerMags?.filter((groundTruthMag) =>
-    dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
-  );
-};
 
 const AiTrainingDataSelector = ({
   selectedAnnotation,
@@ -79,10 +47,9 @@ const AiTrainingDataSelector = ({
     .filter((layer) => layer.typ === "Volume")
     .map((layer) => layer.name);
 
-  const segmentationAndColorLayers: Array<string> = uniq([
-    ...segmentationLayerNames,
-    ...annotationLayerNames,
-  ]);
+  const segmentationAndColorLayers: Array<string> = [
+    ...new Set([...segmentationLayerNames, ...annotationLayerNames]),
+  ];
 
   // Remove uint24 color layers because they cannot be trained on currently
   const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");

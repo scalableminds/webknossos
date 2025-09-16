@@ -169,9 +169,7 @@ export const AiAnalysisSettings: React.FC = () => {
         >
           <BoundingBoxSelector />
         </Form.Item>
-        <Form.Item label="Comments">
-          <Input.TextArea rows={2} />
-        </Form.Item>
+
         <ConfigProvider
           theme={{
             components: {

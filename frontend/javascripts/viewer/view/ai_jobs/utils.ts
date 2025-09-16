@@ -21,6 +21,8 @@ export const getMinimumDSSize = (jobType: APIJobType) => {
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     case APIJobType.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
+    case APIJobType.INFER_INSTANCES:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     default:
       throw new Error(`Unknown job type: ${jobType}`);
   }

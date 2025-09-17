@@ -16,6 +16,7 @@ Organization settings can be managed from the `Administration > Organization` pa
 ### Overview
 
 The overview tab provides a summary of your organization, including:
+
 - **Name:** The display name of the organization, which can be edited here.
 - **Owner:** The user who owns the organization.
 - **Plan Details:** Information about your current subscription plan.
@@ -26,6 +27,7 @@ The overview tab provides a summary of your organization, including:
 ### Notifications
 
 This tab allows admins to configure email notifications for the organization:
+
 - **WEBKNOSSOS Plan & Subscription:** The email address to receive plan and subscription notifications.
 - **AI Job Completion:** Configure who receives notifications about completed AI [jobs](../automation/jobs.md).
 - **New User Signup:** The email address to receive notifications about new user signups.

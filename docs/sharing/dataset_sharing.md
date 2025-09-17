@@ -33,8 +33,9 @@ To share a dataset privately, follow these steps:
 
 To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
 
-**Do not enable the `Make dataset publicly accessible` checkbox otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
-Public access rights are not required for private sharing.**
+!!!warning
+    Do not enable the `Make dataset publicly accessible` checkbox otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
+    Public access rights are not required for private sharing.
 
 ## Public Sharing
 
@@ -57,5 +58,5 @@ To share a dataset publicly, follow these steps:
 ![The Metadata tab overview](../images/metadata_tab.jpeg)
 
 !!!info
-    We recommend giving your datasets a meaningful name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.** 
+    We recommend giving your datasets a meaningful name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.
 

@@ -105,11 +105,11 @@ PUT           /datasets/:datasetId/clearThumbnailCache                          
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
-POST          /datasets/:datasetId/reserveManualAttachmentUpload                                controllers.DatasetController.reserveManualAttachmentUpload(datasetId: ObjectId)
-POST          /datasets/:datasetId/finishManualAttachmentUpload                                 controllers.DatasetController.finishManualAttachmentUpload(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
-POST          /datasets/reserveManualUpload                                                     controllers.DatasetController.reserveManualUpload()
-POST          /datasets/finishManualUpload                                                      controllers.DatasetController.finishManualUpload(datasetId: ObjectId)
+POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+POST          /datasets/finishUploadToPaths                                                     controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

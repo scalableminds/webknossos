@@ -172,7 +172,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
    path TEXT NOT NULL,
    type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
    dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
-   manualUploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
    PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -225,7 +225,7 @@ CREATE TABLE webknossos.dataStores(
   isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
-  allowsManualUpload BOOLEAN NOT NULL DEFAULT TRUE,
+  allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,
   onlyAllowedOrganization TEXT,
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT FALSE
 );

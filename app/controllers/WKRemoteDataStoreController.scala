@@ -89,7 +89,8 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.name,
             uploadInfo.organization,
             dataStore,
-            uploadInfo.requireUniqueName.getOrElse(false)) ?~> "dataset.upload.creation.failed"
+            uploadInfo.requireUniqueName.getOrElse(false),
+            uploadInfo.isVirtual.getOrElse(false)) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
@@ -299,33 +300,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(dataSource))
       }
 
-    }
-
-  // Register a datasource from the datastore as a dataset in the database.
-  // This is called when adding remote virtual datasets (that should only exist in the database)
-  // by the data store after exploration.
-  def registerDataSource(name: String,
-                         key: String,
-                         organizationId: String,
-                         directoryName: String,
-                         token: String): Action[DataSourceRegistrationInfo] =
-    Action.async(validateJson[DataSourceRegistrationInfo]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { dataStore =>
-        for {
-          user <- bearerTokenService.userForToken(token)
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            organizationId) ~> NOT_FOUND
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          dataset <- datasetService.createVirtualDataset(
-            directoryName,
-            dataStore,
-            request.body.dataSource,
-            request.body.folderId,
-            user
-          )
-        } yield Ok(dataset._id.toString)
-      }
     }
 
   def updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean): Action[DataSource] =

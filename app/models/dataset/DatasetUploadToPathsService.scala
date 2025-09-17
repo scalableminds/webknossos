@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticSegmentationLayer,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.services.DataSourceValidation
 import controllers.{LinkedLayerIdentifier, ReserveAttachmentUploadToPathRequest, ReserveDatasetUploadToPathsRequest}
 import models.organization.OrganizationDAO
 import models.user.User
@@ -34,7 +35,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             dataStoreDAO: DataStoreDAO,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                             conf: WkConf)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with DataSourceValidation {
 
   def reserveDatasetUploadToPaths(parameters: ReserveDatasetUploadToPathsRequest,
                                   requestingUser: User,
@@ -57,6 +59,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                   organization._id,
                                                   parameters.pathPrefix)
       dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
+      _ <- assertValidateDataSource(dataSourceWithLayersToLink).toFox
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,

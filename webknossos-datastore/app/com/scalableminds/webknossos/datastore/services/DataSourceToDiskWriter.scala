@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, JsonHelper, ParamFailure}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import play.api.libs.json.Json
 
 import java.io.FileWriter
@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
-trait DataSourceToDiskWriter extends PathUtils with FoxImplicits {
+trait DataSourceToDiskWriter extends PathUtils with DataSourceValidation with FoxImplicits {
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
@@ -25,7 +25,7 @@ trait DataSourceToDiskWriter extends PathUtils with FoxImplicits {
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
 
     for {
-      _ <- Fox.runIf(validate)(validateDataSource(dataSource, organizationDir).toFox)
+      _ <- Fox.runIf(validate)(assertValidateDataSource(dataSource).toFox)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
@@ -66,46 +66,6 @@ trait DataSourceToDiskWriter extends PathUtils with FoxImplicits {
       } finally fileWriter.close()
     } catch {
       case e: Exception => Failure(s"Could not back up old contents: ${e.toString}")
-    }
-  }
-
-  private def validateDataSource(dataSource: UsableDataSource, organizationDir: Path): Box[Unit] = {
-    def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
-
-    // Check that when mags are sorted by max dimension, all dimensions are sorted.
-    // This means each dimension increases monotonically.
-    val magsSorted = dataSource.dataLayers.map(_.resolutions.sortBy(_.maxDim))
-    val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
-    val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
-    val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
-
-    val errors = List(
-      Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),
-      Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
-      Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
-      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.segmentationElementClasses.contains(layer.elementClass)
-        },
-        s"Invalid element class for segmentation layer"
-      ),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
-        },
-        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
-      ),
-      Check(
-        dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
-        "Layer names must be unique. At least two layers have the same name."
-      )
-    ).flatten
-
-    if (errors.isEmpty) {
-      Full(())
-    } else {
-      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
     }
   }
 

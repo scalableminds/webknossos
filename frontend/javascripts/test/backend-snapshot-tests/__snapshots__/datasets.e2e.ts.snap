@@ -66,6 +66,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
                 1,
                 1,
               ],
+              "path": "path",
             },
           ],
           "name": "segmentation",

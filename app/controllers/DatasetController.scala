@@ -60,7 +60,7 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class ReserveManualUploadRequest(
+case class ReserveDatasetUploadToPathsRequest(
     datasetName: String,
     layersToLink: Seq[LinkedLayerIdentifier],
     dataSource: UsableDataSource,
@@ -70,11 +70,11 @@ case class ReserveManualUploadRequest(
     pathPrefix: Option[UPath],
 )
 
-object ReserveManualUploadRequest {
-  implicit val jsonFormat: OFormat[ReserveManualUploadRequest] = Json.format[ReserveManualUploadRequest]
+object ReserveDatasetUploadToPathsRequest {
+  implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsRequest] = Json.format[ReserveDatasetUploadToPathsRequest]
 }
 
-case class ReserveManualAttachmentUploadRequest(
+case class ReserveAttachmentUploadToPathRequest(
     layerName: String,
     attachmentName: String,
     attachmentType: LayerAttachmentType.Value,
@@ -82,9 +82,9 @@ case class ReserveManualAttachmentUploadRequest(
     pathPrefix: Option[UPath]
 )
 
-object ReserveManualAttachmentUploadRequest {
-  implicit val jsonFormat: OFormat[ReserveManualAttachmentUploadRequest] =
-    Json.format[ReserveManualAttachmentUploadRequest]
+object ReserveAttachmentUploadToPathRequest {
+  implicit val jsonFormat: OFormat[ReserveAttachmentUploadToPathRequest] =
+    Json.format[ReserveAttachmentUploadToPathRequest]
 }
 
 object SAMInteractionType extends ExtendedEnumeration {
@@ -128,7 +128,7 @@ class DatasetController @Inject()(userService: UserService,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                  datasetManualUploadService: DatasetManualUploadService,
+                                  datasetUploadToPathsService: DatasetUploadToPathsService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
@@ -307,7 +307,6 @@ class DatasetController @Inject()(userService: UserService,
                 datasetService.publicWrites(
                   d,
                   requestingUser,
-                  includePaths = false,
                   Some(organization),
                   Some(dataStore),
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
@@ -332,8 +331,7 @@ class DatasetController @Inject()(userService: UserService,
 
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
-           sharingToken: Option[String],
-           includePaths: Option[Boolean] = None): Action[AnyContent] =
+           sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -344,11 +342,7 @@ class DatasetController @Inject()(userService: UserService,
             datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
-          js <- datasetService.publicWrites(dataset,
-                                            request.identity,
-                                            includePaths.getOrElse(false),
-                                            Some(organization),
-                                            Some(dataStore))
+          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataset))
             if (dataset.isPublic) {
@@ -591,22 +585,22 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
-  def reserveManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
-    sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
+  def reserveAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        attachmentPath <- datasetManualUploadService.reserveManualAttachmentUpload(dataset, request.body)
+        attachmentPath <- datasetUploadToPathsService.reserveAttachmentUploadToPath(dataset, request.body)
 
       } yield Ok(Json.toJson(attachmentPath))
     }
 
-  def finishManualAttachmentUpload(datasetId: ObjectId): Action[ReserveManualAttachmentUploadRequest] =
-    sil.SecuredAction.async(validateJson[ReserveManualAttachmentUploadRequest]) { implicit request =>
+  def finishAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- datasetLayerAttachmentsDAO.finishManualUpload(datasetId,
+        _ <- datasetLayerAttachmentsDAO.finishUploadToPath(datasetId,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
                                                            request.body.attachmentType)
@@ -620,22 +614,22 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok
     }
 
-  def reserveManualUpload(): Action[ReserveManualUploadRequest] =
-    sil.SecuredAction.async(validateJson[ReserveManualUploadRequest]) { implicit request =>
+  def reserveUploadToPaths(): Action[ReserveDatasetUploadToPathsRequest] =
+    sil.SecuredAction.async(validateJson[ReserveDatasetUploadToPathsRequest]) { implicit request =>
       for {
         newDatasetId <- Fox.successful(ObjectId.generate)
-        dataSourceWithPaths <- datasetManualUploadService.reserveManualUpload(request.body,
-                                                                              request.identity,
-                                                                              newDatasetId)
+        dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPaths(request.body,
+                                                                                       request.identity,
+                                                                                       newDatasetId)
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
-  def finishManualUpload(datasetId: ObjectId): Action[AnyContent] =
+  def finishUploadToPaths(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetManuallyUploaded) ?~> s"Dataset is not in manually uploading state, got ${dataset.status}."
+        _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetUploadedToPaths) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
       } yield Ok

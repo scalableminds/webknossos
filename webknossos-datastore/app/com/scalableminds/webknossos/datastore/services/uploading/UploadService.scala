@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metada
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
+import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -396,19 +398,20 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.organizationId)
-      datasetSizeBytes: Long <- if (uploadToS3) {
+      datasetSizeBytes: Long <- if (uploadToS3 && !datasetNeedsConversion) {
         for {
           _ <- Fox.successful(())
-          _ = logger.info(
-            s"Starting upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
+          beforeS3Upload = Instant.now
+          s3UploadBucket <- s3UploadBucketOpt.toFox
           s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
-          _ <- uploadDirectoryToS3(unpackToDir, dataSource, dataStoreConfig.Datastore.S3Upload.bucketName, s3ObjectKey)
-          _ = logger.info(
-            s"Finished upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3.")
-          endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.endpoint).getHost
-          s3DataSource <- dataSourceService.prependAllPaths(
-            dataSource,
-            newBasePath = s"s3://$endPointHost/${dataStoreConfig.Datastore.S3Upload.bucketName}/$s3ObjectKey")
+          _ <- uploadDirectoryToS3(unpackToDir, dataSource, s3UploadBucket, s3ObjectKey)
+          _ = Instant.logSince(beforeS3Upload,
+                               s"Upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3",
+                               logger)
+          endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
+          s3DataSource <- dataSourceService.prependAllPaths(dataSource,
+                                                            newBasePath =
+                                                              s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey")
           _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId, allowNewPaths = true)
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
           _ = this.synchronized {
@@ -504,24 +507,41 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
         (accessKeyId, secretAccessKey)
     }
-  private lazy val s3Client: S3AsyncClient = S3AsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(
-        AwsBasicCredentials.builder
-          .accessKeyId(s3UploadCredentialsOpt.getOrElse(("", ""))._1)
-          .secretAccessKey(s3UploadCredentialsOpt.getOrElse(("", ""))._2)
-          .build()
-      ))
-    .crossRegionAccessEnabled(true)
-    .forcePathStyle(true)
-    .endpointOverride(new URI(dataStoreConfig.Datastore.S3Upload.endpoint))
-    .region(Region.US_EAST_1)
-    // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-    .build()
+  private lazy val s3UploadBucketOpt: Option[String] =
+    S3DataVault.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
+  private lazy val s3UploadEndpoint: URI = {
+    val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
+    new URI(
+      "https",
+      null,
+      credentialUri.getHost,
+      -1,
+      null,
+      null,
+      null
+    )
+  }
+  private lazy val s3ClientBox: Box[S3AsyncClient] = for {
+    accessKeyId <- Box(s3UploadCredentialsOpt.map(_._1))
+    secretAccessKey <- Box(s3UploadCredentialsOpt.map(_._2))
+  } yield
+    S3AsyncClient
+      .builder()
+      .credentialsProvider(
+        StaticCredentialsProvider.create(
+          AwsBasicCredentials.builder.accessKeyId(accessKeyId).secretAccessKey(secretAccessKey).build()
+        ))
+      .crossRegionAccessEnabled(true)
+      .forcePathStyle(true)
+      .endpointOverride(s3UploadEndpoint)
+      .region(Region.US_EAST_1)
+      // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
+      .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+      .build()
 
-  private lazy val transferManager = S3TransferManager.builder().s3Client(s3Client).build()
+  private lazy val transferManagerBox: Box[S3TransferManager] = for {
+    client <- s3ClientBox
+  } yield S3TransferManager.builder().s3Client(client).build()
 
   private def uploadDirectoryToS3(
       dataDir: Path,
@@ -542,6 +562,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             logger.warn(s"Could not delete file $file before upload to S3: ${e.getMessage}")
         }
       })
+      transferManager <- transferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )
@@ -620,15 +641,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                datasetNeedsConversion: Boolean,
                                uploadToS3: Boolean): Path = {
     val dataSourceDir = {
-      if (uploadToS3)
-        s3UploadDirectory(dataSourceId.organizationId, dataSourceId.directoryName)
+      if (datasetNeedsConversion)
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
       else {
-        if (datasetNeedsConversion)
-          dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
+        if (uploadToS3)
+          s3UploadDirectory(dataSourceId.organizationId, dataSourceId.directoryName)
         else
           dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
       }
     }
+
     dataSourceDir
   }
 

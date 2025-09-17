@@ -6,11 +6,12 @@ import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{
@@ -474,7 +475,7 @@ class DataSourceService @Inject()(
     res
   }
 
-  def datasetInControlledS3(dataSource: DataSource) = {
+  def datasetInControlledS3(dataSource: DataSource): Boolean = {
     def commonPrefix(strings: Seq[String]): String = {
       if (strings.isEmpty) return ""
 
@@ -514,9 +515,7 @@ class DataSourceService @Inject()(
     .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
     .build()
 
-  def deleteFromControlledS3(dataSource: DataSource): Fox[Unit] = {
-    // TODO: Do we handle other datasets using the same layers?
-
+  def deleteFromControlledS3(dataSource: DataSource, datasetId: ObjectId): Fox[Unit] = {
     def deleteBatch(bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
       if (keys.isEmpty) Fox.empty
       else {
@@ -562,18 +561,27 @@ class DataSourceService @Inject()(
 
     for {
       _ <- Fox.successful(())
-      paths = dataSource.allExplicitPaths
-      // Assume everything is in the same bucket
-      firstPath <- paths.headOption.toFox ?~> "No explicit paths found for dataset in controlled S3"
-      bucket <- S3DataVault
-        .hostBucketFromUri(new URI(firstPath))
-        .toFox ?~> s"Could not determine S3 bucket from path $firstPath"
-      prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path)).toFox))
-      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(bucket, _)).map(_.flatten)
-      uniqueKeys = keys.distinct
-      _ = logger.info(
-        s"Deleting ${uniqueKeys.length} objects from controlled S3 bucket $bucket for dataset ${dataSource.id}")
-      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(bucket, _)).map(_ => ())
+      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(datasetId)
+      magsLinkedByOtherDatasets: Set[MagLinkInfo] = layersAndLinkedMags
+        .flatMap(layerInfo => layerInfo.magLinkInfos.filter(_.linkedMags.nonEmpty))
+        .toSet
+      linkedMagPaths = magsLinkedByOtherDatasets.flatMap(_.linkedMags).flatMap(_.path)
+      paths = dataSource.allExplicitPaths.filterNot(path => linkedMagPaths.contains(path))
+      _ <- Fox.runIf(paths.nonEmpty)({
+        for {
+          // Assume everything is in the same bucket
+          firstPath <- paths.headOption.toFox
+          bucket <- S3DataVault
+            .hostBucketFromUri(new URI(firstPath))
+            .toFox ?~> s"Could not determine S3 bucket from path $firstPath"
+          prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path)).toFox))
+          keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(bucket, _)).map(_.flatten)
+          uniqueKeys = keys.distinct
+          _ = logger.info(
+            s"Deleting ${uniqueKeys.length} objects from controlled S3 bucket $bucket for dataset ${dataSource.id}")
+          _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(bucket, _)).map(_ => ())
+        } yield ()
+      })
     } yield ()
   }
 }

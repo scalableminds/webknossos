@@ -20,7 +20,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DataSourceValidation
-import controllers.{LinkedLayerIdentifier, ReserveAttachmentUploadToPathRequest, ReserveDatasetUploadToPathsRequest}
+import controllers.{
+  LinkedLayerIdentifier,
+  ReserveAttachmentUploadToPathRequest,
+  ReserveDatasetUploadToPathsRequest,
+  ReserveDatasetUploadToPathsForPreliminaryRequest
+}
 import models.organization.OrganizationDAO
 import models.user.User
 import play.api.i18n.MessagesProvider
@@ -59,7 +64,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                   organization._id,
                                                   parameters.pathPrefix)
       dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
-      _ <- assertValidateDataSource(dataSourceWithLayersToLink).toFox
+      _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -75,6 +80,27 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths
+
+  // Used by the convert_to_wkw worker job to upload a converting dataset to the final paths.
+  def reserveDatasetUploadToPathsForPreliminary(
+      parameters: ReserveDatasetUploadToPathsForPreliminaryRequest,
+      requestingUser: User,
+      dataset: Dataset)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
+    for {
+      _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading status, got ${dataset.status}."
+      _ <- Fox.fromBool(dataset._uploader.contains(requestingUser._id)) ?~> s"Cannot reserve paths for a dataset someone else uploaded."
+      dataSourceWithFixedDirectoryName = parameters.dataSource.copy(
+        id = DataSourceId(dataset.directoryName, requestingUser._organization))
+      dataSourceWithPaths <- addPathsToDatasource(dataSourceWithFixedDirectoryName,
+                                                  requestingUser._organization,
+                                                  parameters.pathPrefix)
+      _ <- assertValidDataSource(dataSourceWithPaths).toFox
+      _ <- datasetDAO.updateDataSource(dataset._id,
+                                       dataset._dataStore,
+                                       dataSourceWithPaths.hashCode(),
+                                       dataSourceWithPaths,
+                                       isUsable = false)
+    } yield dataSourceWithPaths
 
   private def findReferencedDataStore(
       layersToLink: Seq[LinkedLayerIdentifier])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {

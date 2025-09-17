@@ -25,7 +25,7 @@ trait DataSourceToDiskWriter extends PathUtils with DataSourceValidation with Fo
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
 
     for {
-      _ <- Fox.runIf(validate)(assertValidateDataSource(dataSource).toFox)
+      _ <- Fox.runIf(validate)(assertValidDataSource(dataSource).toFox)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"

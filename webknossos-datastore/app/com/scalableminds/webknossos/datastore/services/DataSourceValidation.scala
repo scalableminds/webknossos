@@ -6,7 +6,7 @@ import play.api.libs.json.Json
 
 trait DataSourceValidation {
 
-  protected def assertValidateDataSource(dataSource: UsableDataSource): Box[Unit] = {
+  protected def assertValidDataSource(dataSource: UsableDataSource): Box[Unit] = {
     val errors = validateDataSourceGetErrors(dataSource)
     if (errors.isEmpty) {
       Full(())

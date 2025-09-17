@@ -74,6 +74,16 @@ object ReserveDatasetUploadToPathsRequest {
   implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsRequest] = Json.format[ReserveDatasetUploadToPathsRequest]
 }
 
+case class ReserveDatasetUploadToPathsForPreliminaryRequest(
+    dataSource: UsableDataSource,
+    pathPrefix: Option[UPath],
+)
+
+object ReserveDatasetUploadToPathsForPreliminaryRequest {
+  implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsForPreliminaryRequest] =
+    Json.format[ReserveDatasetUploadToPathsForPreliminaryRequest]
+}
+
 case class ReserveAttachmentUploadToPathRequest(
     layerName: String,
     attachmentName: String,
@@ -624,12 +634,24 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId, "dataSource" -> Json.toJson(dataSourceWithPaths)))
     }
 
+  def reserveUploadToPathsForPreliminary(
+      datasetId: ObjectId): Action[ReserveDatasetUploadToPathsForPreliminaryRequest] =
+    sil.SecuredAction.async(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPathsForPreliminary(request.body,
+                                                                                                     request.identity,
+                                                                                                     dataset)
+      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceWithPaths)))
+    }
+
   def finishUploadToPaths(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetUploadedToPaths) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
+        _ <- Fox.fromBool(
+          dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
       } yield Ok

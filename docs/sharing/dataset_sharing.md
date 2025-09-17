@@ -56,5 +56,6 @@ To share a dataset publicly, follow these steps:
 
 ![The Metadata tab overview](../images/metadata_tab.jpeg)
 
-**We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
+!!!info
+    We recommend giving your datasets a meaningful name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.** 
 

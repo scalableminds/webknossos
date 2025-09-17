@@ -254,8 +254,9 @@ class PlaneView {
   resize = (): void => {
     const { width, height } = getGroundTruthLayoutRect();
     const sceneController = getSceneControllerOrNull();
-    // Resizing might be called as a result to the navbar height changing because a (maintainance) banner is being shown.
-    // When navigationg back from the annotation UI to the dashboard while a banner is being shown, React has already destroy the scene controller.
+    // Resizes can be triggered by navbar height changes (e.g., maintenance banners).
+    // When navigating back to the dashboard, a throttled resize may fire after
+    // PlaneView/SceneController teardown, so sceneController can be null.
     if (sceneController != null) {
       sceneController.renderer.setSize(width, height);
       this.draw();

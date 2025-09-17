@@ -115,16 +115,18 @@ class DSMeshController @Inject()(
     val normalOffset = 12
     var surfaceSum = 0.0f
     val headerOffset = 84
+    val bytesPerTriangle = 50
     for (triangleIndex <- 0 until numberOfTriangles) {
-      val v1x = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset)
-      val v1y = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 0)
-      val v1z = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 1)
-      val v2x = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 2)
-      val v2y = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 3)
-      val v2z = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 4)
-      val v3x = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 5)
-      val v3y = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 6)
-      val v3z = dataBuffer.getFloat(headerOffset + triangleIndex + normalOffset + 4 * 7)
+      val triangleVerticesOffset = headerOffset + triangleIndex * bytesPerTriangle + normalOffset
+      val v1x = dataBuffer.getFloat(triangleVerticesOffset)
+      val v1y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 0)
+      val v1z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 1)
+      val v2x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 2)
+      val v2y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 3)
+      val v2z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 4)
+      val v3x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 5)
+      val v3y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 6)
+      val v3z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 7)
 
       val vec1x = v2x - v1x
       val vec1y = v2y - v1y

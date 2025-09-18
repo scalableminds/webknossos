@@ -111,7 +111,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
       dataStore <- referencedDatastoreNames.headOption match {
         case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
-        case None                     => dataStoreDAO.findOneWithUplaodsToPathsAllowed
+        case None                     => dataStoreDAO.findOneWithUploadsToPathsAllowed
       }
       _ <- Fox.fromBool(dataStore.allowsUploadToPaths) ?~> "dataStore.uploadToPathsNotAllowed"
     } yield dataStore

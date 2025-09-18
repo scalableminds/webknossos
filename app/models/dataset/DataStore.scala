@@ -149,7 +149,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
-  def findOneWithUplaodsToPathsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneWithUploadsToPathsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

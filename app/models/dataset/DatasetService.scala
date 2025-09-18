@@ -608,7 +608,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
-        "usedStorageBytes" -> usedStorageBytes
+        "usedStorageBytes" -> usedStorageBytes,
+        "isVirtual" -> dataset.isVirtual
       )
     }
 }

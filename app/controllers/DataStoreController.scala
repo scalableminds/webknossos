@@ -29,7 +29,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "key").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
       (__ \ "allowsUpload").readNullable[Boolean] and
-      (__ \ "allowsUplaodToPaths").readNullable[Boolean])(DataStore.fromForm _)
+      (__ \ "allowsUploadToPaths").readNullable[Boolean])(DataStore.fromForm _)
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {

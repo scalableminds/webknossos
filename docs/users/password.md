@@ -40,9 +40,8 @@ Passkeys are a new, more secure way to log in to websites and apps without using
 
 Users can manage their passkeys from the `Security` tab in `Account Settings`.
 
-1. Click the `edit` icon next to the `Password` field to open the security management page.
-2. To add a new passkey, press the `Register Passkey` button and give the passkey a name.
-3. To delete a passkey, press the `Delete` button next to the passkey's name.
+1. To add a new passkey, press the `Register Passkey` button and give the passkey a name.
+2. To delete a passkey, press the `Delete` button next to the passkey's name.
 
 If you lose access to all your passkeys and cannot sign in, use the `Forgot Password` flow to recover your account.
 

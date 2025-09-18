@@ -36,6 +36,12 @@ This tab allows admins to configure email notifications for the organization:
 
 Deleting an organization will permanently remove all associated data, including annotations, datasets, and user accounts. This action cannot be undone.
 
+Before proceeding:  
+
+- Ensure you have exported any datasets and annotations you need to retain.  
+- Only the designated organization Owner (or an Admin with the required permission) may perform this action.  
+- Deleted organizations cannot be restored unless a prior backup exists.  
+
 ## Switching Organizations
 A WEBKNOSSOS user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
 

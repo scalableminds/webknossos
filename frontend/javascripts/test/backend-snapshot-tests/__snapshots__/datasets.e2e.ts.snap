@@ -105,6 +105,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "isEditable": true,
     "isPublic": false,
     "isUnreported": false,
+    "isVirtual": false,
     "lastUsedByUser": 0,
     "logoUrl": "/assets/images/mpi-logos.svg",
     "metadata": [],

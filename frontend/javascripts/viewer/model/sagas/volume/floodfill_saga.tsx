@@ -148,7 +148,7 @@ function* getBoundingBoxForFloodFill(
 }
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
   if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {

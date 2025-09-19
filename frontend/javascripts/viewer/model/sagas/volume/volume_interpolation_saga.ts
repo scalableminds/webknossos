@@ -262,7 +262,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);

@@ -26,7 +26,9 @@ import Deferred from "libs/async/deferred";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
-const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
+// TODOM: Undo
+// const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
+const WAIT_AFTER_SAVE_TRIGGER = 500;
 
 // TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {

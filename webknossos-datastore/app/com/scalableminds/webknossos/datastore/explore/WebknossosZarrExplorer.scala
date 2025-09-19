@@ -3,21 +3,11 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerWithMagLocators,
-  DataSource,
-  GenericDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -26,28 +16,14 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   override def name: String = "WEBKNOSSOS-based Zarr"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
-      dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-      dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
-      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
-        case l: Zarr3SegmentationLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(mags = mags)
-        case l: Zarr3DataLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(mags = mags)
-        case l: ZarrSegmentationLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(mags = mags)
-        case l: ZarrDataLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(mags = mags)
-        case layer => Fox.failure(s"Only remote Zarr2 or Zarr3 layers are supported, got ${layer.getClass}.")
+      dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+      dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
+      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) { layer =>
+        for {
+          mags <- adaptMags(layer.mags, remotePath / layer.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+        } yield layer.mapped(newMags = Some(mags))
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale
@@ -62,7 +38,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       } yield m.copy(path = magPath, credentialId = credentialId))
 
   private def fixRemoteMagPath(mag: MagLocator, remoteLayerPath: VaultPath, headerFilename: String)(
-      implicit tc: TokenContext): Fox[Option[String]] =
+      implicit tc: TokenContext): Fox[Option[UPath]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path))
       case None       =>
@@ -71,7 +47,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
         val magHeaderPath = magPath / headerFilename
         for {
           _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"
-        } yield Some(magPath.toUri.toString)
+        } yield Some(magPath.toUPath)
     }
 
 }

@@ -1732,7 +1732,7 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -1790,7 +1790,7 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   "tracingTime": "tracingTime",
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -1853,7 +1853,7 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -1911,7 +1911,7 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   "tracingTime": "tracingTime",
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -1979,7 +1979,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2037,7 +2037,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "tracingTime": "tracingTime",
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2105,7 +2105,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2163,7 +2163,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "tracingTime": "tracingTime",
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2226,7 +2226,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2336,7 +2336,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "tracingTime": "tracingTime",
   "typ": "Task",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2399,7 +2399,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2509,7 +2509,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "tracingTime": "tracingTime",
   "typ": "Task",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -2572,7 +2572,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -2630,7 +2630,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   "tracingTime": null,
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -2693,7 +2693,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   "organization": "Organization_X",
   "othersMayEdit": true,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -2751,7 +2751,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   "tracingTime": null,
   "typ": "Explorational",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,

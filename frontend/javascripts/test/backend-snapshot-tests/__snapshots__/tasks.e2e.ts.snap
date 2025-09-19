@@ -85,7 +85,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     "organization": "Organization_X",
     "othersMayEdit": false,
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "570b9f4d2a7c0e4d008da6ef",
       "isAdmin": true,
@@ -195,7 +195,7 @@ exports[`Task API  (E2E) > getAnnotationsForTask() 1`] = `
     "tracingTime": null,
     "typ": "Task",
     "user": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "570b9f4d2a7c0e4d008da6ef",
       "isAdmin": true,
@@ -647,7 +647,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   "organization": "Organization_X",
   "othersMayEdit": false,
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -757,7 +757,7 @@ exports[`Task API  (E2E) > requestTask() 1`] = `
   "tracingTime": "tracingTime",
   "typ": "Task",
   "user": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,

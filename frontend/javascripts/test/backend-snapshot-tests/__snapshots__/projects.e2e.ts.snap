@@ -8,7 +8,7 @@ exports[`Project API (E2E) > createProject and deleteProject 1`] = `
   "isBlacklistedFromReport": true,
   "name": "test-new-project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -58,7 +58,7 @@ exports[`Project API (E2E) > getProject(projectId: string) 1`] = `
   "isBlacklistedFromReport": false,
   "name": "Test_Project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -99,7 +99,7 @@ exports[`Project API (E2E) > getProjects() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project",
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "id",
       "isAdmin": true,
@@ -136,7 +136,7 @@ exports[`Project API (E2E) > getProjects() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project2",
     "owner": {
-      "email": "user_D@scalableminds.com",
+      "email": "user_d@scalableminds.com",
       "firstName": "user_D",
       "id": "id",
       "isAdmin": false,
@@ -163,7 +163,7 @@ exports[`Project API (E2E) > getProjects() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project3(for_annotation_mutations)",
     "owner": {
-      "email": "user_D@scalableminds.com",
+      "email": "user_d@scalableminds.com",
       "firstName": "user_D",
       "id": "id",
       "isAdmin": false,
@@ -190,7 +190,7 @@ exports[`Project API (E2E) > getProjects() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project4",
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "id",
       "isAdmin": true,
@@ -232,7 +232,7 @@ exports[`Project API (E2E) > getProjectsWithStatus() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project",
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "id",
       "isAdmin": true,
@@ -271,7 +271,7 @@ exports[`Project API (E2E) > getProjectsWithStatus() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project2",
     "owner": {
-      "email": "user_D@scalableminds.com",
+      "email": "user_d@scalableminds.com",
       "firstName": "user_D",
       "id": "id",
       "isAdmin": false,
@@ -300,7 +300,7 @@ exports[`Project API (E2E) > getProjectsWithStatus() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project3(for_annotation_mutations)",
     "owner": {
-      "email": "user_D@scalableminds.com",
+      "email": "user_d@scalableminds.com",
       "firstName": "user_D",
       "id": "id",
       "isAdmin": false,
@@ -329,7 +329,7 @@ exports[`Project API (E2E) > getProjectsWithStatus() 1`] = `
     "isBlacklistedFromReport": false,
     "name": "Test_Project4",
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "id",
       "isAdmin": true,
@@ -372,7 +372,7 @@ exports[`Project API (E2E) > increaseProjectTaskInstances 1`] = `
   "isBlacklistedFromReport": false,
   "name": "Test_Project2",
   "owner": {
-    "email": "user_D@scalableminds.com",
+    "email": "user_d@scalableminds.com",
     "firstName": "user_D",
     "id": "id",
     "isAdmin": false,
@@ -404,7 +404,7 @@ exports[`Project API (E2E) > pauseProject and resumeProject 1`] = `
   "isBlacklistedFromReport": false,
   "name": "Test_Project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -444,7 +444,7 @@ exports[`Project API (E2E) > pauseProject and resumeProject 2`] = `
   "isBlacklistedFromReport": false,
   "name": "Test_Project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -484,7 +484,7 @@ exports[`Project API (E2E) > updateProject(projectId: string, project: APIProjec
   "isBlacklistedFromReport": false,
   "name": "Test_Project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -524,7 +524,7 @@ exports[`Project API (E2E) > updateProject(projectId: string, project: APIProjec
   "isBlacklistedFromReport": false,
   "name": "Test_Project",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,

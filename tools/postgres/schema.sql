@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(140);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(141);
 COMMIT TRANSACTION;
 
 
@@ -172,6 +172,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
    path TEXT NOT NULL,
    type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
    dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
    PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -224,6 +225,7 @@ CREATE TABLE webknossos.dataStores(
   isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
+  allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,
   onlyAllowedOrganization TEXT,
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT FALSE
 );

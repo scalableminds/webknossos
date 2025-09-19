@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import models.user.User
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -38,7 +39,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     extends FoxImplicits {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(
-      implicit ctx: DBAccessContext): Fox[(DataSource, ObjectId)] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[(UsableDataSource, ObjectId)] =
     for {
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
@@ -51,20 +53,19 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
 
     } yield (dataSource, dataset._id)
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
-      implicit ctx: DBAccessContext): Fox[DataLayer] =
+  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(implicit ctx: DBAccessContext,
+                                                                          mp: MessagesProvider): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
-      dataSource <- datasetService.fullDataSourceFor(dataset)
-      usableDataSource <- dataSource.toUsable.toFox ?~> "Dataset not usable"
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
       layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
         cOpt match {
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      editedLayer: DataLayer <- layer match {
-        case l: DataLayerWithMagLocators =>
+      editedLayer: StaticLayer <- layer match {
+        case l: StaticLayer =>
           Fox.successful(
             l.mapped(name = composeLayer.newName,
                      coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)))
@@ -86,10 +87,11 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     }
 
   private def createDatasource(composeRequest: ComposeRequest, datasetDirectoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[DataSource] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_))
-      dataSource = GenericDataSource(
+      dataSource = UsableDataSource(
         DataSourceId(datasetDirectoryName, organizationId),
         layers,
         composeRequest.voxelSize,

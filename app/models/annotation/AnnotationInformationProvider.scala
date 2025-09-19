@@ -7,6 +7,7 @@ import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import com.scalableminds.util.tools.Full
 import com.scalableminds.util.objectid.ObjectId
+import play.api.i18n.MessagesProvider
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -18,17 +19,19 @@ class AnnotationInformationProvider @Inject()(
     extends play.api.http.Status
     with FoxImplicits {
 
-  def provideAnnotation(typ: String, id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(typ: String, id: ObjectId, user: User)(implicit ctx: DBAccessContext,
+                                                               mp: MessagesProvider): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))
 
-  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
+                                                                          mp: MessagesProvider): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
 
-  def provideAnnotation(id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
+                                                             mp: MessagesProvider): Fox[Annotation] =
     // this function only supports task/explorational look ups, not compound annotations
     for {
       _annotation <- annotationDAO.findOne(id) ?~> "annotation.notFound"
@@ -37,11 +40,12 @@ class AnnotationInformationProvider @Inject()(
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
 
-  def provideAnnotation(id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(id: ObjectId, user: User)(implicit ctx: DBAccessContext,
+                                                  mp: MessagesProvider): Fox[Annotation] =
     provideAnnotation(id, Some(user))
 
-  def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(annotationIdentifier: AnnotationIdentifier,
+                        userOpt: Option[User])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Annotation] =
     annotationStore.requestAnnotation(annotationIdentifier, userOpt)
 
   def nameFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =

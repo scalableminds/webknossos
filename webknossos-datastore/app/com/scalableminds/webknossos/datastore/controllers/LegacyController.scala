@@ -10,9 +10,9 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest,
   WebknossosDataRequest
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, GenericDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.UnusableDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
+import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
   DataSourceService,
@@ -20,10 +20,22 @@ import com.scalableminds.webknossos.datastore.services.{
   DatasetCache,
   UserAccessRequest
 }
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, Result}
 
 import scala.concurrent.ExecutionContext
+
+case class LegacyReserveManualUploadInformation(
+    datasetName: String,
+    organization: String,
+    initialTeamIds: List[ObjectId],
+    folderId: Option[ObjectId],
+    requireUniqueName: Boolean = false,
+)
+object LegacyReserveManualUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyReserveManualUploadInformation] =
+    Json.format[LegacyReserveManualUploadInformation]
+}
 
 class LegacyController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
@@ -33,15 +45,42 @@ class LegacyController @Inject()(
     meshController: DSMeshController,
     dataSourceController: DataSourceController,
     dataSourceService: DataSourceService,
+    dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     datasetCache: DatasetCache
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
     with MissingBucketHeaders {
 
-  // BINARY DATA ROUTES
-
   override def allowRemoteOrigin: Boolean = true
+
+  // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
+  // and it can be put in a webknossos folder where they have access
+  def reserveManualUploadV10(): Action[LegacyReserveManualUploadInformation] =
+    Action.async(validateJson[LegacyReserveManualUploadInformation]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.administrateDataSources(request.body.organization)) {
+        for {
+          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+            ReserveUploadInformation(
+              "aManualUpload",
+              request.body.datasetName,
+              request.body.organization,
+              0,
+              Some(List.empty),
+              None,
+              None,
+              request.body.initialTeamIds,
+              request.body.folderId,
+              Some(request.body.requireUniqueName)
+            )
+          ) ?~> "dataset.upload.validation.failed"
+        } yield
+          Ok(
+            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
+                     "directoryName" -> reservedDatasetInfo.directoryName))
+      }
+    }
 
   def requestViaWebknossosV9(
       organizationId: String,
@@ -440,11 +479,11 @@ class LegacyController @Inject()(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
         organizationId)
       dataSource match {
-        case GenericDataSource(_, _, _, _) =>
+        case UsableDataSource(_, _, _, _, _) =>
           for {
             _ <- remoteWebknossosClient.reportDataSource(dataSource)
           } yield Ok(Json.toJson(dataSource))
-        case UnusableDataSource(_, status, _, _) =>
+        case UnusableDataSource(_, _, status, _, _) =>
           Fox.failure(s"Dataset not found in DB or in directory: $status, cannot reload.") ~> NOT_FOUND
       }
     }
@@ -458,7 +497,8 @@ class LegacyController @Inject()(
             case Some(datasetId) =>
               // Dataset is present in DB
               for {
-                dataSourceOpt: Option[DataSource] <- Fox.fromFuture(datasetCache.getById(datasetId).toFutureOption)
+                dataSourceOpt: Option[UsableDataSource] <- Fox.fromFuture(
+                  datasetCache.getById(datasetId).toFutureOption)
                 // The dataset may be unusable (in which case dataSourceOpt will be None)
                 r <- dataSourceOpt match {
                   case Some(_) =>

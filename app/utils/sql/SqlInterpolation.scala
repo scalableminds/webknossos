@@ -8,6 +8,7 @@ import slick.jdbc._
 import slick.sql.{SqlAction, SqlStreamingAction}
 import slick.util.DumpInfo
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.helpers.UPath
 
 import java.sql.{PreparedStatement, Types}
 import scala.collection.mutable
@@ -239,6 +240,12 @@ case class BoundingBoxValue(v: BoundingBox) extends SqlValue with SqlEscaping {
 
   override def debugInfo: String =
     s"'$bboxSql'"
+}
+
+case class UPathValue(v: UPath) extends SqlValue with SqlEscaping {
+  override def setParameter(pp: PositionedParameters): Unit = pp.setString(v.toString)
+
+  override def debugInfo: String = escapeLiteral(v.toString)
 }
 
 case class NoneValue() extends SqlValue {

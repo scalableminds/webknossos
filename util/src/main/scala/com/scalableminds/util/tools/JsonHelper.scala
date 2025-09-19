@@ -95,17 +95,18 @@ object JsonHelper extends LazyLogging {
   // Sometimes play-json adds a "_type" field to the json-serialized case classes,
   // when it thinks they can’t be distinguished otherwise. We need to remove it manually.
   def removeGeneratedTypeFieldFromJsonRecursively(jsValue: JsValue): JsValue =
-    removeKeyRecursively(jsValue, "_type")
+    removeKeyRecursively(jsValue, Set("_type"))
 
-  private def removeKeyRecursively(jsValue: JsValue, keyToRemove: String): JsValue =
+  def removeKeyRecursively(jsValue: JsValue, keysToRemove: Set[String]): JsValue =
     jsValue match {
       case JsObject(fields) =>
-        val processedAsMap = fields.filter { case (k, _) => k != keyToRemove }.view.mapValues { value: JsValue =>
-          removeKeyRecursively(value, keyToRemove)
+        val processedAsMap = fields.filter { case (k, _) => !keysToRemove.contains(k) }.view.mapValues {
+          value: JsValue =>
+            removeKeyRecursively(value, keysToRemove)
         }.toMap
         Json.toJson(processedAsMap)
       case JsArray(fields) =>
-        Json.toJson(fields.map(value => removeKeyRecursively(value, keyToRemove)))
+        Json.toJson(fields.map(value => removeKeyRecursively(value, keysToRemove)))
       case _ => jsValue
     }
 }

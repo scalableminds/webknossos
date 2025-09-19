@@ -4,13 +4,17 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataFormat, DataLayerWithMagLocators}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
+}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,22 +26,21 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
   override def name: String = "OME NGFF Zarr v0.4"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)
       ngffHeader <- zattrsPath.parseAsJson[NgffMetadata] ?~> s"Failed to read OME NGFF header at $zattrsPath"
       labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
-        Fox.successful(List[(DataLayerWithMagLocators, VoxelSize)]()))
+        Fox.successful(List[(StaticLayer, VoxelSize)]()))
 
-      layerLists: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
-        multiscale => {
-          for {
-            channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
-            channelAttributes = getChannelAttributes(ngffHeader.omero)
-            layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
-          } yield layers
-        })
-      layers: List[(DataLayerWithMagLocators, VoxelSize)] = layerLists.flatten
+      layerLists: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
+        for {
+          channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
+          channelAttributes = getChannelAttributes(ngffHeader.omero)
+          layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
+        } yield layers
+      })
+      layers: List[(StaticLayer, VoxelSize)] = layerLists.flatten
     } yield layers ++ labelLayers
 
   protected def createLayer(remotePath: VaultPath,
@@ -48,7 +51,7 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[ZarrLayer] =
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[StaticLayer] =
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
@@ -63,29 +66,28 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       additionalAxes <- getAdditionalAxes(multiscale, remotePath)
       translationOpt = getTranslation(multiscale)
-      layer: ZarrLayer = if (looksLikeSegmentationLayer(datasetName, elementClass) || isSegmentation) {
-        ZarrSegmentationLayer(
+      layer: StaticLayer = if (looksLikeSegmentationLayer(datasetName, elementClass) || isSegmentation) {
+        StaticSegmentationLayer(
           channelName,
+          DataFormat.zarr,
           boundingBox,
           elementClass,
           magsWithAttributes.map(_.mag),
           largestSegmentId = None,
           additionalAxes = Some(additionalAxes),
           defaultViewConfiguration = Some(viewConfig),
-          coordinateTransformations = translationOpt,
-          dataFormat = DataFormat.zarr
+          coordinateTransformations = translationOpt
         )
       } else
-        ZarrDataLayer(
+        StaticColorLayer(
           channelName,
-          Category.color,
+          DataFormat.zarr,
           boundingBox,
           elementClass,
           magsWithAttributes.map(_.mag),
           additionalAxes = Some(additionalAxes),
           defaultViewConfiguration = Some(viewConfig),
-          coordinateTransformations = translationOpt,
-          dataFormat = DataFormat.zarr
+          coordinateTransformations = translationOpt
         )
     } yield layer
 
@@ -119,11 +121,10 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(
-        MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),
-        magPath,
-        elementClass,
-        boundingBox)
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), channelIndex, credentialId),
+                        magPath,
+                        elementClass,
+                        boundingBox)
 
   protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
     for {
@@ -132,12 +133,12 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext)
     } yield shape
 
   protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS
       ngffHeader <- zattrsPath.parseAsJson[NgffMetadata] ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      layers: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
+      layers: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
         multiscale =>
           layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
                                    fullLabelPath,

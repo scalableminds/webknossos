@@ -12,7 +12,7 @@ class DatasetSymlinkService @Inject()(dataSourceService: DataSourceService)(impl
     extends FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
-  def addSymlinksToOtherDatasetLayers(datasetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+  def addSymlinksToOtherDatasetLayers(datasetDir: Path, layersToLink: List[LegacyLinkedLayerIdentifier]): Fox[Unit] =
     Fox
       .serialCombined(layersToLink) { layerToLink =>
         val layerPath = layerToLink.pathIn(dataBaseDir)

@@ -39,8 +39,11 @@ case class VoxelPosition(
         false
     }
 
-  override def hashCode(): Int =
+  private lazy val hashCodeCached =
     new HashCodeBuilder(17, 31).append(mag1X).append(mag1Y).append(mag1Z).append(mag).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 case class BucketPosition(

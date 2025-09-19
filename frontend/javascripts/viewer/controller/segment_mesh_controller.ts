@@ -263,7 +263,7 @@ export default class SegmentMeshController {
       this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
     }
 
-    const segmentationTracing = getActiveSegmentationTracing(Store.getState());
+    const segmentationTracing = getActiveSegmentationTracing(state);
     if (segmentationTracing != null) {
       // addMeshFromGeometry is often called multiple times for different sets of geometries.
       // Therefore, used a throttled variant of the highlightActiveUnmappedSegmentId method.

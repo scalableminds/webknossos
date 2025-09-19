@@ -9,6 +9,7 @@ The profile page allows users to manage their personal information.
 ### Change Account Email
 
 A user can update their own email address from the `Profile` tab within `Account Settings`.
+
 1. Click the `edit` (pencil) icon next to your email address.
 2. Enter the new email address and confirm the change.
 

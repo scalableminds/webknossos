@@ -1,13 +1,54 @@
-# Password and Account
+# Account Settings
 
-## Password Reset
+Users can manage their account settings by clicking on their user avatar in the top-right corner of the navigation bar and selecting `Account Settings`.
 
-Users can _change_ their account password by themselves as long as they are logged in. Password reset can be found by clicking on their user avatar in the navigation bar in the top-right corner of the screen and selecting `Change Password`. Users need to provide their current password and choose a new one.
+## Profile
 
-Logged-out users can _reset_ their password by clicking on `Forgot Password` in the navigation bar in the top-right corner of the screen. They have to provide their email address and will receive an email containing instructions to reset the password.
+The profile page allows users to manage their personal information.
 
+### Change Account Email
 
-## Change Account Email
-Admins can update the email address of each user from the `Users` administration page. 
-Select the `Edit` icon next to a user's email address, enter the new email address, and confirm the change. 
-Remember to inform the user about the successful change of an email address since the new email address will be used for the login credentials.
+A user can update their own email address from the `Profile` tab within `Account Settings`.
+1. Click the `edit` (pencil) icon next to your email address.
+2. Enter the new email address and confirm the change.
+
+This email address will be used for all future notifications and for logging in.
+
+## Security
+
+The security page allows users to manage their password and passkeys.
+
+### Password Reset
+
+**Logged-in users** can _change_ their account password:
+
+1. Navigate to the `Security` tab in `Account Settings`.
+2. Click the `edit` icon next to the `Password` field.
+3. Provide your current password and choose a new one.
+
+**Logged-out users** can _reset_ a forgotten password:
+
+1. Click on `Forgot Password` on the login screen.
+2. Provide your account's email address.
+3. You will receive an email with instructions to reset your password.
+
+### Passkeys
+
+Passkeys are a new, more secure way to log in to websites and apps without using a password. Instead of typing a password, you use a fingerprint, face scan, or a device PIN to authenticate.
+
+#### Adding and Removing Passkeys
+
+Users can manage their passkeys from the `Security` tab in `Account Settings`.
+
+1. To add a new passkey, press the `Register Passkey` button and give the passkey a name.
+2. To delete a passkey, press the `Delete` button next to the passkey's name.
+
+If you lose access to all your passkeys and cannot sign in, use the `Forgot Password` flow to recover your account.
+
+## Developer Settings
+
+### Authentication Token
+
+This section is for generating a personal access token (API key) for programmatic access to WEBKNOSSOS.
+
+This token is primarily used with the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) to automate tasks like uploading/downloading datasets, managing annotations, and integrating WEBKNOSSOS into custom analysis pipelines.

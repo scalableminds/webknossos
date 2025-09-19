@@ -1,4 +1,5 @@
 import jsonschema from "jsonschema";
+import _ from "lodash";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";
@@ -68,8 +69,18 @@ export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",
 );
 
-export const validateUrlStateJSON = (value: string) =>
-  validateWithSchemaSync("types::UrlManagerState", value);
+export const validateUrlStateJSON = (value: string) => {
+  const json = validateWithSchemaSync("types::UrlManagerState", value);
+  return _.cloneDeepWith(json, (value, key) => {
+    if (key === "mappingType") {
+      if (value == null) return null;
+      const caseFixed = typeof value === "string" ? value.toUpperCase() : value;
+      return caseFixed === "JSON" ? "JSON" : "HDF5";
+    }
+    // let lodash handle everything else
+    return undefined;
+  });
+};
 
 export const isValidJSON = (json: string) => {
   try {

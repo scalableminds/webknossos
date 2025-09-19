@@ -162,7 +162,7 @@ export default function* watchActivatedMappings(): Saga<void> {
 }
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
-  return mapping.mappingType === "HDF5";
+  return mapping.mappingType !== "JSON" && mapping.mappingType != null;
 };
 
 function* reloadData(
@@ -414,7 +414,8 @@ function* handleSetMapping(
 
   if (mappingType === "JSON") {
     yield* call(handleSetJsonMapping, layerName, mappingName, mappingType);
-  } else if (mappingType === "HDF5") {
+  } else {
+    // Default to HDF5 mapping which is the default for now. Only JSON mappings must be treated specially.
     yield* call(
       handleSetHdf5Mapping,
       layerName,

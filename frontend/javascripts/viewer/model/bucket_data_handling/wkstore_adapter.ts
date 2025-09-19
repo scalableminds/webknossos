@@ -194,7 +194,7 @@ export async function requestFromStore(
     );
     return activeMapping != null && // Start to request mapped data during mapping activation phase already
       activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-      activeMapping.mappingType === "HDF5"
+      activeMapping.mappingType !== "JSON"
       ? activeMapping.mappingName
       : null;
   })();

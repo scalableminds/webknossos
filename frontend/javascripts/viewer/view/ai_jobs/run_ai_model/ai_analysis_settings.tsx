@@ -184,7 +184,7 @@ export const AiAnalysisSettings: React.FC = () => {
                   <Form.Item
                     name="seedGeneratorDistanceThreshold"
                     label="Seed generator distance threshold (nm)"
-                    tooltip="The seed_generator_distance_threshold controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
+                    tooltip="Controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
                     rules={[{ required: true, message: "Please enter positive number" }]}
                   >
                     <InputNumber

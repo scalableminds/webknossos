@@ -60,6 +60,7 @@ export const AiTrainingSettings: React.FC = () => {
                 name="maxDistanceNm"
                 label="Max Distance (nm)"
                 rules={[{ required: true, message: "Please enter a positive number" }]}
+                tooltip='The maximum cross-section length or distance ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
               >
                 <InputNumber min={0.1} suffix="nm" />
               </Form.Item>

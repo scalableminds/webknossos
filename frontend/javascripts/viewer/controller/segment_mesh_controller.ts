@@ -255,6 +255,14 @@ export default class SegmentMeshController {
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
 
+    const state = Store.getState();
+    if (isNewlyAddedMesh) {
+      const isVisible =
+        state.localSegmentationData?.[layerName].meshes?.[additionalCoordinatesString]?.[segmentId]
+          .isVisible ?? true;
+      this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
+    }
+
     const segmentationTracing = getActiveSegmentationTracing(Store.getState());
     if (segmentationTracing != null) {
       // addMeshFromGeometry is often called multiple times for different sets of geometries.

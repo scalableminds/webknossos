@@ -2586,7 +2586,7 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName].meshes?.[additionalCoordKey]?.[segmentId] !=
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
       null
     ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
@@ -2614,7 +2614,7 @@ class DataApi {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
     if (
-      state.localSegmentationData[effectiveLayerName].meshes?.[additionalCoordKey]?.[segmentId] !=
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
       null
     ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
@@ -2641,7 +2641,7 @@ class DataApi {
     const additionalCoordinates = state.flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].meshes?.[additionalCoordKey] ||
+      Store.getState().localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey] ||
         EMPTY_OBJECT,
     );
 

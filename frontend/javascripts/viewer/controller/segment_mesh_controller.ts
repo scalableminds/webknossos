@@ -258,7 +258,7 @@ export default class SegmentMeshController {
     const state = Store.getState();
     if (isNewlyAddedMesh) {
       const isVisible =
-        state.localSegmentationData?.[layerName].meshes?.[additionalCoordinatesString]?.[segmentId]
+        state.localSegmentationData?.[layerName]?.meshes?.[additionalCoordinatesString]?.[segmentId]
           .isVisible ?? true;
       this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
     }

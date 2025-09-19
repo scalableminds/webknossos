@@ -148,7 +148,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       organizationId: String,
       requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noPrefixConfigured"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
       orgaDir = uploadToPathsPrefix / organizationId
       datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
       datasetPath = datasetParent / dataSource.id.directoryName
@@ -249,7 +249,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.attachmentType)
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noPrefixConfigured"
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,

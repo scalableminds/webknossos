@@ -121,6 +121,8 @@ dataset.upload.finishFailed=Failed to finalize dataset upload.
 dataset.upload.moveToTarget.failed=Failed to move uploaded dataset to target directory.
 dataset.upload.moreBytesThanReserved=The uploaded dataset contains more bytes than originally reserved. Please make sure to reserve the correct amount of bytes.
 dataset.upload.creation.failed=Failed to create dataset.
+dataset.reserveUploadToPaths.noLayers=Cannot reserve upload for dataset with no layers.
+dataset.uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 dataset.explore.failed.readFile=Failed to read remote file
 dataset.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 dataset.explore.autoAdd.failed=Failed to automatically import the explored dataset.
@@ -141,6 +143,7 @@ dataStore.notFound=DataStore not found.
 dataStore.create.failed=Failed to create DataStore.
 dataStore.remove.failure=The DataStore could not get removed.
 dataStore.name.alreadyTaken=The DataStore name is already in use.
+dataStore.uploadToPathsNotAllowed=The datastore that holds the layers requested to be linked does not support dataset upload to paths
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.

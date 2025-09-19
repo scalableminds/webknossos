@@ -1,3 +1,5 @@
+import type { Rule } from "antd/es/form";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import _ from "lodash";
@@ -5,19 +7,24 @@ import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/a
 import { APIJobType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
-import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
-import { MEAN_VX_SIZE, MIN_BBOX_EXTENT, type ModalJobTypes } from "./constants";
+import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
 
-export const getMinimumDSSize = (jobType: ModalJobTypes) => {
+export const getMinimumDSSize = (jobType: APIJobType) => {
   switch (jobType) {
     case APIJobType.INFER_NEURONS:
     case APIJobType.INFER_NUCLEI:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     case APIJobType.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
+    case APIJobType.INFER_INSTANCES:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
+    default:
+      throw new Error(`Unknown job type: ${jobType}`);
   }
 };
 
@@ -39,9 +46,13 @@ export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingB
 export const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
-  jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
+  jobType:
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI
+    | APIJobType.INFER_INSTANCES,
 ) => {
-  if (jobType === APIJobType.INFER_MITOCHONDRIA) {
+  if (jobType === APIJobType.INFER_MITOCHONDRIA || jobType === APIJobType.INFER_INSTANCES) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.resolutions);
     return magInfo.getFinestMag();
@@ -78,7 +89,11 @@ export const getBestFittingMagComparedToTrainingDS = (
 
 export const isBBoxTooSmall = (
   bbox: Vector3,
-  segmentationType: ModalJobTypes,
+  segmentationType:
+    | APIJobType.INFER_INSTANCES
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -103,7 +118,11 @@ export const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6,
   mag: Vector3,
   colorLayer: APIDataLayer,
-  segmentationType: ModalJobTypes,
+  segmentationType:
+    | APIJobType.INFER_INSTANCES
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,
@@ -285,3 +304,41 @@ export function checkBoundingBoxesForErrorsAndWarnings(
 
   return { hasBBoxErrors, hasBBoxWarnings, errors, warnings };
 }
+
+export const colorLayerMustNotBeUint24Rule = {
+  validator: (_: Rule, value: APIDataLayer) => {
+    if (value && value.elementClass === "uint24") {
+      return Promise.reject(
+        new Error(
+          "The selected layer of type uint24 is not supported. Please select a different one.",
+        ),
+      );
+    }
+    return Promise.resolve();
+  },
+};
+
+export const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+  const colorLayer = colorLayers.find((layer) => layer.name === layerName);
+  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+};
+
+export const getIntersectingMagList = (
+  annotation: APIAnnotation,
+  dataset: APIDataset,
+  groundTruthLayerName: string,
+  imageDataLayerName: string,
+) => {
+  const colorLayers = getColorLayers(dataset);
+  const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
+  const segmentationLayer = getSegmentationLayerByHumanReadableName(
+    dataset,
+    annotation,
+    groundTruthLayerName,
+  );
+  const groundTruthLayerMags = getMagInfo(segmentationLayer.resolutions).getMagList();
+
+  return groundTruthLayerMags?.filter((groundTruthMag) =>
+    dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+  );
+};

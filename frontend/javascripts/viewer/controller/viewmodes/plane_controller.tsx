@@ -80,15 +80,17 @@ import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bound
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
   volumeControls: Record<string, any>,
+  proofreadControls?: Record<string, any>,
 ): void {
   const conflictingHandlers = _.intersection(
     Object.keys(skeletonControls),
     Object.keys(volumeControls),
+    proofreadControls ? Object.keys(proofreadControls) : [],
   );
 
   if (conflictingHandlers.length > 0) {
     throw new Error(
-      `There are unsolved conflicts between skeleton and volume controller: ${conflictingHandlers.join(
+      `There are unsolved conflicts between skeleton, volume and proofread controller: ${conflictingHandlers.join(
         ", ",
       )}`,
     );
@@ -217,6 +219,21 @@ class BoundingBoxKeybindings {
 
   static createKeyDownAndUpHandler() {
     return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
+  }
+}
+
+class ProofreadingKeybindings {
+  static getKeyboardControls() {
+    return {
+      m: () => {
+        const state = Store.getState();
+        const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+        if (isProofreadingActive) {
+          const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
+          Store.dispatch(updateUserSettingAction("isMultiSplitActive", !isMultiSplitActive));
+        }
+      },
+    };
   }
 }
 
@@ -597,7 +614,11 @@ class PlaneController extends React.PureComponent<Props> {
       meta: boundingBoxMetaHandler,
       ctrl: boundingBoxCtrlHandler,
     } = BoundingBoxKeybindings.getKeyboardControls();
-    ensureNonConflictingHandlers(skeletonControls, volumeControls);
+    const proofreadingControls =
+      this.props.annotation.volumes.length > 0
+        ? ProofreadingKeybindings.getKeyboardControls()
+        : emptyDefaultHandler;
+    ensureNonConflictingHandlers(skeletonControls, volumeControls, proofreadingControls);
     const extendedSkeletonControls =
       this.props.annotation.skeleton != null
         ? SkeletonKeybindings.getExtendedKeyboardControls()
@@ -616,6 +637,7 @@ class PlaneController extends React.PureComponent<Props> {
         ...baseControls,
         ...skeletonControls,
         ...volumeControls,
+        ...proofreadingControls,
         c: this.createToolDependentKeyboardHandler(
           skeletonCHandler,
           volumeCHandler,

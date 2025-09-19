@@ -38,6 +38,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
             group: null,
           },
           hideUnregisteredSegments: false,
+          minCutPartitions: { 1: [], 2: [], agglomerateId: null },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

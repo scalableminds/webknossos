@@ -57,6 +57,7 @@ import {
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
   getPosition,
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
@@ -149,6 +150,7 @@ import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucke
 import type DataLayer from "viewer/model/data_layer";
 import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
+import { eventBus } from "viewer/model/helpers/event_bus";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
@@ -2575,12 +2577,18 @@ class DataApi {
    * api.data.setMeshVisibility(segmentId, false);
    */
   setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
+    if (
+      state.localSegmentationData[effectiveLayerName].meshes?.[additionalCoordKey]?.[segmentId] !=
+      null
+    ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
@@ -2944,6 +2952,15 @@ class UtilsApi {
     return {
       unregister: keyboard.destroy.bind(keyboard),
     };
+  }
+
+  waitForAction(actionType: string): Promise<any> {
+    return new Promise((resolve) => {
+      const unsubscribe = eventBus.on(actionType, (payload) => {
+        unsubscribe();
+        resolve(payload);
+      });
+    });
   }
 }
 

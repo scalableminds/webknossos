@@ -112,12 +112,14 @@ describe("Save Saga", () => {
       put(setSaveBusyAction(true)),
     );
 
+    saga.next(false); // selecting othersMayEdit
     saga.next(); // advance to next select state
 
     expectValueDeepEqual(expect, saga.next(saveQueue), call(sendSaveRequestToServer));
     saga.next(saveQueue.length); // select state
 
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    expectValueDeepEqual(expect, saga.next([]), put(SaveActions.doneSavingAction()));
+    expectValueDeepEqual(expect, saga.next(), put(setSaveBusyAction(false)));
 
     // Test that loop repeats
     saga.next(); // select state
@@ -238,8 +240,6 @@ describe("Save Saga", () => {
     const alertEffect = saga.next().value;
     expect(alertEffect.payload.fn).toBe(alert);
 
-    saga.next(); // sleep
-
     expect(() => saga.next()).toThrow();
   });
 
@@ -262,13 +262,15 @@ describe("Save Saga", () => {
       forcePush: SaveActions.saveNowAction(),
     }); // put setSaveBusyAction
 
-    saga.next(); // select state
+    saga.next(); // select state -> othersMayEdit
+    saga.next(false); // select state -> save queue length
 
     saga.next(saveQueue); // call sendSaveRequestToServer
 
-    saga.next(1); // advance to select state
+    saga.next(1); // advance to select state -> save queue -> is empty now
 
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    expectValueDeepEqual(expect, saga.next([]), put(SaveActions.doneSavingAction()));
+    expectValueDeepEqual(expect, saga.next(), put(setSaveBusyAction(false)));
   });
 
   it("should not try to reach state with all actions being saved when saving is triggered by a timeout", () => {
@@ -289,13 +291,14 @@ describe("Save Saga", () => {
       timeout: "a placeholder",
     }); // put setSaveBusyAction
 
-    saga.next(); // EnsureMaySaveNowAsync
-    saga.next(); // EnsureHasNewestVersionAsync
+    saga.next(); // selecting othersMayEdit = false
+    saga.next(false); // selecting othersMayEdit = false
     saga.next(1); // select itemCountToSave
 
     saga.next(saveQueue); // call sendSaveRequestToServer
 
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    expectValueDeepEqual(expect, saga.next(1), put(SaveActions.doneSavingAction()));
+    expectValueDeepEqual(expect, saga.next(), put(setSaveBusyAction(false)));
   });
 
   it("should remove the correct update actions", () => {

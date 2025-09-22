@@ -6,7 +6,6 @@ import _ from "lodash";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
@@ -28,7 +27,6 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
-import { clearActiveMapping, updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
 import Deferred from "libs/async/deferred";
@@ -47,8 +45,8 @@ export function* setupSavingToServer(): Saga<void> {
 }
 
 // todop: restore to 10
-const VERSION_POLL_INTERVAL_COLLAB = 20 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
+const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 5 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
 function saveQueueEntriesToUpdateActionBatch(data: Array<SaveQueueEntry>, version: number) {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import update from "immutability-helper";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -72,6 +72,7 @@ describe("Annotation Saga", () => {
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
+    vi.clearAllMocks(); // clears call counts of *all* spies
   });
   // Properties that can influence whether mutex acquisition is called are:
   // - othersMayEdit

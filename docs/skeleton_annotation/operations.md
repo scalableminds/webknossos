@@ -37,7 +37,7 @@ Common tree operations include splitting and merging trees.
 
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose _Create Edge & Merge with this Tree_. When using _Classic Controls_, the second node needs to be selected with _SHIFT + ALT + Left Click_ to create an edge between the two.
 
-![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](../images/tracing_ui_tree_merge_split.gif)
+![Trees can be split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](../images/tracing_ui_tree_merge_split.gif)
 /// caption
 Trees can be split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.
 ///

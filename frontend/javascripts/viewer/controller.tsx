@@ -21,6 +21,7 @@ import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { wkReadyAction } from "viewer/model/actions/actions";
 import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
@@ -232,8 +233,14 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
         m: () => {
           // rotate allowed modes
-          const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const { allowedModes } = Store.getState().annotation.restrictions;
+          const state = Store.getState();
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          const currentViewMode = state.temporaryConfiguration.viewMode;
+          if (isProofreadingActive && currentViewMode === constants.MODE_PLANE_TRACING) {
+            // Skipping cycling view mode as m in proofreading is used to toggle multi cut tool.
+            return;
+          }
+          const { allowedModes } = state.annotation.restrictions;
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },

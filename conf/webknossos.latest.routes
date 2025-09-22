@@ -105,7 +105,12 @@ PUT           /datasets/:datasetId/clearThumbnailCache                          
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
+POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()
@@ -123,7 +128,7 @@ PUT           /datastores/:name/datasources                                     
 PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
 GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
-PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean)
+PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
@@ -135,7 +140,6 @@ GET           /datastores/:name/findCredential                                  
 POST          /datastores/:name/validateUserAccess                                              controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                                       controllers.DataStoreController.create()
 DELETE        /datastores/:name                                                                 controllers.DataStoreController.delete(name: String)
-PUT           /datastores/:name                                                                 controllers.DataStoreController.update(name: String)
 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()

@@ -4,31 +4,32 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
+import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
   AdditionalAxis,
-  Category,
   CoordinateTransformation,
   CoordinateTransformationType,
   DataFormat,
+  DataLayer,
+  DataSource,
   DataSourceId,
+  DataSourceStatus,
   ElementClass,
   LayerAttachment,
   LayerAttachmentDataformat,
   LayerAttachmentType,
+  LayerCategory,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer,
   ThinPlateSplineCorrespondences,
-  DataLayerLike => DataLayer,
-  DatasetLayerAttachments => AttachmentWrapper
+  DataLayerAttachments => AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.MagPathInfo
 import com.scalableminds.webknossos.schema.Tables._
@@ -46,7 +47,6 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
-import java.net.URI
 import scala.concurrent.ExecutionContext
 
 case class Dataset(_id: ObjectId,
@@ -105,10 +105,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   protected def idColumn(x: Datasets): Rep[String] = x._Id
 
   protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
-
-  val unreportedStatus: String = "No longer available on datastore."
-  val deletedByUserStatus: String = "Deleted by user."
-  private val unreportedStatusList = List(unreportedStatus, deletedByUserStatus)
 
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
@@ -336,7 +332,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            isUnreported = unreportedStatusList.contains(row._10),
+            isUnreported = DataSourceStatus.unreportedStatusList.contains(row._10),
             colorLayerNames = parseArrayLiteral(row._12),
             segmentationLayerNames = parseArrayLiteral(row._13)
         ))
@@ -395,8 +391,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildIsUnreportedPredicate(isUnreportedOpt: Option[Boolean]): SqlToken =
     isUnreportedOpt match {
-      case Some(true)  => q"status = $unreportedStatus OR status = $deletedByUserStatus"
-      case Some(false) => q"status != $unreportedStatus AND status != $deletedByUserStatus"
+      case Some(true)  => q"status = ${DataSourceStatus.unreported} OR status = ${DataSourceStatus.deletedByUser}"
+      case Some(false) => q"status != ${DataSourceStatus.unreported} AND status != ${DataSourceStatus.deletedByUser}"
       case None        => q"TRUE"
     }
 
@@ -434,15 +430,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
     findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
 
-  def doesDatasetDirectoryExistInOrganization(directoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Boolean] =
+  def doesDatasetNameExistInOrganization(datasetName: String, organizationId: String): Fox[Boolean] =
     for {
-      accessQuery <- readAccessQuery
       r <- run(q"""SELECT EXISTS(SELECT 1
                    FROM $existingCollectionName
-                   WHERE directoryName = $directoryName
+                   WHERE name = $datasetName
                    AND _organization = $organizationId
-                   AND $accessQuery
                    LIMIT 1)""".as[Boolean])
       exists <- r.headOption.toFox
     } yield exists
@@ -575,7 +568,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       isPublic = Some(isPublic),
       tags = Some(tags),
       metadata = Some(metadata),
-      folderId = Some(folderId)
+      folderId = Some(folderId),
+      dataSource = None
     )
     updatePartial(datasetId, updateParameters)
   }
@@ -636,14 +630,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def updateDataSourceByDatasetId(id: ObjectId,
-                                  dataStoreName: String,
-                                  inboxSourceHash: Int,
-                                  source: InboxDataSource,
-                                  isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDataSource(id: ObjectId,
+                       dataStoreName: String,
+                       inboxSourceHash: Int,
+                       newDataSource: DataSource,
+                       isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(source.id.organizationId)
-      defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
+      organization <- organizationDAO.findOne(newDataSource.id.organizationId)
+      defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
       _ <- run(q"""UPDATE webknossos.datasets
                    SET
                      _dataStore = $dataStoreName,
@@ -651,23 +645,33 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash = $inboxSourceHash,
                      defaultViewConfiguration = $defaultViewConfiguration,
                      isUsable = $isUsable,
-                     voxelSizeFactor = ${source.voxelSizeOpt.map(_.factor)},
-                     voxelSizeUnit = ${source.voxelSizeOpt.map(_.unit)},
-                     status = ${source.statusOpt.getOrElse("").take(1024)}
+                     voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
+                     voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
+                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}
                    WHERE _id = $id""".asUpdate)
-      _ <- datasetLayerDAO.updateLayers(id, source)
+      _ <- datasetLayerDAO.updateLayers(id, newDataSource)
+    } yield ()
+
+  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET
+                     isUsable = $isUsable,
+                     status = $newStatus
+                   WHERE _id = $id""".asUpdate)
     } yield ()
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            organizationId: Option[String],
-                           unreportedStatus: String,
-                           inactiveStatusList: List[String]): Fox[Unit] = {
+                           unreportedStatus: String): Fox[Unit] = {
     val inSelectedOrga = organizationId.map(id => q"_organization = $id").getOrElse(q"TRUE")
     val inclusionPredicate =
       if (existingDatasetIds.isEmpty) q"NOT isVirtual AND $inSelectedOrga"
       else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)} AND NOT isVirtual AND $inSelectedOrga"
-    val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
+    val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(DataSourceStatus.inactiveStatusList)}"
     val deleteMagsQuery =
       q"""DELETE FROM webknossos.dataset_mags
          WHERE _dataset IN (
@@ -707,7 +711,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
     val deleteDatasetQuery =
       if (onlyMarkAsDeleted)
-        q"UPDATE webknossos.datasets SET status = $deletedByUserStatus, isUsable = false WHERE _id = $datasetId".asUpdate
+        q"UPDATE webknossos.datasets SET status = ${DataSourceStatus.deletedByUser}, isUsable = false WHERE _id = $datasetId".asUpdate
       else
         q"DELETE FROM webknossos.datasets WHERE _id = $datasetId".asUpdate
 
@@ -759,33 +763,23 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
     } yield mag
 
-  def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
+  def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
     for {
-      rows <- run(DatasetMags.filter(r => r._Dataset === datasetId.id && r.datalayername === dataLayerName).result)
-        .map(_.toList)
-      mags <- Fox.combined(rows.map(r => parseMag(r.mag))) ?~> "could not parse mag row"
-    } yield mags
+      rows <- run(
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
+       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName"""
+          .as[DatasetMagsRow])
+      magLocators <- Fox.combined(rows.map(parseMagLocator))
+    } yield magLocators
 
-  def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.magsOpt match {
-        case Some(mags) =>
-          mags.map(mag => {
-            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, realPath, axisOrder, channelIndex, credentialId)
-                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.path}, ${mag.axisOrder.map(
-              Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
+      layer.mags.map { mag =>
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, realPath, axisOrder, channelIndex, credentialId)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
-          })
-        case None =>
-          layer.resolutions.distinct.map { mag: Vec3Int =>
-            {
-              q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
-                    VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
-            }
-          }
       }
-
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
@@ -850,30 +844,23 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos <- rowsToMagInfos(rows)
     } yield magInfos
 
-  def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
+  private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
       mag <- parseMag(row.mag)
       axisOrderParsed = row.axisorder match {
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
+      path <- Fox.runOptional(row.path)(UPath.fromString(_).toFox)
     } yield
       MagLocator(
         mag,
-        row.path,
+        path,
         None,
         axisOrderParsed,
         row.channelindex,
         row.credentialid
       )
-
-  def findAllByDatasetId(datasetId: ObjectId): Fox[Seq[(String, MagLocator)]] =
-    for {
-      rows <- run(
-        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
-           FROM webknossos.dataset_mags WHERE _dataset = $datasetId""".as[DatasetMagsRow])
-      mags <- Fox.combined(rows.map(parseMagLocator))
-    } yield rows.map(r => r.datalayername).zip(mags)
 
 }
 
@@ -884,14 +871,14 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
                                 datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[DataLayer] = {
-    val result: Fox[Fox[DataLayer]] = for {
-      category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
+  private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[StaticLayer] = {
+    val result: Fox[Fox[StaticLayer]] = for {
+      category <- LayerCategory.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse bounding box"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
+      magLocators <- datasetMagsDAO.findMagLocatorsForLayer(datasetId, row.name) ?~> "Could not find magLocators for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -903,43 +890,38 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
       attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       attachmentsOpt = if (attachments.isEmpty) None else Some(attachments)
-
-      dataFormat = row.dataformat.flatMap(df => DataFormat.fromString(df))
+      dataFormat <- row.dataformat.flatMap(df => DataFormat.fromString(df)).toFox
     } yield {
       category match {
-        case Category.segmentation =>
+        case LayerCategory.segmentation =>
           val mappingsAsSet = row.mappings.map(parseArrayLiteral(_).toSet)
           Fox.successful(
-            AbstractSegmentationLayer(
-              row.name,
-              category,
-              boundingBox,
-              mags.sortBy(_.maxDim),
-              elementClass,
-              row.largestsegmentid,
-              mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
-              defaultViewConfigurationOpt,
-              adminViewConfigurationOpt,
-              coordinateTransformationsOpt,
-              additionalAxesOpt,
-              numChannels = row.numchannels,
+            StaticSegmentationLayer(
+              name = row.name,
               dataFormat = dataFormat,
-              attachments = attachmentsOpt
+              boundingBox = boundingBox,
+              elementClass = elementClass,
+              mags = magLocators.sortBy(_.mag.maxDim),
+              defaultViewConfiguration = defaultViewConfigurationOpt,
+              adminViewConfiguration = adminViewConfigurationOpt,
+              coordinateTransformations = coordinateTransformationsOpt,
+              additionalAxes = additionalAxesOpt,
+              attachments = attachmentsOpt,
+              largestSegmentId = row.largestsegmentid,
+              mappings = mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m))
             ))
-        case Category.color =>
+        case LayerCategory.color =>
           Fox.successful(
-            AbstractDataLayer(
-              row.name,
-              category,
-              boundingBox,
-              mags.sortBy(_.maxDim),
-              elementClass,
-              defaultViewConfigurationOpt,
-              adminViewConfigurationOpt,
-              coordinateTransformationsOpt,
-              additionalAxesOpt,
-              numChannels = row.numchannels,
+            StaticColorLayer(
+              name = row.name,
               dataFormat = dataFormat,
+              boundingBox = boundingBox,
+              elementClass = elementClass,
+              mags = magLocators.sortBy(_.mag.maxDim),
+              defaultViewConfiguration = defaultViewConfigurationOpt,
+              adminViewConfiguration = adminViewConfigurationOpt,
+              coordinateTransformations = coordinateTransformationsOpt,
+              additionalAxes = additionalAxesOpt,
               attachments = attachmentsOpt
             ))
         case _ => Fox.failure(s"Could not match dataset layer with category $category")
@@ -948,7 +930,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
     result.flatten
   }
 
-  def findAllForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
+  def findAllForDataset(datasetId: ObjectId): Fox[List[StaticLayer]] =
     for {
       rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
                           defaultViewConfiguration, adminViewConfiguration, numChannels, dataFormat
@@ -958,9 +940,9 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       rowsParsed <- Fox.combined(rows.toList.map(parseRow(_, datasetId)))
     } yield rowsParsed
 
-  private def insertLayerQuery(datasetId: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
+  private def insertLayerQuery(datasetId: ObjectId, layer: StaticLayer): SqlAction[Int, NoStream, Effect] =
     layer match {
-      case s: AbstractSegmentationLayer =>
+      case s: StaticSegmentationLayer =>
         val mappings = s.mappings.getOrElse(Set()).toList
         q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${s.name}, ${s.category}, ${s.elementClass},
@@ -979,7 +961,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               adminViewConfiguration = ${s.adminViewConfiguration.map(Json.toJson(_))},
               numChannels = ${s.numChannels},
               dataFormat = ${s.dataFormat} """.asUpdate
-      case d: AbstractDataLayer =>
+      case d: StaticColorLayer =>
         q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${d.name}, ${d.category}, ${d.elementClass},
                     ${d.boundingBox},
@@ -998,26 +980,26 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       case _ => throw new Exception("DataLayer type mismatch")
     }
 
-  def updateLayers(datasetId: ObjectId, source: InboxDataSource): Fox[Unit] = {
-    def getSpecificClearQuery(dataLayers: List[DataLayer]) =
-      q"""DELETE FROM webknossos.dataset_layers
+  def updateLayers(datasetId: ObjectId, source: DataSource): Fox[Unit] = {
+    def clearQuery(dataLayers: Seq[StaticLayer]) =
+      if (dataLayers.isEmpty) {
+        q"DELETE FROM webknossos.dataset_layers WHERE _dataset = $datasetId".asUpdate
+      } else {
+        q"""DELETE FROM webknossos.dataset_layers
           WHERE _dataset = $datasetId
           AND name NOT IN ${SqlToken.tupleFromList(dataLayers.map(_.name))}""".asUpdate
-    val clearQuery = q"DELETE FROM webknossos.dataset_layers WHERE _dataset = $datasetId".asUpdate
+      }
 
-    val queries = source.toUsable match {
-      case Some(usable) =>
-        getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(datasetId, _))
-      case _ => List(clearQuery)
-    }
+    val layers = source.allLayers
+
+    val queries = clearQuery(layers) :: layers.map(insertLayerQuery(datasetId, _))
 
     for {
       _ <- run(DBIO.sequence(queries))
-      _ <- datasetMagsDAO.updateMags(datasetId, source.toUsable.map(_.dataLayers))
-      _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId,
-                                                                               source.toUsable.map(_.dataLayers))
-      _ <- datasetLayerAttachmentsDAO.updateAttachments(datasetId, source.toUsable.map(_.dataLayers))
-      _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, source.toUsable.map(_.dataLayers))
+      _ <- datasetMagsDAO.updateMags(datasetId, layers)
+      _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId, layers)
+      _ <- datasetLayerAttachmentsDAO.updateAttachments(datasetId, layers)
+      _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, layers)
     } yield ()
   }
 
@@ -1060,13 +1042,13 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
+  private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      uri <- tryo(new URI(row.path)).toFox
-    } yield LayerAttachment(row.name, uri, dataFormat)
+      path <- UPath.fromString(row.path).toFox
+    } yield LayerAttachment(row.name, path, dataFormat)
 
-  def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
+  private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
     for {
       meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(parseRow)
       agglomerateFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.agglomerate.toString))(
@@ -1086,32 +1068,38 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending
                 FROM webknossos.dataset_layer_attachments
-                WHERE _dataset = $datasetId AND layerName = $layerName""".as[DatasetLayerAttachmentsRow])
+                WHERE _dataset = $datasetId
+                AND layerName = $layerName
+                AND NOT uploadToPathIsPending""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
-  def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
-    def insertQuery(attachment: LayerAttachment, layerName: String, fileType: String) =
-      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat)
-          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path.toString}, $fileType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT)""".asUpdate
+  def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
+    def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
+      val query =
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
+          VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false})"""
+      query.asUpdate
+    }
+
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
+    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.attachments match {
         case Some(attachments) =>
           attachments.agglomerates.map { agglomerate =>
-            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate.toString)
+            insertQuery(agglomerate, layer.name, LayerAttachmentType.agglomerate)
           } ++ attachments.connectomes.map { connectome =>
-            insertQuery(connectome, layer.name, LayerAttachmentType.connectome.toString)
+            insertQuery(connectome, layer.name, LayerAttachmentType.connectome)
           } ++ attachments.segmentIndex.map { segmentIndex =>
-            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex.toString)
+            insertQuery(segmentIndex, layer.name, LayerAttachmentType.segmentIndex)
           } ++ attachments.meshes.map { mesh =>
-            insertQuery(mesh, layer.name, LayerAttachmentType.mesh.toString)
+            insertQuery(mesh, layer.name, LayerAttachmentType.mesh)
           } ++ attachments.cumsum.map { cumsumFile =>
-            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum.toString)
+            insertQuery(cumsumFile, layer.name, LayerAttachmentType.cumsum)
           }
         case None =>
           List.empty
@@ -1119,6 +1107,50 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+
+  def insertPending(datasetId: ObjectId,
+                    layerName: String,
+                    attachmentName: String,
+                    attachmentType: LayerAttachmentType.Value,
+                    attachmentDataformat: LayerAttachmentDataformat.Value,
+                    attachmentPath: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
+            VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true})
+         """.asUpdate)
+    } yield ()
+
+  def countAttachmentsIncludingPending(datasetId: ObjectId,
+                                       layerName: String,
+                                       attachmentName: Option[String],
+                                       attachmentType: LayerAttachmentType.Value): Fox[Int] = {
+    val namePredicate = attachmentName.map(name => q"name = $name").getOrElse(q"TRUE")
+    for {
+      rows <- run(q"""SELECT COUNT(*)
+                      FROM webknossos.dataset_layer_attachments
+                      WHERE _dataset = $datasetId
+                      AND layerName = $layerName
+                      AND $namePredicate
+                      AND type = $attachmentType
+                      """.as[Int])
+      first <- rows.headOption.toFox
+    } yield first
+  }
+
+  def finishUploadToPath(datasetId: ObjectId,
+                         layerName: String,
+                         attachmentName: String,
+                         attachmentType: LayerAttachmentType.Value): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
+                   SET uploadToPathIsPending = ${false}
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   AND name = $attachmentName
+                   AND type = $attachmentType
+         """.asUpdate)
+    } yield ()
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -1156,10 +1188,10 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
       rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
     } yield rowsParsed
 
-  def updateCoordinateTransformations(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateCoordinateTransformations(datasetId: ObjectId, layers: List[DataLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+    val insertQueries = layers.flatMap { layer: DataLayer =>
       layer.coordinateTransformations.getOrElse(List.empty).zipWithIndex.map { tuple =>
         {
           val coordinateTransformation: CoordinateTransformation = tuple._1
@@ -1192,10 +1224,10 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
       additionalAxes = rows.map(parseRow)
     } yield additionalAxes
 
-  def updateAdditionalAxes(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateAdditionalAxes(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.additionalAxes.getOrElse(List.empty).map { additionalAxis =>
         {
           q"""INSERT INTO webknossos.dataset_layer_additionalAxes(_dataset, layerName, name, lowerBound, upperBound, index)
@@ -1203,7 +1235,6 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
               $datasetId, ${layer.name}, ${additionalAxis.name}, ${additionalAxis.lowerBound}, ${additionalAxis.upperBound}, ${additionalAxis.index})
               """.asUpdate
         }
-
       }
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)

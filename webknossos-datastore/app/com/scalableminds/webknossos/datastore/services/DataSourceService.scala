@@ -4,19 +4,21 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, MagLinkInfo}
+import com.scalableminds.webknossos.datastore.helpers.{
+  DatasetDeleter,
+  IntervalScheduler,
+  PathSchemes,
+  UPath,
+  MagLinkInfo
+}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
-  DataVaultService,
   RemoteSourceDescriptorService,
   S3AccessKeyCredential
 }
@@ -38,14 +40,14 @@ import software.amazon.awssdk.services.s3.model.{
   ObjectIdentifier
 }
 
-import java.io.{File, FileWriter}
+import java.io.File
 import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.io.Source
 import scala.jdk.CollectionConverters._
 import scala.jdk.FutureConverters._
+import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -57,7 +59,9 @@ class DataSourceService @Inject()(
     extends IntervalScheduler
     with DatasetDeleter
     with LazyLogging
+    with DataSourceToDiskWriter
     with FoxImplicits
+    with DataSourceValidation
     with Formatter {
 
   override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
@@ -65,10 +69,9 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = Path.of(config.Datastore.baseDirectory)
+  val dataBaseDir: Path = config.Datastore.baseDirectory
 
-  private val propertiesFileName = Path.of(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-  private val logFileName = Path.of("datasource-properties-backups.log")
+  private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
 
   private var inboxCheckVerboseCounter = 0
 
@@ -88,7 +91,6 @@ class DataSourceService @Inject()(
         Files.createDirectory(orgaPath)
       }.map(_ => ()).toFox ?~> "Could not create organization directory on datastore server"
     }
-
   }
 
   def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
@@ -115,7 +117,7 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def reportRealPaths(dataSources: List[InboxDataSource]) =
+  private def reportRealPaths(dataSources: List[DataSource]) =
     for {
       _ <- Fox.successful(())
       magPathBoxes = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
@@ -131,58 +133,54 @@ class DataSourceService @Inject()(
       _ <- remoteWebknossosClient.reportRealPaths(pathInfos)
     } yield ()
 
-  private def determineMagRealPathsForDataSource(dataSource: InboxDataSource) = tryo {
-    val organizationPath = dataBaseDir.resolve(dataSource.id.organizationId)
-    val datasetPath = organizationPath.resolve(dataSource.id.directoryName)
+  private def determineMagRealPathsForDataSource(dataSource: DataSource) = tryo {
+    val absoluteDatasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         usableDataSource.dataLayers.flatMap { dataLayer =>
-          val rawLayerPath = datasetPath.resolve(dataLayer.name)
-          val absoluteLayerPath = if (Files.isSymbolicLink(rawLayerPath)) {
-            resolveRelativePath(datasetPath, Files.readSymbolicLink(rawLayerPath))
+          val absoluteRawLayerPath = absoluteDatasetPath.resolve(dataLayer.name)
+          val absoluteRealLayerPath = if (Files.isSymbolicLink(absoluteRawLayerPath)) {
+            resolveRelativePath(absoluteDatasetPath, Files.readSymbolicLink(absoluteRawLayerPath))
           } else {
-            rawLayerPath.toAbsolutePath
+            absoluteRawLayerPath.toAbsolutePath
           }
           dataLayer.mags.map { mag =>
-            getMagPathInfo(datasetPath, absoluteLayerPath, rawLayerPath, dataLayer, mag)
+            getMagPathInfo(absoluteDatasetPath, absoluteRealLayerPath, absoluteRawLayerPath, dataLayer, mag)
           }
         }
       case None => List()
     }
   }
 
-  private def getMagPathInfo(datasetPath: Path,
-                             absoluteLayerPath: Path,
-                             rawLayerPath: Path,
+  private def getMagPathInfo(absoluteDatasetPath: Path,
+                             absoluteRealLayerPath: Path,
+                             absoluteRawLayerPath: Path,
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
-    val (magURI, isRemote) = getMagURI(datasetPath, absoluteLayerPath, mag)
-    if (isRemote) {
-      MagPathInfo(dataLayer.name, mag.mag, magURI.toString, magURI.toString, hasLocalData = false)
+    val resolvedMagPath = resolveMagPath(absoluteDatasetPath, absoluteRealLayerPath, mag)
+    if (resolvedMagPath.isRemote) {
+      MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
     } else {
-      val magPath = Path.of(magURI.getPath)
-      val realPath = magPath.toRealPath()
+      val magPath = resolvedMagPath.toLocalPathUnsafe
+      val realMagPath = magPath.toRealPath()
       // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-      val isLocal = realPath.startsWith(datasetPath.toAbsolutePath)
-      val unresolvedPath =
-        rawLayerPath.toAbsolutePath.resolve(absoluteLayerPath.relativize(magPath)).normalize()
+      val isDatasetLocal = realMagPath.startsWith(absoluteDatasetPath.toAbsolutePath)
+      val absoluteUnresolvedPath = absoluteRawLayerPath.resolve(absoluteRealLayerPath.relativize(magPath)).normalize()
       MagPathInfo(dataLayer.name,
                   mag.mag,
-                  unresolvedPath.toUri.toString,
-                  realPath.toUri.toString,
-                  hasLocalData = isLocal)
+                  UPath.fromLocalPath(absoluteUnresolvedPath),
+                  UPath.fromLocalPath(realMagPath),
+                  hasLocalData = isDatasetLocal)
     }
   }
 
-  private def getMagURI(datasetPath: Path, layerPath: Path, mag: MagLocator): (URI, Boolean) = {
-    val uri = remoteSourceDescriptorService.resolveMagPath(
+  private def resolveMagPath(datasetPath: Path, layerPath: Path, mag: MagLocator): UPath =
+    remoteSourceDescriptorService.resolveMagPath(
       datasetPath,
       layerPath,
       layerPath.getFileName.toString,
       mag
     )
-    (uri, uri.getScheme != null && DataVaultService.isRemoteScheme(uri.getScheme))
-  }
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
     if (relativePath.isAbsolute) {
@@ -191,16 +189,16 @@ class DataSourceService @Inject()(
       basePath.resolve(relativePath).normalize().toAbsolutePath
     }
 
-  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource],
+  private def logFoundDatasources(foundInboxSources: Seq[DataSource],
                                   verbose: Boolean,
                                   selectedOrgaLabel: String): Unit = {
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
         .count(!_.isUsable)} inactive"
     val msg = if (verbose) {
-      val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.organizationId)
+      val byTeam: Map[String, Seq[DataSource]] = foundInboxSources.groupBy(_.id.organizationId)
       shortForm + ". " + byTeam.keys.map { team =>
-        val byUsable: Map[Boolean, Seq[InboxDataSource]] = byTeam(team).groupBy(_.isUsable)
+        val byUsable: Map[Boolean, Seq[DataSource]] = byTeam(team).groupBy(_.isUsable)
         team + ": [" + byUsable.keys.map { usable =>
           val label = if (usable) "active: [" else "inactive: ["
           label + byUsable(usable).map { ds =>
@@ -236,119 +234,7 @@ class DataSourceService @Inject()(
       .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
-  private def validateDataSource(dataSource: DataSource, organizationDir: Path): Box[Unit] = {
-    def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
-
-    // Check that when mags are sorted by max dimension, all dimensions are sorted.
-    // This means each dimension increases monotonically.
-    val magsSorted = dataSource.dataLayers.map(_.resolutions.sortBy(_.maxDim))
-    val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
-    val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
-    val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
-
-    def pathOk(pathStr: String): Boolean = {
-      val uri = new URI(pathStr)
-      if (DataVaultService.isRemoteScheme(uri.getScheme)) true
-      else {
-        val path = organizationDir
-          .resolve(dataSource.id.directoryName)
-          .resolve(Path.of(new URI(pathStr).getPath).normalize())
-          .toAbsolutePath
-        val allowedParent = organizationDir.toAbsolutePath
-        if (path.startsWith(allowedParent)) true else false
-      }
-    }
-
-    val errors = List(
-      Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),
-      Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
-      Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
-      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.segmentationElementClasses.contains(layer.elementClass)
-        },
-        s"Invalid element class for segmentation layer"
-      ),
-      Check(
-        dataSource.segmentationLayers.forall { layer =>
-          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
-        },
-        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
-      ),
-      Check(
-        dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
-        "Layer names must be unique. At least two layers have the same name."
-      ),
-      Check(
-        dataSource.dataLayers.flatMap(_.mags).flatMap(_.path).forall(pathOk),
-        "Mags with explicit paths must stay within the organization directory."
-      )
-    ).flatten
-
-    if (errors.isEmpty) {
-      Full(())
-    } else {
-      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
-    }
-  }
-
-  def updateDataSourceOnDisk(dataSource: DataSource, expectExisting: Boolean, preventNewPaths: Boolean): Fox[Unit] = {
-    val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
-    val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
-    for {
-      _ <- validateDataSource(dataSource, organizationDir).toFox
-      propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
-      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
-      _ <- Fox.runIf(expectExisting && preventNewPaths)(assertNoNewPaths(dataSourcePath, dataSource)) ?~> "dataSource.update.newExplicitPaths"
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
-      _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
-    } yield ()
-  }
-
-  private def assertNoNewPaths(dataSourcePath: Path, newDataSource: DataSource): Fox[Unit] = {
-    val propertiesPath = dataSourcePath.resolve(propertiesFileName)
-    if (Files.exists(propertiesPath)) {
-      Fox
-        .runOptional(newDataSource.toUsable) { newUsableDataSource =>
-          Fox.runOptional(dataSourceFromDir(dataSourcePath, newDataSource.id.organizationId).toUsable) {
-            oldUsableDataSource =>
-              val oldPaths = oldUsableDataSource.allExplicitPaths.toSet
-              Fox.fromBool(newUsableDataSource.allExplicitPaths.forall(oldPaths.contains))
-          }
-        }
-        .map(_ => ())
-    } else {
-      Fox.successful(())
-    }
-  }
-
-  private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
-    val propertiesFile = dataSourcePath.resolve(propertiesFileName)
-    val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
-      val previousContentSource = Source.fromFile(propertiesFile.toString)
-      val previousContent = previousContentSource.getLines().mkString("\n")
-      previousContentSource.close()
-      previousContent
-    } else {
-      "<empty>"
-    }
-    val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by WEBKNOSSOS at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
-    val logfilePath = dataSourcePath.resolve(logFileName)
-    try {
-      val fileWriter = new FileWriter(logfilePath.toString, true)
-      try {
-        fileWriter.write(outputForLogfile)
-        Full(())
-      } finally fileWriter.close()
-    } catch {
-      case e: Exception => Failure(s"Could not back up old contents: ${e.toString}")
-    }
-  }
-
-  private def scanOrganizationDirForDataSources(path: Path): List[InboxDataSource] = {
+  private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path, silent = true) match {
@@ -361,34 +247,40 @@ class DataSourceService @Inject()(
     }
   }
 
-  def dataSourceFromDir(path: Path, organizationId: String): InboxDataSource = {
+  def dataSourceFromDir(path: Path, organizationId: String): DataSource = {
     val id = DataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {
-      JsonHelper.parseFromFileAs[DataSource](propertiesFile, path) match {
+      JsonHelper.parseFromFileAs[UsableDataSource](propertiesFile, path) match {
         case Full(dataSource) =>
-          if (dataSource.dataLayers.nonEmpty) {
+          val validationErrors = validateDataSourceGetErrors(dataSource)
+          if (validationErrors.isEmpty) {
             val dataSourceWithAttachments = dataSource.copy(
-              dataLayers = scanForAttachedFiles(path, dataSource)
+              dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
             )
             dataSourceWithAttachments.copy(id)
           } else
-            UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
+            UnusableDataSource(id,
+                               None,
+                               s"Error: ${validationErrors.mkString(" ")}",
+                               Some(dataSource.scale),
+                               Some(Json.toJson(dataSource)))
         case e =>
           UnusableDataSource(id,
+                             None,
                              s"Error: Invalid json format in $propertiesFile: $e",
                              existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
-      UnusableDataSource(id, "Not imported yet.")
+      UnusableDataSource(id, None, "Not imported yet.")
     }
   }
 
   // Prepend newBasePath to all (relative) paths in mags and attachments of the data source.
-  def prependAllPaths(dataSource: InboxDataSource, newBasePath: String): Fox[DataSource] = {
+  def prependAllPaths(dataSource: DataSource, newBasePath: String): Fox[DataSource] = {
     val replaceUri = (uri: URI) => {
-      val isRelativeFilePath = (uri.getScheme == null || uri.getScheme.isEmpty || uri.getScheme == DataVaultService.schemeFile) && !uri.isAbsolute
+      val isRelativeFilePath = (uri.getScheme == null || uri.getScheme.isEmpty || uri.getScheme == PathSchemes.schemeFile) && !uri.isAbsolute
       uri.getPath match {
         case pathStr if isRelativeFilePath =>
           new URI(uri.getScheme,
@@ -405,11 +297,9 @@ class DataSourceService @Inject()(
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val updatedDataLayers = usableDataSource.dataLayers.map {
-          case layerWithMagLocators: DataLayerWithMagLocators =>
+          case layerWithMagLocators: StaticLayer =>
             layerWithMagLocators.mapped(
-              identity,
-              identity,
-              mag =>
+              magMapping = mag =>
                 mag.path match {
                   case Some(pathStr) => mag.copy(path = Some(replaceUri(new URI(pathStr)).toString))
                   // If the mag does not have a path, it is an implicit path, we need to make it explicit.
@@ -421,7 +311,7 @@ class DataSourceService @Inject()(
                           .toString))
               },
               attachmentMapping = attachment =>
-                DatasetLayerAttachments(
+                DataLayerAttachments(
                   attachment.meshes.map(a => a.copy(path = replaceUri(a.path))),
                   attachment.agglomerates.map(a => a.copy(path = replaceUri(a.path))),
                   attachment.segmentIndex.map(a => a.copy(path = replaceUri(a.path))),
@@ -437,25 +327,27 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
+  private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-      dataLayer.withAttachments(
-        DatasetLayerAttachments(
+      dataLayer.withMergedAndResolvedAttachments(
+        UPath.fromLocalPath(dataSourcePath),
+        DataLayerAttachments(
           MeshFileInfo.scanForMeshFiles(dataLayerPath),
           AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
           ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
           CumsumFileInfo.scanForCumsumFile(dataLayerPath)
-        ))
+        )
+      )
     })
 
-  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =
+  def invalidateVaultCache(dataSource: DataSource, dataLayerName: Option[String]): Option[Int] =
     for {
-      genericDataSource <- dataSource.toUsable
+      usableDataSource <- dataSource.toUsable
       dataLayers = dataLayerName match {
-        case Some(ln) => Seq(genericDataSource.getDataLayer(ln))
-        case None     => genericDataSource.dataLayers.map(d => Some(d))
+        case Some(ln) => Seq(usableDataSource.getDataLayer(ln))
+        case None     => usableDataSource.dataLayers.map(d => Some(d))
       }
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
@@ -475,7 +367,7 @@ class DataSourceService @Inject()(
     res
   }
 
-  def datasetInControlledS3(dataSource: DataSource): Boolean = {
+  def datasetInControlledS3(dataSource: UsableDataSource): Boolean = {
     def commonPrefix(strings: Seq[String]): String = {
       if (strings.isEmpty) return ""
 
@@ -515,7 +407,7 @@ class DataSourceService @Inject()(
     .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
     .build()
 
-  def deleteFromControlledS3(dataSource: DataSource, datasetId: ObjectId): Fox[Unit] = {
+  def deleteFromControlledS3(dataSource: UsableDataSource, datasetId: ObjectId): Fox[Unit] = {
     def deleteBatch(bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
       if (keys.isEmpty) Fox.empty
       else {

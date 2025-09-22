@@ -2212,8 +2212,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: NumberLike;
-    segmentId2: NumberLike;
+    partition1: NumberLike[];
+    partition2: NumberLike[];
     mag: Vector3;
     agglomerateId: NumberLike;
     editableMappingId: string;
@@ -2227,8 +2227,8 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
-            segmentId1: Number(segmentsInfo.segmentId1),
-            segmentId2: Number(segmentsInfo.segmentId2),
+            partition1: segmentsInfo.partition1.map(Number),
+            partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
           },
         },

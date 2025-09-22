@@ -29,7 +29,7 @@ Importing a skeleton annotation can be achieved using one of two ways:
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](../images/tracing_ui_import.jpeg)
 
-If you are looking to import/export annotations through Python code, check out our [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py).
+If you are looking to import/export annotations through Python code, check out our [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/).
 
 ## Merging skeleton annotations
 

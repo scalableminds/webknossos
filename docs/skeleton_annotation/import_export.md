@@ -7,21 +7,10 @@ WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files]
 There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
-  ![Download of skeleton annotations via the ´Download´ button in the toolbar.](../images/tracing_ui_download_tooolbar.jpeg)
-/// caption
-Download of skeleton annotations via the ´Download´ button in the toolbar.
-///
-
+    ![Download of skeleton annotations via the ´Download´ button in the toolbar.](../images/tracing_ui_download_tooolbar.jpeg)
 2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeleton` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
-  ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
-/// caption
-Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.
-///
+    ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
 
-![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
-/// caption
-Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.
-///
 
 ## Import Skeleton Annotations
 Importing a skeleton annotation can be achieved using one of two ways:
@@ -42,14 +31,7 @@ If you are looking to import/export annotations through Python code, check out o
 There are two ways for merging annotations:
 
 1. While in the annotation UI, _drag and drop_ an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with the currently open annotation.
+    ![1. Select the Merge operation from the menu](../images/tracing_ui_merge_1.jpeg)
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button (see image). Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation or the merge will happen in your current annotation.
-
-![1. Select the Merge operation from the menu](../images/tracing_ui_merge_1.jpeg)
-/// caption
-1. Select the Merge operation from the menu
-///
-![2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation](../images/tracing_ui_merge_2.jpeg)
-/// caption
-2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation
-///
+    ![2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation](../images/tracing_ui_merge_2.jpeg)

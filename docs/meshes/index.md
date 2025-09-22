@@ -8,5 +8,5 @@ Mesh will always be rendered in the 3D viewport in the lower right.
 
 ![Mesh in the 3D Viewport](../images/mesh_3D_viewport.jpeg)
 /// caption
-Mesh in the 3D Viewport
+A mesh of a large neuron segment in the 3D viewport.
 ///

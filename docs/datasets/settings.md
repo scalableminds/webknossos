@@ -32,7 +32,7 @@ For each layer in the dataset, you can configure:
 
 ![Dataset Editing: Data Source Tab](../images/dataset_settings_datasource.jpeg)
 /// caption
-Dataset Editing: Data Source Tab
+Data Source Tab: Configure the core settings for your dataset
 ///
 
 
@@ -54,7 +54,7 @@ Read more in [the Sharing guide](../sharing/dataset_sharing.md).
 
 ![Dataset Editing: Sharing Tab](../images/dataset_settings_sharing.jpeg)
 /// caption
-Dataset Editing: Sharing Tab
+Sharing Tab: Control who can access your dataset
 ///
 
 
@@ -67,7 +67,7 @@ This tab allows you to add descriptive information to your dataset.
 
 ![Dataset Editing: Metadata Tab](../images/dataset_settings_metadata.jpeg)
 /// caption
-Dataset Editing: Metadata Tab
+Metadata Tab: Add descriptive information to your dataset
 ///
 
 
@@ -83,7 +83,7 @@ Alternatively, you can set the default view configuration from the main annotati
 
 ![Dataset Editing: View Configuration Tab](../images/dataset_settings_viewconfig.jpeg)
 /// caption
-Dataset Editing: View Configuration Tab
+View Configuration Tab: Set the default viewing parameters for this dataset
 ///
 
 
@@ -95,5 +95,5 @@ Deleting an dataset will not delete any annotations associated with it.
 
 ![Dataset Editing: Delete Tab](../images/dataset_settings_delete.jpeg)
 /// caption
-Dataset Editing: Delete Tab
+Delete Tab: Permanently delete a dataset
 ///

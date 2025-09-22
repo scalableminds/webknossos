@@ -8,6 +8,9 @@ Shift + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that po
 CTRL + Click on any mesh will unload that mesh.
 
 ![Segments Tab](../images/segments_tab2.jpeg)
+/// caption
+The segments tab contains a list of all segments in the dataset. You can load, hide, and remove meshes for each segment here.
+///
 
 Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3d viewport via right-click on a hovered mesh.
 

@@ -7,3 +7,6 @@ On the Task screen, users can request new tasks, continue to work on existing ta
 Read more about the tasks feature in the [Tasks and Projects guide](../tasks_projects/index.md).
 
 ![Tasks can be distributed to users. Task can include rich instructions.](../images/dashboard_tasks.png)
+/// caption
+Tasks can be distributed to users. Task can include rich instructions.
+///

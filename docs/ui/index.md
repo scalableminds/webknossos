@@ -9,17 +9,17 @@ The main WEBKNOSSOS user interface for viewing and annotating datasets is divide
 5. The bottom of the screen is covered by a status bar showing context-sensitive hints for mouse controls as well as additional information on mouse hover.
 
 ![An overview of the WEBKNOSSOS annotation UI highlighting the 4 main sections of the interface](../images/user_interface.png)
+/// caption
+An overview of the WEBKNOSSOS annotation UI highlighting the 4 main sections of the interface
+///
 
 You can customize the interface to your liking. Toggle the left and right sidebars, and drag the viewport edges to adjust the view. To reset the layout, go to Menu > Layout > Reset Layout in the toolbar.
 
 ![Customizing the layout](../images/customize_layout.gif)
+/// caption
+Customizing the layout by draging and resizing the viewports.
+///
 
 Read More About [Skeleton Annotation](../skeleton_annotation/index.md)
 
 Read More About [Volume Annotation](../volume_annotation/index.md)
-
-
-
-
-
-

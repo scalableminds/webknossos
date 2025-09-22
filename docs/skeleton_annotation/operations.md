@@ -5,6 +5,9 @@
 WEBKNOSSOS has a context menu that can be opened via _Right Click_. This context menu offers useful context-sensitive information and most operations should be available through it:
 
 ![Example of the context menu](../images/skeleton_context_menu.png)
+/// caption
+Example of the context menu
+///
 
 Example operations include (but are not limited to):
 
@@ -35,5 +38,6 @@ Common tree operations include splitting and merging trees.
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose _Create Edge & Merge with this Tree_. When using _Classic Controls_, the second node needs to be selected with _SHIFT + ALT + Left Click_ to create an edge between the two.
 
 ![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](../images/tracing_ui_tree_merge_split.gif)
-
-
+/// caption
+Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.
+///

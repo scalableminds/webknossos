@@ -7,7 +7,13 @@ You can also add custom tags to annotations to organize and group them. Click on
 Each annotation can be renamed to reflect its content.
 
 ![Manage and resume your skeleton and volume annotations.](../images/dashboard_annotations.png)
+/// caption
+Manage and resume your skeleton and volume annotations.
+///
 ![Annotations can archived to declutter your dashboard.](../images/dashboard_archive.png)
+/// caption
+Annotations can archived to declutter your dashboard.
+///
 
 ## Shared Annotations
 

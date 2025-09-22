@@ -3,6 +3,9 @@
 The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
 ![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
+/// caption
+The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo
+///
 
 ## Basic Operations
 
@@ -129,4 +132,3 @@ And many other tools. For detailed information, see the [volume annotation guide
 To create a bounding box, select the tool and then click and drag with the mouse on one of the 2D viewports. You can resize the bounding box by dragging its corners or edges.
 
 All created bounding boxes are listed in the **BBoxes** tab in the right-hand sidebar. From there, you can manage your bounding boxes, for example, by renaming, deleting, or jumping to them. Read more about the sidebar tabs in the [Object Info and Lists](./object_info.md) documentation.
-

@@ -141,7 +141,7 @@ You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/web
 ```python
 import webknossos as wk
 
-def main() -> None:
+def main() -> None: 
     """Convert a folder of image files to a WEBKNOSSOS dataset."""
     dataset = wk.Dataset.from_images(
         input_path=INPUT_DIR,
@@ -174,4 +174,3 @@ To get the best streaming performance for Zarr datasets consider the following s
 - Use chunk sizes of 32 - 128 voxels^3
 - Enable sharding (only available in Zarr 3+)
 - Use 3D downsampling
-

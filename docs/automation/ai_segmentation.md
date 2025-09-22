@@ -35,7 +35,7 @@ You can also access **Advanced Settings** to further customize the analysis.
 
 ## Credit Information
 
-This section provides an overview of your available credits and the estimated cost for the analysis. Cost varies depending on the size of your dataset and the type of model you want to run.
+This section provides an overview of your available credits in your organization and the estimated cost for the analysis. Cost varies depending on the size of your dataset and the type of model you want to run.
 
 
 Computation time for any analysis depends directly on the size of your dataset. 

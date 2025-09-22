@@ -52,7 +52,7 @@ You can also add more training data from other annotations by clicking the `+` b
 
 ### Credit Information
 
-This section provides an overview of your available credits and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train.
+This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train.
 
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 

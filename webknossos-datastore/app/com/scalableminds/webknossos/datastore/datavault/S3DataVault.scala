@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Full, Failure => BoxFailure}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
@@ -74,7 +75,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
-    } yield (responseBytesObject.asByteArray(), if (encoding == null) "" else encoding)
+      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
+      encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
+    } yield (responseBytesObject.asByteArray(), encodingNormalized)
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
@@ -106,7 +109,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
-      objectKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      objectKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
         case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
@@ -118,10 +121,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      prefixKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
-      vaultPaths <- tryo(
-        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
+      vaultPaths <- tryo(s3SubPrefixKeys.map(key =>
+        new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
     } yield vaultPaths
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
@@ -144,8 +147,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     case _                  => false
   }
 
-  override def hashCode(): Int =
+  private lazy val hashCodeCached =
     new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object S3DataVault {
@@ -156,7 +162,7 @@ object S3DataVault {
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, remoteSourceDescriptor.uri, ws, ec)
+    new S3DataVault(credential, remoteSourceDescriptor.toUriUnsafe, ws, ec)
   }
 
   private def hostBucketFromUri(uri: URI): Option[String] = {

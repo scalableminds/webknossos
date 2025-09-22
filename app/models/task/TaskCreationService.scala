@@ -28,7 +28,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 
 import scala.concurrent.ExecutionContext
 
@@ -67,7 +67,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParametersList: List[TaskParameters],
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
       params =>
@@ -82,7 +82,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       taskParameters: TaskParameters,
       taskType: TaskType,
       dataset: Dataset,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
@@ -164,7 +164,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
       magRestrictions: MagRestrictions,
-      dataSource: DataSourceLike,
+      dataSource: UsableDataSource,
       requestingUserId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
@@ -250,7 +250,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     }
 
   // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
-  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer]): Fox[List[TracingBoxContainer]] =
+  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer])(
+      implicit mp: MessagesProvider): Fox[List[TracingBoxContainer]] =
     Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
       tracingBox match {
         case TracingBoxContainer(_, _, _, Full(v), Full(datasetId)) =>
@@ -261,11 +262,12 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     }
 
   // Used in createFromFiles. Called once per requested task if volume tracing is passed
-  private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId): Fox[UploadedVolumeLayer] =
+  private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId)(
+      implicit mp: MessagesProvider): Fox[UploadedVolumeLayer] =
     if (volume.tracing.boundingBox.isEmpty) {
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
+        dataSource <- datasetService.usableDataSourceFor(dataset)
       } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
     } else Fox.successful(volume)
 
@@ -421,7 +423,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
           .findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId))
           .toFox ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
+        dataSource <- datasetService.usableDataSourceFor(dataset)
         _ <- assertEachHasEitherSkeletonOrVolume(flattenedRequestedTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         _ = if (flattenedRequestedTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(
@@ -475,7 +477,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       requestedTaskBox: Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
       tracingStoreClient: WKRemoteTracingStoreClient,
       taskType: TaskType,
-      dataSource: DataSourceLike): Fox[Unit] =
+      dataSource: UsableDataSource): Fox[Unit] =
     requestedTaskBox.map { tuple =>
       (tuple._1, tuple._3)
     } match {

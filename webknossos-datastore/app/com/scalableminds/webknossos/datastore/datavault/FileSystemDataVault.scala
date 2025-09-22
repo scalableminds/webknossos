@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
@@ -13,7 +12,7 @@ import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault {
+class FileSystemDataVault extends DataVault with FoxImplicits {
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
@@ -86,23 +85,21 @@ class FileSystemDataVault extends DataVault {
           .collect(Collectors.toList())
           .asScala
           .toList
-          .map(dir => new VaultPath(dir.toUri, this))
+          .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
           .take(maxItems)
       } else List.empty
     } yield listing
 
-  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
-    val uri = path.toUri
+  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] =
     for {
-      _ <- Fox.fromBool(uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file or null"
-      _ <- Fox.fromBool(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
-      localPath = Path.of(uri.getPath)
-      _ <- Fox.fromBool(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
+      localPath <- path.toUPath.toLocalPath.toFox ?~> s"trying to read from FileSystemDataVault, but path $path is not local."
+      _ <- Fox.fromBool(localPath.isAbsolute) ?~> s"trying to read from FileSystemDataVault, but path $path is not absolute."
     } yield localPath
-  }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(19, 31).toHashCode
+  // There is only one instance of this DataVault, so the hashCode does not depend on any values.
+  private lazy val hashCodeCached = new HashCodeBuilder(19, 31).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
 
   override def equals(obj: Any): Boolean = obj match {
     case _: FileSystemDataVault => true

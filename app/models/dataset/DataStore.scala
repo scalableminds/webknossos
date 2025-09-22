@@ -25,6 +25,7 @@ case class DataStore(
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
     allowsUpload: Boolean = true,
+    allowsUploadToPaths: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
     onlyAllowedOrganization: Option[String] = None
 )
@@ -37,7 +38,8 @@ object DataStore {
                publicUrl: String,
                key: String,
                isScratch: Option[Boolean],
-               allowsUpload: Option[Boolean]): DataStore =
+               allowsUpload: Option[Boolean],
+               allowsUploadToPaths: Option[Boolean]): DataStore =
     DataStore(
       name,
       url,
@@ -46,6 +48,7 @@ object DataStore {
       isScratch.getOrElse(false),
       isDeleted = false,
       allowsUpload.getOrElse(true),
+      allowsUploadToPaths.getOrElse(true),
       reportUsedStorageEnabled = false,
       None
     )
@@ -54,8 +57,9 @@ object DataStore {
                      url: String,
                      publicUrl: String,
                      isScratch: Option[Boolean],
-                     allowsUpload: Option[Boolean]): DataStore =
-    fromForm(name, url, publicUrl, "", isScratch, allowsUpload)
+                     allowsUpload: Option[Boolean],
+                     allowsUploadToPaths: Option[Boolean]): DataStore =
+    fromForm(name, url, publicUrl, "", isScratch, allowsUpload, allowsUploadToPaths)
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(
@@ -106,6 +110,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isscratch,
         r.isdeleted,
         r.allowsupload,
+        r.allowsuploadtopaths,
         r.reportusedstorageenabled,
         r.onlyallowedorganization
       ))
@@ -144,6 +149,15 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
+  def findOneWithUploadsToPathsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE allowsUploadToPaths AND $accessQuery LIMIT 1"
+          .as[DatastoresRow])
+      parsed <- parseFirst(r, "find one with uploads allowed")
+    } yield parsed
+
   def updateUrlByName(name: String, url: String): Fox[Unit] = {
     val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(query.update(url)) } yield ()
@@ -159,9 +173,9 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       _ <- run(q"""INSERT INTO webknossos.dataStores
                      (name, url, publicUrl, key, isScratch,
-                     isDeleted, allowsUpload, reportUsedStorageEnabled)
+                     isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled)
                    VALUES(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch},
-                     ${d.isDeleted}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""".asUpdate)
+                     ${d.isDeleted}, ${d.allowsUpload}, ${d.allowsUploadToPaths}, ${d.reportUsedStorageEnabled})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

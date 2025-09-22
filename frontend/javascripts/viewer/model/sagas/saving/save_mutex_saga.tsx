@@ -371,6 +371,9 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
+      if (mutexLogicState.onlyRequiredOnSave) {
+        return;
+      }
       if (isMutexAcquired) {
         Toast.close(MUTEX_NOT_ACQUIRED_KEY);
         if (!mutexLogicState.isInitialRequest && !wasMutexAlreadyAcquiredBefore) {

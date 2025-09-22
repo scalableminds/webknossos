@@ -30,13 +30,11 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: Execu
     extends FoxImplicits
     with LazyLogging {
 
-  private val baseDir: Path = Path.of(config.Datastore.baseDirectory)
-
   private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
 
   def measureStorage(organizationId: String, datasetName: Option[String])(
       implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
-    val organizationDirectory = baseDir.resolve(organizationId)
+    val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
     if (Files.exists(organizationDirectory)) {
       measureStorage(organizationId, datasetName, organizationDirectory)
     } else Fox.successful(List())

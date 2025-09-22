@@ -223,7 +223,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE fp._descendant = $folderId""".as[ObjectId])
     } yield rows.toList
 
-  def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
+  def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: Seq[ObjectId]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".asUpdate
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataset_allowedTeams(_dataset, _team)
              VALUES($datasetId, $teamId)""".asUpdate)

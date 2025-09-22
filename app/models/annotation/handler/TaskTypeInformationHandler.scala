@@ -10,6 +10,7 @@ import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
+import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -25,8 +26,8 @@ class TaskTypeInformationHandler @Inject()(
     extends AnnotationInformationHandler
     with FoxImplicits {
 
-  override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
+                                                                              mp: MessagesProvider): Fox[Annotation] =
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
       tasks <- taskDAO.findAllByTaskType(taskType._id)

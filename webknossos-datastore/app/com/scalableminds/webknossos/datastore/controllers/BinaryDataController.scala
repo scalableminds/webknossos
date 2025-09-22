@@ -180,7 +180,7 @@ class BinaryDataController @Inject()(
           imagesPerRow = 1,
           blackAndWhite = false,
           intensityRange = intensityRange,
-          isSegmentation = dataLayer.category == Category.segmentation,
+          isSegmentation = dataLayer.category == LayerCategory.segmentation,
           color = layerColor,
           invertColor = invertColor
         )

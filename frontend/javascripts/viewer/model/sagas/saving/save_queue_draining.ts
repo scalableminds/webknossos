@@ -11,6 +11,7 @@ import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -69,7 +70,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
     });
     yield* put(setSaveBusyAction(true));
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (othersMayEdit) {
+    if (othersMayEdit && WkDevFlags.liveCollab) {
       // Wait until we may save (due to mutex acquisition).
       yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
       // Wait until we have the newest version. This *must* happen after

@@ -5,7 +5,7 @@ Alternatively, the `Segments` tab in the right-hand side panel, allows you to lo
 
 ![Mesh can be loaded from the context-sensitive right-click menu](../images/mesh_options.jpeg)
 /// caption
-Mesh can be loaded from the context-sensitive right-click menu
+Meshes can be loaded from the context-sensitive right-click menu
 ///
 ![The Segments Tab lists all loaded meshes.](../images/segments_tab2.jpeg)
 /// caption

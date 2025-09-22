@@ -63,7 +63,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def getCachedHdf5File(attachment: LayerAttachment)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
     for {
-      localPath <- tryo(attachment.localPath)
+      localPath <- tryo(attachment.localPathUnsafe)
     } yield getCachedHdf5File(localPath)(loadFn)
 
   def getCachedHdf5File(filePath: Path)(loadFn: Path => CachedHdf5File): CachedHdf5File = {
@@ -104,7 +104,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
     for {
-      localAttachmentPath <- tryo(attachment.localPath)
+      localAttachmentPath <- tryo(attachment.localPathUnsafe)
       result <- withCachedHdf5(localAttachmentPath)(block)
     } yield result
 

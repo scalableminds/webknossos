@@ -2,7 +2,7 @@ import messages from "messages";
 import type { APIOrganization, APIUser } from "types/api_types";
 
 export enum PricingPlanEnum {
-  Basic = "Basic",
+  Personal = "Personal",
   Team = "Team",
   Power = "Power",
   TeamTrial = "Team_Trial",
@@ -11,7 +11,7 @@ export enum PricingPlanEnum {
 }
 
 export const teamPlanFeatures = [
-  "Everything from Basic plan",
+  "Everything from Personal plan",
   "Collaborative Annotation",
   "Project Management",
   "Dataset Management and Access Control",
@@ -20,14 +20,14 @@ export const teamPlanFeatures = [
 ];
 
 export const powerPlanFeatures = [
-  "Everything from Team and Basic plans",
+  "Everything from Team and Personal plans",
   "Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
 ];
 
-export const maxInludedUsersInBasicPlan = 3;
+export const maxInludedUsersInPersonalPlan = 3;
 
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;
@@ -57,7 +57,7 @@ export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
 }
 
 const PLAN_TO_RANK = {
-  [PricingPlanEnum.Basic]: 0,
+  [PricingPlanEnum.Personal]: 0,
   [PricingPlanEnum.Team]: 1,
   [PricingPlanEnum.TeamTrial]: 1,
   [PricingPlanEnum.Power]: 2,
@@ -76,11 +76,11 @@ export function isFeatureAllowedByPricingPlan(
   organization: APIOrganization | null,
   requiredPricingPlan: PricingPlanEnum,
 ) {
-  // This function should not be called to check for "Basic" plans since its the default plan for all users anyway.
+  // This function should not be called to check for "Personal" plans since its the default plan for all users anyway.
 
-  if (requiredPricingPlan === PricingPlanEnum.Basic) {
+  if (requiredPricingPlan === PricingPlanEnum.Personal) {
     console.debug(
-      "Restricting a feature to Basic Plan does not make sense. Consider removing the restriction",
+      "Restricting a feature to Personal Plan does not make sense. Consider removing the restriction",
     );
     return true;
   }

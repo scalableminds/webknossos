@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
@@ -16,6 +15,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   ZarrHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -29,6 +29,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class ZarrStreamingController @Inject()(
@@ -139,58 +140,55 @@ class ZarrStreamingController @Inject()(
         dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
+        zarrSource = UsableDataSource(dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
   }
 
-  private def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): ZarrLayer = {
+  private def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): StaticLayer = {
     val dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
     layer match {
       case s: SegmentationLayer =>
         val rank = s.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
-        ZarrSegmentationLayer(
+        StaticSegmentationLayer(
           s.name,
+          dataFormat,
           s.boundingBox,
           s.elementClass,
           mags = s.sortedMags.map(
             m =>
               MagLocator(m,
-                         Some(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         Some(UPath.fromLocalPath(Path.of(s"./${s.name}/${m.toMagLiteral(allowScalar = true)}"))),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,
                          None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
-          numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = s.defaultViewConfiguration,
           adminViewConfiguration = s.adminViewConfiguration,
           coordinateTransformations = s.coordinateTransformations,
-          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes),
-          dataFormat = dataFormat
+          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes)
         )
       case d: DataLayer =>
         val rank = d.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
-        ZarrDataLayer(
+        StaticColorLayer(
           d.name,
-          d.category,
+          dataFormat,
           d.boundingBox,
           d.elementClass,
           mags = d.sortedMags.map(
             m =>
               MagLocator(m,
-                         Some(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"),
+                         Some(UPath.fromLocalPath(Path.of(s"./${d.name}/${m.toMagLiteral(allowScalar = true)}"))),
                          None,
                          Some(AxisOrder.cAdditionalxyz(rank)),
                          None,
                          None)),
-          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,
           coordinateTransformations = d.coordinateTransformations,
-          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes),
-          dataFormat = dataFormat
+          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes)
         )
     }
   }
@@ -213,7 +211,7 @@ class ZarrStreamingController @Inject()(
                                                                annotationSource.tracingStoreUrl,
                                                                zarrVersion)(relevantTokenContext))
         allLayer = dataSourceLayers ++ annotationLayers
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
+        zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
 
@@ -478,7 +476,7 @@ class ZarrStreamingController @Inject()(
           Ok(views.html.datastoreZarrDatasourceDir(
             "Datastore",
             s"$datasetId",
-            List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
+            List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
           ))
       }
     }
@@ -494,9 +492,9 @@ class ZarrStreamingController @Inject()(
           .filter(!annotationLayerNames.contains(_))
         layerNames = annotationLayerNames ++ dataSourceLayerNames
         additionalEntries = if (zarrVersion == 2)
-          List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
         else
-          List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+          List(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       } yield
         Ok(
           views.html.datastoreZarrDatasourceDir(

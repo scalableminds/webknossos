@@ -9,15 +9,12 @@ import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileC
 import jakarta.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 
-import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
     extends NeuroglancerMeshHelper
     with MeshFileUtils
     with FoxImplicits {
-
-  private val dataBaseDir = Path.of(config.Datastore.baseDirectory)
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 
@@ -154,7 +151,8 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
     } yield wkChunkInfos
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    val datasetPath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+    val datasetPath =
+      config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
     fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
   }

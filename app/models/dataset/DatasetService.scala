@@ -66,6 +66,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
+  def assertNewDatasetNameUnique(name: String, organizationId: String): Fox[Unit] =
+    for {
+      exists <- datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)
+      _ <- Fox.fromBool(!exists) ?~> "dataset.name.taken"
+    } yield ()
+
   def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
     for {
       isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
@@ -487,7 +493,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
       dataset.flatMap {
-        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(dataset) if !dataset.isVirtual =>
+          datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
+          Fox.successful(())
         case Empty => // Dataset reported but ignored (non-existing/forbidden org)
           Fox.successful(())
         case e: EmptyBox =>
@@ -555,7 +564,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
-                   includePaths: Boolean = false,
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
@@ -576,16 +584,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      dataSourceFieldsToRemove = Set(Some("credentialId"),
-                                     Some("credentials"),
-                                     if (includePaths) None else Some("path")).flatten
       usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {
       Json.obj(
         "id" -> dataset._id,
         "name" -> dataset.name,
-        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), dataSourceFieldsToRemove),
+        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,
@@ -603,7 +608,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
-        "usedStorageBytes" -> usedStorageBytes
+        "usedStorageBytes" -> usedStorageBytes,
+        "isVirtual" -> dataset.isVirtual
       )
     }
 }

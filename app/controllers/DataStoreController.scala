@@ -29,7 +29,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ "key").read[String] and
       (__ \ "isScratch").readNullable[Boolean] and
       (__ \ "allowsUpload").readNullable[Boolean] and
-      (__ \ "allowsManualUpload").readNullable[Boolean])(DataStore.fromForm _)
+      (__ \ "allowsUploadToPaths").readNullable[Boolean])(DataStore.fromForm _)
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
@@ -45,7 +45,8 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       dataStoreDAO.findOneByName(dataStore.name).shiftBox.flatMap {
         case Empty =>
           for {
-            _ <- Fox.fromBool(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+            multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+            _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }

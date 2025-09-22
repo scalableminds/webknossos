@@ -19,7 +19,7 @@ case class DataLayerAttachments(
   def allAttachments: Seq[LayerAttachment] = meshes ++ agglomerates ++ segmentIndex ++ connectomes ++ cumsum
   def isEmpty: Boolean = allAttachments.isEmpty
 
-  def merge(other: DataLayerAttachments): DataLayerAttachments =
+  def mergeWithPrecedence(other: DataLayerAttachments): DataLayerAttachments =
     DataLayerAttachments(
       meshes = if (this.meshes.isEmpty) other.meshes else this.meshes,
       agglomerates = if (this.agglomerates.isEmpty) other.agglomerates else this.agglomerates,

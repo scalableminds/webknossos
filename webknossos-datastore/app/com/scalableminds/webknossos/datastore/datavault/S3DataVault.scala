@@ -75,7 +75,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
-      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retreival, can be ignored.
+      // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
       encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
     } yield (responseBytesObject.asByteArray(), encodingNormalized)
   }
@@ -147,8 +147,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     case _                  => false
   }
 
-  override def hashCode(): Int =
+  private lazy val hashCodeCached =
     new HashCodeBuilder(17, 31).append(uri.toString).append(s3AccessKeyCredential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object S3DataVault {

@@ -235,7 +235,7 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
@@ -246,6 +246,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
+          "model_organization_id" -> aiModel._organization,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
@@ -278,7 +279,7 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
@@ -289,6 +290,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
+          "model_organization_id" -> aiModel._organization,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,

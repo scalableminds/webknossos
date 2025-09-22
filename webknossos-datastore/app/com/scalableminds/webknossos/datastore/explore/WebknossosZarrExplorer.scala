@@ -8,13 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataFormat,
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, StaticLayer, UsableDataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -27,20 +21,11 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
-      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
-        case l: StaticSegmentationLayer =>
-          for {
-            headerFilename <- headerFilename(l).toFox
-            mags <- adaptMags(l.mags, remotePath, l.name, headerFilename, credentialId)
-          } yield l.copy(mags = mags)
-        case l: StaticColorLayer =>
-          for {
-            headerFilename <- headerFilename(l).toFox
-            mags <- adaptMags(l.mags, remotePath, l.name, headerFilename, credentialId)
-          } yield l.copy(mags = mags)
-        case layer =>
-          Fox.failure(
-            s"Encountered unsupported layer class ${layer.getClass} when exploring remote webknossos dataset.")
+      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) { layer =>
+        for {
+          headerFilename <- headerFilename(layer).toFox
+          mags <- adaptMags(layer.mags, remotePath, layer.name, headerFilename, credentialId)
+        } yield layer.mapped(newMags = Some(mags))
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale

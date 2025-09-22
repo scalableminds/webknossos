@@ -6,7 +6,7 @@ exports[`Scripts API (E2E) > createScript(), updateScript(), and deleteScript() 
   "id": "fixed-script-id",
   "name": "MergerMode",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -40,7 +40,7 @@ exports[`Scripts API (E2E) > createScript(), updateScript(), and deleteScript() 
   "id": "fixed-script-id",
   "name": "MegaScript",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -76,7 +76,7 @@ exports[`Scripts API (E2E) > getScript() 1`] = `
   "id": "5aead7aaf5be4b070173295b",
   "name": "merger",
   "owner": {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "570b9f4d2a7c0e4d008da6ef",
     "isAdmin": true,
@@ -111,7 +111,7 @@ exports[`Scripts API (E2E) > getScripts() 1`] = `
     "id": "5aead7aaf5be4b070173295b",
     "name": "merger",
     "owner": {
-      "email": "user_A@scalableminds.com",
+      "email": "user_a@scalableminds.com",
       "firstName": "user_A",
       "id": "570b9f4d2a7c0e4d008da6ef",
       "isAdmin": true,

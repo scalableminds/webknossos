@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveAdditionalInformation,
@@ -122,7 +122,7 @@ class DSRemoteWebknossosClient @Inject()(
       .putJson(dataSourcePaths)
 
   def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId}/paths")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId/paths")
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[List[LayerMagLinkInfo]]
 
@@ -135,7 +135,7 @@ class DSRemoteWebknossosClient @Inject()(
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
-  def updateDataSource(dataSource: UsableDataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryString("key" -> dataStoreKey)
       .withTokenFromContext

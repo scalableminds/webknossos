@@ -144,8 +144,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     case _                     => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(credential).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(credential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object HttpsDataVault {

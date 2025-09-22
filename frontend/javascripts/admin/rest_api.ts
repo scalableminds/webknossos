@@ -1867,7 +1867,7 @@ window.setMaintenance = setMaintenance;
 // receives too many parameters, since this doesn't play well with the saga typings.
 type MeshRequest = {
   // The position is in voxels in mag 1
-  position: Vector3;
+  positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
@@ -1886,8 +1886,15 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
-    meshRequest;
+  const {
+    positionWithPadding,
+    additionalCoordinates,
+    cubeSize,
+    mappingName,
+    scaleFactor,
+    mag,
+    ...rest
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -1900,7 +1907,7 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
+          position: positionWithPadding, // position is in mag1
           additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
@@ -2205,8 +2212,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: NumberLike;
-    segmentId2: NumberLike;
+    partition1: NumberLike[];
+    partition2: NumberLike[];
     mag: Vector3;
     agglomerateId: NumberLike;
     editableMappingId: string;
@@ -2220,8 +2227,8 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
-            segmentId1: Number(segmentsInfo.segmentId1),
-            segmentId2: Number(segmentsInfo.segmentId2),
+            partition1: segmentsInfo.partition1.map(Number),
+            partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
           },
         },

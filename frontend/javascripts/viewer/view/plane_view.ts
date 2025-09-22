@@ -268,8 +268,14 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getGroundTruthLayoutRect();
-    getSceneController().renderer.setSize(width, height);
-    this.draw();
+    const sceneController = getSceneControllerOrNull();
+    // Resizes can be triggered by navbar height changes (e.g., maintenance banners).
+    // When navigating back to the dashboard, a throttled resize may fire after
+    // PlaneView/SceneController teardown, so sceneController can be null.
+    if (sceneController != null) {
+      sceneController.renderer.setSize(width, height);
+      this.draw();
+    }
   };
 
   getCameras(): OrthoViewMap<OrthographicCamera> {
@@ -285,7 +291,7 @@ class PlaneView {
         sceneController.scene.remove(this.cameras[plane]);
       }
     }
-
+    this.resizeThrottled.cancel();
     window.removeEventListener("resize", this.resizeThrottled);
 
     for (const fn of this.unsubscribeFunctions) {

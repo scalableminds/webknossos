@@ -81,6 +81,7 @@ import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
+import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";
@@ -314,6 +315,7 @@ export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly autoRenderMeshInProofreading: boolean;
   readonly selectiveVisibilityInProofreading: boolean;
+  readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;
@@ -559,6 +561,7 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
+export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
@@ -576,6 +579,7 @@ export type LocalSegmentationData = {
   readonly selectedIds: { segments: number[]; group: number | null };
   readonly connectomeData: ConnectomeData;
   readonly hideUnregisteredSegments: boolean;
+  readonly minCutPartitions: MinCutPartitions;
 };
 
 export type StoreDataset = APIDataset & {
@@ -615,6 +619,7 @@ export const combinedReducer = reduceReducers(
   DatasetReducer,
   SkeletonTracingReducer,
   VolumeTracingReducer,
+  ProofreadingReducer,
   TaskReducer,
   FlycamReducer,
   FlycamInfoCacheReducer,

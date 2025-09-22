@@ -21,8 +21,8 @@ Depending on the size of the dataset, the conversion will take some time.
 You can check the progress at the [`Jobs`](../automation/jobs.md) page or the "Datasets" tab in the dashboard.
 WEBKNOSSOS will also send you an email notification.
 - Convert your data manually to WKW. For this, we provide the following software tools and libraries:
-    - The [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) is a CLI tool that can convert many formats to WKW. 
-    - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
+    - The [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) is a CLI tool that can convert many formats to WKW. 
+    - For other file formats, the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) can be an option for custom scripting.
 
 In particular, the following file formats are supported for uploading (and conversion):
 

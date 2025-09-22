@@ -14,6 +14,7 @@ import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
@@ -60,6 +61,7 @@ import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { getTreeEdgesAsCSV, getTreeNodesAsCSV } from "viewer/model/helpers/csv_helpers";
 import {
   NmlParseError,
   getNmlName,
@@ -101,7 +103,8 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
-  isDownloading: boolean;
+  isDownloadingNML: boolean;
+  isDownloadingCSV: boolean;
   selectedTreeIds: Array<number>;
   groupToDelete: number | null | undefined;
 };
@@ -317,7 +320,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     super(props);
     this.state = {
       isUploading: false,
-      isDownloading: false,
+      isDownloadingNML: false,
+      isDownloadingCSV: false,
       selectedTreeIds:
         props.skeletonTracing?.activeTreeId != null ? [props.skeletonTracing.activeTreeId] : [],
       groupToDelete: null,
@@ -533,7 +537,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     this.setState({
-      isDownloading: true,
+      isDownloadingNML: true,
     });
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
@@ -546,12 +550,43 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       applyTransforms,
     );
     this.setState({
-      isDownloading: false,
+      isDownloadingNML: false,
     });
     const blob = new Blob([nml], {
       type: "text/plain;charset=utf-8",
     });
     saveAs(blob, getNmlName(state));
+  };
+
+  handleCSVDownload = async (applyTransforms: boolean) => {
+    const { skeletonTracing, annotationId } = this.props;
+
+    if (!skeletonTracing) {
+      return;
+    }
+
+    this.setState({
+      isDownloadingCSV: true,
+    });
+
+    try {
+      const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
+      const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
+
+      const blobWriter = new Zip.BlobWriter("application/zip");
+      const writer = new Zip.ZipWriter(blobWriter);
+      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
+      await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+      await writer.close();
+      saveAs(await blobWriter.getData(), "tree_export.zip");
+    } catch (e) {
+      Toast.error("Could not export trees. See the console for details.");
+      console.error(e);
+    } finally {
+      this.setState({
+        isDownloadingCSV: false,
+      });
+    }
   };
 
   showModalConfirmWarning(title: string, content: string, onConfirm: () => void) {
@@ -749,7 +784,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
           key: "handleNmlDownload",
           onClick: () => this.handleNmlDownload(false),
           icon: <DownloadOutlined />,
-          label: "Download Visible Trees",
+          label: "Download Visible Trees NML",
           title: "Download Visible Trees as NML",
         },
         this.props.isSkeletonLayerTransformed
@@ -757,7 +792,23 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
               key: "handleNmlDownloadTransformed",
               onClick: () => this.handleNmlDownload(true),
               icon: <DownloadOutlined />,
-              label: "Download Visible Trees (Transformed)",
+              label: "Download Visible Trees NML (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
+          : null,
+        {
+          key: "handleCSVDownload",
+          onClick: () => this.handleCSVDownload(false),
+          icon: <DownloadOutlined />,
+          label: "Download Visible Trees CSV",
+          title: "Download Visible Trees as CSV",
+        },
+        this.props.isSkeletonLayerTransformed
+          ? {
+              key: "handleCSVDownloadTransformed",
+              onClick: () => this.handleCSVDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed) CSV",
               title: "The currently active transformation will be applied to each node.",
             }
           : null,
@@ -829,8 +880,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
 
-    if (this.state.isDownloading) {
+    if (this.state.isDownloadingNML) {
       title = "Preparing NML";
+    } else if (this.state.isDownloadingCSV) {
+      title = "Preparing CSV";
     } else if (this.state.isUploading) {
       title = "Importing NML";
     }
@@ -841,6 +894,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isAnnotationLockedByUser,
       isOwner,
     );
+    const isDownloading = this.state.isDownloadingCSV || this.state.isDownloadingNML;
 
     return (
       <div id={treeTabId} className="padded-tab-content" style={{ overflow: "hidden" }}>
@@ -849,7 +903,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             !isVisibleInDom ? null : (
               <React.Fragment>
                 <Modal
-                  open={this.state.isDownloading || this.state.isUploading}
+                  open={isDownloading || this.state.isUploading}
                   title={title}
                   closable={false}
                   footer={null}
@@ -991,6 +1045,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
   skeletonTracing: state.annotation.skeleton,
+  annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: areGeometriesTransformed(state),
   isAnnotationLockedByUser: state.annotation.isLockedByOwner,

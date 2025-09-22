@@ -6,7 +6,4 @@ object PathSchemes {
   val schemeHttp: String = "http"
   val schemeGS: String = "gs"
   val schemeFile: String = "file"
-
-  def isRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
 }

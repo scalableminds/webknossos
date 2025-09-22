@@ -14,7 +14,8 @@ trait ConnectomeFileUtils {
   protected val keySynapseToSrcAgglomerate = "synapse_to_src_agglomerate"
   protected val keySynapseToDstAgglomerate = "synapse_to_dst_agglomerate"
 
-  protected val attrKeyMetadataMappingName = "metadata/mapping_name"
+  protected val attrKeyMetadataMappingName = "metadata/mapping_name" // Used for legacy (hdf5) only
+  protected val attrKeyMappingName = "mapping_name"
   protected val attrKeySynapseTypeNames = "synapse_type_names"
 
   protected def synapticPartnerKey(direction: SynapticPartnerDirection): String =

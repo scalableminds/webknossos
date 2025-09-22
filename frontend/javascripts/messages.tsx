@@ -311,6 +311,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
     "The annotation was successfully locked. Reloading this annotation ...",
+  "proofreading.multi_cut.different_agglomerate_selected": `The selected segment belongs to a different agglomerate than the one that is currently partitioned via selections. If you want to split this other agglomerate please clear your current selection with "ESC" first.`,
+  "proofreading.multi_cut.empty_partition":
+    "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
+  "proofreading.multi_cut.no_valid_agglomerate":
+    "No agglomerate for the selected segments could be found. Please retry with a new selection.",
+  "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

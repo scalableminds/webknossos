@@ -7,12 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -25,18 +20,10 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
-      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
-        case l: StaticSegmentationLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(mags = mags)
-        case l: StaticColorLayer =>
-          for {
-            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(mags = mags)
-        case layer =>
-          Fox.failure(
-            s"Encountered unsupported layer class ${layer.getClass} when exploring remote webknossos dataset.")
+      zarrLayers <- Fox.serialCombined(dataSource.dataLayers) { layer =>
+        for {
+          mags <- adaptMags(layer.mags, remotePath / layer.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+        } yield layer.mapped(newMags = Some(mags))
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale

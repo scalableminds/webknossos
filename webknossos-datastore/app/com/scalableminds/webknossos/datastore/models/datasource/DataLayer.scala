@@ -41,15 +41,14 @@ trait DataLayer {
 
   def attachments: Option[DataLayerAttachments]
 
-  // Datasets that are not in the WKW format use mags
-  def magsOpt: Option[List[MagLocator]] = this match {
-    case layer: StaticLayer => Some(layer.mags)
-    case _                  => None
+  def allExplicitPaths: Seq[UPath] = {
+    val magPaths = this match {
+      case s: StaticLayer => s.mags.flatMap(_.path)
+      case _              => Seq.empty
+    }
+    val attachmentPaths = attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
+    magPaths ++ attachmentPaths
   }
-
-  def allExplicitPaths: Seq[UPath] =
-    magsOpt.map(_.flatMap(_.path)).getOrElse(Seq.empty) ++
-      attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
 
   def containsMag(mag: Vec3Int): Boolean = resolutions.contains(mag)
 
@@ -88,17 +87,22 @@ trait StaticLayer extends DataLayer {
     this match {
       case l: StaticSegmentationLayer =>
         l.copy(
-          attachments =
-            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
+          attachments = l.attachments
+            .map(_.mergeWithPrecedence(attachments))
+            .orElse(Some(attachments))
+            .map(_.resolvedIn(dataSourcePath)))
       case l: StaticColorLayer =>
         l.copy(
-          attachments =
-            l.attachments.map(_.merge(attachments)).orElse(Some(attachments)).map(_.resolvedIn(dataSourcePath)))
+          attachments = l.attachments
+            .map(_.mergeWithPrecedence(attachments))
+            .orElse(Some(attachments))
+            .map(_.resolvedIn(dataSourcePath)))
     }
 
   def mapped(
       boundingBoxMapping: BoundingBox => BoundingBox = b => b,
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+      newMags: Option[List[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
       magMapping: MagLocator => MagLocator = m => m,
       name: String = this.name,
       coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
@@ -107,7 +111,7 @@ trait StaticLayer extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          mags = l.mags.map(magMapping),
+          mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -115,7 +119,7 @@ trait StaticLayer extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          mags = l.mags.map(magMapping),
+          mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
           coordinateTransformations = coordinateTransformations
         )

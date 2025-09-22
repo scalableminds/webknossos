@@ -69,7 +69,7 @@ trait SqlTypeImplicits {
 
   implicit def boundingBoxToSqlValue(v: BoundingBox): SqlValue = BoundingBoxValue(v)
 
-  implicit def uPathToSqlValue(v: UPath): SqlValue = UPathValue(v)
+  implicit def upathToSqlValue(v: UPath): SqlValue = UPathValue(v)
 
   implicit def vec3IntToSqlValue(v: Vec3Int): SqlValue = Vector3Value(v.toVec3Double)
 
@@ -107,7 +107,7 @@ trait SqlTypeImplicits {
 
   implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = boundingBoxToSqlValue(v).toSqlToken
 
-  implicit def uPathToSqlToken(v: UPath): SqlToken = uPathToSqlValue(v).toSqlToken
+  implicit def upathToSqlToken(v: UPath): SqlToken = upathToSqlValue(v).toSqlToken
 
   implicit def vec3IntToSqlToken(v: Vec3Int): SqlToken = vec3IntToSqlValue(v).toSqlToken
 

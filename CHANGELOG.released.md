@@ -7,6 +7,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.10.0](https://github.com/scalableminds/webknossos/releases/tag/25.10.0) - 2025-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.09.0...25.10.0)
+
+### Highlights
+- Added a new multi cut mode to the proofreading tool, allowing more precise agglomerate splits. Instead of marking just one point per partition, users can now specify multiple points for each side of the split before performing the cut. [#8824](https://github.com/scalableminds/webknossos/pull/8824)
+
+### Added
+- When starting an inference job on a dataset with inverted intensity values, that inversion now also applies in the inference job. [#8796](https://github.com/scalableminds/webknossos/pull/8796)
+- Added a new multi cut mode to the proofreading tool, allowing more precise agglomerate splits. Instead of marking just one point per partition, users can now specify multiple points for each side of the split before performing the cut. [#8824](https://github.com/scalableminds/webknossos/pull/8824)
+- Added the option to log out from all devices. [#8850](https://github.com/scalableminds/webknossos/pull/8850)
+- Added a placeholder to the voxel size input field in the upload form. [#8876](https://github.com/scalableminds/webknossos/pull/8876)
+- Added new camera positioning option for animations. [#8909](https://github.com/scalableminds/webknossos/pull/8909)
+
+### Changed
+- Use blosc-java instead of jblosc. [#8882](https://github.com/scalableminds/webknossos/pull/8882)
+- The webknossos-worker jobs export_tiff and render_animation are now allowed also for public datasets of other organizations. [#8911](https://github.com/scalableminds/webknossos/pull/8911)
+
+### Fixed
+- Fixed that segmentation layer names were incorrectly displayed as obfuscated strings (tracing ids) in the viewport status indicator when viewing areas with missing data (e.g. at certain zoom levels). [#8865](https://github.com/scalableminds/webknossos/pull/8865)
+- Fixed a bug where reading zarr3 data would return failures instead of the fill value if requested source chunks don’t exist. [#8885](https://github.com/scalableminds/webknossos/pull/8885)
+- Fixed a bug where zarr streaming could fail for volume annotations that have a larger bbox than their fallback layer. (Some of those were created before #7580) [#8888](https://github.com/scalableminds/webknossos/pull/8888)
+- Fixed that pressing AltGr, Ctrl or Command closed the authentication modal when viewing a public dataset. [#8895](https://github.com/scalableminds/webknossos/pull/8895)
+- Fixed a bug where annotation updates would fail if multiple annotation layers are renamed such that a previously-taken name is then used by another layer. [#8896](https://github.com/scalableminds/webknossos/pull/8896)
+- Fixed that the frontend requested ad-hoc meshes with out-of-layer-bounds coordinates. [#8901](https://github.com/scalableminds/webknossos/pull/8901)
+- Fixed loading ad-hoc-computed meshes for static segmentation layers. [#8903](https://github.com/scalableminds/webknossos/pull/8903)
+- Ad hoc mesh requests loading infinitely. [#8915](https://github.com/scalableminds/webknossos/pull/8915)
+- Fix periodic polling of missing updates when another user edits an annotation. [#8919](https://github.com/scalableminds/webknossos/pull/8919)
+- Fixed WK crashing when navigating between pages while maintenance banner is visible. [#8925](https://github.com/scalableminds/webknossos/pull/8925)
+- Fixed navbar height when navigating between pages while maintenance banner is visible. [#8925](https://github.com/scalableminds/webknossos/pull/8925)
+- Fixed running custom-model worker inferences with models shared from other wk organizations. [#4283](https://github.com/scalableminds/voxelytics/pull/4283) [#8926](https://github.com/scalableminds/webknossos/pull/8926)
+- Fixed a bug in reading zarr3-format connectome files caused by a wrong metadata key [#8927](https://github.com/scalableminds/webknossos/pull/8927)
+
 ## [25.09.0](https://github.com/scalableminds/webknossos/releases/tag/25.09.0) - 2025-08-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.07.1...25.09.0)
 

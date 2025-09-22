@@ -97,8 +97,10 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     case _                           => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(uri).append(credential).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(uri).append(credential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object GoogleCloudDataVault {

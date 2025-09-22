@@ -1068,25 +1068,25 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat, manualUploadIsPending
+      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
-                AND NOT manualUploadIsPending""".as[DatasetLayerAttachmentsRow])
+                AND NOT uploadToPathIsPending""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
           VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
           ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false})"""
       query.asUpdate
     }
 
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT manualUploadIsPending".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.attachments match {
         case Some(attachments) =>
@@ -1116,7 +1116,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                     attachmentPath: UPath): Fox[Unit] =
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, manualUploadIsPending)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
             VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true})
          """.asUpdate)
     } yield ()
@@ -1138,13 +1138,13 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     } yield first
   }
 
-  def finishManualUpload(datasetId: ObjectId,
+  def finishUploadToPath(datasetId: ObjectId,
                          layerName: String,
                          attachmentName: String,
                          attachmentType: LayerAttachmentType.Value): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
-                   SET manualUploadIsPending = ${false}
+                   SET uploadToPathIsPending = ${false}
                    WHERE _dataset = $datasetId
                    AND layerName = $layerName
                    AND name = $attachmentName

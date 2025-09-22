@@ -4,7 +4,7 @@ exports[`Users API (E2E) > getAdminUsers() 1`] = `
 [
   {
     "created": "created",
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "experiences": {
       "abc": 5,
     },
@@ -53,7 +53,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
 [
   {
     "created": 1460379469000,
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "experiences": {
       "abc": 5,
     },
@@ -95,7 +95,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
   },
   {
     "created": 1460379469000,
-    "email": "user_B@scalableminds.com",
+    "email": "user_b@scalableminds.com",
     "experiences": {},
     "firstName": "user_B",
     "id": "670b9f4d2a7c0e4d008da6ef",
@@ -125,7 +125,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
   },
   {
     "created": 1460379469000,
-    "email": "user_C@scalableminds.com",
+    "email": "user_c@scalableminds.com",
     "experiences": {},
     "firstName": "user_C",
     "id": "770b9f4d2a7c0e4d008da6ef",
@@ -155,7 +155,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
   },
   {
     "created": 1460379469000,
-    "email": "user_D@scalableminds.com",
+    "email": "user_d@scalableminds.com",
     "experiences": {},
     "firstName": "user_D",
     "id": "870b9f4d2a7c0e4d008da6ef",
@@ -185,7 +185,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
   },
   {
     "created": 1460465869000,
-    "email": "user_E@scalableminds.com",
+    "email": "user_e@scalableminds.com",
     "experiences": {},
     "firstName": "user_E_in_X",
     "id": "970b9f4d2a7c0e4d008da6eb",
@@ -209,7 +209,7 @@ exports[`Users API (E2E) > getEditableUsers() 1`] = `
   },
   {
     "created": 1460552269000,
-    "email": "user_F@scalableminds.com",
+    "email": "user_f@scalableminds.com",
     "experiences": {},
     "firstName": "user_F_in_X",
     "id": "970b9f4d2a7c0e4d008da6ee",
@@ -305,7 +305,7 @@ exports[`Users API (E2E) > getLoggedTimes() 1`] = `
 exports[`Users API (E2E) > getUser() 1`] = `
 {
   "created": "created",
-  "email": "user_A@scalableminds.com",
+  "email": "user_a@scalableminds.com",
   "experiences": {
     "abc": 5,
   },
@@ -351,7 +351,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
 [
   {
     "created": "created",
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "experiences": {
       "abc": 5,
     },
@@ -393,7 +393,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
   },
   {
     "created": "created",
-    "email": "user_B@scalableminds.com",
+    "email": "user_b@scalableminds.com",
     "experiences": {},
     "firstName": "user_B",
     "id": "id",
@@ -423,7 +423,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
   },
   {
     "created": "created",
-    "email": "user_C@scalableminds.com",
+    "email": "user_c@scalableminds.com",
     "experiences": {},
     "firstName": "user_C",
     "id": "id",
@@ -453,7 +453,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
   },
   {
     "created": "created",
-    "email": "user_D@scalableminds.com",
+    "email": "user_d@scalableminds.com",
     "experiences": {},
     "firstName": "user_D",
     "id": "id",
@@ -483,7 +483,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
   },
   {
     "created": "created",
-    "email": "user_E@scalableminds.com",
+    "email": "user_e@scalableminds.com",
     "experiences": {},
     "firstName": "user_E_in_X",
     "id": "id",
@@ -507,7 +507,7 @@ exports[`Users API (E2E) > getUsers() Orga X 1`] = `
   },
   {
     "created": "created",
-    "email": "user_F@scalableminds.com",
+    "email": "user_f@scalableminds.com",
     "experiences": {},
     "firstName": "user_F_in_X",
     "id": "id",
@@ -536,7 +536,7 @@ exports[`Users API (E2E) > getUsers() Orga Y 1`] = `
 [
   {
     "created": "created",
-    "email": "user_E@scalableminds.com",
+    "email": "user_e@scalableminds.com",
     "experiences": {},
     "firstName": "user_E",
     "id": "id",
@@ -560,7 +560,7 @@ exports[`Users API (E2E) > getUsers() Orga Y 1`] = `
   },
   {
     "created": "created",
-    "email": "user_F@scalableminds.com",
+    "email": "user_f@scalableminds.com",
     "experiences": {},
     "firstName": "user_F_in_Y",
     "id": "id",
@@ -589,7 +589,7 @@ exports[`Users API (E2E) > getUsers() Orga Z 1`] = `
 [
   {
     "created": "created",
-    "email": "user_F@scalableminds.com",
+    "email": "user_f@scalableminds.com",
     "experiences": {},
     "firstName": "user_F",
     "id": "id",
@@ -617,7 +617,7 @@ exports[`Users API (E2E) > getUsers() Orga Z 1`] = `
 exports[`Users API (E2E) > updateUser() 1`] = `
 {
   "created": "created",
-  "email": "user_A@scalableminds.com",
+  "email": "user_a@scalableminds.com",
   "experiences": {
     "abc": 5,
   },
@@ -662,7 +662,7 @@ exports[`Users API (E2E) > updateUser() 1`] = `
 exports[`Users API (E2E) > updateUser() 2`] = `
 {
   "created": "created",
-  "email": "user_A@scalableminds.com",
+  "email": "user_a@scalableminds.com",
   "experiences": {
     "abc": 5,
   },

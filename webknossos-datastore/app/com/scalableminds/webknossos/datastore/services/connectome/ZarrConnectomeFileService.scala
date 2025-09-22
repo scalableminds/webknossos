@@ -29,7 +29,7 @@ object ConnectomeFileAttributes extends VoxelyticsZarrArtifactUtils with Connect
       val connectomeFileAttrs = lookUpArtifactAttributes(json)
       for {
         formatVersion <- readArtifactSchemaVersion(json)
-        mappingName <- (connectomeFileAttrs \ attrKeyMetadataMappingName).validate[String]
+        mappingName <- (connectomeFileAttrs \ attrKeyMappingName).validate[String]
         synapseTypeNames <- (connectomeFileAttrs \ attrKeySynapseTypeNames).validate[Seq[String]]
       } yield
         ConnectomeFileAttributes(

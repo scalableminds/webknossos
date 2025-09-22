@@ -66,6 +66,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
                 1,
                 1,
               ],
+              "path": "path",
             },
           ],
           "name": "segmentation",
@@ -104,6 +105,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "isEditable": true,
     "isPublic": false,
     "isUnreported": false,
+    "isVirtual": false,
     "lastUsedByUser": 0,
     "logoUrl": "/assets/images/mpi-logos.svg",
     "metadata": [],
@@ -119,7 +121,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
 exports[`Dataset API (E2E) > getDatasetAccessList 1`] = `
 [
   {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -145,7 +147,7 @@ exports[`Dataset API (E2E) > getDatasetAccessList 1`] = `
     ],
   },
   {
-    "email": "user_B@scalableminds.com",
+    "email": "user_b@scalableminds.com",
     "firstName": "user_B",
     "id": "id",
     "isAdmin": false,

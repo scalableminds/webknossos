@@ -96,8 +96,10 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
       _ <- Fox.fromBool(localPath.isAbsolute) ?~> s"trying to read from FileSystemDataVault, but path $path is not absolute."
     } yield localPath
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(19, 31).toHashCode
+  // There is only one instance of this DataVault, so the hashCode does not depend on any values.
+  private lazy val hashCodeCached = new HashCodeBuilder(19, 31).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
 
   override def equals(obj: Any): Boolean = obj match {
     case _: FileSystemDataVault => true

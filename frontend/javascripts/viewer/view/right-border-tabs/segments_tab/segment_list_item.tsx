@@ -62,6 +62,7 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
         alignSelf: "flex-start",
         marginTop: 5,
         marginLeft: 2,
+        flex: "0 0 10px",
       }}
     />
   );

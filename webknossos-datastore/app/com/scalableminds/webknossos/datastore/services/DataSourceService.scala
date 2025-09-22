@@ -34,6 +34,7 @@ class DataSourceService @Inject()(
     with LazyLogging
     with DataSourceToDiskWriter
     with FoxImplicits
+    with DataSourceValidation
     with Formatter {
 
   override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
@@ -226,7 +227,8 @@ class DataSourceService @Inject()(
     if (new File(propertiesFile.toString).exists()) {
       JsonHelper.parseFromFileAs[UsableDataSource](propertiesFile, path) match {
         case Full(dataSource) =>
-          if (dataSource.dataLayers.nonEmpty) {
+          val validationErrors = validateDataSourceGetErrors(dataSource)
+          if (validationErrors.isEmpty) {
             val dataSourceWithAttachments = dataSource.copy(
               dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
             )
@@ -234,7 +236,7 @@ class DataSourceService @Inject()(
           } else
             UnusableDataSource(id,
                                None,
-                               "Error: Zero layer Dataset",
+                               s"Error: ${validationErrors.mkString(" ")}",
                                Some(dataSource.scale),
                                Some(Json.toJson(dataSource)))
         case e =>

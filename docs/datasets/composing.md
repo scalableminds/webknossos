@@ -12,4 +12,3 @@ There are three different ways to compose a new dataset:
 See the "Compose from existing datasets" tab in the "Add Dataset" screen for more details.
 
 ![youtube-video](https://www.youtube.com/embed/BV6Hw9v3pao)
-

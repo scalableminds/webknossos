@@ -12,5 +12,8 @@ To export (download) an annotation, go to **Menu > Download**. From there, selec
 After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this, go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
 
 ![Icon to open the materialize volume annotation dialog](../images/materialize_volume_annotation_icon.jpg)
+/// caption
+Icon to open the materialize volume annotation dialog
+///
 
 This button opens up a dialog that starts a long-running job which will materialize the volume annotation.

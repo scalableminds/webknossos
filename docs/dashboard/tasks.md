@@ -6,4 +6,7 @@ Tasks are small annotation work assignments that are automatically distributed t
 On the Task screen, users can request new tasks, continue to work on existing tasks, and finish tasks. These tasks are assigned based on a user's experience level, project priority, and task availability.
 Read more about the tasks feature in the [Tasks and Projects guide](../tasks_projects/index.md).
 
-![Tasks can be distributed to users. Task can include rich instructions.](../images/dashboard_tasks.png)
+![Tasks can be distributed to users. Tasks can include rich instructions.](../images/dashboard_tasks.png)
+/// caption
+Tasks can be distributed to users. Tasks can include rich instructions.
+///

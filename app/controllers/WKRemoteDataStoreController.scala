@@ -3,15 +3,14 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, DataSource, DataSourceId}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
-  LinkedLayerIdentifier,
+  LegacyLinkedLayerIdentifier,
   ReserveAdditionalInformation,
   ReserveUploadInformation
 }
@@ -27,7 +26,6 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -81,23 +79,27 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
-          folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
+          folderId = uploadInfo.folderId.getOrElse(organization._rootFolder)
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-          layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
+          layersToLinkWithDirectoryName <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          dataset <- datasetService.createPreliminaryDataset(
-            uploadInfo.name,
-            uploadInfo.organization,
-            dataStore,
-            uploadInfo.requireUniqueName.getOrElse(false),
-            uploadInfo.isVirtual.getOrElse(false)) ?~> "dataset.upload.creation.failed"
+          newDatasetId = ObjectId.generate
+          _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
+            datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
+          // TODO pass isVirtual
+          dataset <- datasetService.createPreliminaryDataset(newDatasetId,
+                                                             uploadInfo.name,
+                                                             datasetService.generateDirectoryName(uploadInfo.name,
+                                                                                                  newDatasetId),
+                                                             uploadInfo.organization,
+                                                             dataStore) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id,
                                                         dataset.directoryName,
-                                                        if (layersToLinkWithDatasetId.isEmpty) None
-                                                        else Some(layersToLinkWithDatasetId))
+                                                        if (layersToLinkWithDirectoryName.isEmpty) None
+                                                        else Some(layersToLinkWithDirectoryName))
         } yield Ok(Json.toJson(additionalInfo))
       }
     }
@@ -131,9 +133,9 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(
+  private def validateLayerToLink(layerIdentifier: LegacyLinkedLayerIdentifier, requestingUser: User)(
       implicit ec: ExecutionContext,
-      m: MessagesProvider): Fox[LinkedLayerIdentifier] =
+      m: MessagesProvider): Fox[LegacyLinkedLayerIdentifier] =
     for {
       organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
@@ -200,8 +202,8 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[InboxDataSource]] =
-    Action.async(validateJson[List[InboxDataSource]]) { implicit request =>
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSource]] =
+    Action.async(validateJson[List[DataSource]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val dataSources = request.body
         for {
@@ -220,8 +222,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updateOne(name: String, key: String): Action[InboxDataSource] =
-    Action.async(validateJson[InboxDataSource]) { implicit request =>
+  def updateOne(name: String, key: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           _ <- datasetService.updateDataSources(dataStore, List(request.body))(GlobalAccessContext)
@@ -296,27 +298,23 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-          dataSource <- datasetService.fullDataSourceFor(dataset)
+          dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
 
     }
 
-  def updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean): Action[DataSource] =
+  def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          abstractDataSource = request.body.copy(dataLayers = request.body.dataLayers.map(AbstractDataLayer.from))
-          oldDataSource <- datasetService.fullDataSourceFor(dataset)
-          oldPaths = oldDataSource.toUsable.map(_.allExplicitPaths).getOrElse(List.empty)
-          newPaths = request.body.allExplicitPaths
-          _ <- Fox.fromBool(allowNewPaths || newPaths.forall(oldPaths.contains)) ?~> "New mag paths must be a subset of old mag paths" ~> BAD_REQUEST
-          _ <- datasetDAO.updateDataSourceByDatasetId(datasetId,
-                                                      name,
-                                                      abstractDataSource.hashCode(),
-                                                      abstractDataSource,
-                                                      isUsable = true)(GlobalAccessContext)
+          _ <- Fox.runIf(!dataset.isVirtual)(
+            datasetDAO.updateDataSource(datasetId,
+                                        name,
+                                        request.body.hashCode(),
+                                        request.body,
+                                        isUsable = request.body.toUsable.isDefined)(GlobalAccessContext))
         } yield Ok
       }
     }

@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
@@ -60,13 +60,13 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
 
-  def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[DataSourceLike] =
+  def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")
       .addQueryString("annotationId" -> annotationId.toString)
       .addQueryString("key" -> tracingStoreKey)
       .withTokenFromContext
       .silent
-      .getWithJsonResponse[DataSourceLike]
+      .getWithJsonResponse[UsableDataSource]
 
   def getDataStoreUriForDataset(datasetId: ObjectId): Fox[String] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetId")

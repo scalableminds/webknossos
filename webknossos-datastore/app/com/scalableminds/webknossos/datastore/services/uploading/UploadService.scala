@@ -9,7 +9,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.layers._
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
@@ -20,9 +19,8 @@ import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
@@ -53,43 +51,31 @@ case class ReserveUploadInformation(
     totalFileCount: Long,
     filePaths: Option[List[String]],
     totalFileSizeInBytes: Option[Long],
-    layersToLink: Option[List[LinkedLayerIdentifier]],
-    initialTeams: List[String], // team ids
-    folderId: Option[String],
+    layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
+    initialTeams: List[ObjectId], // team ids
+    folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
-    isVirtual: Option[Boolean])
+    isVirtual: Option[Boolean] // TODO rethink?
+)
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
-}
-case class ReserveManualUploadInformation(
-    datasetName: String,
-    organization: String,
-    initialTeamIds: List[String],
-    folderId: Option[String],
-    requireUniqueName: Boolean = false,
-)
-object ReserveManualUploadInformation {
-  implicit val reserveUploadInformation: OFormat[ReserveManualUploadInformation] =
-    Json.format[ReserveManualUploadInformation]
 }
 
 case class ReserveAdditionalInformation(newDatasetId: ObjectId,
                                         directoryName: String,
-                                        layersToLink: Option[List[LinkedLayerIdentifier]])
+                                        layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
 object ReserveAdditionalInformation {
   implicit val reserveAdditionalInformation: OFormat[ReserveAdditionalInformation] =
     Json.format[ReserveAdditionalInformation]
 }
 
-case class LinkedLayerIdentifier(organizationId: Option[String],
-                                 organizationName: Option[String],
-                                 // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
-                                 datasetDirectoryName: Option[String],
-                                 dataSetName: String,
-                                 layerName: String,
-                                 newLayerName: Option[String] = None) {
-  def this(organizationId: String, dataSetName: String, layerName: String, newLayerName: Option[String]) =
-    this(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
+                                       organizationName: Option[String],
+                                       // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
+                                       datasetDirectoryName: Option[String],
+                                       dataSetName: String,
+                                       layerName: String,
+                                       newLayerName: Option[String] = None) {
 
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 
@@ -99,16 +85,16 @@ case class LinkedLayerIdentifier(organizationId: Option[String],
   }
 }
 
-object LinkedLayerIdentifier {
+object LegacyLinkedLayerIdentifier {
   def apply(organizationId: String,
             dataSetName: String,
             layerName: String,
-            newLayerName: Option[String]): LinkedLayerIdentifier =
-    new LinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
+            newLayerName: Option[String]): LegacyLinkedLayerIdentifier =
+    new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
 }
 
-case class LinkedLayerIdentifiers(layersToLink: Option[List[LinkedLayerIdentifier]])
+case class LinkedLayerIdentifiers(layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
 object LinkedLayerIdentifiers {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
@@ -412,7 +398,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           s3DataSource <- dataSourceService.prependAllPaths(dataSource,
                                                             newBasePath =
                                                               s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey")
-          _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId, allowNewPaths = true)
+          _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId)
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
           _ = this.synchronized {
             PathUtils.deleteDirectoryRecursively(unpackToDir)
@@ -430,7 +416,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
                                             unpackToDir: Path,
                                             dataSourceId: DataSourceId,
-                                            layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
+                                            layersToLink: Option[List[LegacyLinkedLayerIdentifier]]): Fox[Unit] =
     if (datasetNeedsConversion)
       Fox.successful(())
     else {
@@ -488,13 +474,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           .map(layerDir =>
             for {
               _ <- addLayerAndMagDirIfMissing(layerDir).toFox
-              explored: DataSourceWithMagLocators <- exploreLocalLayerService
-                .exploreLocal(path, dataSourceId, layerDir.getFileName.toString)
+              explored: UsableDataSource <- exploreLocalLayerService.exploreLocal(path,
+                                                                                  dataSourceId,
+                                                                                  layerDir.getFileName.toString)
             } yield explored)
           .toList)
       combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
       firstExploredDatasource <- dataSources.headOption.toFox
-      dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, firstExploredDatasource.scale)
+      dataSource = UsableDataSource(dataSourceId, combinedLayers, firstExploredDatasource.scale)
       path <- Fox.runIf(combinedLayers.nonEmpty)(
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
@@ -545,7 +532,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def uploadDirectoryToS3(
       dataDir: Path,
-      dataSource: InboxDataSource,
+      dataSource: DataSource,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
@@ -572,7 +559,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
 
-  private def getNonReferencedFiles(dataDir: Path, dataSource: InboxDataSource): Fox[List[Path]] =
+  private def getNonReferencedFiles(dataDir: Path, dataSource: DataSource): Fox[List[Path]] =
     for {
       usableDataSource <- dataSource.toUsable.toFox ?~> "Data source is not usable"
       explicitPaths: Set[Path] = usableDataSource.dataLayers
@@ -656,7 +643,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationId: String,
-                                                    layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+                                                    layersToLink: List[LegacyLinkedLayerIdentifier]): Fox[Unit] =
     if (layersToLink.isEmpty) {
       Fox.successful(())
     } else {
@@ -665,32 +652,23 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSourceOnDisk(
-          dataSourceWithLinkedLayers,
-          expectExisting = true,
-          preventNewPaths = false) ?~> "Could not write combined properties file"
+        _ <- dataSourceService.updateDataSourceOnDisk(dataSourceWithLinkedLayers,
+                                                      expectExisting = true,
+                                                      validate = true) ?~> "Could not write combined properties file"
       } yield ()
     }
 
-  private def layerFromIdentifier(layerIdentifier: LinkedLayerIdentifier): Fox[DataLayer] = {
+  private def layerFromIdentifier(layerIdentifier: LegacyLinkedLayerIdentifier): Fox[StaticLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
-    val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
+    val dataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
     for {
-      usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
-      layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
+      usableDataSource <- dataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
+      layer: StaticLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
       newName = layerIdentifier.newLayerName.getOrElse(layerIdentifier.layerName)
-      layerRenamed: DataLayer <- layer match {
-        case l: N5DataLayer                  => Fox.successful(l.copy(name = newName))
-        case l: N5SegmentationLayer          => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedDataLayer         => Fox.successful(l.copy(name = newName))
-        case l: PrecomputedSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case l: Zarr3DataLayer               => Fox.successful(l.copy(name = newName))
-        case l: Zarr3SegmentationLayer       => Fox.successful(l.copy(name = newName))
-        case l: ZarrDataLayer                => Fox.successful(l.copy(name = newName))
-        case l: ZarrSegmentationLayer        => Fox.successful(l.copy(name = newName))
-        case l: WKWDataLayer                 => Fox.successful(l.copy(name = newName))
-        case l: WKWSegmentationLayer         => Fox.successful(l.copy(name = newName))
-        case _                               => Fox.failure("Unknown layer type for link")
+      layerRenamed: StaticLayer <- layer match {
+        case l: StaticColorLayer        => Fox.successful(l.copy(name = newName))
+        case l: StaticSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case _                          => Fox.failure("Unknown layer type for link")
       }
     } yield layerRenamed
   }
@@ -814,7 +792,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
     for {
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
-      excludeFromPrefix = Category.values.map(_.toString).toList
+      excludeFromPrefix = LayerCategory.values.map(_.toString).toList
       firstFile = shallowFileList.headOption
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {

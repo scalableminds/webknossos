@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{DataServiceMappin
 import com.scalableminds.webknossos.datastore.storage.ParsedMappingCache
 import com.typesafe.scalalogging.LazyLogging
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -20,9 +19,7 @@ class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     val readInstruction =
-      MappingReadInstruction(Path.of(config.Datastore.baseDirectory),
-                             request.dataSourceIdOrVolumeDummy,
-                             request.mapping)
+      MappingReadInstruction(config.Datastore.baseDirectory, request.dataSourceIdOrVolumeDummy, request.mapping)
     request.dataLayer.mappingProvider.load(readInstruction).toFox
   }
 

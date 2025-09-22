@@ -2,6 +2,16 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
+
+  val dependencyResolvers: Seq[MavenRepository] =
+    Seq(
+      Resolver.typesafeRepo("releases"),
+      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
+      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
+      "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
+      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
+    )
+
   private val silhouetteVersion = "10.0.3"
   private val brotliVersion = "1.19.0"
   private val slickVersion = "3.5.2"

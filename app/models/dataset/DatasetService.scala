@@ -3,32 +3,17 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
+import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
+import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
-  DataFormat,
   DataSource,
   DataSourceId,
-  GenericDataSource,
-  DataLayerLike => DataLayer
+  DataSourceStatus,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer,
+  UnusableDataSource,
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
@@ -37,9 +22,9 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Empty, EmptyBox, Full}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import play.api.http.Status.NOT_FOUND
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -64,10 +49,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = datasetDAO.unreportedStatus
-  private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList =
-    List(unreportedStatus, notYetUploadedStatus, datasetDAO.deletedByUserStatus)
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
@@ -85,40 +66,46 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String,
-                               organizationId: String,
-                               dataStore: DataStore,
-                               requireUniqueName: Boolean,
-                               isVirtual: Boolean): Fox[Dataset] = {
-    val newDatasetId = ObjectId.generate
+  def assertNewDatasetNameUnique(name: String, organizationId: String): Fox[Unit] =
     for {
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
-        GlobalAccessContext)
-      _ <- Fox.fromBool(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
-      datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
-      unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
-                                                notYetUploadedStatus)
-      newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource, isVirtual = isVirtual)
-    } yield newDataset
+      exists <- datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)
+      _ <- Fox.fromBool(!exists) ?~> "dataset.name.taken"
+    } yield ()
+
+  def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
+    for {
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
+      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
+    } yield ()
+
+  // TODO may get isVirtual=true too. Change to createVirtualDataset?
+  def createPreliminaryDataset(newDatasetId: ObjectId,
+                               datasetName: String,
+                               datasetDirectoryName: String,
+                               organizationId: String,
+                               dataStore: DataStore): Fox[Dataset] = {
+    val unreportedDatasource =
+      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, DataSourceStatus.notYetUploaded)
+    createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
   }
 
   def createVirtualDataset(datasetName: String,
                            dataStore: DataStore,
-                           dataSource: DataSource,
+                           dataSource: UsableDataSource,
                            folderId: Option[String],
                            user: User): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, user._organization)(
-        GlobalAccessContext)
-      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
       _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
-      abstractDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map(AbstractDataLayer.from),
-                                           id = DataSourceId(datasetName, user._organization))
-      dataset <- createDataset(dataStore, newDatasetId, datasetName, abstractDataSource, isVirtual = true)
+      directoryName = generateDirectoryName(datasetName, newDatasetId)
+      dataset <- createDataset(dataStore,
+                               newDatasetId,
+                               datasetName,
+                               dataSource.copy(id = DataSourceId(directoryName, organization._id)),
+                               isVirtual = true)
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -131,16 +118,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       organizationIdOpt = Some(organizationId),
       isActiveOpt = Some(false),
       includeSubfolders = true,
-      statusOpt = Some(notYetUploadedStatus),
+      statusOpt = Some(DataSourceStatus.notYetUploaded),
       // Only list pending uploads since the two last weeks.
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
 
-  private def createDataset(
+  def createDataset(
       dataStore: DataStore,
       datasetId: ObjectId,
       datasetName: String,
-      dataSource: InboxDataSource,
+      dataSource: DataSource,
       publication: Option[ObjectId] = None,
       isVirtual: Boolean = false
   ): Fox[Dataset] = {
@@ -186,12 +173,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
+  def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
+      .serialCombined(groupedByOrga) { orgaTuple: (String, List[DataSource]) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
@@ -216,7 +203,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def updateDataSourceFromDataStore(
       dataStore: DataStore,
-      dataSource: InboxDataSource,
+      dataSource: DataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
@@ -235,25 +222,23 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  private def updateKnownDataSource(foundDataset: Dataset, dataSource: InboxDataSource, dataStore: DataStore)(
+  private def updateKnownDataSource(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =
     if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataset._id)
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
-                                                    dataStore.name,
-                                                    dataSource.hashCode,
-                                                    dataSource,
-                                                    dataSource.isUsable)
+        _ <- datasetDAO.updateDataSource(foundDataset._id,
+                                         dataStore.name,
+                                         dataSource.hashCode,
+                                         dataSource,
+                                         dataSource.isUsable)
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
-  private def updateDataSourceDifferentDataStore(
-      foundDataset: Dataset,
-      dataSource: InboxDataSource,
-      dataStore: DataStore)(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+  private def updateDataSourceDifferentDataStore(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
+      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
@@ -264,11 +249,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSourceByDatasetId(foundDataset._id,
-                                                      dataStore.name,
-                                                      dataSource.hashCode,
-                                                      dataSource,
-                                                      dataSource.isUsable)(GlobalAccessContext)
+          _ <- datasetDAO.updateDataSource(foundDataset._id,
+                                           dataStore.name,
+                                           dataSource.hashCode,
+                                           dataSource,
+                                           dataSource.isUsable)(GlobalAccessContext)
           _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
@@ -278,9 +263,110 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     }).flatten
 
-  private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
+  private def insertNewDataset(dataSource: DataSource, datasetName: String, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
       createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
+    }
+
+  def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Unit] =
+    for {
+      existingDataSource <- usableDataSourceFor(dataset)
+      datasetId = dataset._id
+      dataStoreClient <- clientFor(dataset)
+      updatedDataSource = applyDataSourceUpdates(existingDataSource, dataSourceUpdates)
+      isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
+      _ <- if (isChanged) {
+        logger.info(s"Updating dataSource of $datasetId")
+        for {
+          _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
+          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+          _ <- datasetDAO.updateDataSource(datasetId,
+                                           dataset._dataStore,
+                                           updatedDataSource.hashCode(),
+                                           updatedDataSource,
+                                           isUsable = true)(GlobalAccessContext)
+        } yield ()
+      } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
+    } yield ()
+
+  private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
+                                     updates: UsableDataSource): UsableDataSource = {
+    val updatedLayers = existingDataSource.dataLayers.flatMap { existingLayer =>
+      val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
+      layerUpdatesOpt match {
+        case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
+        case None               => None
+      }
+    }
+    existingDataSource.copy(
+      dataLayers = updatedLayers,
+      scale = updates.scale
+    )
+  }
+
+  private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
+    /*
+  Taken from the new layer are only those properties:
+   - category (so Color may become Segmentation and vice versa)
+   - boundingBox
+   - coordinatesTransformations
+   - defaultViewConfiguration
+   - adminViewConfiguration
+   - largestSegmentId (segmentation only)
+     */
+
+    existingLayer match {
+      case e: StaticColorLayer =>
+        layerUpdates match {
+          case u: StaticColorLayer =>
+            e.copy(
+              boundingBox = u.boundingBox,
+              coordinateTransformations = u.coordinateTransformations,
+              defaultViewConfiguration = u.defaultViewConfiguration,
+              adminViewConfiguration = u.adminViewConfiguration
+            )
+          case u: StaticSegmentationLayer =>
+            StaticSegmentationLayer(
+              e.name,
+              e.dataFormat,
+              u.boundingBox,
+              e.elementClass,
+              e.mags,
+              u.defaultViewConfiguration,
+              u.adminViewConfiguration,
+              u.coordinateTransformations,
+              e.additionalAxes,
+              e.attachments,
+              u.largestSegmentId,
+              None
+            )
+        }
+      case e: StaticSegmentationLayer =>
+        layerUpdates match {
+          case u: StaticSegmentationLayer =>
+            e.copy(
+              boundingBox = u.boundingBox,
+              coordinateTransformations = u.coordinateTransformations,
+              defaultViewConfiguration = u.defaultViewConfiguration,
+              adminViewConfiguration = u.adminViewConfiguration,
+              largestSegmentId = u.largestSegmentId
+            )
+          case u: StaticColorLayer =>
+            StaticColorLayer(
+              e.name,
+              e.dataFormat,
+              u.boundingBox,
+              e.elementClass,
+              e.mags,
+              u.defaultViewConfiguration,
+              u.adminViewConfiguration,
+              u.coordinateTransformations,
+              e.additionalAxes,
+              e.attachments
+            )
+        }
     }
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
@@ -296,11 +382,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,
                                       organizationId: Option[String]): Fox[Unit] =
-    datasetDAO.deactivateUnreported(reportedDatasetIds,
-                                    dataStore.name,
-                                    organizationId,
-                                    unreportedStatus,
-                                    inactiveStatusList)
+    datasetDAO.deactivateUnreported(reportedDatasetIds, dataStore.name, organizationId, DataSourceStatus.unreported)
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -317,238 +399,28 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def dataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
-    (for {
-      dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
-    } yield {
-      if (dataset.isUsable)
-        for {
-          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
-        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-      else
-        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
-    }).flatten
-
-  // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
-  def fullDataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
-    (for {
-      dataLayers <- findLayersForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
-    } yield {
-      if (dataset.isUsable)
-        for {
-          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
-        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-      else
-        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
-    }).flatten
-
-  private def findLayersForDataset(datasetId: ObjectId): Fox[List[DataLayer]] =
+  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      layers <- datasetDataLayerDAO.findAllForDataset(datasetId)
-      layerNamesAndMags <- datasetMagsDAO.findAllByDatasetId(datasetId)
-      layersWithMags <- Fox.serialCombined(layers) { layer =>
-        tryo {
-          val mags = layerNamesAndMags.filter(_._1 == layer.name).map(_._2).toList
-          layer match {
-            case AbstractDataLayer(name,
-                                   category,
-                                   boundingBox,
-                                   _,
-                                   elementClass,
-                                   defaultViewConfiguration,
-                                   adminViewConfiguration,
-                                   coordinateTransformations,
-                                   additionalAxes,
-                                   attachmentsOpt,
-                                   _,
-                                   numChannels,
-                                   dataFormat) =>
-              dataFormat match {
-                case Some(df) =>
-                  df match {
-                    case DataFormat.wkw =>
-                      WKWDataLayer(
-                        name,
-                        category,
-                        boundingBox,
-                        mags,
-                        elementClass,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.neuroglancerPrecomputed =>
-                      PrecomputedDataLayer(
-                        name,
-                        boundingBox,
-                        category,
-                        elementClass,
-                        mags,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.n5 =>
-                      N5DataLayer(
-                        name,
-                        category,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.zarr =>
-                      ZarrDataLayer(
-                        name,
-                        category,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt,
-                        df
-                      )
-                    case DataFormat.zarr3 =>
-                      Zarr3DataLayer(
-                        name,
-                        category,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt,
-                      )
-                  }
-                case None => throw new IllegalStateException(s"Data layer ${layer.name} has no data format defined.")
-              }
-            case AbstractSegmentationLayer(name,
-                                           _,
-                                           boundingBox,
-                                           _,
-                                           elementClass,
-                                           largestSegmentId,
-                                           mappings,
-                                           defaultViewConfiguration,
-                                           adminViewConfiguration,
-                                           coordinateTransformations,
-                                           additionalAxes,
-                                           attachmentsOpt,
-                                           _,
-                                           numChannels,
-                                           dataFormat) =>
-              dataFormat match {
-                case Some(df) =>
-                  df match {
-                    case DataFormat.wkw =>
-                      WKWSegmentationLayer(
-                        name,
-                        boundingBox,
-                        mags,
-                        elementClass,
-                        mappings,
-                        largestSegmentId,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.neuroglancerPrecomputed =>
-                      PrecomputedSegmentationLayer(
-                        name,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        largestSegmentId,
-                        mappings,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.n5 =>
-                      N5SegmentationLayer(
-                        name,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        largestSegmentId,
-                        mappings,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                    case DataFormat.zarr =>
-                      ZarrSegmentationLayer(
-                        name,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        largestSegmentId,
-                        mappings,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt,
-                        df
-                      )
-                    case DataFormat.zarr3 =>
-                      Zarr3SegmentationLayer(
-                        name,
-                        boundingBox,
-                        elementClass,
-                        mags,
-                        largestSegmentId,
-                        mappings,
-                        defaultViewConfiguration,
-                        adminViewConfiguration,
-                        coordinateTransformations,
-                        numChannels,
-                        additionalAxes,
-                        attachmentsOpt
-                      )
-                  }
-                case None =>
-                  throw new IllegalStateException(s"Data layer ${layer.name} has no data format defined.")
-              }
-            case _ => throw new NotImplementedError("DataLayer type mismatch (unreachable)")
-          }
-        }.toFox
-      }
-    } yield layersWithMags
+      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
+    } yield usableDataSource
+
+  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
+    val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
+    if (dataset.isUsable)
+      for {
+        voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
+        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
+      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
+    else
+      Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
+  }
 
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"
       dataStoreClient <- clientFor(dataset)
-      _ <- dataStoreClient.updateDatasetInDSCache(dataset._id.toString)
+      _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
     } yield ()
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =
@@ -575,7 +447,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(Instant.zero)
     }
 
-  def allLayersFor(dataset: Dataset): Fox[List[DataLayer]] =
+  def allLayersFor(dataset: Dataset): Fox[List[StaticLayer]] =
     for {
       dataSource <- dataSourceFor(dataset)
       datasetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
@@ -597,18 +469,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(false)
     }
 
-  def isUnreported(dataset: Dataset): Boolean = dataset.status == unreportedStatus
+  def isUnreported(dataset: Dataset): Boolean = dataset.status == DataSourceStatus.unreported
 
-  def addInitialTeams(dataset: Dataset, teams: List[String], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataset: Dataset, teamIds: Seq[ObjectId], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
       _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-      _ <- Fox.fromBool(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- Fox.fromBool(teamIds.forall(teamId => userTeams.map(_._id).contains(teamId))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
-      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIdsValidated)
+      _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIds)
     } yield ()
 
   def addUploader(dataset: Dataset, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -623,7 +494,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
       dataset.flatMap {
-        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(dataset) if !dataset.isVirtual =>
+          datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
+          Fox.successful(())
         case Empty => // Dataset reported but ignored (non-existing/forbidden org)
           Fox.successful(())
         case e: EmptyBox =>
@@ -658,7 +532,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield magInfosAndLinkedMags
 
-  def validatePaths(paths: Seq[String], dataStore: DataStore): Fox[Unit] =
+  def validatePaths(paths: Seq[UPath], dataStore: DataStore): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       client = new WKRemoteDataStoreClient(dataStore, rpc)
@@ -682,6 +556,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         } yield ()
       } ?~> "dataset.delete.failed"
     } yield ()
+
+  def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
+    TextUtils.normalizeStrong(datasetName) match {
+      case Some(prefix) => s"$prefix-$datasetId"
+      case None         => datasetId.toString
+    }
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
@@ -711,7 +591,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> dataset._id,
         "name" -> dataset.name,
-        "dataSource" -> dataSource,
+        "dataSource" -> JsonHelper.removeKeyRecursively(Json.toJson(dataSource), Set("credentialId", "credentials")),
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,
@@ -729,9 +609,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
-        // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
-        "publication" -> None,
-        "usedStorageBytes" -> usedStorageBytes
+        "usedStorageBytes" -> usedStorageBytes,
+        "isVirtual" -> dataset.isVirtual
       )
     }
 }

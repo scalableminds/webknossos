@@ -27,7 +27,7 @@ The active node, branch points, and nodes that have comments assigned to them ar
 Users can assign new random colors to a single tree or all trees at once.](../images/shuffle_tree_colors.png)
 /// caption
 Trees are randomly assigned colors upon creation.
-Users can assign new random colors to a single tree or all trees at once.
+Users can assign new colors to a single tree or all trees at once.
 ///
 
 ## Skeleton & Tree Visibility

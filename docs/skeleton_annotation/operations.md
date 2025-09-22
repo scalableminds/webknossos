@@ -39,5 +39,5 @@ Common tree operations include splitting and merging trees.
 
 ![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](../images/tracing_ui_tree_merge_split.gif)
 /// caption
-Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.
+Trees can be split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.
 ///

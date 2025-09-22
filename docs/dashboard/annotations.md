@@ -10,9 +10,9 @@ Each annotation can be renamed to reflect its content.
 /// caption
 Manage and resume your skeleton and volume annotations.
 ///
-![Annotations can archived to declutter your dashboard.](../images/dashboard_archive.png)
+![Annotations can be archived to declutter your dashboard.](../images/dashboard_archive.png)
 /// caption
-Annotations can archived to declutter your dashboard.
+Annotations can be archived to declutter your dashboard.
 ///
 
 ## Shared Annotations

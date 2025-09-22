@@ -83,6 +83,9 @@ Currently, there are four toolkits available:
 - Split Segments: This toolkit allows splitting a labeled segment into two parts. Tools in this toolkit behave a bit differently to streamline this workflow. Read more about this toolkit [here](../proofreading/split_segments_toolkit.md).
 
 ![Toolkit Selection](../images/toolkit_dropdown.jpg)
+/// caption
+The toolkit dropdown allows selecting a subset of tools tailored for a specific use case.
+///
 
 ## Annotation Tools
 

@@ -5,15 +5,15 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 
 ![Trace Tool](../ui/images/trace-tool.jpg){align=left width="60"}
 **Trace Tool**: Create precise boundary definitions by drawing outlines around structures. This tool is particularly useful when accuracy is crucial. For added precision consider using a [pen input device](./pen_tablets.md). 
-![Adding labels with the Trace tool](../images/volume_trace.gif)
+    ![Adding labels with the Trace tool](../images/volume_trace.gif)
 
 ![Brush Tool](../ui/images/brush-tool.jpg){align=left width="60"} 
 **Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable using ++shift++ + _Mousewheel_. Drawing around objects in one continuous motion will automatically fill the inside area.
-![Adding labels with the Brush tool](../images/volume_brush.gif)
+    ![Adding labels with the Brush tool](../images/volume_brush.gif)
 
 ![Eraser (Trace/Brush)](../ui/images/eraser-tool.jpg){align=left width="60"} 
  **Eraser (Trace/Brush)**: Remove existing labels by drawing over them. Functions identically to the Trace/Brush tools, with adjustable size using ++shift++ + _Mousewheel_.
-![Removing labels with the Eraser tool](../images/volume_delete.gif)
+    ![Removing labels with the Eraser tool](../images/volume_delete.gif)
 
 ![Fill Tool](../ui/images/fill-tool.jpg){align=left width="60"} 
 **Fill Tool**: Fill regions with volume annotations up to segment boundaries or viewport edges. Useful for:

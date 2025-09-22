@@ -16,7 +16,7 @@ You also have the possibility to add metadata for your dataset in the info tab o
 
 ![Adding metadata](../images/metadata_dataset.gif)
 /// caption
-Adding metadata
+Adding metadata to a dataset as key-value pairs to keep it organized and manageable.
 ///
 
 To move multiple datasets to a folder at once, you can make use of multi-selection. As in typical file explorers, CTRL + left click adds individual datasets to the current selection. Shift + left click selects a range of datasets.

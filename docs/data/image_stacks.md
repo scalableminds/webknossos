@@ -54,8 +54,8 @@ WEBKNOSSOS understands most modern bio-imaging file formats and uses the [BioFor
 
 You can manually convert image stacks through:
 
-- [WEBKNOSSOS CLI](https://docs.webknossos.org/cli)
-- [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py)
+- [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/)
+- [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/)
 
 ### Conversion with CLI
 You can easily convert image stacks manually with the WEBKNOSSOS CLI.
@@ -75,11 +75,11 @@ This snippet converts an image stack that is located in directory called `data/s
 It will create a so called `color` layer containing your raw greyscale/color image.
 The supplied `--voxel-size` is specified in nanometers.
 
-Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
+Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/).
 
 ### Conversion with Python
 
-You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr v3 or integrate the conversion as part of an existing workflow. 
+You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) to convert image stacks to Zarr v3 or integrate the conversion as part of an existing workflow. 
 
 ```python
 import webknossos as wk

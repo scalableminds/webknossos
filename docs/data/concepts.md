@@ -105,7 +105,7 @@ The term "magnifications" is used synonymously for mags throughout the UI.
 At the moment, WEBKNOSSOS guarantees correct rendering of data with non-uniform mag factors only if the z-component between two mags changes by a factor of 1 or 2.
 
 Most users do not create these metadata files manually.
-When using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).
+When using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).
 During the data import process, WEBKNOSSOS will ask for the necessary properties.
 
 [See below for the full specification](#dataset-metadata-specification).

@@ -17,7 +17,7 @@ You can customize the interface to your liking. Toggle the left and right sideba
 
 ![Customizing the layout](../images/customize_layout.gif)
 /// caption
-Customizing the layout by draging and resizing the viewports.
+Customizing the layout by dragging and resizing the viewports.
 ///
 
 Read More About [Skeleton Annotation](../skeleton_annotation/index.md)

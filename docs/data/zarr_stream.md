@@ -10,7 +10,7 @@ To access and share a dataset through Zarr streaming, follow these steps:
 1. Click on the overflow menu (dropdown), next to the `Save` button in the WEBKNOSSOS navbar
 2. Select `Zarr Links` entry
 3. Click `Create Zarr Link` to make the resource available through the Zarr streaming interface. Set the `Expiration Date` as required. The default duration is 1 month into the future.
-4. Click on the little copy button (clipboard icon) to copy the Zarr web link. Due to the nature of the Zarr spec, if you need to individually copy a URL for each WEBKNOSSOS layer.
+4. Click on the little copy button (clipboard icon) to copy the Zarr web link. Due to the nature of the Zarr spec, you need to individually copy the URL for each WEBKNOSSOS layer.
 
 ![The Zarr Link dialog for sharing a dataset/annotation as a Zarr source for streaming to third-party services.](../images/zarr_links.jpeg)
 /// caption

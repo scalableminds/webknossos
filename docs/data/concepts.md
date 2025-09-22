@@ -24,7 +24,7 @@ A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which
 
 ![Color and Segmentation Layers](../images/datalayers.jpeg)
 /// caption
-Color contain the microscopy data and and segmentation layers contain (volume) annotations or masks.
+Color layers contain the microscopy data and segmentation layers contain (volume) annotations or masks.
 ///
 
 ## Magnification Steps and Downsampling

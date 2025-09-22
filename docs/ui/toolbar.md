@@ -2,9 +2,9 @@
 
 The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
-![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
+![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo](../images/ui_toolbar_menu.png)
 /// caption
-The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo
+The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo
 ///
 
 ## Basic Operations

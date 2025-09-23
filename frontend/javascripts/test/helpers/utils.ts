@@ -16,7 +16,7 @@ export const transformStateAsReadOnly = (
   return overrideAllowUpdateInState(transformedState, true);
 };
 
-export function overrideAllowUpdateInState(state: WebknossosState, value: boolean) {
+function overrideAllowUpdateInState(state: WebknossosState, value: boolean) {
   return update(state, {
     annotation: {
       restrictions: {

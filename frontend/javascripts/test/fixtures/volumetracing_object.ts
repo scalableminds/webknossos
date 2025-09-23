@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import Constants from "viewer/constants";
+import Constants, { ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 import { combinedReducer } from "viewer/store";
@@ -33,18 +33,19 @@ const stateWithoutDatasetInitialization = update(defaultState, {
       $set: {
         branchPointsAllowed: true,
         allowUpdate: true,
+        allowSave: true,
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        allowedModes: [],
         somaClickingAllowed: true,
-        volumeInterpolationAllowed: true,
         mergerMode: false,
-        magRestrictions: {
-          min: undefined,
-          max: undefined,
-        },
+        volumeInterpolationAllowed: true,
+        allowedModes: ViewModeValues,
+        magRestrictions: {},
       },
+    },
+    isUpdatingCurrentlyAllowed: {
+      $set: true,
     },
     volumes: {
       $set: [volumeTracing],

@@ -258,6 +258,7 @@ class BackendMock {
     _annotationId: string,
     oldestVersion?: number,
     _newestVersion?: number,
+    _truncateActionLog: boolean = false,
     sortAscending: boolean = false,
   ): Promise<Array<APIUpdateActionBatch>> => {
     const firstUnseenVersionIndex = this.updateActionLog.findIndex(

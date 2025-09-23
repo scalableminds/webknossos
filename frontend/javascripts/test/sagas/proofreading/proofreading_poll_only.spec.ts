@@ -17,7 +17,6 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 
 describe("Proofreading (Poll only)", () => {
@@ -70,7 +69,6 @@ describe("Proofreading (Poll only)", () => {
         ],
         4,
       );
-      WkDevFlags.logActions = true;
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
       const mapping1 = yield select(

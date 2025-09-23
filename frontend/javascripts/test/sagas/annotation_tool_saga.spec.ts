@@ -47,7 +47,6 @@ import {
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { watchToolDeselection } from "viewer/model/sagas/annotation_tool_saga";
-import { overrideAllowUpdateInState } from "test/helpers/utils";
 
 describe("Annotation Tool Saga", () => {
   const allToolControllers = [
@@ -71,7 +70,7 @@ describe("Annotation Tool Saga", () => {
   });
 
   it("Cycling through the annotation tools should trigger a deselection of the previous tool.", () => {
-    let newState = overrideAllowUpdateInState(initialState, true);
+    let newState = initialState;
     const saga = watchToolDeselection();
     saga.next();
     saga.next(newState.uiInformation.activeTool);
@@ -115,7 +114,7 @@ describe("Annotation Tool Saga", () => {
   });
 
   it("Selecting another tool should trigger a deselection of the previous tool.", () => {
-    let newState = overrideAllowUpdateInState(initialState, true);
+    let newState = initialState;
 
     const saga = watchToolDeselection();
     saga.next();

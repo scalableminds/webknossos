@@ -197,11 +197,11 @@ describe("Proofreading (Multi User)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1338],
-          [2, 1338],
+          [1, 1339],
+          [2, 1339],
           [3, 1],
-          [4, 1338],
-          [5, 1338],
+          [4, 1339],
+          [5, 1339],
           [6, 6],
           [7, 6],
         ]),
@@ -271,6 +271,7 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 2,
             segmentId2: 3,
+            agglomerateId: 1,
           },
         },
       ]);
@@ -283,8 +284,8 @@ describe("Proofreading (Multi User)", () => {
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
-          [2, 1338],
-          [3, 1339],
+          [2, 1339],
+          [3, 1340],
           [4, 4],
           [5, 4],
           [6, 6],
@@ -367,10 +368,10 @@ describe("Proofreading (Multi User)", () => {
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
-          [2, 1338],
-          [3, 1338],
-          [4, 1338],
-          [5, 1338],
+          [2, 1339],
+          [3, 1339],
+          [4, 1339],
+          [5, 1339],
           [6, 6],
           [7, 6],
         ]),
@@ -636,11 +637,11 @@ describe("Proofreading (Multi User)", () => {
 
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1338],
-          [2, 1338],
-          [3, 1338],
-          [4, 1338],
-          [5, 1338],
+          [1, 1339],
+          [2, 1339],
+          [3, 1339],
+          [4, 1339],
+          [5, 1339],
           [6, 1337],
           [7, 1337],
           // [1337, 1338], not loaded

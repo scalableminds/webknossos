@@ -34,16 +34,16 @@ export class AgglomerateMapping {
       this.adjacencyList.set(segmentId, new Set());
       initialVersionMap.set(segmentId, segmentId); // each segment is its own component at v0
     }
-    this.commit(initialVersionMap);
+    this.commit(initialVersionMap, true);
 
     for (const edge of edges) {
-      this.addEdge(edge[0], edge[1]);
+      this.addEdge(edge[0], edge[1], true);
     }
 
     this.resetVersionCounter(initialVersion);
   }
 
-  addEdge(segmentIdA: number, segmentIdB: number): void {
+  addEdge(segmentIdA: number, segmentIdB: number, bumpVersion: boolean): void {
     /*
      * Add an edge and record the new version. All segment ids
      * that are present in the component defined by segmentIdB
@@ -66,10 +66,10 @@ export class AgglomerateMapping {
       }
     }
 
-    this.commit(nextVersionMap);
+    this.commit(nextVersionMap, bumpVersion);
   }
 
-  removeEdge(segmentIdA: number, segmentIdB: number): void {
+  removeEdge(segmentIdA: number, segmentIdB: number, bumpVersion: boolean): void {
     /*
      * Remove an edge, possibly splitting a component, and record the new version.
      * The source component (defined by segmentIdA) will keep its mapped id.
@@ -131,7 +131,7 @@ export class AgglomerateMapping {
       }
     }
 
-    this.commit(nextVersionMap);
+    this.commit(nextVersionMap, bumpVersion);
   }
 
   mapSegment(segmentId: number, version: number): number {
@@ -177,7 +177,7 @@ export class AgglomerateMapping {
     if (newestMap == null) {
       throw new Error("No initial version of map found.");
     }
-    this.commit(newestMap);
+    this.commit(newestMap, true);
   }
 
   /* Helpers */
@@ -188,15 +188,23 @@ export class AgglomerateMapping {
     }
   }
 
-  private commit(newVersionMap: Map<number, number>): void {
+  private commit(newVersionMap: Map<number, number>, bumpVersion: boolean): void {
     /*
      * Mush mapping snapshot and advance the global version counter
      */
-    this.versions.push(newVersionMap);
-    this.currentVersion++;
-    console.log(
-      `Committed v=${this.currentVersion} with mapping: `,
-      newVersionMap.entries().toArray(),
-    );
+    if (bumpVersion) {
+      this.currentVersion++;
+      this.versions.push(newVersionMap);
+      console.log(
+        `Committed v=${this.currentVersion} with mapping: `,
+        newVersionMap.entries().toArray(),
+      );
+    } else {
+      this.versions[this.currentVersion] = newVersionMap;
+      console.log(
+        `Appended new update to v=${this.currentVersion}; resulting mapping: `,
+        newVersionMap.entries().toArray(),
+      );
+    }
   }
 }

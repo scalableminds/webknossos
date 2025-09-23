@@ -98,7 +98,6 @@ class BackendMock {
     _url: string,
     payload: { data: Array<unknown> },
   ) => {
-    // console.log("[BackendMock] sendJSONReceiveArraybufferWithHeaders");
     await sleep(this.requestDelay);
     const bucketCount = payload.data.length;
     const TypedArrayClass = this.typedArrayClass;
@@ -139,7 +138,6 @@ class BackendMock {
   };
 
   acquireAnnotationMutex = async (_annotationId: string) => {
-    // console.log("[BackendMock] acquireAnnotationMutex");
     return { canEdit: true, blockedByUser: null };
   };
 
@@ -208,32 +206,37 @@ class BackendMock {
       console.log("pushing to server: v=", item.version, "with", item.value);
       let agglomerateActionCounter = 0;
       for (const updateAction of item.value) {
+        const bumpVersion = agglomerateActionCounter === 0;
         if (updateAction.name === "mergeAgglomerate") {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
           }
-          if (agglomerateActionCounter > 0) {
+          // TODOM: test  whether the current implementation is sufficient.
+          /*if (agglomerateActionCounter > 0) {
             throw new Error(
               "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
             );
-          }
+          }*/
           this.agglomerateMapping.addEdge(
             updateAction.value.segmentId1,
             updateAction.value.segmentId2,
+            bumpVersion,
           );
           agglomerateActionCounter++;
         } else if (updateAction.name === "splitAgglomerate") {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
           }
-          if (agglomerateActionCounter > 0) {
+          // TODOM: test  whether the current implementation is sufficient.
+          /*if (agglomerateActionCounter > 0) {
             throw new Error(
               "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
             );
-          }
+          }*/
           this.agglomerateMapping.removeEdge(
             updateAction.value.segmentId1,
             updateAction.value.segmentId2,
+            bumpVersion,
           );
           agglomerateActionCounter++;
         } else {
@@ -311,6 +314,7 @@ export function mockInitialBucketAndAgglomerateData(
   const backendMock = new BackendMock(
     [
       { position: [100, 100, 100], value: 1337 },
+      { position: [101, 101, 101], value: 1338 },
       { position: [1, 1, 1], value: 1 },
       { position: [2, 2, 2], value: 2 },
       { position: [3, 3, 3], value: 3 },

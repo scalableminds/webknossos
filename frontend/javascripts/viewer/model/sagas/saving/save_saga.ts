@@ -431,18 +431,28 @@ export function* tryToIncorporateActions(
           // as this is done by the proofreading saga itself after saving the split actions.
           // Moreover, as the split actions are still needed to be saved after tryToIncorporateActions is finished,
           // the backend and thus a refresh within tryToIncorporateActions wouldn't yet know about the split actions and
-          // thus the new update mapping after the split actions.
+          // thus reloading the mapping here would yield false results.
           if (areUnsavedChangesOfUser) {
             break;
           }
-          // todop: doublecheck that this is respected properly:
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
+          const { segmentId1, segmentId2, agglomerateId, actionTracingId } = action.value;
+          volumeTracingIdOfMapping = actionTracingId;
+          if (agglomerateId) {
+            // The action already contains the info about what agglomerate was split.
+            // As the split could have happened between segments not loaded in this client,
+            // we need to reload in case any segment of the agglomerate is loaded and
+            // cannot guess the expected result without asking the backend.
+            agglomerateIdsToRefresh.add(agglomerateId);
+            continue;
+          }
+          // If the agglomerate id was not provided, try to get it from the local mapping.
           const activeMapping = yield* select(
             (store) =>
               store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
           );
-          const { segmentId1, segmentId2 } = action.value;
+          // Collect agglomerate ids which need to be refreshed to update the local mapping accordingly.
           if (
             !activeMapping ||
             !activeMapping.mapping ||
@@ -458,7 +468,6 @@ export function* tryToIncorporateActions(
               : (el: number) => BigInt(el);
           let firstAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId1));
           let secondAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId2));
-          volumeTracingIdOfMapping = action.value.actionTracingId;
           if (firstAgglomerateId) {
             agglomerateIdsToRefresh.add(firstAgglomerateId);
           }
@@ -553,10 +562,9 @@ export function* tryToIncorporateActions(
     }
     ColoredLogger.logGreen("Setting local version to", actionBatch.version);
     yield* put(setVersionNumberAction(actionBatch.version));
-    // TODOM refresh split
     if (agglomerateIdsToRefresh.size > 0 && volumeTracingIdOfMapping) {
       const agglomerateIdToRefresh = agglomerateIdsToRefresh.values().next().value;
-      if (!agglomerateIdToRefresh) {
+      if (agglomerateIdToRefresh == null) {
         continue;
       }
       const activeMapping = yield* select(

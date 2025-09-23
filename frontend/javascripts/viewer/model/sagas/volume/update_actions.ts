@@ -897,6 +897,7 @@ export function updateMappingName(
 export function splitAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
+  agglomerateId: NumberLike,
   actionTracingId: string,
 ): {
   /*
@@ -910,12 +911,13 @@ export function splitAgglomerate(
     actionTracingId: string;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    agglomerateId?: number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    agglomerateId?: number | undefined; // Unused in back-end but may exist in older update actions
     mag?: Vector3; // Unused in back-end but may exist in older update actions
   };
 } {
@@ -926,6 +928,7 @@ export function splitAgglomerate(
       // TODO: Proper 64 bit support (#6921)
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
+      agglomerateId: Number(agglomerateId),
     },
   } as const;
 }

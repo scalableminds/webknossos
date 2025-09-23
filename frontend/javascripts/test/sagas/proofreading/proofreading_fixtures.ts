@@ -15,7 +15,7 @@ export const edgesForInitialMapping: Vector2[] = [
   [2, 3],
   [4, 5],
   [6, 7],
-  [1337, 1337],
+  [1337, 1338],
 ];
 
 export const expectedMappingAfterMerge = new Map([

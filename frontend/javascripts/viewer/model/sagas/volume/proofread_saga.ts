@@ -464,7 +464,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
       return;
     }
-    items.push(splitAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
+    items.push(
+      splitAgglomerate(
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        sourceAgglomerateId,
+        volumeTracingId,
+      ),
+    );
   } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
     const [hasErrored] = yield* call(
       performMinCut,
@@ -637,7 +644,9 @@ function* performMinCut(
       "and",
       edge.segmentId2,
     );
-    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
+    items.push(
+      splitAgglomerate(edge.segmentId1, edge.segmentId2, sourceAgglomerateId, volumeTracingId),
+    );
   }
 
   return [false, edgesToRemove];
@@ -857,7 +866,7 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, volumeTracingId));
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, agglomerateId, volumeTracingId));
   }
 
   return { didCancel: false, neighborInfo };
@@ -1613,7 +1622,7 @@ export function* updateMappingWithMerge(
      * watched property changes.
      * three possible solutions:
      *   a) avoid dispatching setMappingAction when the mapping did not change
-     *      (this is the current solution here) .
+     *      (this is the current solution here).
      *   b) Don't set the state to activating in the reducer if the mapping identity,
      *      did not change.
      *      (I feel like this makes the logic that controls the lifecycle of the mapping status

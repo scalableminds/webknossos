@@ -143,4 +143,84 @@ describe("Proofreading (Poll only)", () => {
 
     await task.toPromise();
   }, 8000);
+
+  it("should update the mapping correctly when the server has a new update action with a split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[7, 1337]]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+
+      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
+      // other user (via backendMock.injectVersion) are both editing the annotation in this test
+      // (although the user of this test only sends empty updates). Else the polling logic would not work.
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      yield call(() => api.tracing.save());
+      context.receivedDataPerSaveRequest = [];
+
+      backendMock.injectVersion(
+        [
+          {
+            name: "splitAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 1,
+              segmentId2: 2,
+              agglomerateId: 1,
+            },
+          },
+        ],
+        4,
+      );
+      backendMock.injectVersion(
+        [
+          {
+            name: "splitAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 1338,
+              segmentId2: 1337,
+              agglomerateId: 6,
+            },
+          },
+        ],
+        5,
+      );
+
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1339],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 1340],
+          [7, 1340],
+        ]),
+      );
+
+      yield call(() => api.tracing.save());
+
+      expect(context.receivedDataPerSaveRequest).toEqual([]);
+    });
+
+    await task.toPromise();
+  }, 8000);
 });

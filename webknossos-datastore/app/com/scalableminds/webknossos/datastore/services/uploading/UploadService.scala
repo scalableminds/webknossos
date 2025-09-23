@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -17,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -175,7 +174,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
-  def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
+  private def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
     getObjectFromRedis[ObjectId](redisKeyForDatasetId(uploadId))
 
   def reserveUpload(reserveUploadInfo: ReserveUploadInformation,
@@ -395,9 +394,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                s"Upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3",
                                logger)
           endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
-          s3DataSource <- dataSourceService.prependAllPaths(dataSource,
-                                                            newBasePath =
-                                                              s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey")
+          newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
+          s3DataSource <- dataSourceService.resolvePathsInNewBasePath(dataSource, newBasePath)
           _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId)
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
           _ = this.synchronized {
@@ -572,7 +570,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         .flatten
         .toSet
       neededPaths = usableDataSource.dataLayers
-        .flatMap(layer => layer.allExplicitPaths)
+        .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
         .map(dataDir.resolve)
         .toSet ++ explicitPaths
       allFiles <- PathUtils.listFilesRecursive(dataDir, silent = true, maxDepth = 10).toFox

@@ -72,7 +72,8 @@ class LegacyController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId,
-              Some(request.body.requireUniqueName)
+              Some(request.body.requireUniqueName),
+              None
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield

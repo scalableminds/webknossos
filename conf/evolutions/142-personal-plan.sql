@@ -26,7 +26,7 @@ AND (
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS
 SELECT
-u._id AS _user, m.email, u.firstName, u.lastname, o.name AS organization_name,
+u._id AS _user, m.email, u.firstName, u.lastName, o.name AS organization_name,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o._id AS organization_id, u.created AS user_created,
 m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified

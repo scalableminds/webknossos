@@ -27,12 +27,18 @@ There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
 ![The list of available datasets](./images/screenshot_featured_publications.png)
+/// caption
+The list of available datasets
+///
 
 You can open any WEBKNOSSOS dataset for read-only viewing (“View” mode) or in editor-mode to create a new skeleton and/or volume annotation.
 Three orthogonal viewports slicing the data along the major axis and a 3D viewport make up the main WEBKNOSSOS user interface.
 Read more [about the user interface](./ui/index.md).
 
 ![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.png)
+/// caption
+The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.
+///
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for advanced use.
@@ -68,6 +74,9 @@ Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3r
 Read the guides about the [annotation UI](./ui/index.md), [skeleton annotation](./skeleton_annotation/index.md), or [volume annotation](./volume_annotation/index.md) for more details.
 
 ![Editing skeleton and volume annotations in the Annotation UI](./images/context_menu.png)
+/// caption
+Editing skeleton and volume annotations in the Annotation UI
+///
 
 ## Tutorials
 We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 
@@ -93,7 +102,7 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)
 
-Please contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or[write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
+Please contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 
 [Read the installation tutorial](./open_source/installation.md) if you wish to install the open source version of WEBKNOSSOS on your server.

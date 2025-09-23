@@ -43,7 +43,7 @@ Before proceeding:
 - Deleted organizations cannot be restored unless a prior backup exists.  
 
 ## Switching Organizations
-A WEBKNOSSOS user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
+A WEBKNOSSOS user account can be part of more than one organization, e.g., when your are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
 Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.

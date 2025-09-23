@@ -4,6 +4,9 @@ On webknossos.org, users can either sign up for a WEBKNOSSOS account by themselv
 As an admin or team manager, you can invite users to join your WEBKNOSSOS organization by clicking the `Invite Users` button at the top of the `Users` list available from the `Admin` menu in the navbar. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
 ![Send an invite link to new users](../images/users_invite.jpeg)
+/// caption
+Send an invite link to new users
+///
 
 ## Adding Users to Teams
 Teams help organize users into logical groups for better collaboration and access control. By assigning users to specific teams, you can manage dataset permissions, coordinate tasks, and streamline project workflows more efficiently.
@@ -23,6 +26,9 @@ To add or modify team assignments for users:
 Users can be members of multiple teams simultaneously. Team managers have additional permissions to manage team members and team-specific settings. For more information about user roles and permissions, see [User Roles](./access_rights.md).
 
 ![Teams and Permissions dialog](../images/users_team_assignment.jpg)
+/// caption
+Teams and Permissions dialog
+///
 
 
 ## Experience Levels
@@ -34,4 +40,4 @@ Each experience domain is combined with a numeric value indicating the proficien
 E.g., a season annotator may have the experiences `nuclei: 10` and  `mitochondria: 7`, while a rookie could start at `nuclei: 1` to codify that he has not worked on mitochondria annotation at all and just started with his first nuclei reconstruction project. 
 
 Experience domains are referenced during task type and project creation and task distributing respectively. 
-Domain names and values are arbitrary and can be customized to make sense for your organization. 
+Domain names and values are arbitrary and can be customized to make sense for your organization.

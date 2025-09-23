@@ -91,7 +91,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 
   override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     tryo({
-      val objName = path.toUri.getPath.tail
+      val objName = path.toRemoteUriUnsafe.getPath.tail
       val blobs =
         storage.list(bucket,
                      Storage.BlobListOption.prefix(objName) /* no currentDirectory(); Do deep recursive listing */ )

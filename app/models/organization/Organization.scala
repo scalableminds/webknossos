@@ -10,6 +10,7 @@ import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import slick.dbio.DBIO
+import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -181,19 +182,23 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def deleteUsedStorage(organizationId: String): Fox[Unit] =
     for {
       _ <- run(
-        DBIO.sequence(Seq(
-          q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
-          q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
-        )))
+        DBIO
+          .sequence(Seq(
+            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
+            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
+          ))
+          .transactionally)
     } yield ()
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- run(
-        DBIO.sequence(Seq(
-          q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
-          q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
-        )))
+        DBIO
+          .sequence(Seq(
+            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
+            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
+          ))
+          .transactionally)
     } yield ()
 
   def updateLastStorageScanTime(organizationId: String, time: Instant): Fox[Unit] =
@@ -231,7 +236,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
           """.asUpdate)
 
     for {
-      _ <- run(DBIO.sequence(datasetMagReportsQueries ++ dataLayerAttachmentReportsQueries))
+      _ <- run(DBIO.sequence(datasetMagReportsQueries ++ dataLayerAttachmentReportsQueries).transactionally)
     } yield ()
   }
 

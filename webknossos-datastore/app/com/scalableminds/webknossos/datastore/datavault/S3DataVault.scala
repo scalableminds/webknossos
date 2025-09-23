@@ -159,7 +159,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     }
 
     for {
-      prefixKey <- S3DataVault.objectKeyFromUri(path.toUri).toFox
+      prefixKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       client <- clientFox
       totalSize <- fetchBatch(prefixKey, client, None, 0)
     } yield totalSize

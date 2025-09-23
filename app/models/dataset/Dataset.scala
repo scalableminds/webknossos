@@ -776,7 +776,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                                  dataStoreId: String,
                                  datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
     for {
-      storageRelevantMags <- run(q"""SELECT *
+      storageRelevantMags <- run(q"""SELECT
+            dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
             FROM (
               SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
                      ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
@@ -1205,7 +1206,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                                         dataStoreId: String,
                                         datasetIdOpt: Option[ObjectId]): Fox[List[StorageRelevantDataLayerAttachment]] =
     for {
-      storageRelevantAttachments <- run(q"""SELECT *
+      storageRelevantAttachments <- run(q"""SELECT
+                                            _dataset, layerName, name, path, type, _organization, directoryName
                                             FROM (
                                               SELECT
                                                 att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName,

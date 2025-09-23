@@ -978,27 +978,6 @@ export async function getDatasets(
   return datasets;
 }
 
-export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.id}/readInboxDataSource?token=${token}`,
-    ),
-  );
-}
-
-export async function updateDatasetDatasource(
-  dataStoreUrl: string,
-  datasource: APIDataSource,
-  datasetId: string,
-): Promise<void> {
-  await doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetId}?token=${token}`, {
-      data: datasource,
-      method: "PUT",
-    }),
-  );
-}
-
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
   assertResponseLimit(datasets);
@@ -1007,11 +986,18 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 
 export function getDataset(
   datasetId: string,
+  includePaths?: boolean | null | undefined,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
+  const params = new URLSearchParams();
+  if (sharingToken != null) {
+    params.set("sharingToken", String(sharingToken));
+  }
+  if (includePaths != null) {
+    params.set("includePaths", String(includePaths));
+  }
+  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
 }
 
 export async function getDatasetLegacy(
@@ -1026,7 +1012,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getDataset(datasetId, true, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1037,6 +1023,7 @@ export type DatasetUpdater = {
   tags?: string[];
   folderId?: string;
   metadata?: APIDataset["metadata"];
+  dataSource?: APIDataSource;
 };
 
 export function updateDatasetPartial(
@@ -2226,8 +2213,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: NumberLike;
-    segmentId2: NumberLike;
+    partition1: NumberLike[];
+    partition2: NumberLike[];
     mag: Vector3;
     agglomerateId: NumberLike;
     editableMappingId: string;
@@ -2241,8 +2228,8 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
-            segmentId1: Number(segmentsInfo.segmentId1),
-            segmentId2: Number(segmentsInfo.segmentId2),
+            partition1: segmentsInfo.partition1.map(Number),
+            partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
           },
         },

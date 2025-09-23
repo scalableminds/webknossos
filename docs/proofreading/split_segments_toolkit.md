@@ -20,6 +20,9 @@ The recommended steps for splitting a segment are as follows:
 - If multiple spline curves appear per slice, this is often due to a configuration issue. Please adapt the clipping distance in the left sidebar (`Layers` → `Skeleton`).
 
 ![A visualization of a floodfill operation "bleeding" across the boundary because the boundary is not precise enough](../images/splitting-floodfill-visualization.png)
+/// caption
+A visualization of a floodfill operation "bleeding" across the boundary because the boundary is not precise enough
+///
 
 ## Impact of "Split Segments" Toolkit
 

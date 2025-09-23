@@ -2,7 +2,10 @@
 
 The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
-![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
+![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo](../images/ui_toolbar_menu.png)
+/// caption
+The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo
+///
 
 ## Basic Operations
 
@@ -80,6 +83,9 @@ Currently, there are four toolkits available:
 - Split Segments: This toolkit allows splitting a labeled segment into two parts. Tools in this toolkit behave a bit differently to streamline this workflow. Read more about this toolkit [here](../proofreading/split_segments_toolkit.md).
 
 ![Toolkit Selection](../images/toolkit_dropdown.jpg)
+/// caption
+The toolkit dropdown allows selecting a subset of tools tailored for a specific use case.
+///
 
 ## Annotation Tools
 
@@ -126,4 +132,6 @@ And many other tools. For detailed information, see the [volume annotation guide
 ![Bounding Box Tool](./images/boundingbox-tool.jpg){align=left width="60"}
 **Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
 
-For detailed information, see the [Advanced Analysis Tools](../automation/ai_segmentation.md).
+To create a bounding box, select the tool and then click and drag with the mouse on one of the 2D viewports. You can resize the bounding box by dragging its corners or edges.
+
+All created bounding boxes are listed in the **BBoxes** tab in the right-hand sidebar. From there, you can manage your bounding boxes, for example, by renaming, deleting, or jumping to them. Read more about the sidebar tabs in the [Object Info and Lists](./object_info.md) documentation.

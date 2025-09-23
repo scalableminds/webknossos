@@ -19,6 +19,7 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         uiInformation: {
           ...defaultState.uiInformation,
           storedLayouts: state.uiInformation.storedLayouts,
+          navbarHeight: state.uiInformation.navbarHeight,
         },
       };
     }

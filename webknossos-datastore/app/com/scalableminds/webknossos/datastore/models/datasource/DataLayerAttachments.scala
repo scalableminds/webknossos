@@ -47,9 +47,9 @@ case class DataLayerAttachments(
     )
 
   lazy val containsDuplicateNames: Boolean =
-    meshes.distinctBy(_.name).length == meshes.length &&
-      agglomerates.distinctBy(_.name).length == agglomerates.length &&
-      connectomes.distinctBy(_.name).length == connectomes.length
+    meshes.distinctBy(_.name).length != meshes.length ||
+      agglomerates.distinctBy(_.name).length != agglomerates.length ||
+      connectomes.distinctBy(_.name).length != connectomes.length
 }
 
 object DataLayerAttachments {

@@ -413,13 +413,15 @@ class DataSourceController @Inject()(
                 dataSourceId.directoryName,
                 Some(datasetId),
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
             } yield ()
           } else
             for {
+              _ <- Fox.runIf(dataSourceService.datasetInControlledS3(dataSource))(
+                dataSourceService.deleteFromControlledS3(dataSource, datasetId))
               _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
               _ = logger.warn(s"Tried to delete dataset ${dataSource.id} that is not on disk.")
             } yield ()
+          _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
         } yield Ok
       }
     }

@@ -14,14 +14,9 @@ import {
   Row,
   Select,
   Space,
-  Switch,
   Tooltip,
 } from "antd";
-import {
-  FormItemWithInfo,
-  Hideable,
-  RetryingErrorBoundary,
-} from "dashboard/dataset/helper_components";
+import { FormItemWithInfo, RetryingErrorBoundary } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
@@ -29,87 +24,29 @@ import type React from "react";
 import { cloneElement, useEffect } from "react";
 import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
+import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { syncDataSourceFields } from "./dataset_settings_provider";
-
-const FormItem = Form.Item;
 
 export default function DatasetSettingsDataTab() {
-  const { dataset, form, activeDataSourceEditMode, handleDataSourceEditModeChange } =
-    useDatasetSettingsContext();
+  const { dataset, form } = useDatasetSettingsContext();
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
   // TODO: The "preserve" option probably fixes this, e.g. useWatch("dataSource", { form, preserve: true });
   Form.useWatch("dataSource", { form, preserve: true });
   // Then, the newest value can be retrieved with getFieldValue
   const dataSource = form.getFieldValue("dataSource");
-  const dataSourceJson = Form.useWatch("dataSourceJson", form);
-  const datasetStoredLocationInfo = dataset
-    ? ` (datastore ${dataset?.dataStore.name}, ${dataset?.owningOrganization}/${dataset?.directoryName})`
-    : "";
-  const isJSONValid = isValidJSON(dataSourceJson);
 
   return (
     <div>
-      <span
-        style={{
-          float: "right",
-        }}
-      >
-        <Tooltip
-          title={
-            isJSONValid
-              ? "Switch between simple and advanced mode"
-              : "Please ensure that the supplied config JSON is valid."
-          }
-        >
-          <Switch
-            checkedChildren="Advanced"
-            unCheckedChildren="Simple"
-            checked={activeDataSourceEditMode === "advanced"}
-            disabled={!isJSONValid}
-            style={{
-              marginBottom: 6,
-              display: "none",
-            }}
-            onChange={(bool) => {
-              const key = bool ? "advanced" : "simple";
-              handleDataSourceEditModeChange(key);
-            }}
-          />
-        </Tooltip>
-      </span>
       <SettingsTitle title="Data Source" description="Configure the data source" />
 
-      <Hideable hidden={activeDataSourceEditMode !== "simple"}>
-        <RetryingErrorBoundary>
-          <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
-        </RetryingErrorBoundary>
-      </Hideable>
-
-      <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
-        <FormItem
-          name="dataSourceJson"
-          label={"Dataset Configuration" + datasetStoredLocationInfo}
-          hasFeedback
-          rules={[
-            {
-              required: true,
-              message: "Please provide a dataset configuration.",
-            },
-            {
-              validator: validateDatasourceJSON,
-            },
-          ]}
-        >
-          <Input.TextArea rows={20} style={{ display: "none" }} disabled />
-        </FormItem>
-      </Hideable>
+      <RetryingErrorBoundary>
+        <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
+      </RetryingErrorBoundary>
     </div>
   );
 }
@@ -145,7 +82,6 @@ function SimpleDatasetForm({
         dataLayers: newLayers,
       },
     });
-    syncDataSourceFields(form, "advanced");
   };
   const marginBottom: React.CSSProperties = {
     marginBottom: 24,

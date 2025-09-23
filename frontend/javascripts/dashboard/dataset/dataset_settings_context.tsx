@@ -8,7 +8,6 @@ export type DataSourceEditMode = "simple" | "advanced";
 
 export type FormData = {
   dataSource: APIDataSource;
-  dataSourceJson: string;
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
@@ -21,11 +20,9 @@ export type DatasetSettingsContextValue = {
   dataset: APIDataset | null | undefined;
   datasetId: string;
   datasetDefaultConfiguration: DatasetConfiguration | null | undefined;
-  activeDataSourceEditMode: DataSourceEditMode;
   isEditingMode: boolean;
   handleSubmit: () => void;
   handleCancel: () => void;
-  handleDataSourceEditModeChange: (activeEditMode: DataSourceEditMode) => void;
   onValuesChange: (changedValues: FormData, allValues: FormData) => void;
   getFormValidationSummary: () => Record<string, any>;
   hasFormErrors: boolean;

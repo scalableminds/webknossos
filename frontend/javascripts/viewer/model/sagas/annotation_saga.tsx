@@ -152,7 +152,7 @@ export function* warnAboutSegmentationZoom(): Saga<never> {
       );
       return (
         mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
-        mappingInfo.mappingType === "HDF5" &&
+        mappingInfo.mappingType !== "JSON" &&
         !needsLocalHdf5Mapping(storeState, segmentationLayer.name)
       );
     });

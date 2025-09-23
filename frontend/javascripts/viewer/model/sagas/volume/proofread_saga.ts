@@ -346,7 +346,8 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   const { mappingName, mappingType, mappingStatus } = mappingInfo;
   if (
     mappingName == null ||
-    mappingType !== "HDF5" ||
+    mappingType == null ||
+    mappingType === "JSON" ||
     mappingStatus === MappingStatusEnum.DISABLED
   ) {
     Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");

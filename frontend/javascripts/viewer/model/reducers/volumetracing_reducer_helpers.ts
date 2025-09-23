@@ -180,7 +180,7 @@ export function setMappingNameReducer(
   // Clear the name for Non-HDF5 mappings or when the mapping got disabled,
   // before persisting the name in volume annotations. JSON mappings are
   // not stored in the back-end for now.
-  if (mappingType !== "HDF5" || !isMappingEnabled) {
+  if (mappingType === "JSON" || mappingType == null || !isMappingEnabled) {
     mappingName = null;
   }
 

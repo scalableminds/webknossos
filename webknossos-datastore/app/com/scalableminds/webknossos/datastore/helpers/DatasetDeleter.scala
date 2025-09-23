@@ -1,14 +1,8 @@
 package com.scalableminds.webknossos.datastore.helpers
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerWithMagLocators,
-  DataSource,
-  DataSourceId,
-  GenericDataSource
-}
-import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceToDiskWriter}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
@@ -19,13 +13,14 @@ import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
+trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits with DataSourceToDiskWriter {
   def dataBaseDir: Path
 
-  def existsOnDisk(organizationId: String, datasetDirectoryName: String, isInConversion: Boolean = false): Boolean = {
+  def existsOnDisk(dataSourceId: DataSourceId, isInConversion: Boolean = false): Boolean = {
     val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetDirectoryName)
-      else dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
+      if (isInConversion)
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
+      else dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
 
     Files.exists(dataSourcePath)
   }
@@ -131,33 +126,29 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
     // We need to update locally explored datasets, since they now may have symlinks where previously they only had the
     // path property set.
     Fox.serialCombined(dataSourceIds)(dataSourceId => {
-      val propertiesPath = dataBaseDir
-        .resolve(dataSourceId.organizationId)
-        .resolve(dataSourceId.directoryName)
-        .resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+      val dataSourcePath = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+      val propertiesPath = dataSourcePath.resolve(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       if (Files.exists(propertiesPath)) {
-        JsonHelper.parseFromFileAs[DataSource](propertiesPath, dataBaseDir) match {
+        JsonHelper.parseFromFileAs[UsableDataSource](propertiesPath, dataBaseDir) match {
           case Full(dataSource) =>
-            val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
-              case dl: DataLayerWithMagLocators =>
-                if (dl.mags.forall(_.path.exists(_.startsWith(s"${DataVaultService.schemeFile}://")))) {
-                  // Setting path to None means using resolution of layer/mag directories to access data
-                  dl.mapped(magMapping = _.copy(path = None))
-                } else {
-                  dl
-                }
-              case dl => dl
-            })
+            val updatedDataSource = dataSource.copy(
+              id = dataSourceId,
+              dataLayers = dataSource.dataLayers.map {
+                case dl: StaticLayer =>
+                  if (dl.mags.forall(_.path.exists(p => p.isLocal && p.isAbsolute))) {
+                    // Setting path to None means using resolution of layer/mag directories to access data
+                    dl.mapped(magMapping = _.copy(path = None))
+                  } else {
+                    dl
+                  }
+                case dl => dl
+              }
+            )
             // Write properties back
-            tryo(Files.delete(propertiesPath)) match {
-              case Full(_) => JsonHelper.writeToFile(propertiesPath, updatedDataSource).toFox
-              case e       => e.toFox
-            }
+            updateDataSourceOnDisk(updatedDataSource, expectExisting = true, validate = false)
           case _ => Fox.successful(())
         }
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
     })
 
   private def updateMagSymlinks(targetMagPath: Path, linkedMag: DataSourceMagInfo): Unit = {

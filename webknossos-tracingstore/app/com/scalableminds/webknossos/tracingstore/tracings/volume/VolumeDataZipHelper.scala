@@ -5,12 +5,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataFormatHelper, WKWFile}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
-import com.scalableminds.webknossos.datastore.datareaders.{
-  BloscCompressor,
-  IntCompressionSetting,
-  StringCompressionSetting
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BloscCodec, BloscCodecConfiguration, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -170,13 +165,6 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     tempFile
   }
 
-  private lazy val compressor =
-    new BloscCompressor(
-      Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
-        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
-        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
-        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+  private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor
+
 }

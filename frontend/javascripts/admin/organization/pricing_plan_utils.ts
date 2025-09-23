@@ -27,7 +27,7 @@ export const powerPlanFeatures = [
   "Integration with your HPC and storage servers",
 ];
 
-export const maxInludedUsersInPersonalPlan = 3;
+export const maxInludedUsersInPersonalPlan = 1;
 
 export function getActiveUserCount(users: APIUser[]): number {
   return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;

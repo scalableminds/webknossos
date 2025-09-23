@@ -15,7 +15,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import { maxInludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
+import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
@@ -210,7 +210,7 @@ export function InviteUsersModal({
   handleVisibleChange,
   destroy,
   currentUserCount = 1,
-  maxUserCountPerOrganization = maxInludedUsersInPersonalPlan, // default for Personal Plan,
+  maxUserCountPerOrganization = maxIncludedUsersInPersonalPlan, // default for Personal Plan,
 }: {
   organizationId: string;
   isOpen?: boolean;

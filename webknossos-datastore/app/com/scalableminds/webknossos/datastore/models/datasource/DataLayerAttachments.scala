@@ -45,6 +45,11 @@ case class DataLayerAttachments(
       connectomes = connectomes.map(_.relativizedIn(dataSourcePath)),
       cumsum = cumsum.map(_.relativizedIn(dataSourcePath))
     )
+
+  lazy val containsDuplicateNames: Boolean =
+    meshes.distinctBy(_.name).length == meshes.length &&
+      agglomerates.distinctBy(_.name).length == agglomerates.length &&
+      connectomes.distinctBy(_.name).length == connectomes.length
 }
 
 object DataLayerAttachments {

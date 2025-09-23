@@ -48,12 +48,10 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
     with LazyLogging
     with URIUtils {
 
-  private val baseDir: Path = Path.of(config.Datastore.baseDirectory)
-
   def measureStorageForPaths(paths: List[String], organizationId: String)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[PathStorageReport]] = {
-    val organizationDirectory = baseDir.resolve(organizationId)
+    val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
     val pathsAsURIs = paths.map(new URI(_))
     val pathsWithAbsoluteURIs = pathsAsURIs.map(uri => {
       if (uri.getScheme == null || uri.getScheme == DataVaultService.schemeFile) {

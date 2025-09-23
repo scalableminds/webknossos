@@ -56,12 +56,18 @@ An organization represents your lab in WEBKNOSSOS and handles permissions for us
 Choose a descriptive name for your organization, e.g., "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
 ![Create your organization](../images/onboarding_organization.jpeg)
+/// caption
+Create your organization
+///
 
 In the onboarding flow, you are asked to create a user account for yourself.
 This will be the first user of your organization which will automatically be activated and granted admin rights.
 Make sure to enter a correct email address.
 
 ![Create your first user](../images/onboarding_user.jpeg)
+/// caption
+Create your first user
+///
 
 
 ## Your First Dataset
@@ -79,7 +85,13 @@ By default, datasets are visible to all users in your organization.
 However, WEBKNOSSOS includes fine-grained permissions to assign datasets to groups of users.
 
 ![Upload your first dataset](../images/onboarding_data1.jpeg)
+/// caption
+Upload your first dataset
+///
 ![Confirm the detected dataset properties](../images/onboarding_data2.jpeg)
+/// caption
+Confirm the detected dataset properties
+///
 
 ## Activating New Users
 TODO revise this section
@@ -97,4 +109,10 @@ When activating new users, a popup opens for
   - access role assignment
 
 ![Activate new users](../images/users_activate1.jpeg)
+/// caption
+Activate new users
+///
 ![Assign roles to new users](../images/users_activate2.jpeg)
+/// caption
+Assign roles to new users
+///

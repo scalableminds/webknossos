@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -152,7 +152,7 @@ class BinaryDataService(val dataBaseDir: Path,
       )
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
-          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == LayerCategory.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
           clippedData,
           data => agglomerateService.applyAgglomerate(request)(data),
           request

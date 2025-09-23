@@ -27,13 +27,13 @@ We have years of experience with automated machine learning analysis and [offer 
 We are also always interested in new collaborations. 
 Get in touch if you want to work together on a project resulting in new classifiers.
 
-WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
+WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py/) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
 
 ## How can I use my dataset with WEBKNOSSOS?
 
 WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./data/index.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
 
-Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) CLI tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
+Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) CLI tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
 
 ## Can I host the WEBKNOSSOS data in my own compute cluster (on-premise installation)?
 
@@ -53,7 +53,7 @@ For example, the WEBKNOSSOS main component could be hosted on commercial cloud i
 ## Can I further analyze my annotations outside of WEBKNOSSOS with Python/MATLAB?
 Yes, you can. WEBKNOSSOS allows the download and export of skeleton annotations as NML files and segmentations/volume data as binary/wkw files.
 
-Use our free [Python library](https://docs.webknossos.org/webknossos-py) to work with the WEBKNOSSOS standard formats.
+Use our free [Python library](https://docs.webknossos.org/webknossos-py/) to work with the WEBKNOSSOS standard formats.
 
 ## Newly registered users don't show up
 

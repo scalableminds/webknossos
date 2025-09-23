@@ -19,8 +19,8 @@ exports[`Dataset API (E2E) > Dataset Paths 1`] = `
             1,
             1,
           ],
-          "path": "Organization_X/test-dataset/segmentation/1/",
-          "realPath": "Organization_X/test-dataset/segmentation/1/",
+          "path": "Organization_X/test-dataset/segmentation/1",
+          "realPath": "Organization_X/test-dataset/segmentation/1",
         },
       },
     ],
@@ -56,9 +56,21 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
             "width": 100,
           },
           "category": "segmentation",
+          "dataFormat": "wkw",
           "elementClass": "uint32",
           "largestSegmentId": 176,
+          "mags": [
+            {
+              "mag": [
+                1,
+                1,
+                1,
+              ],
+              "path": "path",
+            },
+          ],
           "name": "segmentation",
+          "numChannels": 1,
           "resolutions": [
             [
               1,
@@ -93,12 +105,12 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "isEditable": true,
     "isPublic": false,
     "isUnreported": false,
+    "isVirtual": false,
     "lastUsedByUser": 0,
     "logoUrl": "/assets/images/mpi-logos.svg",
     "metadata": [],
     "name": "test-dataset",
     "owningOrganization": "Organization_X",
-    "publication": null,
     "sortingKey": "sortingKey",
     "tags": [],
     "usedStorageBytes": 0,
@@ -109,7 +121,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
 exports[`Dataset API (E2E) > getDatasetAccessList 1`] = `
 [
   {
-    "email": "user_A@scalableminds.com",
+    "email": "user_a@scalableminds.com",
     "firstName": "user_A",
     "id": "id",
     "isAdmin": true,
@@ -135,7 +147,7 @@ exports[`Dataset API (E2E) > getDatasetAccessList 1`] = `
     ],
   },
   {
-    "email": "user_B@scalableminds.com",
+    "email": "user_b@scalableminds.com",
     "firstName": "user_B",
     "id": "id",
     "isAdmin": false,

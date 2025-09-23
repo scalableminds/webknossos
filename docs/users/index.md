@@ -6,5 +6,4 @@ WEBKNOSSOS offers a built-in user management system to administer different user
 - [Teams](teams.md)
 - [Access rights and roles](access_rights.md)
 - [Users](new_users.md)
-- [Password and account](password.md)
-- [Passkeys](passkeys.md)
+- [Account and password](password.md)

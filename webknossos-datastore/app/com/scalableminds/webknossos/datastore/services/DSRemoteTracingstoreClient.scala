@@ -3,9 +3,9 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, NgffZarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
+import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentationLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -40,11 +40,11 @@ class DSRemoteTracingstoreClient @Inject()(
   def getVolumeLayerAsZarrLayer(tracingId: String,
                                 tracingName: Option[String],
                                 tracingStoreUri: String,
-                                zarrVersion: Int)(implicit tc: TokenContext): Fox[ZarrSegmentationLayer] = {
+                                zarrVersion: Int)(implicit tc: TokenContext): Fox[StaticSegmentationLayer] = {
     val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
     rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource").withTokenFromContext
       .addQueryStringOptional("tracingName", tracingName)
-      .getWithJsonResponse[ZarrSegmentationLayer]
+      .getWithJsonResponse[StaticSegmentationLayer]
   }
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String)(implicit tc: TokenContext): Fox[NgffMetadata] =

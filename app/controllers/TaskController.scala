@@ -59,14 +59,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
           .findUniqueElement(request.body.map(_.datasetId))
           .toFox ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
+        usableDataSource <- datasetService.usableDataSourceFor(dataset)
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
                                                                                     dataset,
-                                                                                    dataSource,
+                                                                                    usableDataSource,
                                                                                     request.identity._id)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull)

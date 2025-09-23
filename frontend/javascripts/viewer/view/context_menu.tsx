@@ -624,11 +624,12 @@ function getNodeContextMenuOptions({
     {
       key: "focus-tree",
       onClick: () => {
+        Store.dispatch(setActiveNodeAction(clickedNodeId));
         Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
         Store.dispatch(focusTreeAction(clickedTree));
         layoutEmitter.emit(LayoutEvents.showSkeletonTab);
       },
-      label: "Focus Tree in Skeleton Tab",
+      label: "Activate & Focus Tree in Skeleton Tab",
     },
     getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
     ...(allowUpdate

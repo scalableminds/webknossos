@@ -49,6 +49,7 @@ import {
   type EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
+import { updateMappingRebaseInformationAction } from "viewer/model/actions/save_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
@@ -79,7 +80,6 @@ import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetr
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkReady } from "../ready_sagas";
-import { updateMappingRebaseInformationAction } from "viewer/model/actions/save_actions";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };

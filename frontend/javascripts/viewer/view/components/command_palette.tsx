@@ -73,7 +73,6 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const props: TracingViewMenuProps = {
     restrictions,
-    allowUpdate,
     task,
     annotationType,
     annotationId,

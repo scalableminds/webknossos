@@ -15,6 +15,7 @@ import {
   take,
   takeEvery,
 } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
@@ -36,7 +37,6 @@ import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_act
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "../ready_sagas";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).

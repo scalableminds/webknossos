@@ -1,4 +1,5 @@
 import { getUpdateActionLog } from "admin/rest_api";
+import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { ColoredLogger, isNumberMap, sleep } from "libs/utils";
@@ -6,12 +7,14 @@ import _ from "lodash";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
   prepareRebasingAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
+import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
@@ -27,13 +30,10 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
+import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import type { ServerUpdateAction } from "../volume/update_actions";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
-import Deferred from "libs/async/deferred";
-import type { ServerUpdateAction } from "../volume/update_actions";
-import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.

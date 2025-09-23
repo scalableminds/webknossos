@@ -13,20 +13,32 @@ export const getBilinearColorFor: ShaderModule = {
       coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
       vec2 bifilteringParams = (coordsUVW - floor(coordsUVW)).xy;
       coordsUVW = floor(coordsUVW);
-
       bool supportsPrecomputedBucketAddress = false;
-      vec4 a = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
-      vec4 b = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
-      vec4 c = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
-      vec4 d = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
-      if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
+
+      // Do not unroll this loop as it will lead to much slower compilation and
+      // possibly WebGL crashes, because some compilers cannot optimize it as well then.
+      vec4 samples[4];
+      int idx = 0;
+      for (int y = 0; y <= 1; y++) {
+          for (int x = 0; x <= 1; x++) {
+              vec3 offset = vec3(x, y, 0);
+              samples[idx] = getColorForCoords(
+                  layerIndex, d_texture_width, packingDegree,
+                  coordsUVW + offset,
+                  supportsPrecomputedBucketAddress
+              );
+              idx++;
+          }
+      }
+
+      if (samples[0].a < 0.0 || samples[1].a < 0.0 || samples[2].a < 0.0 || samples[3].a < 0.0) {
         // We need to check all four colors for a negative parts, because there will be black
         // lines at the borders otherwise (black gets mixed with data)
         return vec4(0.0, 0.0, 0.0, -1.0);
       }
 
-      vec4 ab = mix(a, b, bifilteringParams.x);
-      vec4 cd = mix(c, d, bifilteringParams.x);
+      vec4 ab = mix(samples[0], samples[1], bifilteringParams.x);
+      vec4 cd = mix(samples[2], samples[3], bifilteringParams.x);
 
       return mix(ab, cd, bifilteringParams.y);
     }
@@ -46,29 +58,37 @@ export const getTrilinearColorFor: ShaderModule = {
       coordsUVW = floor(coordsUVW);
       bool supportsPrecomputedBucketAddress = false;
 
-      vec4 a = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW, supportsPrecomputedBucketAddress);
-      vec4 b = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0), supportsPrecomputedBucketAddress);
-      vec4 c = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0), supportsPrecomputedBucketAddress);
-      vec4 d = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0), supportsPrecomputedBucketAddress);
+      // Do not unroll this loop as it will lead to much slower compilation and
+      // possibly WebGL crashes, because some compilers cannot optimize it as well then.
+      vec4 samples[8];
+      int idx = 0;
+      for (int z = 0; z <= 1; z++) {
+          for (int y = 0; y <= 1; y++) {
+              for (int x = 0; x <= 1; x++) {
+                  vec3 offset = vec3(x, y, z);
+                  samples[idx] = getColorForCoords(
+                      layerIndex, d_texture_width, packingDegree,
+                      coordsUVW + offset,
+                      supportsPrecomputedBucketAddress
+                  );
+                  idx++;
+              }
+          }
+      }
 
-      vec4 a2 = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1), supportsPrecomputedBucketAddress);
-      vec4 b2 = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1), supportsPrecomputedBucketAddress);
-      vec4 c2 = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1), supportsPrecomputedBucketAddress);
-      vec4 d2 = getColorForCoords(layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1), supportsPrecomputedBucketAddress);
-
-      if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
-        a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
-        // We need to check all four colors for a negative parts, because there will be black
+      if (samples[0].a < 0.0 || samples[1].a < 0.0 || samples[2].a < 0.0 || samples[3].a < 0.0 ||
+        samples[4].a < 0.0 || samples[5].a < 0.0 || samples[6].a < 0.0 || samples[7].a < 0.0) {
+        // We need to check all eight colors for a negative parts, because there will be black
         // lines at the borders otherwise (black gets mixed with data)
         return vec4(0.0, 0.0, 0.0, -1.0);
       }
 
-      vec4 ab = mix(a, b, bifilteringParams.x);
-      vec4 cd = mix(c, d, bifilteringParams.x);
+      vec4 ab = mix(samples[0], samples[1], bifilteringParams.x);
+      vec4 cd = mix(samples[2], samples[3], bifilteringParams.x);
       vec4 abcd = mix(ab, cd, bifilteringParams.y);
 
-      vec4 ab2 = mix(a2, b2, bifilteringParams.x);
-      vec4 cd2 = mix(c2, d2, bifilteringParams.x);
+      vec4 ab2 = mix(samples[4], samples[5], bifilteringParams.x);
+      vec4 cd2 = mix(samples[6], samples[7], bifilteringParams.x);
 
       vec4 abcd2 = mix(ab2, cd2, bifilteringParams.y);
 

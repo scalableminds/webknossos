@@ -27,7 +27,6 @@ import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
-import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.duration._
@@ -45,8 +44,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
-                               rpc: RPC,
-                               conf: WkConf)(implicit ec: ExecutionContext)
+                               rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -217,7 +215,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
         case _ =>
-          insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+          createDataset(dataStore, ObjectId.generate, dataSource.id.directoryName, dataSource).map(ds => Some(ds._id))
       }
     }
   }
@@ -262,11 +260,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(None)
       }
     }).flatten
-
-  private def insertNewDataset(dataSource: DataSource, datasetName: String, dataStore: DataStore) =
-    publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
-    }
 
   def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
       implicit ctx: DBAccessContext,
@@ -368,16 +361,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             )
         }
     }
-
-  private def publicationForFirstDataset: Fox[Option[ObjectId]] =
-    if (conf.WebKnossos.SampleOrganization.enabled) {
-      datasetDAO.isEmpty.map { isEmpty =>
-        if (isEmpty)
-          Some(ObjectId("5c766bec6c01006c018c7459"))
-        else
-          None
-      }
-    } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,

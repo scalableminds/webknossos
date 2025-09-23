@@ -18,6 +18,9 @@ The following pages explain:
 - [Annotation modes](./modes.md)
 
 ![An example of a complex WEBKNOSSOS skeleton annotation](../images/skeleton_annotations.png)
+/// caption
+An example of a complex WEBKNOSSOS skeleton annotation
+///
 
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=306)

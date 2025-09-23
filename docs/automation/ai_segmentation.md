@@ -17,13 +17,22 @@ As a first trial, WEBKNOSSOS includes neuron segmentation. This analysis is desi
 You can launch the AI analysis dialog using the `AI Analysis` button in the toolbar at the top. Use the `Start AI neuron segmentation` button in the dialog to start the analysis.
 
 ![Neuron segmentations can be launched from the tool bar.](../images/process_dataset.jpg)
+/// caption
+Neuron segmentations can be launched from the tool bar.
+///
 
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 
 The finished analysis will be available as a new dataset from your dashboard. You can monitor the status and progress of the analysis job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification.
 
 ![Starting a new neuron segmentation.](../images/neuron_segmentation_start.jpeg)
+/// caption
+Starting a new neuron segmentation.
+///
 ![Monitor the segmentation progress from the Jobs page.](../images/nuclei_segmentation_job.jpeg)
+/// caption
+Monitor the segmentation progress from the Jobs page.
+///
 
 ## Mitochondria detection
 Similarly to the neuron segmentation, you can now start a mitochondria detection in WEBKNOSSOS. In the AI analysis dialog, choose `Mitochondria detection`, select a bounding box, and go to `Processing Jobs` to look at the result. 
@@ -31,6 +40,4 @@ Similarly to the neuron segmentation, you can now start a mitochondria detection
 ## Custom Analysis
 You'll soon be able to train custom classifiers directly in WEBKNOSSOS. [Contact us](mailto:hello@webknossos.org) for an invite to join the beta program.
 
-If you are interested in specialized, automated analysis, image segmentation, object detection etc. then feel free to [contact us](mailto:hello@webknossos.org). The WEBKNOSSOS development teams offers [commercial analysis services](https://webknossos.org/services/automated-segmentation) for that. 
-
-
+If you are interested in specialized, automated analysis, image segmentation, object detection etc. then feel free to [contact us](mailto:hello@webknossos.org). The WEBKNOSSOS development teams offers [commercial analysis services](https://webknossos.org/services/automated-segmentation) for that.

@@ -21,7 +21,6 @@ import {
   FormItemWithInfo,
   Hideable,
   RetryingErrorBoundary,
-  jsonEditStyle,
 } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -51,7 +50,7 @@ export default function DatasetSettingsDataTab() {
   const dataSource = form.getFieldValue("dataSource");
   const dataSourceJson = Form.useWatch("dataSourceJson", form);
   const datasetStoredLocationInfo = dataset
-    ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
+    ? ` (datastore ${dataset?.dataStore.name}, ${dataset?.owningOrganization}/${dataset?.directoryName})`
     : "";
   const isJSONValid = isValidJSON(dataSourceJson);
 
@@ -76,6 +75,7 @@ export default function DatasetSettingsDataTab() {
             disabled={!isJSONValid}
             style={{
               marginBottom: 6,
+              display: "none",
             }}
             onChange={(bool) => {
               const key = bool ? "advanced" : "simple";
@@ -107,7 +107,7 @@ export default function DatasetSettingsDataTab() {
             },
           ]}
         >
-          <Input.TextArea rows={20} style={jsonEditStyle} />
+          <Input.TextArea rows={20} style={{ display: "none" }} disabled />
         </FormItem>
       </Hideable>
     </div>
@@ -391,9 +391,7 @@ function SimpleLayerForm({
             ]}
           >
             <Input
-              // the name of a layer depends on the folder name in wkw. Therefore, don't allow
-              // editing the layer name for wkw.
-              disabled={layer.dataFormat === "wkw"}
+              disabled
               style={{
                 width: LEFT_COLUMN_ITEMS_WIDTH,
               }}

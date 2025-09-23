@@ -291,8 +291,9 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn(): React.ReactNode {
-    const selectedLayerName: string | null =
-      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+    const selectedLayerName: string | null = this.data.isActive
+      ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
+      : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";

@@ -4,10 +4,10 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.N5Layer
 import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 
 import scala.concurrent.ExecutionContext
 
@@ -16,7 +16,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
   override def name: String = "N5 Multiscales"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath.parseAsJson[N5Metadata] ?~> s"Failed to read N5 header at $metadataPath"
@@ -26,7 +26,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
   private def layerFromN5MultiscalesItem(
       multiscalesItem: N5MultiscalesItem,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit tc: TokenContext): Fox[(N5Layer, VoxelSize)] =
+      credentialId: Option[String])(implicit tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
       magsWithAttributes <- Fox.serialCombined(multiscalesItem.datasets)(d =>
@@ -61,7 +61,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), None, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

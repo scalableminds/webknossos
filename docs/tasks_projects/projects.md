@@ -11,6 +11,9 @@ To create a project, follow these steps:
    - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
 
 ![Create a Project](../images/tasks_project.jpeg)
+/// caption
+Create a Project
+///
 
 ## Project progress and statistics
 

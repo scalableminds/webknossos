@@ -5,3 +5,6 @@ This screen lists a number of featured public community datasets and their respe
 [Contact us](mailto:hello@webknossos.org) if you would like your data and publication to be featured here as well.
 
 ![The list of featured community datasets.](../images/dashboard_featured_publications.png)
+/// caption
+The list of featured community datasets.
+///

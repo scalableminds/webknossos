@@ -13,21 +13,11 @@ import com.scalableminds.webknossos.datastore.datavault.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.PathSchemes
 import play.api.libs.ws.WSClient
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-
-object DataVaultService {
-  val schemeS3: String = "s3"
-  val schemeHttps: String = "https"
-  val schemeHttp: String = "http"
-  val schemeGS: String = "gs"
-  val schemeFile: String = "file"
-
-  def isRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps, schemeHttp, schemeGS).contains(uriScheme)
-}
 
 class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends LazyLogging {
 
@@ -37,30 +27,27 @@ class DataVaultService @Inject()(ws: WSClient, config: DataStoreConfig) extends 
   def getVaultPath(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
       vault <- vaultCache.getOrLoad(remoteSourceDescriptor, createVault) ?~> "dataVault.setup.failed"
-    } yield new VaultPath(remoteSourceDescriptor.uri, vault)
+    } yield new VaultPath(remoteSourceDescriptor.upath, vault)
 
   def removeVaultFromCache(remoteSourceDescriptor: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.successful(vaultCache.remove(remoteSourceDescriptor))
 
   private def createVault(remoteSource: RemoteSourceDescriptor)(implicit ec: ExecutionContext): Fox[DataVault] = {
-    val scheme = remoteSource.uri.getScheme
+    val scheme = remoteSource.upath.getScheme
     try {
-      val fs: DataVault = if (scheme == DataVaultService.schemeGS) {
-        GoogleCloudDataVault.create(remoteSource)
-      } else if (scheme == DataVaultService.schemeS3) {
-        S3DataVault.create(remoteSource, ws)
-      } else if (scheme == DataVaultService.schemeHttps || scheme == DataVaultService.schemeHttp) {
-        HttpsDataVault.create(remoteSource, ws, config.Http.uri)
-      } else if (scheme == DataVaultService.schemeFile || scheme == null) {
-        FileSystemDataVault.create
-      } else {
-        throw new Exception(s"Unknown file system scheme $scheme")
+      val fs: DataVault = scheme match {
+        case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(remoteSource)
+        case Some(PathSchemes.schemeS3) => S3DataVault.create(remoteSource, ws)
+        case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
+          HttpsDataVault.create(remoteSource, ws, config.Http.uri)
+        case None => FileSystemDataVault.create
+        case _    => throw new Exception(s"Unknown file system scheme $scheme")
       }
-      logger.info(s"Created data vault for ${remoteSource.uri.toString}")
+      logger.info(s"Created data vault for ${remoteSource.upath.toString}")
       Fox.successful(fs)
     } catch {
       case e: Exception =>
-        val msg = s"Creating data vault errored for ${remoteSource.uri.toString}:"
+        val msg = s"Creating data vault errored for ${remoteSource.upath.toString}:"
         logger.error(msg, e)
         Fox.failure(msg, Full(e))
     }

@@ -2,6 +2,7 @@ package controllers
 
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -15,6 +16,17 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  DataSourceId,
+  ElementClass,
+  StaticColorLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
+}
 import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
@@ -39,6 +51,8 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
+                                   datasetDAO: DatasetDAO,
+                                   datasetLayerDAO: DatasetLayerDAO,
                                    multiUserDAO: MultiUserDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
@@ -156,6 +170,95 @@ Samplecountry
     Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
     Some(AiModelCategory.em_neurons)
   )
+  private val defaultDataSource = UsableDataSource(
+    id = DataSourceId("l4_sample_remote", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "color",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(3072, 3072, 512), 1024, 1024, 1024),
+        elementClass = ElementClass.uint8,
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(2, 2, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(4, 4, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/4-4-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(8, 8, 2),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/8-8-2"))
+          ),
+          MagLocator(
+            mag = Vec3Int(16, 16, 4),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/16-16-4"))
+          )
+        )
+      ),
+      StaticSegmentationLayer(
+        name = "segmentation",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(3072, 3072, 512), 1024, 1024, 1024),
+        elementClass = ElementClass.uint32,
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(2, 2, 1),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/2-2-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(4, 4, 1),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/4-4-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(8, 8, 2),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/8-8-2"))
+          ),
+          MagLocator(
+            mag = Vec3Int(16, 16, 4),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/16-16-4"))
+          )
+        ),
+        largestSegmentId = Some(2504697),
+      )
+    ),
+    scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
+  )
+
+  private val defaultDataset = Dataset(
+    _id = ObjectId("68b80290d4000090f8f4aa62"),
+    _dataStore = defaultDataStore.name,
+    _organization = defaultOrganization._id,
+    _publication = Some(defaultPublication._id),
+    _uploader = Some(defaultUser._id),
+    _folder = defaultOrganization._rootFolder,
+    inboxSourceHash = Some(defaultDataSource.hashCode()),
+    defaultViewConfiguration = None,
+    adminViewConfiguration = None,
+    description = None,
+    directoryName = defaultDataSource.id.directoryName,
+    isPublic = false,
+    isUsable = true,
+    isVirtual = true,
+    name = "l4_sample_remote",
+    voxelSize = Some(defaultDataSource.scale),
+    sharingToken = None,
+    status = "",
+    logoUrl = None,
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -175,6 +278,7 @@ Samplecountry
       _ <- insertTaskType()
       _ <- insertProject()
       _ <- insertPublication()
+      _ <- insertDataset()
       _ <- insertAiModel()
     } yield ()
 
@@ -273,6 +377,15 @@ Samplecountry
   private def insertPublication(): Fox[Unit] = publicationDAO.findAll.flatMap { publications =>
     if (publications.isEmpty) {
       publicationDAO.insertOne(defaultPublication)
+    } else Fox.successful(())
+  }
+
+  private def insertDataset(): Fox[Unit] = datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+    if (maybeDataset.isEmpty) {
+      for {
+        _ <- datasetDAO.insertOne(defaultDataset)
+        _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+      } yield ()
     } else Fox.successful(())
   }
 

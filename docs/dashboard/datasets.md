@@ -12,3 +12,6 @@ If you are [an Admin, a Dataset Manager or a Team Manager](../users/access_right
 Read more about the organization of datasets [here](../datasets/organization.md).
 
 ![Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.](../images/screenshot_DS_management.png)
+/// caption
+Dashboard for Team Managers or Admins with access to dataset settings and additional administration actions.
+///

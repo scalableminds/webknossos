@@ -12,6 +12,9 @@ Synapse locations, types, and partners have to be pre-computed outside of WEBKNO
 - Filtering by synapse type or direction 
 
 ![The Synapse and Connectome viewer displays the incoming and outgoing synaptic connections for a selected neuron.](./images/connectome_viewer.jpeg)
+/// caption
+The Synapse and Connectome viewer displays the incoming and outgoing synaptic connections for a selected neuron.
+///
 
 ## Getting started with the Synapse & Connectome Viewer
 

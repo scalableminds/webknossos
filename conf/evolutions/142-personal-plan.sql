@@ -1,4 +1,6 @@
--- https://github.com/scalableminds/webknossos/issues/8873
+-- https://github.com/scalableminds/webknossos/issues/8951
+
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 141, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 START TRANSACTION;
 

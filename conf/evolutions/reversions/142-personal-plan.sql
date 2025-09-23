@@ -1,4 +1,6 @@
--- https://github.com/scalableminds/webknossos/issues/8873
+-- https://github.com/scalableminds/webknossos/issues/8951
+
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 142, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 START TRANSACTION;
 
@@ -7,21 +9,7 @@ DROP VIEW webknossos.userinfos;
 DROP VIEW webknossos.organizations_;
 
 -- Rename Personal to Basic
-ALTER TYPE webknossos.PRICING_PLANS RENAME TO prizing_plans_old;
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
-ALTER TABLE webknossos.organizations
-  ALTER COLUMN pricingPLan DROP DEFAULT,
-  ALTER COLUMN pricingPlan TYPE webknossos.PRICING_PLANS USING
-    CASE pricingPlan
-      WHEN 'Personal'::webknossos.prizing_plans_old THEN 'Basic'::webknossos.PRICING_PLANS
-      WHEN 'Team'::webknossos.prizing_plans_old THEN 'Team'::webknossos.PRICING_PLANS
-      WHEN 'Power'::webknossos.prizing_plans_old THEN 'Power'::webknossos.PRICING_PLANS
-      WHEN 'Team_Trial'::webknossos.prizing_plans_old THEN 'Team_Trial'::webknossos.PRICING_PLANS
-      WHEN 'Power_Trial'::webknossos.prizing_plans_old THEN 'Power_Trial'::webknossos.PRICING_PLANS
-      WHEN 'Custom'::webknossos.prizing_plans_old THEN 'Custom'::webknossos.PRICING_PLANS
-    END,
-  ALTER COLUMN pricingPlan SET DEFAULT 'Custom'::webknossos.PRICING_PLANS;
-DROP TYPE webknossos.prizing_plans_old;
+ALTER TYPE webknossos.PRICING_PLANS RENAME VALUE 'Personal' TO 'Basic';
 
 -- Revert includedUsers for Basic plan
 UPDATE webknossos.organizations

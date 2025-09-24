@@ -12,7 +12,7 @@ This will open a dialog where you can configure and start your training job.
 
 ## Preparing Your Annotations
 
-Before you can start a training, you need to prepare your annotations. The training process requires at least one volume annotation with at least one bounding box.
+Before you can start a training, you need to prepare your groundtruth annotation(s). The training process requires at least one volume annotation with at least one bounding box.
 
 Here is a step-by-step guide to prepare your data:
 

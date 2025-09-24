@@ -15,7 +15,7 @@ You can launch the AI analysis dialog using the `AI Analysis` button in the tool
 
 WEBKNOSSOS offers several pre-trained models to get you started quickly:
 
-*   **Neuron Segmentation:** This analysis is designed to work with serial electron microscopy data of neural tissue (brain/cortex) and will segment all neurons within the dataset. It is tuned for serial block-face electron microscopy (SBEM), MultiSEM, Focused ion beam-SEM (FIB-SEM) data.
+*   **Neuron Segmentation:** This analysis is designed to work with serial electron microscopy data of neural tissue (brain/cortex) and will segment all neurons within the dataset. It is tuned for serial block-face electron microscopy (SBEM), MultiSEM and focused ion beam-SEM (FIB-SEM) data.
 *   **Mitochondria Detection:** Run a pre-trained instance segmentation model for mitochondria detection. Optimized for EM data.
 *   **Nuclei Detection:** (Coming Soon) Run a pre-trained instance segmentation model for nuclei detection. Optimized for EM data.
 

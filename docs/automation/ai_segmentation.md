@@ -21,7 +21,7 @@ WEBKNOSSOS offers several pre-trained models to get you started quickly:
 
 ## Your Custom Models
 
-This section will list any custom models that you have trained or uploaded to your organization. While these build on the fundation of the our pre-trained models, you customize your models to identify or segment biological structures of your interest or fine-tune models to the contrast and staining of your images. Training will be enable soon.
+This section will list any custom models that you have trained or uploaded to your organization. While these build on the foundation of our pre-trained models, you can customize your models to identify or segment biological structures of your interest or fine-tune models to the contrast and staining of your images. Training will be enabled soon.
 
 ## Analysis Settings
 

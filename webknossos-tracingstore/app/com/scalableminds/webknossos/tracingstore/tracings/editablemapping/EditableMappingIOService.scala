@@ -4,11 +4,6 @@ import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
-import com.scalableminds.webknossos.datastore.datareaders.{
-  BloscCompressor,
-  IntCompressionSetting,
-  StringCompressionSetting
-}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
@@ -49,7 +44,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
           ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
         fill_value = Right(0),
         attributes = None,
-        codecs = Seq(BytesCodecConfiguration(Some("big")), compressorConfiguration),
+        codecs = Seq(BytesCodecConfiguration(Some("big")), BloscCodecConfiguration.defaultForWKZarrOutput),
         storage_transformers = None,
         dimension_names = Some(Array("edge", "srcDst"))
       )
@@ -70,7 +65,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
           ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
         fill_value = Left("false"),
         attributes = None,
-        codecs = Seq(BytesCodecConfiguration(Some("big")), compressorConfiguration),
+        codecs = Seq(BytesCodecConfiguration(Some("big")), BloscCodecConfiguration.defaultForWKZarrOutput),
         storage_transformers = None,
         dimension_names = Some(Array("edge"))
       )
@@ -114,23 +109,6 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
       compressor.compress(bytes.array)
     }
 
-  private lazy val compressorConfiguration =
-    BloscCodecConfiguration(
-      BloscCompressor.defaultCname.getValue,
-      BloscCompressor.defaultCLevel,
-      StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle.getValue)),
-      Some(BloscCompressor.defaultTypesize),
-      BloscCompressor.defaultBlocksize
-    )
-
-  private lazy val compressor =
-    new BloscCompressor(
-      Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname.getValue),
-        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle.getValue),
-        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
-        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+  private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor
 
 }

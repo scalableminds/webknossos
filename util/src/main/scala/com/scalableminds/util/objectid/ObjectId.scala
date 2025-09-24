@@ -23,13 +23,14 @@ object ObjectId extends FoxImplicits {
     BSONObjectID.parse(input).map(fromBsonId).toOption
 
   // Accept human-readable prefix: anything-before-hyphen-<ObjectId>
-  def fromHumanReadableStringSync(input: String): Option[ObjectId] = {
+  private def fromStringWithPrefixSync(input: String): Option[ObjectId] = {
     val objectIdCandidate = input.lastIndexOf('-') match {
       case -1  => input
       case idx => input.substring(idx + 1)
     }
     BSONObjectID.parse(objectIdCandidate).map(fromBsonId).toOption
   }
+
   def dummyId: ObjectId = ObjectId("000000000000000000000000")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {
@@ -48,7 +49,7 @@ object ObjectId extends FoxImplicits {
   implicit def pathBinder: PathBindable[ObjectId] =
     new PathBindable[ObjectId] {
       override def bind(key: String, value: String): Either[String, ObjectId] =
-        fromHumanReadableStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+        fromStringWithPrefixSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }

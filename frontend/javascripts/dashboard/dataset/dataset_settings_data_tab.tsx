@@ -131,7 +131,7 @@ function SimpleDatasetForm({
                   />
                   {activeUser?.isSuperUser && dataset ? (
                     <Tooltip title="Inspect the full data source JSON response from the server. This is shown to super users only.">
-                      <a href={`/api/datasets/${dataset?.id}`} target="_blank" rel="noreferrer">
+                      <a href={`/api/datasets/${dataset?.id}`} target="_blank" rel="noopener noreferrer">
                         <Button icon={<ExportOutlined />} />
                       </a>
                     </Tooltip>

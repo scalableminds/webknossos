@@ -108,7 +108,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       unparsableMags = relevantPathsAndUnparsableMags.collect { case Right(mag) => mag }.distinctBy(_._dataset)
       relevantMagsWithValidPaths = relevantPathsAndUnparsableMags.collect { case Left(magWithPaths) => magWithPaths }
       relevantMagPaths = relevantPathsAndUnparsableMags.collect { case Left((_, paths)) => paths }.flatten
-      _ = Fox.runIfNonEmpty(unparsableMags)(logger.error(
+      _ = Fox.runIfSeqNonEmpty(unparsableMags)(logger.error(
         s"Found dataset mags with unparsable mag literals in datastore ${dataStore.name} of organization ${organization._id} with dataset ids : ${unparsableMags
           .map(_._dataset)}"))
       relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,

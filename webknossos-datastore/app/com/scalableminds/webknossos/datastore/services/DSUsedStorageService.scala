@@ -75,10 +75,10 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
           PathStorageReport(vaultPath.toUPath.toString, usedStorageBytes)
       }
       failedPaths = pathsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
-      _ <- Fox.runIfNonEmpty(failedPaths)(
+      _ <- Fox.runIfSeqNonEmpty(failedPaths)(
         logger.error(
           s"Failed to measure storage for paths ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}."))
-      _ <- Fox.runIfNonEmpty(absoluteUpathsToSkip)(
+      _ <- Fox.runIfSeqNonEmpty(absoluteUpathsToSkip)(
         logger.error(
           s"Did not measure storage for ${paths.length} paths as they are remote and not in a registered remote vault.")
       )

@@ -93,7 +93,8 @@ export class RetryingErrorBoundary extends React.Component<
           showIcon
           message={
             <span>
-              An error occurred while processing the configuration. Ensure that the JSON is valid.
+              An error occurred while processing the configuration. Ensure that the configuration is
+              valid.
               {this.state.error.toString()}
             </span>
           }
@@ -104,6 +105,7 @@ export class RetryingErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
+
 export const confirmAsync = (opts: Record<string, any>): Promise<boolean> => {
   return new Promise((resolve) => {
     Modal.confirm({

@@ -1,4 +1,4 @@
-import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, ExportOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
@@ -44,6 +44,7 @@ export default function DatasetSettingsDataTab() {
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
 
+      {/* TODO do we still  need this error boundary? */}
       <RetryingErrorBoundary>
         <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
       </RetryingErrorBoundary>
@@ -120,11 +121,20 @@ function SimpleDatasetForm({
                   <Input
                     value={dataset?.id}
                     style={{
-                      width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
+                      width: activeUser?.isSuperUser
+                        ? LEFT_COLUMN_ITEMS_WIDTH - 2 * COPY_ICON_BUTTON_WIDTH
+                        : LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
                     }}
                     readOnly
                     disabled
                   />
+                  {activeUser?.isSuperUser ? (
+                    <Tooltip title="Inspect the full data source JSON response from the server. This is shown to super users only.">
+                      <a href={`/api/datasets/${dataset?.id}`} target="_blank" rel="noreferrer">
+                        <Button icon={<ExportOutlined />} />
+                      </a>
+                    </Tooltip>
+                  ) : null}
                   <Tooltip title="Copy dataset ID">
                     <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
                   </Tooltip>
@@ -156,7 +166,6 @@ function SimpleDatasetForm({
                   allowDecimals
                 />
               </FormItemWithInfo>
-              <Space size="large" />
               <FormItemWithInfo
                 name={["dataSource", "scale", "unit"]}
                 label="Unit"

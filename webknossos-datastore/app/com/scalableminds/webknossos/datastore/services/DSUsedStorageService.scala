@@ -61,9 +61,9 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
       (absoluteUpathsToMeasure, absoluteUpathsToSkip) = absoluteUpaths.partition(
         path =>
           path.isLocal || config.Datastore.DataVaults.credentials.exists(
-            vault =>
+            vaultCredentialConfig =>
               UPath
-                .fromString(vault.getString("name"))
+                .fromString(vaultCredentialConfig.getString("name"))
                 .map(registeredPath => path.startsWith(registeredPath))
                 .getOrElse(false)))
       vaultPaths <- Fox.serialCombined(absoluteUpathsToMeasure)(upath =>

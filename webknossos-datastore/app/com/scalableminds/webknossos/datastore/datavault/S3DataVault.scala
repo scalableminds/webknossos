@@ -140,7 +140,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
-    def fetchBatch(prefixKey: String,
+    def fetchBatchRecursive(prefixKey: String,
                    client: S3AsyncClient,
                    continuationToken: Option[String],
                    alreadyMeasuredSize: Long): Fox[Long] = {
@@ -152,7 +152,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         objectListing <- notFoundToFailure(client.listObjectsV2(request).asScala)
         totalCurrentSize = objectListing.contents().asScala.map(_.size()).foldLeft(alreadyMeasuredSize)(_ + _)
         result <- if (objectListing.isTruncated)
-          fetchBatch(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
+          fetchBatchRecursive(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
         else
           Fox.successful(totalCurrentSize)
       } yield result
@@ -161,7 +161,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     for {
       prefixKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       client <- clientFox
-      totalSize <- fetchBatch(prefixKey, client, None, 0)
+      totalSize <- fetchBatchRecursive(prefixKey, client, None, 0)
     } yield totalSize
   }
 

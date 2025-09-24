@@ -56,7 +56,8 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
 
   private val pauseAfterEachOrganization = 5 seconds
   private val organizationCountToScanPerTick = config.WebKnossos.FetchUsedStorage.scansPerTick
-  private val MAX_STORAGE_PATH_REQUESTS_PER_REQUEST = 200
+  private val MaxStoragePathRequestsPerRequest = 200
+
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
@@ -183,7 +184,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                              dataStore: DataStore): Fox[List[PathStorageReport]] = {
     val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
     for {
-      storageReportAnswers <- Fox.serialCombined(relevantPaths.grouped(MAX_STORAGE_PATH_REQUESTS_PER_REQUEST).toList)(
+      storageReportAnswers <- Fox.serialCombined(relevantPaths.grouped(MaxStoragePathRequestsPerRequest).toList)(
         pathsBatch =>
           dataStoreClient.fetchStorageReports(organizationId, pathsBatch) ?~> "Could not fetch storage report")
       storageReports = storageReportAnswers.flatMap(_.reports)

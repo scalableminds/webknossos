@@ -2,17 +2,17 @@ import { exploreRemoteDataset } from "admin/rest_api";
 import { Col, Collapse, Form, type FormInstance, Input, Radio, Row } from "antd";
 import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
-import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import _ from "lodash";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { APIDataStore } from "types/api_types";
+import type { APIDataStore, VoxelSize } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
-import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { Hint } from "viewer/view/action-bar/download_modal_view";
 import { GoogleAuthFormItem } from "./google_auth_form_item";
+import { isEqual } from "lodash";
+import { formatScale } from "libs/format_utils";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -23,7 +23,6 @@ type Protocol = "s3" | "https" | "gs" | "file";
 
 interface AddRemoteLayerProps {
   form: FormInstance;
-  existingDatasourceConfig: DatasourceConfiguration;
   uploadableDatastores: APIDataStore[];
   onSuccess?: (
     datasetUrl: string,
@@ -31,6 +30,7 @@ interface AddRemoteLayerProps {
   ) => Promise<void> | void;
   onError?: () => void;
   defaultUrl?: string | null | undefined;
+  preferredVoxelSize?: VoxelSize;
 }
 
 // Constants
@@ -76,38 +76,6 @@ const ensureLargestSegmentIdsInPlace = (datasource: DatasourceConfiguration): vo
   }
 };
 
-const mergeNewLayers = (
-  existingDatasource: DatasourceConfiguration | null,
-  newDatasource: DatasourceConfiguration,
-): DatasourceConfiguration => {
-  if (existingDatasource?.dataLayers == null) {
-    return newDatasource;
-  }
-
-  const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
-  const groupedLayers: Record<string, DataLayer[]> = _.groupBy(
-    allLayers,
-    (layer: DataLayer) => layer.name,
-  );
-
-  const uniqueLayers: DataLayer[] = [];
-  for (const [name, layerGroup] of _.entries(groupedLayers)) {
-    if (layerGroup.length === 1) {
-      uniqueLayers.push(layerGroup[0]);
-    } else {
-      layerGroup.forEach((layer, idx) => {
-        const layerName = idx === 0 ? name : `${name}_${idx + 1}`;
-        uniqueLayers.push({ ...layer, name: layerName });
-      });
-    }
-  }
-
-  return {
-    ...existingDatasource,
-    dataLayers: uniqueLayers,
-  };
-};
-
 const parseCredentials = async (file: RcFile | undefined): Promise<ArbitraryObject | null> => {
   if (!file) {
     return null;
@@ -125,10 +93,10 @@ const parseCredentials = async (file: RcFile | undefined): Promise<ArbitraryObje
 export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   form,
   uploadableDatastores,
-  existingDatasourceConfig,
   onSuccess,
   onError,
   defaultUrl,
+  preferredVoxelSize,
 }) => {
   const datasourceUrl: string | null = Form.useWatch("url", form);
 
@@ -201,7 +169,6 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
       throw new Error("Could not find datastore that allows uploading.");
     }
 
-    const preferredVoxelSize = existingDatasourceConfig?.scale?.factor;
     let credentials = null;
 
     if (showCredentialsFields) {
@@ -233,12 +200,12 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     datasourceUrl,
     uploadableDatastores,
     form,
-    existingDatasourceConfig,
     showCredentialsFields,
     selectedProtocol,
     fileList,
     usernameOrAccessKey,
     passwordOrSecretKey,
+    preferredVoxelSize,
   ]);
 
   const handleExplore = useCallback(async () => {
@@ -254,7 +221,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
         [url],
         datastoreName,
         credentials,
-        preferredVoxelSize,
+        preferredVoxelSize?.factor,
       );
 
       setExploreLog(report);
@@ -267,16 +234,8 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
 
       ensureLargestSegmentIdsInPlace(newDataSourceConfig);
 
-      if (!existingDatasourceConfig) {
-        await onSuccess?.(url, newDataSourceConfig);
-        return;
-      }
-
       // Check for scale differences
-      if (
-        existingDatasourceConfig.scale?.unit &&
-        !_.isEqual(existingDatasourceConfig.scale, newDataSourceConfig.scale)
-      ) {
+      if (preferredVoxelSize?.factor && !isEqual(preferredVoxelSize, newDataSourceConfig.scale)) {
         Toast.warning(
           `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
             newDataSourceConfig.scale,
@@ -285,7 +244,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
         );
       }
 
-      await onSuccess?.(url, mergeNewLayers(existingDatasourceConfig, newDataSourceConfig));
+      await onSuccess?.(url, newDataSourceConfig);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       Toast.error(errorMessage);
@@ -293,7 +252,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     } finally {
       setIsExploring(false);
     }
-  }, [isExploring, buildExploreParams, existingDatasourceConfig, onSuccess, handleFailure]);
+  }, [isExploring, buildExploreParams, onSuccess, handleFailure]);
 
   // Effects
   useEffect(() => {

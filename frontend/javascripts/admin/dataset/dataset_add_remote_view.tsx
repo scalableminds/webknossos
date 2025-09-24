@@ -16,11 +16,44 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
-import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
+import { groupBy } from "lodash";
 
 const FormItem = Form.Item;
+
+const mergeNewLayers = (
+  existingDatasource: DatasourceConfiguration | null,
+  newDatasource: DatasourceConfiguration,
+): DatasourceConfiguration => {
+  if (existingDatasource?.dataLayers == null) {
+    return newDatasource;
+  }
+
+  const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
+  const groupedLayers: Record<string, DataLayer[]> = groupBy(
+    allLayers,
+    (layer: DataLayer) => layer.name,
+  );
+
+  const uniqueLayers: DataLayer[] = [];
+  for (const [name, layerGroup] of Utils.entries(groupedLayers)) {
+    if (layerGroup.length === 1) {
+      uniqueLayers.push(layerGroup[0]);
+    } else {
+      layerGroup.forEach((layer, idx) => {
+        const layerName = idx === 0 ? name : `${name}_${idx + 1}`;
+        uniqueLayers.push({ ...layer, name: layerName });
+      });
+    }
+  }
+
+  return {
+    ...existingDatasource,
+    dataLayers: uniqueLayers,
+  };
+};
 
 type Props = {
   onAdded: (
@@ -78,11 +111,14 @@ function DatasetAddRemoteView(props: Props) {
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  const onSuccesfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
-    form.setFieldValue("dataSource", newDataSourceConfig);
+  const onSuccessfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
+    const datasourceConfig = form.getFieldValue("dataSource");
+    const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
+    form.setFieldValue("dataSource", mergedConfig);
 
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);
+      setShowAddLayerModal(false);
       return;
     }
 
@@ -100,11 +136,13 @@ function DatasetAddRemoteView(props: Props) {
         return;
       }
     }
+
     if (!hasFormAnyErrors(form)) {
       handleStoreDataset();
     } else {
       setShowLoadingOverlay(false);
     }
+    setShowAddLayerModal(false);
   };
 
   async function handleStoreDataset() {
@@ -176,20 +214,20 @@ function DatasetAddRemoteView(props: Props) {
           >
             <AddRemoteLayer
               form={form}
-              existingDatasourceConfig={datasourceConfig}
+              preferredVoxelSize={datasourceConfig?.scale}
               uploadableDatastores={uploadableDatastores}
-              onSuccess={() => setShowAddLayerModal(false)}
+              onSuccess={onSuccessfulExplore}
             />
           </Modal>
 
           {hideDatasetUI && (
             <AddRemoteLayer
               form={form}
-              existingDatasourceConfig={datasourceConfig}
+              preferredVoxelSize={datasourceConfig?.scale}
               uploadableDatastores={uploadableDatastores}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
-              onSuccess={onSuccesfulExplore}
+              onSuccess={onSuccessfulExplore}
             />
           )}
           <Hideable hidden={hideDatasetUI}>

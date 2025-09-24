@@ -97,7 +97,7 @@ function SimpleDatasetForm({
           <Row gutter={[24, 24]}>
             <Col span={24} xl={12}>
               <FormItemWithInfo
-                // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
+                // The dataset name is not synced with the datasource.id.name, because datasource.id represents a DataSourceId
                 // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
                 name={["dataset", "name"]}
                 label="Name"
@@ -121,14 +121,15 @@ function SimpleDatasetForm({
                   <Input
                     value={dataset?.id}
                     style={{
-                      width: activeUser?.isSuperUser
-                        ? LEFT_COLUMN_ITEMS_WIDTH - 2 * COPY_ICON_BUTTON_WIDTH
-                        : LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
+                      width:
+                        activeUser?.isSuperUser && dataset
+                          ? LEFT_COLUMN_ITEMS_WIDTH - 2 * COPY_ICON_BUTTON_WIDTH
+                          : LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
                     }}
                     readOnly
                     disabled
                   />
-                  {activeUser?.isSuperUser ? (
+                  {activeUser?.isSuperUser && dataset ? (
                     <Tooltip title="Inspect the full data source JSON response from the server. This is shown to super users only.">
                       <a href={`/api/datasets/${dataset?.id}`} target="_blank" rel="noreferrer">
                         <Button icon={<ExportOutlined />} />

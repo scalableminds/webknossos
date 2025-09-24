@@ -28,7 +28,7 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import type { FormData } from "./dataset_settings_context";
+import type { DatasetSettingsFormData } from "./dataset_settings_context";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 
@@ -38,7 +38,7 @@ type DatasetSettingsProviderProps = {
   isEditingMode: boolean;
   onComplete?: () => void;
   onCancel?: () => void;
-  form?: FormInstance<FormData>;
+  form?: FormInstance<DatasetSettingsFormData>;
 };
 
 export function getRotationFromCoordinateTransformations(
@@ -74,7 +74,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   onCancel,
   form: formProp, // In case of Remote Dataset Upload, we start with a prefilled form containing the DS information
 }) => {
-  const [form] = Form.useForm<FormData>(formProp);
+  const [form] = Form.useForm<DatasetSettingsFormData>(formProp);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -226,7 +226,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
   const submitForm = useCallback(async () => {
     // Call getFieldsValue() with "True" to get all values from form not just those that are visible in the current view
-    const formValues: FormData = form.getFieldsValue(true);
+    const formValues: DatasetSettingsFormData = form.getFieldsValue(true);
     const datasetChangeValues = { ...formValues.dataset };
 
     if (datasetChangeValues.sortingKey != null) {
@@ -324,9 +324,12 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     setTimeout(afterForceUpdateCallback, 0);
   }, [form, submitForm, handleValidationFailed]);
 
-  const onValuesChange = useCallback((_changedValues: FormData, _allValues: FormData) => {
-    setHasUnsavedChanges(true);
-  }, []);
+  const onValuesChange = useCallback(
+    (_changedValues: DatasetSettingsFormData, _allValues: DatasetSettingsFormData) => {
+      setHasUnsavedChanges(true);
+    },
+    [],
+  );
 
   const handleCancel = useCallback(() => {
     onCancel();

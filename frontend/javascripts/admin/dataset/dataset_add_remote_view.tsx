@@ -2,10 +2,10 @@ import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_componen
 import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import { Button, Col, Divider, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
+import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import {
   DatasetSettingsProvider, // Sync simple with advanced and get newest datasourceJson
-  syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -16,6 +16,7 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -44,10 +45,10 @@ function DatasetAddRemoteView(props: Props) {
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<DatasetSettingsFormData & { datastoreUrl?: string }>();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const datasourceConfig = Form.useWatch(["dataSource"], form);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,7 +67,7 @@ function DatasetAddRemoteView(props: Props) {
 
   const maybeOpenExistingDataset = () => {
     const maybeDSNameError = form
-      .getFieldError("datasetName")
+      .getFieldError(["dataset", "name"])
       .filter((error) => error === messages["dataset.name.already_taken"]);
     if (maybeDSNameError == null) return;
     navigate(
@@ -77,18 +78,19 @@ function DatasetAddRemoteView(props: Props) {
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  const onSuccesfulExplore = async (url: string) => {
-    const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+  const onSuccesfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
+    form.setFieldValue("dataSource", newDataSourceConfig);
+
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);
       return;
     }
+
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
-    const dataSourceJson = JSON.parse(dataSourceJsonString);
+
     const defaultDatasetName = getDefaultDatasetName(url);
-    setDatasourceConfigStr(
-      JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
-    );
+    form.setFieldValue(["dataSource", "id"], { name: defaultDatasetName, team: "" });
+
     try {
       await form.validateFields();
     } catch (_e) {
@@ -103,14 +105,6 @@ function DatasetAddRemoteView(props: Props) {
     } else {
       setShowLoadingOverlay(false);
     }
-  };
-
-  const setDatasourceConfigStr = (dataSourceJson: string) => {
-    form.setFieldsValue({ dataSourceJson });
-    // Since this function sets the JSON string, we have to update the
-    // data which is rendered by the "simple" page.
-    syncDataSourceFields(form, "simple", true);
-    form.validateFields();
   };
 
   async function handleStoreDataset() {
@@ -139,18 +133,18 @@ function DatasetAddRemoteView(props: Props) {
 
     // The dataset name is not synced with the datasource.id.name in the advanced settings: See DatasetSettingsDataTab.
     const datasetName = form.getFieldValue(["dataset", "name"]);
-    const dataSourceJsonStr = form.getFieldValue("dataSourceJson");
-    if (dataSourceJsonStr && activeUser) {
+    const dataSource = form.getFieldValue("dataSource");
+
+    if (dataSource && activeUser) {
       try {
         const nameValidationResult = await isDatasetNameValid(datasetName);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        const dataSourceJson = JSON.parse(dataSourceJsonStr);
         const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.name,
           datasetName,
-          dataSourceJson,
+          dataSource,
           targetFolderId,
         );
         onAdded(newDatasetId, datasetName);
@@ -182,8 +176,8 @@ function DatasetAddRemoteView(props: Props) {
           >
             <AddRemoteLayer
               form={form}
+              existingDatasourceConfig={datasourceConfig}
               uploadableDatastores={uploadableDatastores}
-              setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
             />
           </Modal>
@@ -191,11 +185,11 @@ function DatasetAddRemoteView(props: Props) {
           {hideDatasetUI && (
             <AddRemoteLayer
               form={form}
+              existingDatasourceConfig={datasourceConfig}
               uploadableDatastores={uploadableDatastores}
-              setDatasourceConfigStr={setDatasourceConfigStr}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
-              onSuccess={(defaultDatasetUrl: string) => onSuccesfulExplore(defaultDatasetUrl)}
+              onSuccess={onSuccesfulExplore}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -249,7 +243,6 @@ function DatasetAddRemoteView(props: Props) {
                       type="default"
                       style={{ width: "100%" }}
                       onClick={() => {
-                        setDatasourceConfigStr("");
                         form.resetFields();
                       }}
                     >
@@ -266,7 +259,6 @@ function DatasetAddRemoteView(props: Props) {
                         style={{ width: "100%" }}
                         onClick={handleStoreDataset}
                         disabled={
-                          isDatasourceConfigStrFalsy ||
                           !!form.getFieldsError().filter(({ errors }) => errors.length).length
                         }
                       >

@@ -5,8 +5,6 @@ import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { jsonStringify } from "libs/utils";
-import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { useEffect, useState } from "react";
@@ -86,19 +84,21 @@ export const parseCredentials = async (
 export function AddRemoteLayer({
   form,
   uploadableDatastores,
-  setDatasourceConfigStr,
+  existingDatasourceConfig: existingDataSourceConfig,
   onSuccess,
   onError,
   defaultUrl,
 }: {
   form: FormInstance;
+  existingDatasourceConfig: DatasourceConfiguration;
   uploadableDatastores: APIDataStore[];
-  setDatasourceConfigStr: (dataSourceJson: string) => void;
-  onSuccess?: (datasetUrl: string) => Promise<void> | void;
+  onSuccess?: (
+    datasetUrl: string,
+    newDataSourceConfig: DatasourceConfiguration,
+  ) => Promise<void> | void;
   onError?: () => void;
   defaultUrl?: string | null | undefined;
 }) {
-  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
   const datasourceUrl: string | null = Form.useWatch("url", form);
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
@@ -161,7 +161,6 @@ export function AddRemoteLayer({
       return;
     }
 
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
@@ -171,9 +170,9 @@ export function AddRemoteLayer({
       return;
     }
 
-    const { dataSource: newDataSource, report } = await (async () => {
+    const { dataSource: newDataSourceConfig, report } = await (async () => {
       // @ts-ignore
-      const preferredVoxelSize = Utils.parseMaybe(datasourceConfigStr)?.scale;
+      const preferredVoxelSize = existingDataSourceConfig?.scale.factor;
 
       if (showCredentialsFields) {
         if (selectedProtocol === "gs") {
@@ -206,46 +205,40 @@ export function AddRemoteLayer({
       }
       return exploreRemoteDataset([datasourceUrl], datastoreToUse.name, null, preferredVoxelSize);
     })();
+
     setExploreLog(report);
-    if (!newDataSource) {
+
+    if (!newDataSourceConfig) {
       handleFailure();
       Toast.error(
         "Exploring this remote dataset did not return a datasource. Please check the Log.",
       );
       return;
     }
-    ensureLargestSegmentIdsInPlace(newDataSource);
-    if (!datasourceConfigStr) {
-      setDatasourceConfigStr(jsonStringify(newDataSource));
+
+    ensureLargestSegmentIdsInPlace(newDataSourceConfig);
+
+    if (!existingDataSourceConfig) {
       if (onSuccess) {
-        onSuccess(datasourceUrl);
+        onSuccess(datasourceUrl, newDataSourceConfig);
       }
       return;
     }
-    let existingDatasource: DatasourceConfiguration;
-    try {
-      existingDatasource = JSON.parse(datasourceConfigStr);
-    } catch (_e) {
-      handleFailure();
-      Toast.error(
-        "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
-      );
-      return;
-    }
+
     if (
-      existingDatasource?.scale != null &&
-      !_.isEqual(existingDatasource.scale, newDataSource.scale)
+      existingDataSourceConfig?.scale.unit &&
+      !_.isEqual(existingDataSourceConfig.scale, newDataSourceConfig.scale)
     ) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
-          newDataSource.scale,
+          newDataSourceConfig.scale,
         )}`,
         { timeout: 10000 },
       );
     }
-    setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
+
     if (onSuccess) {
-      onSuccess(datasourceUrl);
+      onSuccess(datasourceUrl, mergeNewLayers(existingDataSourceConfig, newDataSourceConfig));
     }
   }
 
@@ -357,7 +350,7 @@ export function AddRemoteLayer({
           <Col span={6}>
             <AsyncButton
               size="large"
-              type={isDatasourceConfigStrFalsy ? "primary" : "default"}
+              type={"primary"}
               style={{ width: "100%" }}
               onClick={handleExplore}
             >

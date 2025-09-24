@@ -1,7 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 
 import javax.inject.Inject
@@ -15,15 +15,15 @@ import scala.concurrent.duration.DurationInt
   * It also provides a mapping from temporary/compound annotation id (e.g. taskTypeId, projectId) to datasource.
   */
 class AnnotationDataSourceTemporaryStore @Inject()(
-    temporaryStore: TemporaryStore[ObjectId, (DataSourceLike, ObjectId)]) {
+    temporaryStore: TemporaryStore[ObjectId, (UsableDataSource, ObjectId)]) {
 
   private val timeOut = 7 * 24 hours
 
-  def store(annotationId: ObjectId, dataSource: DataSourceLike, datasetId: ObjectId)(
+  def store(annotationId: ObjectId, dataSource: UsableDataSource, datasetId: ObjectId)(
       implicit ec: ExecutionContext): Unit =
     temporaryStore.insert(annotationId, (dataSource, datasetId), Some(timeOut))
 
-  def find(annotationId: ObjectId): Option[(DataSourceLike, ObjectId)] =
+  def find(annotationId: ObjectId): Option[(UsableDataSource, ObjectId)] =
     temporaryStore.get(annotationId)
 
 }

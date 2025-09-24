@@ -39,7 +39,7 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { BoundingBoxSelection } from "./starting_job_modals";
+import { BoundingBoxSelection } from "./ai_job_modals/components/bounding_box_selection";
 
 type Props = {
   isOpen: boolean;
@@ -406,11 +406,17 @@ function CreateAnimationModal(props: Props) {
                 <Radio.Button value={CAMERA_POSITIONS.MOVING}>
                   Camera circling around the dataset
                 </Radio.Button>
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_XY}>
+                  Static camera looking at XY-viewport{" "}
+                </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
                   Static camera looking at XZ-viewport{" "}
                 </Radio.Button>
                 <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
                   Static camera looking at YZ-viewport{" "}
+                </Radio.Button>
+                <Radio.Button value={CAMERA_POSITIONS.STATIC_ISOMETRIC}>
+                  Static camera with an isometric perspective looking at all 3 viewports{" "}
                 </Radio.Button>
               </Space>
             </Radio.Group>

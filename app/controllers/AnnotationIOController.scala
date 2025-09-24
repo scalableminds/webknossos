@@ -44,7 +44,7 @@ import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, MultipartFormData}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
 import play.silhouette.api.Silhouette
 import security.WkEnv
 import utils.WkConf
@@ -128,8 +128,7 @@ class AnnotationIOController @Inject()(
                                                        volumeLayersGroupedRaw.flatten,
                                                        datasetIds,
                                                        wkUrl)
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> Messages("dataset.notImported", dataset.name)
-          usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
+          usableDataSource <- datasetService.usableDataSourceFor(dataset)
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
           newAnnotationId = ObjectId.generate
@@ -168,7 +167,7 @@ class AnnotationIOController @Inject()(
                                        volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
-                                       dataSource: DataSourceLike,
+                                       dataSource: UsableDataSource,
                                        datasetId: ObjectId): Fox[List[AnnotationLayer]] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List())
@@ -305,10 +304,9 @@ class AnnotationIOController @Inject()(
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
                                                  dataset: Dataset,
-                                                 dataSource: DataSourceLike): Fox[List[List[UploadedVolumeLayer]]] =
+                                                 dataSource: UsableDataSource): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
         Fox.serialCombined(volumeLayers) { volumeLayer =>
@@ -316,7 +314,6 @@ class AnnotationIOController @Inject()(
             adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
                                                              dataSource,
                                                              dataset,
-                                                             organization._id,
                                                              remoteDataStoreClient)
             adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
           } yield adaptedAnnotationLayer
@@ -324,16 +321,13 @@ class AnnotationIOController @Inject()(
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](
-      volumeTracing: VolumeTracing,
-      dataSource: GenericDataSource[T],
-      dataset: Dataset,
-      organizationId: String,
-      remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
+  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing,
+                                             dataSource: UsableDataSource,
+                                             dataset: Dataset,
+                                             remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
-      case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
-      case _                                                                                   => None
+      case layer: StaticSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+      case _                                                                                 => None
     }.headOption
     val bbox =
       if (volumeTracing.boundingBox.isEmpty)
@@ -413,12 +407,13 @@ class AnnotationIOController @Inject()(
       } yield result
     }
 
-  private def downloadExplorational(annotationId: ObjectId,
-                                    typ: String,
-                                    requestingUser: Option[User],
-                                    version: Option[Long],
-                                    skipVolumeData: Boolean,
-                                    volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
+  private def downloadExplorational(
+      annotationId: ObjectId,
+      typ: String,
+      requestingUser: Option[User],
+      version: Option[Long],
+      skipVolumeData: Boolean,
+      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Result] = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -501,6 +496,11 @@ class AnnotationIOController @Inject()(
               val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
               zipper.stream.setLevel(Deflater.BEST_SPEED)
               zipper.addFileFromBytes(dataZipName, volumeData)
+            }
+            volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
+              val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
+              zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
             }
         }
         _ = zipper.close()

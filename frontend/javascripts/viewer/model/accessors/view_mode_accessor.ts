@@ -166,7 +166,7 @@ function _calculateMaybeGlobalPos(
 // This function inverts parts of the _calculateMaybeGlobalPos function.
 // It takes a global position and calculates a screen space vector relative to the flycam position for it.
 // The result it like the input of position of _calculateMaybeGlobalPos but as a 3D vector from which the
-// viewport dependant coordinates need to be extracted (xy -> xy, yz -> zy, xz -> xz).
+// viewport-dependent coordinates need to be extracted (xy -> xy, yz -> zy, xz -> xz).
 function _calculateInViewportPos(
   globalPosition: Vector3,
   flycamPosition: Vector3,

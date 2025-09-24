@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(137);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(141);
 COMMIT TRANSACTION;
 
 
@@ -59,7 +59,7 @@ CREATE TABLE webknossos.annotation_layers(
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
   name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
-  UNIQUE (name, _annotation),
+  UNIQUE (name, _annotation) DEFERRABLE INITIALLY DEFERRED,
   PRIMARY KEY (_annotation, tracingId),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
 );
@@ -172,6 +172,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
    path TEXT NOT NULL,
    type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
    dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
    PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -224,6 +225,7 @@ CREATE TABLE webknossos.dataStores(
   isScratch BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
+  allowsUploadToPaths BOOLEAN NOT NULL DEFAULT TRUE,
   onlyAllowedOrganization TEXT,
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -410,6 +412,7 @@ CREATE TABLE webknossos.users(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId TEXT CONSTRAINT lastTaskTypeId_objectId CHECK (lastTaskTypeId ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
+  loggedOutEverywhereTime TIMESTAMPTZ,
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
@@ -462,6 +465,22 @@ CREATE TABLE webknossos.multiUsers(
   emailChangeDate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
+);
+
+CREATE TABLE webknossos.webauthnCredentials(
+  _id TEXT PRIMARY KEY,
+  _multiUser TEXT NOT NULL,
+  credentialId BYTEA NOT NULL,
+  name TEXT NOT NULL,
+  userVerified BOOLEAN NOT NULL,
+  backupEligible BOOLEAN NOT NULL,
+  backupState BOOLEAN NOT NULL,
+  serializedAttestationStatement JSONB NOT NULL,
+  serializedAttestedCredential BYTEA NOT NULL,
+  serializedExtensions JSONB NOT NULL,
+  signatureCount INTEGER NOT NULL DEFAULT 0,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_multiUser, credentialId)
 );
 
 
@@ -776,6 +795,7 @@ CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WH
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
 CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
+CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthnCredentials WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -937,6 +957,8 @@ ALTER TABLE webknossos.aiModel_trainingAnnotations
 ALTER TABLE webknossos.aiModel_organizations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.webauthnCredentials
+  ADD FOREIGN KEY (_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
@@ -1081,7 +1103,3 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
-
-
-
-

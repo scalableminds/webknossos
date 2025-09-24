@@ -32,9 +32,19 @@ POST          /auth/sendInvites                                                 
 POST          /auth/startResetPassword                                                          controllers.AuthenticationController.handleStartResetPassword()
 POST          /auth/changePassword                                                              controllers.AuthenticationController.changePassword()
 POST          /auth/resetPassword                                                               controllers.AuthenticationController.handleResetPassword()
-GET           /auth/logout                                                                      controllers.AuthenticationController.logout()
+POST          /auth/logout                                                                      controllers.AuthenticationController.logout()
+POST          /auth/logoutEverywhere                                                            controllers.AuthenticationController.logoutEverywhere()
 GET           /auth/sso                                                                         controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
 GET           /auth/oidc/login                                                                  controllers.AuthenticationController.loginViaOpenIdConnect()
+
+# Routes for WebAuthn
+POST          /auth/webauthn/auth/start                                                         controllers.AuthenticationController.webauthnAuthStart()
+POST          /auth/webauthn/auth/finalize                                                      controllers.AuthenticationController.webauthnAuthFinalize()
+POST          /auth/webauthn/register/start                                                     controllers.AuthenticationController.webauthnRegisterStart()
+POST          /auth/webauthn/register/finalize                                                  controllers.AuthenticationController.webauthnRegisterFinalize()
+GET           /auth/webauthn/keys                                                               controllers.AuthenticationController.webauthnListKeys()
+DELETE        /auth/webauthn/keys/:id                                                           controllers.AuthenticationController.webauthnRemoveKey(id: ObjectId)
+
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin()
@@ -79,6 +89,7 @@ GET           /datasets                                                         
 POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
+POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
 GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String, sharingToken: Option[String])
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
@@ -93,7 +104,13 @@ POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask            
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
+POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()
@@ -107,25 +124,22 @@ DELETE        /folders/:id                                                      
 # Datastores
 GET           /datastores                                                                       controllers.DataStoreController.list()
 PUT           /datastores/:name/datasource                                                      controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
-PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
+PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String, organizationId: Option[String])
 PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
 GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
-POST          /datastores/:name/datasources/:organizationId/:directoryName                      controllers.WKRemoteDataStoreController.registerDataSource(name: String, key: String, organizationId: String, directoryName: String, token: String)
-PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId, allowNewPaths: Boolean)
+PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
 POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetDirectoryName: String, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
-POST          /datastores/:name/deleteVirtualDataset                                            controllers.WKRemoteDataStoreController.deleteVirtualDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
 GET           /datastores/:name/findCredential                                                  controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: ObjectId)
 POST          /datastores/:name/validateUserAccess                                              controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                                       controllers.DataStoreController.create()
 DELETE        /datastores/:name                                                                 controllers.DataStoreController.delete(name: String)
-PUT           /datastores/:name                                                                 controllers.DataStoreController.update(name: String)
 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()
@@ -146,7 +160,6 @@ POST          /userToken/generate                                               
 POST          /annotations/upload                                                               controllers.AnnotationIOController.upload()
 POST          /annotations/:typ/:id/duplicate                                                   controllers.AnnotationController.duplicate(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/edit                                                        controllers.AnnotationController.editAnnotation(typ: String, id: ObjectId)
-PATCH         /annotations/:typ/:id/editLayer/:tracingId                                        controllers.AnnotationController.editAnnotationLayer(typ: String, id: ObjectId, tracingId: String)
 
 PATCH         /annotations/:typ/:id/finish                                                      controllers.AnnotationController.finish(typ: String, id: ObjectId, timestamp: Long)
 PATCH         /annotations/:typ/finish                                                          controllers.AnnotationController.finishAll(typ: String, timestamp: Long)
@@ -260,8 +273,8 @@ POST          /jobs/run/convertToWkw/:datasetId                                 
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: ObjectId, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String)
 POST          /jobs/run/exportTiff/:datasetId                                                   controllers.JobController.runExportTiffJob(datasetId: ObjectId, bbox: String, additionalCoordinates: Option[String], layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[ObjectId], asOmeTiff: Boolean)
-POST          /jobs/run/inferNuclei/:datasetId                                                  controllers.JobController.runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String)
-POST          /jobs/run/inferNeurons/:datasetId                                                 controllers.JobController.runInferNeuronsJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String, doSplitMergerEvaluation: Boolean, annotationId: Option[String], evalUseSparseTracing: Option[Boolean], evalMaxEdgeLength: Option[Double], evalSparseTubeThresholdNm: Option[Double], evalMinMergerPathLengthNm: Option[Double])
+POST          /jobs/run/inferNuclei/:datasetId                                                  controllers.JobController.runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String, invertColorLayer: Option[Boolean])
+POST          /jobs/run/inferNeurons/:datasetId                                                 controllers.JobController.runInferNeuronsJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String, doSplitMergerEvaluation: Boolean, annotationId: Option[String], evalUseSparseTracing: Option[Boolean], evalMaxEdgeLength: Option[Double], evalSparseTubeThresholdNm: Option[Double], evalMinMergerPathLengthNm: Option[Double], invertColorLayer: Option[Boolean])
 POST          /jobs/run/inferMitochondria/:datasetId                                            controllers.JobController.runInferMitochondriaJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/alignSections/:datasetId                                                controllers.JobController.runAlignSectionsJob(datasetId: ObjectId, layerName: String, newDatasetName: String, annotationId: Option[ObjectId])
 POST          /jobs/run/materializeVolumeAnnotation/:datasetId                                  controllers.JobController.runMaterializeVolumeAnnotationJob(datasetId: ObjectId, fallbackLayerName: String, annotationId: ObjectId, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String], includesEditableMapping: Boolean, boundingBox: Option[String])
@@ -276,8 +289,10 @@ POST          /jobs/:id/attachDatasetToInference                                
 GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: ObjectId)
 
 # AI Models
-POST          /aiModels/runNeuronTraining                                                       controllers.AiModelController.runNeuronTraining
-POST          /aiModels/inferences/runCustomNeuronInference                                     controllers.AiModelController.runCustomNeuronInference
+POST          /aiModels/runNeuronModelTraining                                                  controllers.AiModelController.runNeuronTraining
+POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining
+POST          /aiModels/inferences/runCustomNeuronModelInference                                controllers.AiModelController.runCustomNeuronInference
+POST          /aiModels/inferences/runCustomInstanceModelInference                              controllers.AiModelController.runCustomInstanceModelInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels

@@ -3,8 +3,8 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import controllers.{Application, InitialDataService}
 import files.WkTempFileService
 import mail.MailchimpTicker
-import models.analytics.AnalyticsSessionService
-import models.annotation.{AnnotationMutexService, AnnotationStore, AnnotationDataSourceTemporaryStore}
+import models.analytics.{AnalyticsService, AnalyticsSessionService}
+import models.annotation.{AnnotationDataSourceTemporaryStore, AnnotationMutexService, AnnotationStore}
 import models.dataset.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.organization.FreeCreditTransactionService
@@ -43,5 +43,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[AnnotationDataSourceTemporaryStore]).asEagerSingleton()
     bind(classOf[CertificateValidationService]).asEagerSingleton()
     bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
+    bind(classOf[AnalyticsService]).asEagerSingleton()
   }
 }

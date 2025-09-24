@@ -1,6 +1,6 @@
 package models.dataset.explore
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
@@ -9,10 +9,9 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{DataStore, DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
@@ -48,7 +47,6 @@ object ExploreAndAddRemoteDatasetParameters {
 class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                             organizationDAO: OrganizationDAO,
                                             dataStoreDAO: DataStoreDAO,
-                                            datasetService: DatasetService,
                                             wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                             rpc: RPC)
     extends FoxImplicits
@@ -105,21 +103,4 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
 
-  def addRemoteDatasourceToDatabase(dataSource: GenericDataSource[DataLayer],
-                                    datasetName: String,
-                                    user: User,
-                                    folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      organizationId = user._organization
-      _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.createVirtualDataset(
-        dataSource.id.directoryName,
-        organizationId,
-        dataStore,
-        dataSource,
-        folderId.map(_.toString),
-        user
-      )
-    } yield ()
 }

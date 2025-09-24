@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.annotation._
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   ElementClass,
-  DataSourceLike => DataSource,
-  SegmentationLayerLike => SegmentationLayer
+  StaticSegmentationLayer,
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
@@ -119,11 +119,11 @@ class AnnotationService @Inject()(
     }).flatten
 
   private def createVolumeTracing(
-      dataSource: DataSource,
+      dataSource: UsableDataSource,
       datasetOrganizationId: String,
       datasetId: ObjectId,
       datasetDataStore: DataStore,
-      fallbackLayer: Option[SegmentationLayer],
+      fallbackLayer: Option[StaticSegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
       startRotation: Option[Vec3Double] = None,
@@ -175,19 +175,19 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
-    def getAutoFallbackLayerName(dataSource: DataSource): Option[String] =
+    def getAutoFallbackLayerName(dataSource: UsableDataSource): Option[String] =
       dataSource.dataLayers.find {
-        case _: SegmentationLayer => true
-        case _                    => false
+        case _: StaticSegmentationLayer => true
+        case _                          => false
       }.map(_.name)
 
-    def getFallbackLayer(dataSource: DataSource, fallbackLayerName: String): Fox[SegmentationLayer] =
+    def getFallbackLayer(dataSource: UsableDataSource, fallbackLayerName: String): Fox[StaticSegmentationLayer] =
       for {
         fallbackLayer <- dataSource.dataLayers
           .filter(dl => dl.name == fallbackLayerName)
           .flatMap {
-            case layer: SegmentationLayer => Some(layer)
-            case _                        => None
+            case layer: StaticSegmentationLayer => Some(layer)
+            case _                              => None
           }
           .headOption
           .toFox
@@ -201,8 +201,7 @@ class AnnotationService @Inject()(
 
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
-      inboxDataSource <- datasetService.dataSourceFor(dataset)
-      dataSource <- inboxDataSource.toUsable.toFox ?~> Messages("dataset.notImported", inboxDataSource.id.directoryName)
+      usableDataSource <- datasetService.usableDataSourceFor(dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
 
       /*
@@ -223,20 +222,20 @@ class AnnotationService @Inject()(
         case AnnotationLayerType.Skeleton =>
           val skeleton = SkeletonTracingDefaults.createInstance.copy(
             datasetName = dataset.name,
-            editPosition = dataSource.center,
+            editPosition = usableDataSource.center,
             organizationId = Some(dataset._organization),
-            additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
+            additionalAxes = AdditionalAxis.toProto(usableDataSource.additionalAxesUnion)
           )
           val skeletonAdapted = adaptSkeletonTracing(skeleton, oldPrecedenceLayerProperties)
           Fox.successful(Left(skeletonAdapted))
         case AnnotationLayerType.Volume =>
           val autoFallbackLayerName =
-            if (params.autoFallbackLayer) getAutoFallbackLayerName(dataSource) else None
+            if (params.autoFallbackLayer) getAutoFallbackLayerName(usableDataSource) else None
           val fallbackLayerName = params.fallbackLayerName.orElse(autoFallbackLayerName)
           for {
-            fallbackLayer <- Fox.runOptional(fallbackLayerName)(n => getFallbackLayer(dataSource, n))
+            fallbackLayer <- Fox.runOptional(fallbackLayerName)(n => getFallbackLayer(usableDataSource, n))
             volumeTracing <- createVolumeTracing(
-              dataSource,
+              usableDataSource,
               dataset._organization,
               dataset._id,
               dataStore,
@@ -257,7 +256,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
+      dataSource <- datasetService.usableDataSourceFor(dataset)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -423,12 +422,12 @@ class AnnotationService @Inject()(
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
+      dataSource <- datasetService.usableDataSourceFor(dataset)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
-          case layer: SegmentationLayer => Some(layer)
-          case _                        => None
+          case layer: StaticSegmentationLayer => Some(layer)
+          case _                              => None
         }.headOption
       } else None
       _ <- Fox.fromBool(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
@@ -698,7 +697,8 @@ class AnnotationService @Inject()(
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Annotation] =
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
@@ -789,7 +789,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
-      datasetJs <- datasetService.publicWrites(dataset, None, None, None)
+      datasetJs <- datasetService.publicWrites(dataset, None)
     } yield
       Json.obj(
         "id" -> annotation._id.id,

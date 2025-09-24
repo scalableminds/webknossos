@@ -8,7 +8,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
@@ -22,15 +21,21 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   ChunkGridSpecification,
   ChunkKeyEncoding,
   ChunkKeyEncodingConfiguration,
+  NgffZarr3GroupHeader,
   TransposeCodecConfiguration,
   TransposeSetting,
-  Zarr3ArrayHeader,
-  NgffZarr3GroupHeader
+  Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataFormat, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  DataFormat,
+  DataLayer,
+  ElementClass,
+  StaticSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -269,15 +274,14 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          zarrLayer = ZarrSegmentationLayer(
+          zarrLayer = StaticSegmentationLayer(
             name = tracingName.getOrElse(tracingId),
+            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
             mags = tracing.mags.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
-            mappings = None,
-            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1),
-            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
+            mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))
       }
@@ -352,7 +356,8 @@ class VolumeTracingZarrStreamingController @Inject()(
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
           remoteFallbackLayer,
           List(request)) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
-        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer" ~> NOT_FOUND // return 404 if the request worked but data is empty
+        // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
+        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "Could not retrieve data from fallback layer" ~> INTERNAL_SERVER_ERROR
       } yield fallbackData
     } else Fox.successful(data)
 }

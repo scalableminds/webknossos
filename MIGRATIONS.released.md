@@ -6,6 +6,21 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.10.0](https://github.com/scalableminds/webknossos/releases/tag/25.10.0) - 2025-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.09.0...25.10.0)
+
+### Postgres Evolutions
+- [139-logout-everywhere.sql](conf/evolutions/139-logout-everywhere.sql)
+- [140-annotation-layer-name-check-deferrable.sql](conf/evolutions/140-annotation-layer-name-check-deferrable.sql)
+
+## [25.09.0](https://github.com/scalableminds/webknossos/releases/tag/25.09.0) - 2025-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.1...25.09.0)
+
+### Postgres Evolutions
+- [136-extra-column-for-email-changed.sql](conf/evolutions/136-extra-column-for-email-changed.sql)
+- [137-virtual-datasets.sql](conf/evolutions/137-virtual-datasets.sql)
+- [138-add-webauthn-credentials.sql](conf/evolutions/138-add-webauthn-credentials.sql)
+
 ## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
 [Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
 

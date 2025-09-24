@@ -18,7 +18,7 @@ class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
     extends Controller
     with FoxImplicits {
 
-  def create: Action[String] = sil.SecuredAction.async(validateJson[String]) { implicit request =>
+  def create: Action[String] = sil.UserAwareAction.async(validateJson[String]) { implicit request =>
     val longLink = request.body
     val _id = ObjectId.generate
     val key = RandomIDGenerator.generateBlocking(12)

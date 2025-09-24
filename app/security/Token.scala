@@ -134,6 +134,18 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for { _ <- run(query.update(true)) } yield ()
   }
 
+  def deleteDataStoreTokensForMultiUser(multiUserId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.tokens
+                   SET isDeleted = ${true}
+                   WHERE tokenType = ${TokenType.DataStore}
+                   AND loginInfo_providerKey IN (
+                     SELECT _id
+                     FROM webknossos.users_
+                     WHERE _multiUser = $multiUserId
+                   )""".asUpdate)
+    } yield ()
+
   def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.tokens

@@ -286,7 +286,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     const actions = segmentIds.map((segmentId) =>
       updateSegmentAction(segmentId, segmentShape, layerName, undefined, createsNewUndoState),
     );
-    Store.dispatch(batchUpdateGroupsAndSegmentsAction(actions));
+    if (actions.length > 0) {
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(actions));
+    }
   },
 
   updateSegment(
@@ -841,7 +843,7 @@ class SegmentsView extends React.Component<Props, State> {
       const maybeMappingName =
         !isEditableMapping &&
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType === "HDF5" &&
+        mappingInfo.mappingType !== "JSON" &&
         mappingInfo.mappingName != null
           ? mappingInfo.mappingName
           : undefined;
@@ -1340,7 +1342,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (visibleSegmentationLayer == null) return;
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
-    if (relevantSegments == null) return;
+    if (relevantSegments == null || relevantSegments.length < 1) return;
 
     const actions = relevantSegments.map((segment) =>
       updateSegmentAction(segment.id, { color: color }, visibleSegmentationLayer.name),

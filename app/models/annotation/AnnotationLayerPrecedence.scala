@@ -179,7 +179,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           tracingStoreClient.getVolumeTracing(existingAnnotationId,
                                               oldPrecedenceLayer,
                                               previousVersion,
-                                              skipVolumeData = true,
+                                              skipVolumeAndEdgesData = true,
                                               volumeDataZipFormat = VolumeDataZipFormat.wkw,
                                               dataset.voxelSize)
       } yield Some(oldPrecedenceLayerFetched)

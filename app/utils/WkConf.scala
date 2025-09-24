@@ -112,7 +112,13 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
+
+    object Datasets {
+      val uploadToPathsPrefixes: Option[Seq[String]] =
+        getOptional[Seq[String]]("webKnossos.datasets.uploadToPathsPrefixes")
+      val uploadToPathsInfix: Option[String] = getOptional[String]("webKnossos.datasets.uploadToPathsInfix")
+    }
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }
 
   object SingleSignOn {
@@ -143,12 +149,15 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
   }
 
   object Datastore {
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
+    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
   }
 
   object Tracingstore {
@@ -201,6 +210,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val cookiePath: String = get[String]("silhouette.cookieAuthenticator.cookiePath")
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val sameSite: String = get[String]("silhouette.cookieAuthenticator.sameSite")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
       val authenticatorExpiry: FiniteDuration =
         get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")

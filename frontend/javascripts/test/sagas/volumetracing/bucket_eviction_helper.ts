@@ -32,7 +32,11 @@ export async function testLabelingManyBuckets(
   const newCellId = 2;
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-    createBucketResponseFunction(Uint16Array, oldCellId, 500),
+    createBucketResponseFunction(
+      { volumeTracingId: "uint16", color: "uint8", segmentation: "uint16" },
+      oldCellId,
+      500,
+    ),
   );
 
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders

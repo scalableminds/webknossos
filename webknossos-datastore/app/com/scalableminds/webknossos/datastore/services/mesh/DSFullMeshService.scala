@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, SegmentationLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services._
@@ -34,8 +34,7 @@ object FullMeshRequest {
   implicit val jsonFormat: OFormat[FullMeshRequest] = Json.format[FullMeshRequest]
 }
 
-class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
-                                  meshFileService: MeshFileService,
+class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
                                   val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -52,7 +51,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  def loadFor(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
+  def loadFor(dataSource: UsableDataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
       m: MessagesProvider,
       tc: TokenContext): Fox[Array[Byte]] =
@@ -61,9 +60,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     else
       loadFullMeshFromAdHoc(dataSource, dataLayer, fullMeshRequest)
 
-  private def loadFullMeshFromAdHoc(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromAdHoc(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
@@ -80,7 +80,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield array
 
   private def getAllAdHocChunks(
-      dataSource: DataSource,
+      dataSource: UsableDataSource,
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
       topLeft: VoxelPosition,
@@ -111,10 +111,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield allVertices
   }
 
-  private def loadFullMeshFromMeshFile(dataSource: DataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
-      implicit ec: ExecutionContext,
-      m: MessagesProvider,
-      tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromMeshFile(dataSource: UsableDataSource,
+                                       dataLayer: DataLayer,
+                                       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
+                                                                         m: MessagesProvider,
+                                                                         tc: TokenContext): Fox[Array[Byte]] =
     for {
       before <- Instant.nowFox
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh.meshFileName.required"

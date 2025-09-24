@@ -291,8 +291,9 @@ class DatasetRenderer {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
   renderNameColumn(): React.ReactNode {
-    const selectedLayerName: string | null =
-      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+    const selectedLayerName: string | null = this.data.isActive
+      ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
+      : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
@@ -852,7 +853,7 @@ export function TeamTags({
   const teams = dataset.allowedTeamsCumulative;
   const permittedTeams = [...teams];
   if (dataset.isPublic) {
-    permittedTeams.push({ name: "public", id: "", organization: "" });
+    permittedTeams.push({ name: "public", id: "", organization: "", isOrganizationTeam: false });
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {

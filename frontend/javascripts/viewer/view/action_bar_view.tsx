@@ -36,12 +36,14 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "viewer/view/action-bar/view_modes_view";
 import {
+  LayoutEvents,
   addNewLayout,
   deleteLayout,
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
+import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
@@ -162,7 +164,7 @@ function CreateAnnotationButton() {
     let maybeMappingName = null;
     if (
       mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-      mappingInfo.mappingType === "HDF5"
+      mappingInfo.mappingType !== "JSON"
     ) {
       maybeMappingName = mappingInfo.mappingName;
     }
@@ -204,8 +206,16 @@ function CreateAnnotationButton() {
   const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
     AsyncButton,
   );
+
   return (
-    <>
+    <div
+      onKeyDownCapture={(e: React.KeyboardEvent) => {
+        // Prevent closing the modal upon pressing some keys.
+        if (e.ctrlKey || e.metaKey || e.key === "AltGraph" || e.getModifierState("AltGraph")) {
+          e.stopPropagation();
+        }
+      }}
+    >
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
@@ -230,7 +240,7 @@ function CreateAnnotationButton() {
           setSelectedSegmentationLayerName={setSelectedLayerName}
         />
       </Modal>
-    </>
+    </div>
   );
 }
 
@@ -264,7 +274,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   handleResetLayout = () => {
     layoutEmitter.emit(
-      "resetLayout",
+      LayoutEvents.resetLayout,
       this.props.layoutProps.layoutKey,
       this.props.layoutProps.activeLayout,
     );

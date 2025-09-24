@@ -69,13 +69,12 @@ class Zarr3Array(vaultPath: VaultPath,
 
   private def initializeCodecs(codecSpecs: Seq[CodecConfiguration]): (Option[ShardingCodec], Seq[Codec], Seq[Codec]) = {
     val outerCodecs = codecSpecs.map {
-      case BytesCodecConfiguration(endian)    => new BytesCodec(endian)
-      case TransposeCodecConfiguration(order) => new TransposeCodec(order)
-      case BloscCodecConfiguration(cname, clevel, shuffle, typesize, blocksize) =>
-        new BloscCodec(cname, clevel, shuffle, typesize, blocksize)
-      case GzipCodecConfiguration(level)           => new GzipCodec(level)
-      case ZstdCodecConfiguration(level, checksum) => new ZstdCodec(level, checksum)
-      case Crc32CCodecConfiguration                => new Crc32CCodec
+      case BytesCodecConfiguration(endian)             => new BytesCodec(endian)
+      case TransposeCodecConfiguration(order)          => new TransposeCodec(order)
+      case bloscConfiguration: BloscCodecConfiguration => BloscCodec.fromConfiguration(bloscConfiguration)
+      case GzipCodecConfiguration(level)               => new GzipCodec(level)
+      case ZstdCodecConfiguration(level, checksum)     => new ZstdCodec(level, checksum)
+      case Crc32CCodecConfiguration                    => new Crc32CCodec
       case ShardingCodecConfiguration(chunk_shape, codecs, index_codecs, index_location) =>
         new ShardingCodec(chunk_shape, codecs, index_codecs, index_location)
     }
@@ -177,7 +176,9 @@ class Zarr3Array(vaultPath: VaultPath,
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
       chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
       (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
-      _ <- Fox.fromBool(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
+      _ <- if (chunkOffset == -1 && chunkLength == -1) {
+        Fox.empty // -1 signifies empty/missing chunk
+      } else Fox.successful(())
       range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
     } yield (shardPath, range)
 }

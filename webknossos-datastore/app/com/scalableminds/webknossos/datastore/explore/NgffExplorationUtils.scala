@@ -24,9 +24,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataLayerWithMagLocators,
   ElementClass,
-  LayerViewConfiguration
+  LayerViewConfiguration,
+  StaticLayer
 }
 import com.scalableminds.util.tools.Box
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
@@ -184,7 +184,7 @@ trait NgffExplorationUtils extends FoxImplicits {
 
   protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
 
-  private def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
+  private def createAdditionalAxis(name: String, index: Int, bounds: Seq[Int]): Box[AdditionalAxis] =
     for {
       normalizedName <- Box(normalizeStrong(name)) ?~ s"Axis name '$name' would be empty if sanitized"
       _ <- Box(Option(bounds.length == 2).collect { case true => () })
@@ -203,7 +203,7 @@ trait NgffExplorationUtils extends FoxImplicits {
           .filter(axis => !defaultAxes.contains(axis.name))
           .zipWithIndex
           .map(axisAndIndex =>
-            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2).toInt)).toFox))
+            createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Seq(0, shape(axisAndIndex._2).toInt)).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
       _ <- Fox.fromBool(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes
@@ -230,7 +230,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[DataLayerWithMagLocators]
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[StaticLayer]
 
   protected def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                          remotePath: VaultPath,
@@ -239,7 +239,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                                          channelAttributes: Option[Seq[ChannelAttributes]] = None,
                                          isSegmentation: Boolean = false)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       unifiedAxisUnit <- selectAxisUnit(multiscale.axes, axisOrder)
@@ -304,11 +304,11 @@ trait NgffExplorationUtils extends FoxImplicits {
   }
 
   protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
 
   protected def exploreLabelLayers(remotePath: VaultPath, credentialId: Option[String])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
       labelGroup <- labelDescriptionPath.parseAsJson[NgffLabelsGroup]

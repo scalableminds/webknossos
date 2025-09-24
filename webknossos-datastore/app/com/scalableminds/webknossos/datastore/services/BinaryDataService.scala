@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{LayerCategory, DataLayer, DataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -67,16 +67,20 @@ class BinaryDataService(val dataBaseDir: Path,
         firstRequest <- requests.headOption.toFox
         // Requests outside of the layer range can be skipped. They will be answered with Empty below.
         indicesWhereOutsideRange: Set[Int] = requests.zipWithIndex.collect {
-          case (request, idx)
-              if !dataLayer.doesContainBucket(request.cuboid.topLeft.toBucket) || !request.dataLayer.containsMag(
-                request.cuboid.mag) =>
+          case (request, idx) if !request.dataLayer.containsMag(request.cuboid.mag) =>
             idx
         }.toSet
         requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
-        readInstructions = requestsSelected.map(r =>
-          DataReadInstruction(dataBaseDir, dataSourceId, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
+        readInstructions = requestsSelected.map(
+          r =>
+            DataReadInstruction(
+              dataBaseDir,
+              dataSourceId,
+              dataLayer,
+              r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
+              r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
           dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
@@ -148,7 +152,7 @@ class BinaryDataService(val dataBaseDir: Path,
       )
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
-          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == LayerCategory.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
           clippedData,
           data => agglomerateService.applyAgglomerate(request)(data),
           request
@@ -181,7 +185,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
-    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
+    if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir,
                             request.dataSourceIdOrVolumeDummy,

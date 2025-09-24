@@ -35,7 +35,7 @@ scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*t
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(
-  resolvers ++= DependencyResolvers.dependencyResolvers,
+  resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
 )
@@ -59,6 +59,7 @@ lazy val copyMessagesFilesSetting = {
 lazy val util = (project in file("util")).settings(
   commonSettings,
   libraryDependencies ++= Dependencies.utilDependencies,
+  dependencyOverrides ++= Dependencies.dependencyOverrides
 )
 
 lazy val webknossosJni = (project in file("webknossos-jni"))
@@ -78,6 +79,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -102,6 +104,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     copyMessagesFilesSetting,
   )
 
@@ -117,6 +120,7 @@ lazy val webknossos = (project in file("."))
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     Assets / sourceDirectory := file("none"),
     // The following two assignments avoid that the public assets
     // appear in two output jars. Namely, target/universal/stage/lib/webknossos.webknossos-wk-sans-externalized.jar

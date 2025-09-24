@@ -218,7 +218,8 @@ class AnnotationController @Inject()(
     }
 
   private def finishAnnotation(typ: String, id: ObjectId, issuingUser: User, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
@@ -275,17 +276,6 @@ class AnnotationController @Inject()(
           .runOptional(viewConfiguration)(vc => annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> "annotation.edit.failed"
       } yield JsonOk(Messages("annotation.edit.success"))
   }
-
-  def editAnnotationLayer(typ: String, id: ObjectId, tracingId: String): Action[JsValue] =
-    sil.SecuredAction.async(parse.json) { implicit request =>
-      for {
-        annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        newLayerName = (request.body \ "name").as[String]
-        _ <- annotationLayerDAO.updateName(annotation._id, tracingId, newLayerName) ?~> "annotation.edit.failed"
-      } yield JsonOk(Messages("annotation.edit.success"))
-    }
 
   def annotationsForTask(taskId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -416,7 +406,7 @@ class AnnotationController @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       dataSource <- if (annotation._task.isDefined)
-        datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox).map(Some(_))
+        datasetService.usableDataSourceFor(dataset).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationId = ObjectId.generate

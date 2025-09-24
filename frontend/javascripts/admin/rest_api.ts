@@ -151,7 +151,11 @@ export async function loginUser(formValues: {
 }
 
 export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout");
+  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+}
+
+export async function logoutUserEverywhere(): Promise<void> {
+  await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
 export async function getUsers(): Promise<Array<APIUser>> {
@@ -974,27 +978,6 @@ export async function getDatasets(
   return datasets;
 }
 
-export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.id}/readInboxDataSource?token=${token}`,
-    ),
-  );
-}
-
-export async function updateDatasetDatasource(
-  dataStoreUrl: string,
-  datasource: APIDataSource,
-  datasetId: string,
-): Promise<void> {
-  await doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetId}?token=${token}`, {
-      data: datasource,
-      method: "PUT",
-    }),
-  );
-}
-
 export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
   assertResponseLimit(datasets);
@@ -1003,11 +986,18 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 
 export function getDataset(
   datasetId: string,
+  includePaths?: boolean | null | undefined,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
-  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
+  const params = new URLSearchParams();
+  if (sharingToken != null) {
+    params.set("sharingToken", String(sharingToken));
+  }
+  if (includePaths != null) {
+    params.set("includePaths", String(includePaths));
+  }
+  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
 }
 
 export async function getDatasetLegacy(
@@ -1022,7 +1012,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getDataset(datasetId, true, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1033,6 +1023,7 @@ export type DatasetUpdater = {
   tags?: string[];
   folderId?: string;
   metadata?: APIDataset["metadata"];
+  dataSource?: APIDataSource;
 };
 
 export function updateDatasetPartial(
@@ -1256,27 +1247,29 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+type StoreRemoteDatasetArgs = {
+  dataStoreName: string;
+  dataSource: APIDataSource;
+  folderId?: string | null;
+};
+
 export async function storeRemoteDataset(
-  datastoreUrl: string,
+  dataStoreName: string,
   datasetName: string,
-  organizationId: string,
-  datasource: string,
+  dataSource: APIDataSource,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
-    params.set("token", token);
-    if (folderId) {
-      params.set("folderId", folderId);
-    }
+  const payload: StoreRemoteDatasetArgs = {
+    dataSource,
+    dataStoreName: dataStoreName,
+  };
+  if (folderId) {
+    payload["folderId"] = folderId;
+  }
 
-    return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
-      {
-        method: "POST",
-        data: datasource,
-      },
-    );
+  return Request.sendJSONReceiveJSON(`/api/datasets/addVirtualDataset/${datasetName}`, {
+    method: "POST",
+    data: payload,
   });
 }
 
@@ -1304,13 +1297,21 @@ export function updateDatasetTeams(
   });
 }
 
-export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
+export async function triggerDatasetCheck(
+  datastoreHost: string,
+  organizationId?: string,
+): Promise<void> {
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.set("token", token);
+    if (organizationId) {
+      params.set("organizationId", organizationId);
+    }
+    return Request.triggerRequest(`/data/triggers/checkInboxBlocking?${params}`, {
       host: datastoreHost,
       method: "POST",
-    }),
-  );
+    });
+  });
 }
 
 export async function triggerDatasetClearCache(
@@ -1335,13 +1336,10 @@ export async function triggerDatasetClearCache(
   });
 }
 
-export async function deleteDatasetOnDisk(datastoreHost: string, datasetId: string): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(`/data/datasets/${datasetId}/deleteOnDisk?token=${token}`, {
-      host: datastoreHost,
-      method: "DELETE",
-    }),
-  );
+export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+    method: "DELETE",
+  });
 }
 
 export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
@@ -1467,7 +1465,7 @@ export function getEditableMappingInfo(
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  dataSourceId: APIDataSourceId,
+  datasetId: string,
   layerName: string,
   mappingName: string,
   segmentId: number,
@@ -1478,9 +1476,7 @@ export function getPositionForSegmentInAgglomerate(
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
-        dataSourceId.directoryName
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
+      `${datastoreUrl}/data/datasets/${datasetId}/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });
@@ -1871,7 +1867,7 @@ window.setMaintenance = setMaintenance;
 // receives too many parameters, since this doesn't play well with the saga typings.
 type MeshRequest = {
   // The position is in voxels in mag 1
-  position: Vector3;
+  positionWithPadding: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   mag: Vector3;
   segmentId: number; // Segment to build mesh for
@@ -1890,8 +1886,15 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
-    meshRequest;
+  const {
+    positionWithPadding,
+    additionalCoordinates,
+    cubeSize,
+    mappingName,
+    scaleFactor,
+    mag,
+    ...rest
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -1904,7 +1907,7 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
+          position: positionWithPadding, // position is in mag1
           additionalCoordinates,
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
@@ -2209,8 +2212,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: NumberLike;
-    segmentId2: NumberLike;
+    partition1: NumberLike[];
+    partition2: NumberLike[];
     mag: Vector3;
     agglomerateId: NumberLike;
     editableMappingId: string;
@@ -2224,8 +2227,8 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
-            segmentId1: Number(segmentsInfo.segmentId1),
-            segmentId2: Number(segmentsInfo.segmentId2),
+            partition1: segmentsInfo.partition1.map(Number),
+            partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
           },
         },

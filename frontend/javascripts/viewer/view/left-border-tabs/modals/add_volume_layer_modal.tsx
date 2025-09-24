@@ -201,7 +201,7 @@ export default function AddVolumeLayerModal({
       let maybeMappingName = null;
       if (
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType === "HDF5"
+        mappingInfo.mappingType !== "JSON"
       ) {
         maybeMappingName = mappingInfo.mappingName;
       }
@@ -227,14 +227,7 @@ export default function AddVolumeLayerModal({
   };
 
   return (
-    <Modal
-      title="Add Volume Annotation Layer"
-      footer={null}
-      width={500}
-      maskClosable={false}
-      onCancel={onCancel}
-      open
-    >
+    <Modal title="Add Volume Annotation Layer" footer={null} width={500} onCancel={onCancel} open>
       Layer Name:{" "}
       <InputComponent
         size="small"

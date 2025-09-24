@@ -4,6 +4,7 @@ import { usePolledState } from "libs/react_helpers";
 import _ from "lodash";
 import * as React from "react";
 import { getUnrenderableLayerInfosForCurrentZoom } from "viewer/model/accessors/flycam_accessor";
+import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import type { SmallerOrHigherInfo } from "viewer/model/helpers/mag_info";
 
 const { useState } = React;
@@ -38,17 +39,12 @@ export default function ViewportStatusIndicator() {
   usePolledState((state) => {
     const newUnrenderableLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
     const newUnrenderableLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> =
-      newUnrenderableLayersWithInfos.map(({ layer, smallerOrHigherInfo }) =>
-        layer.category === "segmentation"
-          ? {
-              layerName: "Segmentation",
-              smallerOrHigherInfo,
-            }
-          : {
-              layerName: layer.name,
-              smallerOrHigherInfo,
-            },
-      );
+      newUnrenderableLayersWithInfos.map(({ layer, smallerOrHigherInfo }) => {
+        return {
+          layerName: getReadableNameForLayerName(state.dataset, state.annotation, layer.name),
+          smallerOrHigherInfo,
+        };
+      });
 
     if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UnrenderableLayerNamesInfo[]' is... Remove this comment to see the full error message

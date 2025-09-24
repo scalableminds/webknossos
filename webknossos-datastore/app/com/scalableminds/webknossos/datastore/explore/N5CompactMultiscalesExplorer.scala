@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5CompactMultiscalesMetadata, N5Header, N5Metadata}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayerWithMagLocators
+import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
 import com.scalableminds.util.tools.Box.tryo
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +18,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
   override def name: String = "N5 Multiscales with compact metadata"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath
@@ -64,7 +64,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), None, credentialId),
                         magPath,
                         elementClass,
                         boundingBox)

@@ -7,7 +7,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
@@ -94,19 +94,15 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(dataSourceId: DataSourceId, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)(
-      implicit tc: TokenContext): Fox[String] =
-    for {
-      uploadedDatasetIdJson <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
-        .addQueryString("key" -> dataStoreKey)
-        .addQueryString("datasetDirectoryName" -> dataSourceId.directoryName)
-        .addQueryString("needsConversion" -> needsConversion.toString)
-        .addQueryString("viaAddRoute" -> viaAddRoute.toString)
-        .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
-        .withTokenFromContext
-        .postEmptyWithJsonResponse[JsValue]()
-      uploadedDatasetId <- JsonHelper.as[String](uploadedDatasetIdJson \ "id").toFox ?~> "uploadedDatasetId.invalid"
-    } yield uploadedDatasetId
+  def reportUpload(datasetId: ObjectId, datasetSizeBytes: Long, needsConversion: Boolean)(
+      implicit tc: TokenContext): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("datasetId" -> datasetId.toString)
+      .addQueryString("needsConversion" -> needsConversion.toString)
+      .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
+      .withTokenFromContext
+      .postEmptyWithJsonResponse[JsValue]()
 
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
@@ -141,10 +137,10 @@ class DSRemoteWebknossosClient @Inject()(
       .withTokenFromContext
       .putJson(dataSource)
 
-  def deleteDataSource(id: DataSourceId): Fox[_] =
+  def deleteDataset(datasetId: ObjectId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
       .addQueryString("key" -> dataStoreKey)
-      .postJson(id)
+      .postJson(datasetId)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")

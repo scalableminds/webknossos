@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSource
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LegacyLinkedLayerIdentifier,
@@ -243,11 +243,11 @@ class WKRemoteDataStoreController @Inject()(
   /**
     * Called by the datastore after a dataset has been deleted on disk.
     */
-  def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
+  def deleteDataset(name: String, key: String): Action[ObjectId] = Action.async(validateJson[ObjectId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).shiftBox
+          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
           _ <- existingDatasetBox match {
             case Full(dataset) =>
               for {

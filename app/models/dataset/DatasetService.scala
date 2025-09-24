@@ -76,15 +76,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  // TODO may get isVirtual=true too. Change to createVirtualDataset?
+  // TODO consolidate with createVirtualDataset?
   def createPreliminaryDataset(newDatasetId: ObjectId,
                                datasetName: String,
                                datasetDirectoryName: String,
                                organizationId: String,
                                dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource =
+    val unusableDataSource =
       UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, DataSourceStatus.notYetUploaded)
-    createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
+    createDataset(dataStore, newDatasetId, datasetName, unusableDataSource, isVirtual = true)
   }
 
   def createVirtualDataset(datasetName: String,

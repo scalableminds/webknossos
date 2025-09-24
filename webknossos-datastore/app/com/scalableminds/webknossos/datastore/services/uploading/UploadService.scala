@@ -54,7 +54,7 @@ case class ReserveUploadInformation(
     initialTeams: List[ObjectId], // team ids
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
-    isVirtual: Option[Boolean] // TODO rethink?
+    isVirtual: Option[Boolean] // Only set (to false) for legacy manual uploads
 )
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
@@ -126,6 +126,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
    *  uploadId -> fileCount
    *  uploadId -> set(fileName)
    *  uploadId -> dataSourceId
+   *  uploadId -> datasetId
    *  uploadId -> linkedLayerIdentifier
    *  uploadId#fileName -> totalChunkCount
    *  uploadId#fileName -> set(chunkIndices)
@@ -171,10 +172,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def s3UploadDirectory(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadToS3Dir).resolve(uploadId)
 
-  def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
+  private def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
-  private def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
+  def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
     getObjectFromRedis[ObjectId](redisKeyForDatasetId(uploadId))
 
   def reserveUpload(reserveUploadInfo: ReserveUploadInformation,
@@ -212,7 +213,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadAdditionalInfo.layersToLink)))
       )
       _ = logger.info(
-        f"Reserving dataset upload of ${reserveUploadInfo.organization}/${reserveUploadInfo.name} with id ${reserveUploadInfo.uploadId}...")
+        f"Reserving dataset upload of ${reserveUploadInfo.organization}/${reserveUploadInfo.name} with uploadId ${reserveUploadInfo.uploadId}...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
@@ -274,7 +275,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
-      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      datasetId <- getDatasetIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
@@ -316,7 +317,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                      String.valueOf(currentChunkNumber))
             val errorMsg =
-              s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.directoryName}: ${e.getMessage}"
+              s"Error receiving chunk $currentChunkNumber for uploadId $uploadId (datsetId $datasetId): ${e.getMessage}"
             logger.warn(errorMsg)
             Fox.failure(errorMsg)
         }
@@ -327,22 +328,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = cancelUploadInformation.uploadId
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      datasetId <- getDatasetIdByUploadId(uploadId)
       knownUpload <- isKnownUpload(uploadId)
     } yield
       if (knownUpload) {
-        logger.info(
-          f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
+        logger.info(f"Cancelling dataset upload of uploadId $uploadId (datasetId $datasetId)...")
         for {
           _ <- removeFromRedis(uploadId)
           _ <- PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)).toFox
         } yield ()
-      } else {
-        Fox.failure(s"Unknown upload")
-      }
+      } else Fox.failure(s"Unknown upload")
   }
 
-  def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true)(
-      implicit tc: TokenContext): Fox[(DataSourceId, Long)] = {
+  def finishUpload(uploadInformation: UploadInformation)(implicit tc: TokenContext): Fox[(ObjectId, Long)] = {
     val uploadId = uploadInformation.uploadId
 
     for {
@@ -362,7 +360,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
       _ = logger.info(
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
-      _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
+      _ <- checkAllChunksUploaded(uploadId)
 
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion, uploadToS3)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
@@ -371,6 +369,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       datasetId <- getDatasetIdByUploadId(uploadId)
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
+                            datasetId,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
@@ -379,6 +378,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                             dataSourceId,
                                                             linkedLayerInfo.layersToLink).shiftBox
       _ <- cleanUpOnFailure(postProcessingResult,
+                            datasetId,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
@@ -408,7 +408,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           datasetSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
         } yield datasetSize
       }
-    } yield (dataSourceId, datasetSizeBytes)
+    } yield (datasetId, datasetSizeBytes)
   }
 
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
@@ -578,6 +578,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield filesToDelete
 
   private def cleanUpOnFailure[T](result: Box[T],
+                                  datasetId: ObjectId,
                                   dataSourceId: DataSourceId,
                                   datasetNeedsConversion: Boolean,
                                   label: String): Fox[Unit] =
@@ -598,13 +599,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                      None,
                      datasetNeedsConversion,
                      Some("the upload failed"))
-        remoteWebknossosClient.deleteDataSource(dataSourceId)
+        remoteWebknossosClient.deleteDataset(datasetId)
         for {
           _ <- result.toFox ?~> f"Error while $label"
         } yield ()
     }
 
-  private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
+  private def checkAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
       fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
       fileCountString <- fileCountStringOpt.toFox ?~> "dataset.upload.noFiles"
@@ -827,9 +828,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
     for {
-      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      datasetId <- getDatasetIdByUploadId(uploadId)
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- remoteWebknossosClient.deleteDataSource(dataSourceId)
+      _ <- remoteWebknossosClient.deleteDataset(datasetId)
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =

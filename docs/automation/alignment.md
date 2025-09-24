@@ -7,7 +7,7 @@ This will open a dialog where you can configure and start the alignment.
 
 ## Select AI Alignment Task
 
-*   **Align Sections:** Align all sections of this dataset along the Z-axis using features in neighboring sections. This is optimized for datasets with a single tile per section (no stitching needed).
+*   **Align Sections:** Align all sections of this dataset along the Z-axis using features in neighboring sections. This only supports datasets with a single tile per section (no in-plane stitching needed).
 *   **Align & stitch multiple tiles:** (Coming Soon) For stitching and aligning datasets with multiple tiles per section, please contact us via email for a quote. [Learn more about our alignment services.](https://webknossos.org/services/alignment)
 
 ## Alignment Settings

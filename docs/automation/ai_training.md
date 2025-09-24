@@ -18,7 +18,7 @@ Here is a step-by-step guide to prepare your data:
 
 1.  **Create an annotation:** Start by creating a new annotation or opening an existing one.
 2.  **Define bounding boxes:** Create one or more bounding boxes that define the areas you want to use for training. 
-    - It is important that the bounding boxes are not too small. The validation code checks that each bounding box has a minimum extent of **32 voxels in each dimension**.
+    - It is important that the bounding boxes are not too small. WEBKNOSSOS checks that each bounding box has a minimum extent of **32 voxels in each dimension**.
     - Bounding boxes that are not aligned with the selected magnification will be automatically shrunk to fit.
     - For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions.
 3.  **Label segments:** Within your bounding boxes, label the segmentation of your structures of interest. Use the volume annotation tool to manualy annotate structures. This will be your ground truth data. For neurons, we recommend to densely label each structure with a unique ID. For instances segmentations you only need to label the structures you want to train on, e.g. nuclei, mitochondria, soma, vesicles, etc. 

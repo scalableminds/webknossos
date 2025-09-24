@@ -36,6 +36,7 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "viewer/view/action-bar/view_modes_view";
 import {
+  LayoutEvents,
   addNewLayout,
   deleteLayout,
   getLayoutConfig,
@@ -273,7 +274,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   handleResetLayout = () => {
     layoutEmitter.emit(
-      "resetLayout",
+      LayoutEvents.resetLayout,
       this.props.layoutProps.layoutKey,
       this.props.layoutProps.activeLayout,
     );

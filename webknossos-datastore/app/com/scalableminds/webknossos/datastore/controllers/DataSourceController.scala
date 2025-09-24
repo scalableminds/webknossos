@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -189,12 +188,7 @@ class DataSourceController @Inject()(
         datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
         response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
           for {
-            (datasetId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-            _ <- dsRemoteWebknossosClient.reportUpload(
-              datasetId,
-              datasetSizeBytes,
-              request.body.needsConversion.getOrElse(false)
-            ) ?~> "reportUpload.failed"
+            datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
           } yield Ok(Json.obj("newDatasetId" -> datasetId))
         }
       } yield response

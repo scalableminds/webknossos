@@ -202,9 +202,9 @@ class DataSourceService @Inject()(
     }
   }
 
-  def exploreMappings(organizationId: String, datasetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
@@ -246,7 +246,7 @@ class DataSourceService @Inject()(
                              existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
-      UnusableDataSource(id, None, "Not imported yet.")
+      UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
     }
   }
 

@@ -4,5 +4,5 @@ trait DirectoryConstants {
   val forConversionDir = ".forConversion"
   val trashDir = ".trash"
   val uploadingDir: String = ".uploading"
-  val uploadToS3Dir = ".cloud"
+  val unpackedDir = ".unpacked"
 }

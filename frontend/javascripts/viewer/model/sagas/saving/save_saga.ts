@@ -2,7 +2,7 @@ import { getUpdateActionLog } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { ColoredLogger, isNumberMap, sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -11,6 +11,7 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
+  finishedApplyingMissingUpdatesAction,
   prepareRebasingAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
@@ -22,13 +23,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
-import type {
-  NumberLike,
-  NumberLikeMap,
-  SaveQueueEntry,
-  SkeletonTracing,
-  VolumeTracing,
-} from "viewer/store";
+import type { NumberLike, SaveQueueEntry, SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
 import type { ServerUpdateAction } from "../volume/update_actions";
@@ -80,7 +75,7 @@ function* watchForSaveConflicts(): Saga<void> {
     );
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-    // todop
+    // TODOM
     if (
       (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
       (!WkDevFlags.liveCollab && allowSave)
@@ -211,8 +206,8 @@ function* watchForSaveConflicts(): Saga<void> {
       continue;
     }
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-
-    if (WkDevFlags.liveCollab && othersMayEdit) {
+    const needsRebasing = WkDevFlags.liveCollab && othersMayEdit;
+    if (needsRebasing) {
       // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
       // Then incorporate the actions from backend and then those from the user again. then resolve.
       const everythingIsDiffedDeferred = new Deferred();
@@ -227,17 +222,19 @@ function* watchForSaveConflicts(): Saga<void> {
 
     try {
       const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
+      if (needsRebasing && !didAskUserToRefreshPage) {
+        yield* put(finishedApplyingMissingUpdatesAction());
+      }
       const saveQueueEntries = yield* select((state) => state.save.queue);
       const currentVersion = yield* select((state) => state.annotation.version);
-      const success =
-        WkDevFlags.liveCollab && othersMayEdit
-          ? !didAskUserToRefreshPage &&
-            (yield* tryToIncorporateActions(
-              saveQueueEntriesToUpdateActionBatch(saveQueueEntries, currentVersion),
-              true,
-            ))
-          : !didAskUserToRefreshPage;
-      if (!success) {
+      let successfullyAppliedOwnUpdates = true;
+      if (needsRebasing && !didAskUserToRefreshPage && saveQueueEntries.length > 0) {
+        successfullyAppliedOwnUpdates = (yield* tryToIncorporateActions(
+          saveQueueEntriesToUpdateActionBatch(saveQueueEntries, currentVersion),
+          true,
+        )).success;
+      }
+      if (didAskUserToRefreshPage || !successfullyAppliedOwnUpdates) {
         // The user was already notified about the current annotation being outdated.
         // There is not much else we can do now. Sleep for 5 minutes.
         yield* call(sleep, 5 * 60 * 1000);
@@ -278,12 +275,9 @@ export function* tryToIncorporateActions(
   // "finalization step", because it requires that the newest version is set
   // in the store annotation. Also, it only needs to happen once (instead of
   // per action).
-  const updateLocalHdf5FunctionByTracing: Record<string, () => unknown> = {};
   const refreshLayerFunctionByTracing: Record<string, () => unknown> = {};
   function* finalize() {
-    for (const fn of Object.values(updateLocalHdf5FunctionByTracing).concat(
-      Object.values(refreshLayerFunctionByTracing),
-    )) {
+    for (const fn of Object.values(refreshLayerFunctionByTracing)) {
       yield* call(fn);
     }
   }
@@ -385,16 +379,24 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
+          const { actionTracingId, agglomerateId1, agglomerateId2 } = action.value;
+          if (agglomerateId1 == null || agglomerateId2 == null) {
+            console.log(
+              "Cannot apply mergeAgglomerate action due to agglomerateId1 or agglomerateId2 not being provided in the action",
+              action.value,
+            );
+            yield* call(finalize);
+            return { success: false };
+          }
           const activeMapping = yield* select(
-            (store) =>
-              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
+            (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
           );
           yield* call(
             updateMappingWithMerge,
-            action.value.actionTracingId,
+            actionTracingId,
             activeMapping,
-            action.value.segmentId1 || 1,
-            action.value.segmentId2 || 2,
+            agglomerateId1,
+            agglomerateId2,
           );
           // todop: segmentId1 and segmentId2 might not exist in the local mapping. this does not
           // mean that the action can be ignored, though, because the agglomerates themselves might
@@ -437,7 +439,7 @@ export function* tryToIncorporateActions(
           }
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
-          const { segmentId1, segmentId2, agglomerateId, actionTracingId } = action.value;
+          const { agglomerateId, actionTracingId } = action.value;
           volumeTracingIdOfMapping = actionTracingId;
           if (agglomerateId) {
             // The action already contains the info about what agglomerate was split.
@@ -445,82 +447,14 @@ export function* tryToIncorporateActions(
             // we need to reload in case any segment of the agglomerate is loaded and
             // cannot guess the expected result without asking the backend.
             agglomerateIdsToRefresh.add(agglomerateId);
-            continue;
-          }
-          // If the agglomerate id was not provided, try to get it from the local mapping.
-          const activeMapping = yield* select(
-            (store) =>
-              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
-          );
-          // Collect agglomerate ids which need to be refreshed to update the local mapping accordingly.
-          if (
-            !activeMapping ||
-            !activeMapping.mapping ||
-            segmentId1 == null ||
-            segmentId2 == null
-          ) {
-            continue;
-          }
-          const { mapping } = activeMapping;
-          const adaptToType =
-            activeMapping.mapping && isNumberMap(mapping)
-              ? (el: number) => el
-              : (el: number) => BigInt(el);
-          let firstAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId1));
-          let secondAgglomerateId = (mapping as NumberLikeMap).get(adaptToType(segmentId2));
-          if (firstAgglomerateId) {
-            agglomerateIdsToRefresh.add(firstAgglomerateId);
-          }
-          if (secondAgglomerateId) {
-            agglomerateIdsToRefresh.add(secondAgglomerateId);
-          }
-
-          // const mappingWithSplitted = yield* call(splitAgglomerateInMapping);
-          // yield* call(
-          //   removeAgglomerateFromActiveMapping,
-          //   action.value.actionTracingId,
-          //   activeMapping,
-          //   /* todop:
-          //    * segmentId1 was split from segmentId2. This means both used to map to the same agglomerateId.
-          //    * This UA should "invalidate" the current equivalence class to which segmentId1 and segmentId2
-          //    * belong. All members of that equivalence class should be removed from the active mapping
-          //    * and then re-fetched.
-          //    * If our current mapping contains one (or both) of the segmentIds, we can look up the mapped value
-          //    * and then clear the mapping accordingly (this is important because the local mapping might have diverged
-          //    * from the mapping stored on the server; therefore, even if the UA would also encode the mapped value,
-          //    * that wouldn't be sufficient).
-          //    * However, it might be that none of the segmentIds were fetched yet. In that case, there are two options:
-          //    *   1) the entire equivalence class is unknown to the frontend. Nothing needs to be done now.
-          //    *   2) the equivalence class is known, but the segmentIds from the UA are not known. In that case
-          //    *      we still need to find out to which id the segmentIds used to map.
-          //    *      This can be done by asking the server. For the request we should pass the version that existed
-          //    *      right before the update action (because that is the version where the two segments were merged.)
-          //    */
-
-          //   action.value.agglomerateId,
-          // );
-
-          /*const layerName = action.value.actionTracingId;
-
-          const mappingInfo = yield* select((state) =>
-            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-          );
-          const { mappingName } = mappingInfo;
-
-          if (mappingName == null) {
-            throw new Error(
-              "Could not apply splitAgglomerate because no active mapping was found.",
+          } else {
+            console.log(
+              "Cannot apply splitAgglomerate action due to agglomerateId not being provided in the action",
+              action.value,
             );
+            yield* call(finalize);
+            return { success: false };
           }
-
-          const dataset = yield* select((state) => state.dataset);
-          const layerInfo = getLayerByName(dataset, layerName);
-
-          updateLocalHdf5FunctionByTracing[layerName] = function* () {
-            console.log("clearing and refreshing mapping because of split/merge action");
-            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
-            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
-          };*/
 
           break;
         }

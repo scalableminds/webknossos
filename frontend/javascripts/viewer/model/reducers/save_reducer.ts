@@ -266,7 +266,8 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "DONE_SAVING": {
+    case "DONE_SAVING":
+    case "FINISHED_APPLYING_MISSING_UPDATES": {
       return update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {

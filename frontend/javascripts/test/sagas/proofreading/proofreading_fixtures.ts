@@ -42,11 +42,11 @@ export const expectedMappingAfterMergeRebase = new Map([
 
 export const expectedMappingAfterSplit = new Map([
   [1, 1],
-  [2, 1338],
-  [3, 1338],
+  [2, 1339],
+  [3, 1339],
   [4, 4],
   [5, 4],
   [6, 6],
   [7, 6],
-  // [1337, 1337], -- not loaded by FE during test scenario, but exists in backend mock
+  // [1337, 1338], -- not loaded by FE during test scenario, but exists in backend mock
 ]);

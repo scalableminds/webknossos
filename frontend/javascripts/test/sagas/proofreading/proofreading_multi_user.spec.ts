@@ -47,6 +47,8 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 5,
           segmentId2: 6,
+          agglomerateId1: 4,
+          agglomerateId2: 6,
         },
       },
     ]);
@@ -104,6 +106,8 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 1,
             segmentId2: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -129,6 +133,7 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 3,
           segmentId2: 2,
+          agglomerateId: 1,
         },
       },
     ]);
@@ -187,6 +192,8 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 1,
             segmentId2: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -222,6 +229,7 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 1,
           segmentId2: 2,
+          agglomerateId: 1,
         },
       },
     ]);

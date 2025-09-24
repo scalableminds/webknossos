@@ -36,6 +36,9 @@ export type PrepareRebasingAction = ReturnType<typeof prepareRebasingAction>;
 export type UpdateMappingRebaseInformationAction = ReturnType<
   typeof updateMappingRebaseInformationAction
 >;
+export type FinishedApplyingMissingUpdatesAction = ReturnType<
+  typeof finishedApplyingMissingUpdatesAction
+>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -55,7 +58,8 @@ export type SaveAction =
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
   | PrepareRebasingAction
-  | UpdateMappingRebaseInformationAction;
+  | UpdateMappingRebaseInformationAction
+  | FinishedApplyingMissingUpdatesAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -204,4 +208,8 @@ export const updateMappingRebaseInformationAction = (volumeLayerIdToUpdate: stri
   ({
     type: "UPDATE_MAPPING_REBASE_INFORMATION",
     volumeLayerIdToUpdate,
+  }) as const;
+export const finishedApplyingMissingUpdatesAction = () =>
+  ({
+    type: "FINISHED_APPLYING_MISSING_UPDATES",
   }) as const;

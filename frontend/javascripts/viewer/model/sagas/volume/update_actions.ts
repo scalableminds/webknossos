@@ -935,6 +935,8 @@ export function splitAgglomerate(
 export function mergeAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
+  agglomerateId1: NumberLike,
+  agglomerateId2: NumberLike,
   actionTracingId: string,
 ): {
   /*
@@ -946,14 +948,15 @@ export function mergeAgglomerate(
     actionTracingId: string;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    agglomerateId1?: number;
+    agglomerateId2?: number;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
     mag?: Vector3;
-    agglomerateId1?: number; // Unused in back-end but may exist in older update actions
-    agglomerateId2?: number; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
@@ -963,6 +966,8 @@ export function mergeAgglomerate(
       // TODO: Proper 64 bit support (#6921)
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
+      agglomerateId1: Number(agglomerateId1),
+      agglomerateId2: Number(agglomerateId2),
     },
   } as const;
 }

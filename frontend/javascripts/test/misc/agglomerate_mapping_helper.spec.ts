@@ -32,13 +32,13 @@ describe("AgglomerateMapping", () => {
     const agglomerateMapping = new AgglomerateMapping(initialEdges);
 
     // V1
-    agglomerateMapping.addEdge(1, 4);
+    agglomerateMapping.addEdge(1, 4, true);
     expect(agglomerateMapping.mapSegment(1, 1)).toBe(1);
     expect(agglomerateMapping.mapSegment(4, 1)).toBe(1);
     expect(agglomerateMapping.mapSegment(5, 1)).toBe(1);
 
     // V2
-    agglomerateMapping.addEdge(7, 5);
+    agglomerateMapping.addEdge(7, 5, true);
     for (const id of [1, 2, 3, 4, 5, 6, 7]) {
       expect(agglomerateMapping.mapSegment(id, 2)).toBe(6);
     }
@@ -48,18 +48,18 @@ describe("AgglomerateMapping", () => {
     const agglomerateMapping = new AgglomerateMapping(initialEdges);
 
     // V1
-    agglomerateMapping.removeEdge(1, 2);
+    agglomerateMapping.removeEdge(1, 2, true);
     expect(agglomerateMapping.mapSegment(1, 1)).toBe(1);
     expect(agglomerateMapping.mapSegment(2, 1)).toBe(8);
     expect(agglomerateMapping.mapSegment(3, 1)).toBe(8);
 
     // V2
-    agglomerateMapping.removeEdge(6, 7);
+    agglomerateMapping.removeEdge(6, 7, true);
     expect(agglomerateMapping.mapSegment(6, 2)).toBe(6);
     expect(agglomerateMapping.mapSegment(7, 2)).toBe(9);
 
     // V3
-    agglomerateMapping.removeEdge(2, 3);
+    agglomerateMapping.removeEdge(2, 3, true);
     expect(agglomerateMapping.mapSegment(1, 3)).toBe(1);
     expect(agglomerateMapping.mapSegment(2, 3)).toBe(8);
     expect(agglomerateMapping.mapSegment(3, 3)).toBe(10);
@@ -69,26 +69,26 @@ describe("AgglomerateMapping", () => {
     const agglomerateMapping = new AgglomerateMapping(initialEdges);
 
     // V1
-    agglomerateMapping.removeEdge(1, 2);
+    agglomerateMapping.removeEdge(1, 2, true);
     expect(agglomerateMapping.mapSegment(1, 1)).toBe(1);
     expect(agglomerateMapping.mapSegment(2, 1)).toBe(8);
     expect(agglomerateMapping.mapSegment(3, 1)).toBe(8);
 
     // V2
-    agglomerateMapping.addEdge(7, 1);
+    agglomerateMapping.addEdge(7, 1, true);
     expect(agglomerateMapping.mapSegment(1, 2)).toBe(6);
     expect(agglomerateMapping.mapSegment(2, 2)).toBe(8);
     expect(agglomerateMapping.mapSegment(6, 2)).toBe(6);
     expect(agglomerateMapping.mapSegment(7, 2)).toBe(6);
 
     // V3
-    agglomerateMapping.addEdge(2, 6);
+    agglomerateMapping.addEdge(2, 6, true);
     expect(agglomerateMapping.mapSegment(2, 3)).toBe(8);
     expect(agglomerateMapping.mapSegment(3, 3)).toBe(8);
     expect(agglomerateMapping.mapSegment(6, 3)).toBe(8);
     expect(agglomerateMapping.mapSegment(7, 3)).toBe(8);
 
-    agglomerateMapping.removeEdge(6, 7);
+    agglomerateMapping.removeEdge(6, 7, true);
     expect(agglomerateMapping.mapSegment(6, 4)).toBe(8);
     expect(agglomerateMapping.mapSegment(2, 4)).toBe(8);
     expect(agglomerateMapping.mapSegment(3, 4)).toBe(8);

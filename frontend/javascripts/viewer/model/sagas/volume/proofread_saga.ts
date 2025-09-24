@@ -452,7 +452,15 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       return;
     }
-    items.push(mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId));
+    items.push(
+      mergeAgglomerate(
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        volumeTracingId,
+      ),
+    );
     yield* call(
       updateMappingWithMerge,
       volumeTracingId,
@@ -927,7 +935,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     }
 
     updateActions.push(
-      mergeAgglomerate(sourceInfo.unmappedId, targetInfo.unmappedId, volumeTracingId),
+      mergeAgglomerate(
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        volumeTracingId,
+      ),
     );
 
     console.log(
@@ -1533,90 +1547,38 @@ export function* splitAgglomerateInMapping(
 
 function* mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceUnmappedId: number,
-  targetUnmappedId: number,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
 ): Saga<Mapping> {
   const adaptToType =
     activeMapping.mapping && isNumberMap(activeMapping.mapping)
       ? (el: number) => el
       : (el: number) => BigInt(el);
 
-  let sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
-    adaptToType(sourceUnmappedId),
-  );
-  let targetAgglomerateId = (activeMapping.mapping as NumberLikeMap).get(
-    adaptToType(targetUnmappedId),
-  );
-  console.log(
-    "Updating local mapping by merging segments",
-    sourceUnmappedId,
-    "and",
-    targetUnmappedId,
-    "(sourceAgglomerateId: ",
-    sourceAgglomerateId,
-    "targetAgglomerateId: ",
-    targetAgglomerateId,
-    ")",
-  );
-  console.log("oldMapping", activeMapping.mapping);
-  const agglomeratesToRequest = [];
-  if (targetAgglomerateId == null) {
-    agglomeratesToRequest.push(targetUnmappedId);
-  }
-
-  if (sourceAgglomerateId == null) {
-    agglomeratesToRequest.push(sourceAgglomerateId);
-  }
-  // TODOM: think about cases where reloading isnt necessary.
-  if (agglomeratesToRequest.length > 0 && activeMapping.mappingName) {
-    const annotation = yield* select((state) => state.annotation);
-    const missingAgglomerateIdMap = yield* call(
-      getAgglomeratesForSegmentsFromTracingstore,
-      annotation.tracingStore.url,
-      activeMapping.mappingName,
-      [sourceUnmappedId],
-      annotation.annotationId,
-      annotation.version,
-    );
-    sourceAgglomerateId =
-      sourceAgglomerateId ||
-      (missingAgglomerateIdMap as NumberLikeMap).get(adaptToType(sourceUnmappedId));
-    targetAgglomerateId =
-      targetAgglomerateId ||
-      (missingAgglomerateIdMap as NumberLikeMap).get(adaptToType(targetUnmappedId));
-  }
-
-  if (
-    sourceAgglomerateId === targetAgglomerateId ||
-    sourceAgglomerateId == null ||
-    targetAgglomerateId == null
-  ) {
-    return activeMapping.mapping as Mapping;
-  }
-  const retVal = new Map(
+  const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
+  const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+  return new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
-      value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
+      value === typedTargetAgglomerateId ? [key, typedSourceAgglomerateId] : [key, value],
     ),
   ) as Mapping;
-  console.log("retVal", retVal);
-  return retVal;
 }
 
 export function* updateMappingWithMerge(
   volumeTracingId: string,
   activeMapping: ActiveMappingInfo,
-  sourceUnmappedId: number,
-  targetUnmappedId: number,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
 ) {
   // todop: the agglomerate ids might be outdated?
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
     activeMapping,
-    sourceUnmappedId,
-    targetUnmappedId,
+    sourceAgglomerateId,
+    targetAgglomerateId,
   );
   if (mergedMapping === activeMapping.mapping) {
-    /* todop: in case setMappingAction is called with the same mapping
+    /* TODOM: in case setMappingAction is called with the same mapping
      * as already active, the reducer will set the state to ACTIVATING
      * but the listenToStoreProperty handler in mappings.ts will never be
      * triggered, because the callback is only called if the identity of the

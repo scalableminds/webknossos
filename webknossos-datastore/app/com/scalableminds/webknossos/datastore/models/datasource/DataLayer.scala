@@ -83,6 +83,8 @@ trait StaticLayer extends DataLayer {
 
   def numChannels: Int = if (elementClass == ElementClass.uint24) 3 else 1
 
+  def attachments: Option[DataLayerAttachments]
+
   def withMergedAndResolvedAttachments(dataSourcePath: UPath, attachments: DataLayerAttachments): StaticLayer =
     this match {
       case l: StaticSegmentationLayer =>

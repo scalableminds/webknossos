@@ -18,8 +18,8 @@ SET includedUsers = 1
 WHERE pricingplan = 'Personal'::webknossos.PRICING_PLANS
 AND (
   SELECT COUNT(*)
-  FROM webknossos.users u
-  JOIN webknossos.multiUsers m ON u._multiUser = m._id
+  FROM webknossos.users_ u
+  JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
   WHERE u._organization = webknossos.organizations._id
   AND m.isSuperUser = FALSE
 ) = 1;

@@ -35,7 +35,7 @@ my_dataset.precomputed             # One root folder per dataset
 └─ scale_n                  
 ```
 
-For details see the [Neuroglancer spec](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed).
+For details see the [Neuroglancer spec](https://github.com/google/neuroglancer/blob/e13f1f4c62918f2ea07b12f2116bdcb6767b1499/src/datasource/precomputed/README.md).
 
 ## Performance Considerations
 To get the best streaming performance for Neuroglancer Precomputed datasets consider the following settings.

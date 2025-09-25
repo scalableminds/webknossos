@@ -320,7 +320,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <div>
         <Dropdown
-        <Dropdown key="ai-job-dropdown"
+          key="ai-job-dropdown"
           menu={{
             items: menuItems,
           }}

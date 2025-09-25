@@ -150,7 +150,6 @@ import type { Bucket, DataBucket } from "viewer/model/bucket_data_handling/bucke
 import type DataLayer from "viewer/model/data_layer";
 import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
-import { eventBus } from "viewer/model/helpers/event_bus";
 import { MagInfo } from "viewer/model/helpers/mag_info";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";

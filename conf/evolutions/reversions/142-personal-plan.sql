@@ -18,8 +18,8 @@ WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS
   AND includedUsers = 1
   AND (
     SELECT COUNT(*)
-    FROM webknossos.users u
-    JOIN webknossos.multiUsers m ON u._multiUser = m._id
+    FROM webknossos.users_ u
+    JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
     WHERE u._organization = webknossos.organizations._id
       AND m.isSuperUser = FALSE
   ) < 3;

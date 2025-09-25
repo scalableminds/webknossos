@@ -14,7 +14,15 @@ ALTER TYPE webknossos.PRICING_PLANS RENAME VALUE 'Personal' TO 'Basic';
 -- Revert includedUsers for Basic plan
 UPDATE webknossos.organizations
 SET includedUsers = 3
-WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS;
+WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS
+  AND includedUsers = 1
+  AND (
+    SELECT COUNT(*)
+    FROM webknossos.users u
+    JOIN webknossos.multiUsers m ON u._multiUser = m._id
+    WHERE u._organization = webknossos.organizations._id
+      AND m.isSuperUser = FALSE
+  ) = 1;
 
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;

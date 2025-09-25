@@ -22,7 +22,7 @@ WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS
     JOIN webknossos.multiUsers m ON u._multiUser = m._id
     WHERE u._organization = webknossos.organizations._id
       AND m.isSuperUser = FALSE
-  ) = 1;
+  ) < 3;
 
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;

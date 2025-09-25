@@ -24,6 +24,17 @@ AND (
   AND m.isSuperUser = FALSE
 ) = 1;
 
+UPDATE webknossos.organizations
+SET includedUsers = 2
+WHERE pricingplan = 'Personal'::webknossos.PRICING_PLANS
+AND (
+  SELECT COUNT(*)
+  FROM webknossos.users_ u
+  JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
+  WHERE u._organization = webknossos.organizations._id
+  AND m.isSuperUser = FALSE
+) = 2;
+
 -- Recreate views
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS

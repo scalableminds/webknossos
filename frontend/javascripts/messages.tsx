@@ -360,7 +360,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.name.already_taken":
     "This name is already being used by a different dataset. Please choose a different name.",
   "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
-  "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
   "dataset.import.required.name": "Please provide a name for the dataset.",

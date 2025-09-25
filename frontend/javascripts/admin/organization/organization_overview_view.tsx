@@ -73,7 +73,7 @@ export function OrganizationOverviewView() {
   let upgradeStorageAction: React.ReactNode = null;
 
   if (
-    organization.pricingPlan === PricingPlanEnum.Basic ||
+    organization.pricingPlan === PricingPlanEnum.Personal ||
     organization.pricingPlan === PricingPlanEnum.Team ||
     organization.pricingPlan === PricingPlanEnum.TeamTrial
   ) {
@@ -84,7 +84,7 @@ export function OrganizationOverviewView() {
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Basic
+          organization.pricingPlan === PricingPlanEnum.Personal
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeUserQuota
         }
@@ -98,7 +98,7 @@ export function OrganizationOverviewView() {
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
         onClick={
-          organization.pricingPlan === PricingPlanEnum.Basic
+          organization.pricingPlan === PricingPlanEnum.Personal
             ? () => UpgradePricingPlanModal.upgradePricingPlan(organization)
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
@@ -194,7 +194,7 @@ export function OrganizationOverviewView() {
         </Row>
       </Spin>
       <PlanExpirationCard organization={organization} />
-      {organization.pricingPlan === PricingPlanEnum.Basic ||
+      {organization.pricingPlan === PricingPlanEnum.Personal ||
       organization.pricingPlan === PricingPlanEnum.Team ||
       organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
         <>

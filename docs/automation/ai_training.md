@@ -2,13 +2,12 @@
 
 WEBKNOSSOS allows you to train your own AI models for image segmentation. This feature is currently in early access.
 
+<!-- Keep info in sync with docs/automation/ai_segmentation.md -->
 !!!info
     AI Model Training is only available on [webknossos.org](https://webknossos.org) at the moment. 
     If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 
 
-To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.
 
-This will open a dialog where you can configure and start your training job.
 
 ## Preparing Your Annotations
 
@@ -23,15 +22,14 @@ Here is a step-by-step guide to prepare your data:
     - For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions.
 3.  **Label segments:** Within your bounding boxes, label the segmentation of your structures of interest. Use the volume annotation tool to manually annotate structures. This will be your ground truth data. For neurons, we recommend to densely label each structure with a unique ID. For instances segmentations you only need to label the structures you want to train on, e.g. nuclei, mitochondria, soma, vesicles, etc. 
 
-## Launching the Training
-
-Once your annotations are ready, you can launch the training from the `Train AI model` dialog.
-
+## Configuring the Training
+To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.
+This will open a dialog where you can configure and start your training job.
 ### Select AI Training Task
 
-First, you need to select the type of model you want to train:
+First, you need to select the type of model you want to train. Both models are optiimized for SEM, FIB-SEM, SBEM, and Multi-SEM microscopes:
 
-*   **EM Neuron Model:** Train a new AI model for EM neuron segmentation. This is optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, and Multi-SEM microscopes.
+*   **EM Neuron Model:** Train a new AI model for dense EM neuron segmentation.
 *   **EM Instances Model:** Train a new AI model for EM instance segmentation. This is optimized for nuclei, mitochondria, and other cell types.
 
 ### Training Data
@@ -40,7 +38,7 @@ In this section, you need to specify the data that will be used for training.
 
 *   **Image Data Layer:** Select the raw image layer.
 *   **Ground Truth Layer:** Select the segmentation layer that you created.
-*   **Magnification:** Choose the magnification at which the training should be performed.
+*   **Magnification:** Choose the magnification that should be used for training.
 
 You can also add more training data from other annotations by clicking the `+` button and referencing annotation by IDs or WEBKNOSSOS URLs.
 
@@ -53,6 +51,8 @@ You can also add more training data from other annotations by clicking the `+` b
 ### Credit Information
 
 This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train.
+
+## Launching the Training
 
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 

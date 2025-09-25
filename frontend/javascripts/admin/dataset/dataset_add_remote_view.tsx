@@ -12,6 +12,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { groupBy } from "lodash";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +20,6 @@ import type { APIDataStore } from "types/api_types";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
-import { groupBy } from "lodash";
 
 const FormItem = Form.Item;
 

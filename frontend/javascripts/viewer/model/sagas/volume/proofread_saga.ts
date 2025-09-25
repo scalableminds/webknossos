@@ -465,8 +465,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceInfo.unmappedId,
-      targetInfo.unmappedId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
+      true,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -509,6 +510,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
+  // TODOM: just as below: check whether this is really needed
+  /*
   if (action.type === "MERGE_TREES") {
     console.log("Calling updateMappingWithMerge again after saving was done.");
     // During saving, newer versions might have been pulled from the server.
@@ -516,10 +519,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceInfo.unmappedId,
-      targetInfo.unmappedId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
     );
   }
+    */
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -957,8 +961,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceInfo.unmappedId,
-      targetInfo.unmappedId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
+      true,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -996,17 +1001,18 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
-  if (action.type === "PROOFREAD_MERGE") {
+  // TODOM;: Check whether this can be removed.
+  /*if (action.type === "PROOFREAD_MERGE") {
     ColoredLogger.logBlue("Calling updateMappingWithMerge again after saving was done.");
     // During saving, newer versions might have been pulled from the server.
     yield* call(
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceInfo.unmappedId,
-      targetInfo.unmappedId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
     );
-  }
+  }*/
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
@@ -1569,6 +1575,7 @@ export function* updateMappingWithMerge(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
+  isUnsyncedWithServer: boolean,
 ) {
   // todop: the agglomerate ids might be outdated?
   const mergedMapping = yield* call(
@@ -1599,9 +1606,15 @@ export function* updateMappingWithMerge(
     return;
   }
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: mergedMapping,
-    }),
+    setMappingAction(
+      volumeTracingId,
+      activeMapping.mappingName,
+      activeMapping.mappingType,
+      {
+        mapping: mergedMapping,
+      },
+      isUnsyncedWithServer,
+    ),
   );
 }
 

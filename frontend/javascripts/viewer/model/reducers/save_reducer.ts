@@ -132,7 +132,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return state;
     }
 
-    case "DISCARD_SAVE_QUEUES": {
+    case "DISCARD_SAVE_QUEUE": {
       return update(state, {
         save: {
           queue: {
@@ -145,6 +145,19 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             totalActionCount: {
               $set: 0,
             },
+          },
+        },
+      });
+    }
+
+    case "REPLACE_SAVE_QUEUE": {
+      if (state.save.queue.length !== action.newSaveQueue.length) {
+        return state;
+      }
+      return update(state, {
+        save: {
+          queue: {
+            $set: action.newSaveQueue,
           },
         },
       });
@@ -196,6 +209,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_MAPPING": {
+      if (action.isUnsyncedWithServer) {
+        return state;
+      }
       const mappingInfoOfLayer =
         state.temporaryConfiguration.activeMappingByLayer[action.layerName];
 
@@ -250,7 +266,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "FINISH_MAPPING_INITIALIZATION": {
+    /*case "FINISH_MAPPING_INITIALIZATION": {
       const mappingInfoOfLayer =
         state.temporaryConfiguration.activeMappingByLayer[action.layerName];
       return update(state, {
@@ -264,7 +280,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
           },
         },
       });
-    }
+    }*/
 
     case "DONE_SAVING":
     case "FINISHED_APPLYING_MISSING_UPDATES": {

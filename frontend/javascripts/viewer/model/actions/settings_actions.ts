@@ -213,6 +213,7 @@ export const setMappingAction = (
     showLoadingIndicator,
     isMergerModeMapping,
   }: OptionalMappingProperties = {},
+  isUnsyncedWithServer: boolean = false,
 ) =>
   ({
     type: "SET_MAPPING",
@@ -224,6 +225,7 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    isUnsyncedWithServer,
   }) as const;
 
 export const setMappingNameAction = (

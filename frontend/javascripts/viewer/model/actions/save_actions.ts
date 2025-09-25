@@ -8,6 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
+import type { SaveQueueEntry } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 export type PushSaveQueueTransaction = {
@@ -17,7 +18,7 @@ export type PushSaveQueueTransaction = {
 };
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
-type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
+type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
 export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
@@ -39,12 +40,13 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
 >;
+export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
   | SaveNowAction
   | ShiftSaveQueueAction
-  | DiscardSaveQueuesAction
+  | DiscardSaveQueueAction
   | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
@@ -59,7 +61,8 @@ export type SaveAction =
   | SetUserHoldingMutexAction
   | PrepareRebasingAction
   | UpdateMappingRebaseInformationAction
-  | FinishedApplyingMissingUpdatesAction;
+  | FinishedApplyingMissingUpdatesAction
+  | ReplaceSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
@@ -93,9 +96,9 @@ export const shiftSaveQueueAction = (count: number) =>
     count,
   }) as const;
 
-export const discardSaveQueuesAction = () =>
+export const discardSaveQueueAction = () =>
   ({
-    type: "DISCARD_SAVE_QUEUES",
+    type: "DISCARD_SAVE_QUEUE",
   }) as const;
 
 export const setSaveBusyAction = (isBusy: boolean) =>
@@ -213,3 +216,6 @@ export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
   }) as const;
+
+export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>
+  ({ type: "REPLACE_SAVE_QUEUE", newSaveQueue }) as const;

@@ -192,7 +192,7 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 1,
             segmentId2: 4,
-            agglomerateId1: 1,
+            agglomerateId1: 1339,
             agglomerateId2: 4,
           },
         },
@@ -270,16 +270,16 @@ describe("Proofreading (Multi User)", () => {
       yield take("DONE_SAVING");
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(splitSaveActionBatch).toEqual([
         {
           name: "splitAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
             segmentId1: 2,
             segmentId2: 3,
-            agglomerateId: 1,
+            agglomerateId: 1339,
           },
         },
       ]);
@@ -315,6 +315,7 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 1,
           segmentId2: 2,
+          agglomerateId: 1,
         },
       },
     ]);
@@ -365,6 +366,8 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 3,
             segmentId2: 4,
+            agglomerateId1: 1339,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -401,7 +404,8 @@ describe("Proofreading (Multi User)", () => {
      *  [ 5, 1337 ],
      *  [ 6, 6 ],
      *  [ 7, 6 ],
-     *  [ 1337, 1337 ]]
+     *  [ 1337, 1337 ]
+     *  [ 1338, 1337 ]]
      */
     backendMock.planVersionInjection(7, [
       {
@@ -410,6 +414,8 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 1337,
           segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
         },
       },
     ]);
@@ -478,6 +484,8 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 4,
             segmentId2: 1,
+            agglomerateId1: 1337,
+            agglomerateId2: 1,
           },
         },
       ]);
@@ -496,6 +504,7 @@ describe("Proofreading (Multi User)", () => {
           [6, 6],
           [7, 6],
           // [1337, 1337], not loaded
+          // [1338, 1337], not loaded
         ]),
       );
     });
@@ -503,7 +512,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  it("should merge two agglomerates optimistically and incorporate new split and merge actionS from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     const { api } = context;
 
     /* Initial mapping should now be
@@ -514,7 +523,8 @@ describe("Proofreading (Multi User)", () => {
      *  [ 5, 4 ],
      *  [ 6, 1337 ],
      *  [ 7, 1337 ],
-     *  [ 1337, 1337 ]]
+     *  [ 1337, 1337 ],
+     *  [ 1338, 1337 ]]
      */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]]);
 
@@ -526,7 +536,8 @@ describe("Proofreading (Multi User)", () => {
      *  [ 5, 4 ],
      *  [ 6, 1337 ],
      *  [ 7, 1337 ],
-     *  [ 1337, 1338 ]]
+     *  [ 1337, 1339 ],
+     *  [ 1338, 1339 ]]
      */
     backendMock.planVersionInjection(7, [
       {
@@ -535,6 +546,7 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 7,
           segmentId2: 1337,
+          agglomerateId: 1337,
         },
       },
     ]);
@@ -543,11 +555,12 @@ describe("Proofreading (Multi User)", () => {
      * [[ 1, 1 ],
      *  [ 2, 1 ],
      *  [ 3, 1 ],
-     *  [ 4, 1338 ],
-     *  [ 5, 1338 ],
+     *  [ 4, 1339 ],
+     *  [ 5, 1339 ],
      *  [ 6, 1337 ],
      *  [ 7, 1337 ],
-     *  [ 1337, 1338 ]]
+     *  [ 1337, 1339 ],
+     *  [ 1338, 1339 ]]
      */
     backendMock.planVersionInjection(8, [
       {
@@ -556,6 +569,8 @@ describe("Proofreading (Multi User)", () => {
           actionTracingId: "volumeTracingId",
           segmentId1: 1337,
           segmentId2: 5,
+          agglomerateId1: 1339,
+          agglomerateId2: 4,
         },
       },
     ]);
@@ -597,7 +612,7 @@ describe("Proofreading (Multi User)", () => {
       // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
-      // Execute the actual merge and wait for the finished mapping.
+      // Execute the1339 actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
           [1, 1, 1], // unmappedId=4 / mappedId=4 at this position
@@ -635,6 +650,8 @@ describe("Proofreading (Multi User)", () => {
             actionTracingId: "volumeTracingId",
             segmentId1: 4,
             segmentId2: 1,
+            agglomerateId1: 1339,
+            agglomerateId2: 1,
           },
         },
       ]);
@@ -652,7 +669,8 @@ describe("Proofreading (Multi User)", () => {
           [5, 1339],
           [6, 1337],
           [7, 1337],
-          // [1337, 1338], not loaded
+          // [1337, 1339], not loaded
+          // [1338, 1339], not loaded
         ]),
       );
     });

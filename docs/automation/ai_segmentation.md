@@ -37,6 +37,7 @@ You can also access **Advanced Settings** to further customize the analysis.
 
 This section provides an overview of your available credits in your organization and the estimated cost for the analysis. Cost varies depending on the size of your dataset and the type of model you want to run.
 
+---
 
 Computation time for any analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 
@@ -46,6 +47,7 @@ The finished analysis will be available as a new dataset from your dashboard. Yo
 We plan to add more AI analysis features in the future. If you want to work with us on an automated analysis project, [please contact us](mailto:hello@webknossos.org). 
 We would love to integrate analysis solutions for more modalities and use cases.
 
+<!-- Keep info in sync with docs/automation/ai_training.md -->
 !!!info
     Automated analysis is only available on [webknossos.org](https://webknossos.org) at the moment. 
     If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 

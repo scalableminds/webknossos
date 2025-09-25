@@ -10,6 +10,9 @@ Right-click on an existing tree group to bring up a menu for creating new (sub-)
 Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](../images/skeleton_tree_list.png)
+/// caption
+Organize your skeleton annotation's trees to remember important structures for later reference
+///
 
 ## Tree Colors
 
@@ -22,6 +25,10 @@ The active node, branch points, and nodes that have comments assigned to them ar
 
 ![Trees are randomly assigned colors upon creation.
 Users can assign new random colors to a single tree or all trees at once.](../images/shuffle_tree_colors.png)
+/// caption
+Trees are randomly assigned colors upon creation.
+Users can assign new colors to a single tree or all trees at once.
+///
 
 ## Skeleton & Tree Visibility
 
@@ -36,3 +43,6 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 | 2           | Toggle Visibility of Inactive Trees |
 
 ![Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](../images/tracing_ui_tree_visibility.jpeg)
+/// caption
+Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.
+///

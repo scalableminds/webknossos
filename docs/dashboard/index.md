@@ -9,9 +9,3 @@ Check out these sections to become familiar with the WEBKNOSSOS dashboard:
 - [Annotation dashboard](./annotations.md)
 - [Tasks dashboard](tasks.md)
 - [Featured publications dashboard](featured_publications.md)
-
-
-
-
-
-

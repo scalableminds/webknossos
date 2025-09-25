@@ -73,11 +73,17 @@ case class Job(
             resultAnnotationLink
           }
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
-            JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
-          // Old jobs before the dataset renaming changes returned the output dataset name.
-          // New jobs return the directory name. Thus, the resulting link should be
-          returnValue.map { resultDatasetDirectoryName =>
-            s"/datasets/$organizationId/$resultDatasetDirectoryName/view"
+            JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
+            JobCommand.infer_instances =>
+          // There exist jobs with dataset name as return value, some with directoryName, and newest with datasetId
+          // Construct links that work in either case.
+          returnValue.map { datasetIdentifier =>
+            ObjectId
+              .fromStringSync(datasetIdentifier)
+              .map { asObjectId =>
+                s"/datasets/$asObjectId/view"
+              }
+              .getOrElse(s"/datasets/$organizationId/$datasetIdentifier/view")
           }
         case _ => None
       }

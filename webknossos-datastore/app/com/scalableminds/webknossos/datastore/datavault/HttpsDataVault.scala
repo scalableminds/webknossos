@@ -34,7 +34,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
-    val uri = path.toUri
+    val uri = path.toRemoteUriUnsafe
     for {
       response <- range match {
         case StartEnd(r)          => getWithRange(uri, r)
@@ -144,8 +144,10 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     case _                     => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(credential).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(credential).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
+
 }
 
 object HttpsDataVault {

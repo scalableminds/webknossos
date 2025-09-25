@@ -9,5 +9,3 @@ Please enjoy this playlist of our latest tips and tricks:
 <figure class="video_container">
   <iframe width="560" height="560" src="https://www.youtube-nocookie.com/embed/videoseries?si=CqXiVKkxxFU8uETH&amp;list=PLpizOgyiA4kEGKFRQFOgjucZCKtI2GUZY&autoplay=1&loop=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </figure>
-
-

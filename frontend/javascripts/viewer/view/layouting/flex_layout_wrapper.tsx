@@ -11,7 +11,7 @@ import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { OrthoView } from "viewer/constants";
+import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
@@ -43,7 +43,7 @@ import {
   getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { getLayoutConfig, layoutEmitter } from "./layout_persistence";
+import { LayoutEvents, getLayoutConfig, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 
@@ -118,19 +118,29 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   addListeners() {
     this.unbindListeners.push(
-      layoutEmitter.on("resetLayout", () => {
+      layoutEmitter.on(LayoutEvents.resetLayout, () => {
         resetDefaultLayouts();
         this.rebuildLayout();
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("toggleBorder", (side) => {
+      layoutEmitter.on(LayoutEvents.toggleBorder, (side) => {
         this.toggleBorder(side);
       }),
     );
     this.unbindListeners.push(
-      layoutEmitter.on("toggleMaximize", () => {
+      layoutEmitter.on(LayoutEvents.toggleMaximize, () => {
         this.toggleMaximize();
+      }),
+    );
+    this.unbindListeners.push(
+      layoutEmitter.on(LayoutEvents.showSkeletonTab, () => {
+        this.openRightBorderTabById(BorderTabs.SkeletonTabView);
+      }),
+    );
+    this.unbindListeners.push(
+      layoutEmitter.on(LayoutEvents.showSegmentsTab, () => {
+        this.openRightBorderTabById(BorderTabs.SegmentsView);
       }),
     );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
@@ -145,6 +155,19 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
     return model;
+  }
+
+  openRightBorderTabById(tabType: BorderTabType) {
+    const rightBorderId = "right-border-tab-container";
+    const node = this.state.model.getNodeById(rightBorderId);
+    if (!node || node.getType() !== "tab") return;
+
+    const isRightOpen = getBorderOpenStatus(this.state.model).right;
+    if (!isRightOpen) this.toggleBorder("right");
+
+    const rightBorderModel = (node as TabNode).getExtraData().model;
+    if (rightBorderModel == null) return;
+    rightBorderModel.doAction(FlexLayout.Actions.selectTab(tabType.id));
   }
 
   adaptModelToConditionalTabs(model: Model) {

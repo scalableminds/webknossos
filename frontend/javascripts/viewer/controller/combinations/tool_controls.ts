@@ -1131,9 +1131,9 @@ export class ProofreadToolController {
     if (isTDViewportActive) {
       let maybeLeftClick: Partial<ActionDescriptor> = {};
       if (shiftKey) {
-        maybeLeftClick.leftClick = "Jump to point";
+        maybeLeftClick.leftClick = "Jump to Point";
       } else if (ctrlOrMetaKey) {
-        maybeLeftClick.leftClick = "Activate super-voxel";
+        maybeLeftClick.leftClick = "Activate Supervoxel";
       }
 
       return {

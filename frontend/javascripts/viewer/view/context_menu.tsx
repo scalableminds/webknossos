@@ -512,7 +512,7 @@ function getMeshItems(
       ? `within Segment ${clickedMeshId}`
       : clickedMeshId;
   const segmentOrSuperVoxel =
-    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
   const proofreadingMultiSplitToolActions =
     isProofreadingActive && isMultiSplitActive && minCutPartitions && maybeUnmappedSegmentId != null
@@ -1040,7 +1040,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? `within Segment ${maybeUnmappedSegmentId}`
       : segmentIdAtPosition;
   const segmentOrSuperVoxel =
-    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
 
   const loadPrecomputedMesh = async () => {

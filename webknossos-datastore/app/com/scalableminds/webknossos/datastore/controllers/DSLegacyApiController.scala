@@ -58,7 +58,7 @@ object LegacyLinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
 }
 
-class LegacyController @Inject()(
+class DSLegacyApiController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     binaryDataController: BinaryDataController,

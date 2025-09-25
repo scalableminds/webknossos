@@ -13,7 +13,7 @@ This will open a dialog where you can configure and start the alignment.
 ## Alignment Settings
 
 *   **New Dataset Name:** The name of the new dataset that will be created with the aligned images.
-*   **Manual Matches:** You can use manual matches from a skeleton annotation to guide the alignment process. This can be useful for particularly hard-to-align sections. When manual landmarks are used, they don't need to cover the entire dataset. In most cases, these these manual landmarks are not necessary but they can help for tricky cases such as a big gap, tear or jump between two sections.
+*   **Manual Matches:** You can use manual matches from a skeleton annotation to help the alignment process in specific spots. This can be useful for particularly hard-to-align sections. When manual landmarks are used, they don't need to cover the entire dataset. Instead, these manual landmarks can be placed to help help with tricky cases such as a big gap, tear or jump between two sections.
 
 ## Credit Information
 

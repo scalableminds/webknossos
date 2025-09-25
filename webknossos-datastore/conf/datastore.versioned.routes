@@ -1,8 +1,14 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
+->  /v12/ datastore.latest.Routes
+
+POST          /v11/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
+
 ->  /v11/ datastore.latest.Routes
 
 POST          /v10/datasets/reserveManualUpload                                                                                                          @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
+
+POST          /v10/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
 
 ->  /v10/ datastore.latest.Routes
 
@@ -48,6 +54,8 @@ GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
 POST          /v9/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
+
+POST          /v9/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
 
 ->  /v9/  datastore.latest.Routes
 
@@ -95,6 +103,8 @@ GET           /v8/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v8/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
 
+POST          /v8/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
+
 ->  /v8/  datastore.latest.Routes
 
 # Read image data
@@ -139,6 +149,8 @@ GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
 POST          /v7/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
+
+POST          /v7/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
 
 ->  /v7/  datastore.latest.Routes
 
@@ -185,6 +197,8 @@ GET           /v6/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v6/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
 
+POST          /v6/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
+
 ->  /v6/  datastore.latest.Routes
 
 # Read image data
@@ -227,6 +241,8 @@ GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:dataLayerName/:mag/:coordinates                                              @com.scalableminds.webknossos.datastore.controllers.LegacyController.requestRawZarrCubeV9(organizationId: String, datasetDirectoryName: String, dataLayerName: String, mag: String, coordinates: String)
 
 POST          /v5/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveManualUploadV10()
+
+POST          /v5/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.LegacyController.reserveUploadV11()
 
 ->  /v5/  datastore.latest.Routes
 ->  /     datastore.latest.Routes

@@ -48,6 +48,7 @@ case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
   def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
 }
 
+// TODO use
 object LegacyLinkedLayerIdentifier {
   def apply(organizationId: String,
             dataSetName: String,
@@ -73,6 +74,8 @@ class LegacyController @Inject()(
     with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def reserveUploadV11(): Action[LegacyReserveManualUploadInformation] = ??? // TODO
 
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access

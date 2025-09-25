@@ -37,6 +37,26 @@ object LegacyReserveManualUploadInformation {
     Json.format[LegacyReserveManualUploadInformation]
 }
 
+case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
+                                       organizationName: Option[String],
+                                       // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
+                                       datasetDirectoryName: Option[String],
+                                       dataSetName: String,
+                                       layerName: String,
+                                       newLayerName: Option[String] = None) {
+
+  def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
+}
+
+object LegacyLinkedLayerIdentifier {
+  def apply(organizationId: String,
+            dataSetName: String,
+            layerName: String,
+            newLayerName: Option[String]): LegacyLinkedLayerIdentifier =
+    new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
+}
+
 class LegacyController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     remoteWebknossosClient: DSRemoteWebknossosClient,

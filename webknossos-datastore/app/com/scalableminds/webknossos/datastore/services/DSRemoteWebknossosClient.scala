@@ -16,13 +16,14 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  ReportDatasetUploadParameters,
   ReserveAdditionalInformation,
   ReserveUploadInformation
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -94,15 +95,12 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(datasetId: ObjectId, datasetSizeBytes: Long, needsConversion: Boolean)(
-      implicit tc: TokenContext): Fox[_] =
+  def reportUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("datasetId" -> datasetId.toString)
-      .addQueryString("needsConversion" -> needsConversion.toString)
-      .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
       .withTokenFromContext
-      .postEmptyWithJsonResponse[JsValue]()
+      .postJson[ReportDatasetUploadParameters](parameters)
 
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")

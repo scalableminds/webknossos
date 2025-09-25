@@ -50,50 +50,40 @@ case class ReserveUploadInformation(
     totalFileCount: Long,
     filePaths: Option[List[String]],
     totalFileSizeInBytes: Option[Long],
-    layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
+    layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[ObjectId], // team ids
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean] // Only set (to false) for legacy manual uploads
 )
 object ReserveUploadInformation {
-  implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
+  implicit val jsonFormat: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
 
-case class ReserveAdditionalInformation(newDatasetId: ObjectId,
-                                        directoryName: String,
-                                        layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
+case class ReserveAdditionalInformation(newDatasetId: ObjectId, directoryName: String)
 object ReserveAdditionalInformation {
-  implicit val reserveAdditionalInformation: OFormat[ReserveAdditionalInformation] =
+  implicit val jsonFormat: OFormat[ReserveAdditionalInformation] =
     Json.format[ReserveAdditionalInformation]
 }
 
-case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
-                                       organizationName: Option[String],
-                                       // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
-                                       datasetDirectoryName: Option[String],
-                                       dataSetName: String,
-                                       layerName: String,
-                                       newLayerName: Option[String] = None) {
-
-  def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
-
-  def pathIn(dataBaseDir: Path): Path = {
-    val datasetDirectoryName = this.datasetDirectoryName.getOrElse(dataSetName)
-    dataBaseDir.resolve(getOrganizationId).resolve(datasetDirectoryName).resolve(layerName)
-  }
+case class ReportDatasetUploadParameters(
+    needsConversion: Boolean,
+    datasetSizeBytes: Long,
+    dataSourceOpt: Option[DataSource], // must be set if needsConversion is false
+    layersToLink: Seq[LinkedLayerIdentifier]
+)
+object ReportDatasetUploadParameters {
+  implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
+    Json.format[ReportDatasetUploadParameters]
 }
 
-object LegacyLinkedLayerIdentifier {
-  def apply(organizationId: String,
-            dataSetName: String,
-            layerName: String,
-            newLayerName: Option[String]): LegacyLinkedLayerIdentifier =
-    new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
-  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
+case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
+
+object LinkedLayerIdentifier {
+  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class LinkedLayerIdentifiers(layersToLink: Option[List[LegacyLinkedLayerIdentifier]])
+case class LinkedLayerIdentifiers(layersToLink: Option[List[LinkedLayerIdentifier]])
 object LinkedLayerIdentifiers {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
@@ -165,7 +155,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
-  private def uploadDirectory(organizationId: String, uploadId: String): Path =
+  private def uploadDirectoryFor(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
 
   private def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
@@ -189,10 +179,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               .insertLong(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), 0L)
           ))
       }
+      newDataSourceId = DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
-        Json.stringify(
-          Json.toJson(DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)))
+        Json.stringify(Json.toJson(newDataSourceId))
       )
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDatasetId(reserveUploadInfo.uploadId),
@@ -206,10 +196,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
-        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadAdditionalInfo.layersToLink)))
+        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
       )
       _ = logger.info(
-        f"Reserving dataset upload of ${reserveUploadInfo.organization}/${reserveUploadInfo.name} with uploadId ${reserveUploadInfo.uploadId}...")
+        f"Reserving dataset upload ${reserveUploadInfo.uploadId} for dataset ${reserveUploadAdditionalInfo.newDatasetId} ($newDataSourceId)...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
@@ -243,7 +233,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
-      uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
       _ <- Fox.fromBool(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
@@ -331,7 +321,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         logger.info(f"Cancelling dataset upload of uploadId $uploadId (datasetId $datasetId)...")
         for {
           _ <- removeFromRedis(uploadId)
-          _ <- PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)).toFox
+          _ <- PathUtils.deleteDirectoryRecursively(uploadDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
         } yield ()
       } else Fox.failure(s"Unknown upload")
   }
@@ -356,13 +346,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       datasetId <- getDatasetIdByUploadId(uploadId)
       _ = logger.info(s"Finishing dataset upload $uploadId of datasetId $datasetId ($dataSourceId)...")
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
-      uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
-      isS3UploadEnabled = dataStoreConfig.Datastore.S3Upload.enabled
-
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
 
-      unpackToDir = unpackToDirFor(dataSourceId, needsConversion)
+      unpackToDir = unpackToDirFor(dataSourceId)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
@@ -372,54 +360,88 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             needsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
       postProcessingResult <- Fox
-        .runIf(!needsConversion)(postProcessUploadedDataSource(needsConversion, unpackToDir, dataSourceId))
+        .runIf(!needsConversion)(exploreProcessUploadedDataSourceIfNeeded(needsConversion, unpackToDir, dataSourceId))
         .shiftBox
       _ <- cleanUpOnFailure(postProcessingResult,
                             datasetId,
                             dataSourceId,
                             needsConversion,
                             label = s"processing dataset at $unpackToDir")
-      dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.organizationId)
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
-      dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir)
-
+      dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId)
       linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- remoteWebknossosClient.reportUpload(
         datasetId,
-        datasetSizeBytes,
-        dataSourceWithAbsolutePathsOpt,
-        linkedLayerIdentifiers,
-        uploadInformation.needsConversion.getOrElse(false)
+        ReportDatasetUploadParameters(
+          uploadInformation.needsConversion.getOrElse(false),
+          datasetSizeBytes,
+          dataSourceWithAbsolutePathsOpt,
+          linkedLayerIdentifiers.layersToLink.getOrElse(List.empty)
+        )
       ) ?~> "reportUpload.failed"
     } yield datasetId
   }
 
-  private def moveUnpackedToTarget(path: Path, needsConversion: Boolean, dataSourceId: DataSourceId): Fox[DataSource] =
-    // TODO move either to S3, to orgaDir/direcctoryName locally or to forConversion. Adapt paths
-    if (!needsConversion) {
-
-      for {
-        _ <- Fox.successful(())
-        s3UploadBucket <- s3UploadBucketOpt.toFox
-        beforeS3Upload = Instant.now
-        s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/$uploadId/"
-        _ <- uploadDirectoryToS3(unpackToDir, dataSource, s3UploadBucket, s3ObjectKey)
-        _ = Instant.logSince(beforeS3Upload,
-                             s"Upload of dataset ${dataSourceId.organizationId}/${dataSourceId.directoryName} to S3",
-                             logger)
-        endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
-        newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
-        s3DataSource <- dataSourceService.resolvePathsInNewBasePath(dataSource, newBasePath)
-        _ <- remoteWebknossosClient.updateDataSource(s3DataSource, datasetId)
-        _ = this.synchronized {
-          PathUtils.deleteDirectoryRecursively(unpackToDir)
+  private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: DataSource): Fox[Unit] =
+    for {
+      filesToDelete <- findNonReferencedFiles(unpackedDir, dataSource)
+      _ = if (filesToDelete.nonEmpty)
+        logger.info(s"Uploaded dataset contains files not referenced in the datasource. Deleting $filesToDelete...")
+      _ = filesToDelete.foreach(file => {
+        try {
+          // TODO move to trash instead?
+          Files.deleteIfExists(file)
+        } catch {
+          case e: Exception =>
+            logger.warn(s"Deletion failed for non-referenced file $file of uploaded dataset: ${e.getMessage}")
         }
-      } yield ()
-    } else Fox.successful(())
+      })
+    } yield ()
 
-  private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
-                                            unpackToDir: Path,
-                                            dataSourceId: DataSourceId): Fox[Unit] =
+  private def moveUnpackedToTarget(unpackedDir: Path,
+                                   needsConversion: Boolean,
+                                   datasetId: ObjectId,
+                                   dataSourceId: DataSourceId): Fox[Option[DataSource]] =
+    if (needsConversion) {
+      val forConversionPath =
+        dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
+      for {
+        _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
+      } yield None
+    } else {
+      for {
+        dataSourceFromDir <- Fox.successful(
+          dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId))
+        _ <- deleteFilesNotReferencedInDataSource(unpackedDir, dataSourceFromDir)
+        newBasePath <- if (dataStoreConfig.Datastore.S3Upload.enabled) {
+          for {
+            s3UploadBucket <- s3UploadBucketOpt.toFox
+            beforeS3Upload = Instant.now
+            s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/"
+            _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
+            _ = Instant.logSince(beforeS3Upload,
+                                 s"Forwarding of uploaded of dataset $datasetId ($dataSourceId) to S3",
+                                 logger)
+            endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
+            newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
+          } yield newBasePath
+        } else {
+          val finalUploadedLocalPath =
+            dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+          for {
+            _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
+          } yield UPath.fromLocalPath(finalUploadedLocalPath)
+        }
+        dataSourceWithAdaptedPaths <- dataSourceService.resolvePathsInNewBasePath(dataSourceFromDir, newBasePath)
+        _ = this.synchronized {
+          PathUtils.deleteDirectoryRecursively(unpackedDir)
+        }
+      } yield Some(dataSourceWithAdaptedPaths)
+    }
+
+  private def exploreProcessUploadedDataSourceIfNeeded(datasetNeedsConversion: Boolean,
+                                                       unpackToDir: Path,
+                                                       dataSourceId: DataSourceId): Fox[Unit] =
     if (datasetNeedsConversion)
       Fox.successful(())
     else {
@@ -493,8 +515,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
         (accessKeyId, secretAccessKey)
     }
+
   private lazy val s3UploadBucketOpt: Option[String] =
     S3DataVault.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
+
   private lazy val s3UploadEndpoint: URI = {
     val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
     new URI(
@@ -507,48 +531,32 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       null
     )
   }
-  private lazy val s3ClientBox: Box[S3AsyncClient] = for {
+
+  private lazy val getS3TransferManager: Box[S3TransferManager] = for {
     accessKeyId <- Box(s3UploadCredentialsOpt.map(_._1))
     secretAccessKey <- Box(s3UploadCredentialsOpt.map(_._2))
-  } yield
-    S3AsyncClient
-      .builder()
-      .credentialsProvider(
-        StaticCredentialsProvider.create(
+    client <- tryo(
+      S3AsyncClient
+        .builder()
+        .credentialsProvider(StaticCredentialsProvider.create(
           AwsBasicCredentials.builder.accessKeyId(accessKeyId).secretAccessKey(secretAccessKey).build()
         ))
-      .crossRegionAccessEnabled(true)
-      .forcePathStyle(true)
-      .endpointOverride(s3UploadEndpoint)
-      .region(Region.US_EAST_1)
-      // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-      .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-      .build()
-
-  private lazy val transferManagerBox: Box[S3TransferManager] = for {
-    client <- s3ClientBox
+        .crossRegionAccessEnabled(true)
+        .forcePathStyle(true)
+        .endpointOverride(s3UploadEndpoint)
+        .region(Region.US_EAST_1)
+        // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
+        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+        .build())
   } yield S3TransferManager.builder().s3Client(client).build()
 
   private def uploadDirectoryToS3(
       dataDir: Path,
-      dataSource: DataSource,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      // Delete all files in the dataDir that are not at a mag path or an attachment path, since we do not need to upload them to S3.
-      filesToDelete <- getNonReferencedFiles(dataDir, dataSource)
-      _ = filesToDelete.foreach(file => {
-        logger.info(s"Deleting file $file before upload to S3.")
-        try {
-          Files.deleteIfExists(file)
-        } catch {
-          case e: Exception =>
-            logger.warn(s"Could not delete file $file before upload to S3: ${e.getMessage}")
-        }
-      })
-      transferManager <- transferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
+      transferManager <- getS3TransferManager.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )
@@ -558,7 +566,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
 
-  private def getNonReferencedFiles(dataDir: Path, dataSource: DataSource): Fox[List[Path]] =
+  private def findNonReferencedFiles(unpackedDir: Path, dataSource: DataSource): Fox[List[Path]] =
     for {
       usableDataSource <- dataSource.toUsable.toFox ?~> "Data source is not usable"
       explicitPaths: Set[Path] = usableDataSource.dataLayers
@@ -566,15 +574,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           layer.mags.map(mag =>
             mag.path match {
               case Some(_) => None
-              case None    => Some(dataDir.resolve(List(layer.name, mag.mag.toMagLiteral(true)).mkString("/")))
+              case None    => Some(unpackedDir.resolve(List(layer.name, mag.mag.toMagLiteral(true)).mkString("/")))
           }))
         .flatten
         .toSet
       neededPaths = usableDataSource.dataLayers
         .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
-        .map(dataDir.resolve)
+        .map(unpackedDir.resolve)
         .toSet ++ explicitPaths
-      allFiles <- PathUtils.listFilesRecursive(dataDir, silent = true, maxDepth = 10).toFox
+      allFiles <- PathUtils.listFilesRecursive(unpackedDir, silent = true, maxDepth = 10).toFox
       filesToDelete = allFiles.filterNot(file => neededPaths.exists(neededPath => file.startsWith(neededPath)))
     } yield filesToDelete
 
@@ -624,13 +632,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- Fox.fromBool(list.forall(identity))
     } yield ()
 
-  private def unpackToDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
-    val orgaDir = dataBaseDir.resolve(dataSourceId.organizationId)
-    if (datasetNeedsConversion)
-      orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
-    else
-      orgaDir.resolve(uploadingDir).resolve(unpackedDir).resolve(dataSourceId.directoryName)
-  }
+  private def unpackToDirFor(dataSourceId: DataSourceId): Path =
+    dataBaseDir
+      .resolve(dataSourceId.organizationId)
+      .resolve(uploadingDir)
+      .resolve(unpackedDir)
+      .resolve(dataSourceId.directoryName)
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
     if (looksLikeExploredDataSource(dataSourceDir).getOrElse(false)) {

@@ -20,11 +20,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DataSourceValidation
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
-  LinkedLayerIdentifier,
   ReserveAttachmentUploadToPathRequest,
-  ReserveDatasetUploadToPathsRequest,
-  ReserveDatasetUploadToPathsForPreliminaryRequest
+  ReserveDatasetUploadToPathsForPreliminaryRequest,
+  ReserveDatasetUploadToPathsRequest
 }
 import models.organization.OrganizationDAO
 import models.user.User

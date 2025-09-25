@@ -150,6 +150,7 @@ import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -694,16 +695,16 @@ function getNodeContextMenuOptions({
       onClick: () => Store.dispatch(setActiveNodeAction(clickedNodeId)),
       label: "Select this Node",
     },
-    activeTreeId === clickedTree.treeId
-      ? {
-          key: "focus-tree",
-          onClick: () => {
-            Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
-            Store.dispatch(focusTreeAction(clickedTree));
-          },
-          label: "Focus Tree in Skeleton Tab",
-        }
-      : null,
+    {
+      key: "focus-tree",
+      onClick: () => {
+        Store.dispatch(setActiveNodeAction(clickedNodeId));
+        Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
+        Store.dispatch(focusTreeAction(clickedTree));
+        layoutEmitter.emit(LayoutEvents.showSkeletonTab);
+      },
+      label: "Activate & Focus Tree in Skeleton Tab",
+    },
     getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, isVolumeModificationAllowed),
     ...(allowUpdate
       ? [
@@ -1081,6 +1082,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
+    layoutEmitter.emit(LayoutEvents.showSegmentsTab);
   };
 
   const onlyShowSegment = () => {

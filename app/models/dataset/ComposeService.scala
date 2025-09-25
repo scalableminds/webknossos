@@ -64,13 +64,9 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      editedLayer: StaticLayer <- layer match {
-        case l: StaticLayer =>
-          Fox.successful(
-            l.mapped(name = composeLayer.newName,
-                     coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations)))
-        case _ => Fox.failure("Unsupported layer type for composition: " + layer.getClass.getSimpleName)
-      }
+      editedLayer = layer.mapped(name = composeLayer.newName,
+                                 coordinateTransformations =
+                                   applyCoordinateTransformations(layer.coordinateTransformations))
     } yield editedLayer
 
   private def isComposable(composeRequest: ComposeRequest)(implicit ctx: DBAccessContext): Fox[Boolean] =

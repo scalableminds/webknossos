@@ -2963,15 +2963,6 @@ class UtilsApi {
       unregister: keyboard.destroy.bind(keyboard),
     };
   }
-
-  waitForAction(actionType: string): Promise<any> {
-    return new Promise((resolve) => {
-      const unsubscribe = eventBus.on(actionType, (payload) => {
-        unsubscribe();
-        resolve(payload);
-      });
-    });
-  }
 }
 
 export type ApiInterface = {

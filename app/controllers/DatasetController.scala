@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -25,6 +26,7 @@ import models.dataset.explore.{
 }
 import models.folder.FolderService
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -52,12 +54,6 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
-}
-
-case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-
-object LinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -121,7 +117,7 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[String], dataStoreName: String)
+case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[ObjectId], dataStoreName: String)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -142,6 +138,7 @@ class DatasetController @Inject()(userService: UserService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
+                                  usedStorageService: UsedStorageService,
                                   conf: WkConf,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -212,7 +209,7 @@ class DatasetController @Inject()(userService: UserService,
           request.body.datasetName,
           dataStore,
           dataSource,
-          folderIdOpt.map(_.toString),
+          folderIdOpt,
           request.identity
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
@@ -236,6 +233,11 @@ class DatasetController @Inject()(userService: UserService,
           request.body.folderId,
           user
         )
+        _ <- datasetService.trackNewDataset(dataset,
+                                            user,
+                                            needsConversion = false,
+                                            datasetSizeBytes = 0,
+                                            viaAddRoute = false)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -654,6 +656,12 @@ class DatasetController @Inject()(userService: UserService,
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+        _ <- datasetService.trackNewDataset(dataset,
+                                            request.identity,
+                                            needsConversion = false,
+                                            datasetSizeBytes = 0,
+                                            viaAddRoute = false)
       } yield Ok
     }
 

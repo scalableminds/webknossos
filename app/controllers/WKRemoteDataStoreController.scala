@@ -1,16 +1,20 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.DataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  UnusableDataSource
+}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
-  LinkedLayerIdentifier,
   ReportDatasetUploadParameters,
   ReserveAdditionalInformation,
   ReserveUploadInformation
@@ -19,13 +23,12 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
-import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
-import models.user.{User, UserDAO, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
+import models.user.UserDAO
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -38,13 +41,12 @@ class WKRemoteDataStoreController @Inject()(
     datasetService: DatasetService,
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
-    userService: UserService,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
+    layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
     datasetLayerDAO: DatasetLayerDAO,
     userDAO: UserDAO,
-    folderDAO: FolderDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
@@ -71,21 +73,17 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
-          folderId = uploadInfo.folderId.getOrElse(organization._rootFolder)
-          _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          newDatasetId = ObjectId.generate
+          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
+            layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
             datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
-          dataset <- datasetService.createPreliminaryDataset(newDatasetId,
-                                                             uploadInfo.name,
-                                                             datasetService.generateDirectoryName(uploadInfo.name,
-                                                                                                  newDatasetId),
-                                                             uploadInfo.organization,
-                                                             dataStore) ?~> "dataset.upload.creation.failed"
-          _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
+          preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
+          dataset <- datasetService.createVirtualDataset(uploadInfo.name,
+                                                         dataStore,
+                                                         preliminaryDataSource,
+                                                         uploadInfo.folderId,
+                                                         user) ?~> "dataset.upload.creation.failed"
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
-          _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
       }
@@ -120,16 +118,6 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
-                                  requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(layerIdentifier.datasetId)(AuthorizedAccessContext(requestingUser)) ?~> Messages(
-        "dataset.notFound",
-        layerIdentifier.datasetId) ~> NOT_FOUND
-      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
-      _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
-    } yield ()
-
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
@@ -145,7 +133,18 @@ class WKRemoteDataStoreController @Inject()(
                                               request.body.needsConversion,
                                               request.body.datasetSizeBytes,
                                               viaAddRoute = false)
-          // TODO update dataset in db with layersToLink
+          dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
+            implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
+            layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
+          }
+          _ <- Fox.runOptional(dataSourceWithLinkedLayersOpt) { dataSource =>
+            logger.info(s"Updating dataset $datasetId in database after upload reported from datastore $name.")
+            datasetDAO.updateDataSource(datasetId,
+                                        dataset._dataStore,
+                                        dataSource.hashCode(),
+                                        dataSource,
+                                        isUsable = true)(GlobalAccessContext)
+          }
         } yield Ok
       }
     }

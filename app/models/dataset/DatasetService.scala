@@ -85,36 +85,25 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  // TODO consolidate with createVirtualDataset?
-  def createPreliminaryDataset(newDatasetId: ObjectId,
-                               datasetName: String,
-                               datasetDirectoryName: String,
-                               organizationId: String,
-                               dataStore: DataStore): Fox[Dataset] = {
-    val unusableDataSource =
-      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, DataSourceStatus.notYetUploaded)
-    createDataset(dataStore, newDatasetId, datasetName, unusableDataSource, isVirtual = true)
-  }
-
   def createVirtualDataset(datasetName: String,
                            dataStore: DataStore,
-                           dataSource: UsableDataSource,
-                           folderId: Option[String],
+                           dataSource: DataSource,
+                           folderId: Option[ObjectId],
                            user: User): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
-      _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
+      folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
       dataset <- createDataset(dataStore,
                                newDatasetId,
                                datasetName,
-                               dataSource.copy(id = DataSourceId(directoryName, organization._id)),
+                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
                                isVirtual = true)
       datasetId = dataset._id
-      _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
+      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
     } yield dataset
 

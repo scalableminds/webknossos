@@ -33,6 +33,7 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.libs.Files
@@ -63,6 +64,7 @@ class DataSourceController @Inject()(
     segmentIndexFileService: SegmentIndexFileService,
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
+    slackNotificationService: DSSlackNotificationService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
@@ -183,7 +185,7 @@ class DataSourceController @Inject()(
     }
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log() {
+    log(Some(slackNotificationService.noticeFailedFinishUpload)) {
       for {
         datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
         response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {

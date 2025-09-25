@@ -250,27 +250,23 @@ class DataSourceService @Inject()(
     }
   }
 
-  def resolvePathsInNewBasePath(dataSource: DataSource, newBasePath: UPath): Fox[DataSource] =
-    dataSource.toUsable match {
-      case Some(usableDataSource) =>
-        val updatedDataLayers = usableDataSource.dataLayers.map { layer =>
-          layer.mapped(
-            magMapping = mag =>
-              mag.path match {
-                case Some(existingMagPath) => mag.copy(path = Some(existingMagPath.resolvedIn(newBasePath)))
-                // If the mag does not have a path, it is an implicit path, we need to make it explicit.
-                case _ =>
-                  mag.copy(
-                    path = Some(newBasePath / layer.name / mag.mag.toMagLiteral(true))
-                  )
-            },
-            attachmentMapping = _.resolvedIn(newBasePath)
-          )
-        }
-        Fox.successful(usableDataSource.copy(dataLayers = updatedDataLayers))
-      case None =>
-        Fox.failure("Cannot replace paths of unusable datasource")
+  def resolvePathsInNewBasePath(dataSource: UsableDataSource, newBasePath: UPath): UsableDataSource = {
+    val updatedDataLayers = dataSource.dataLayers.map { layer =>
+      layer.mapped(
+        magMapping = mag =>
+          mag.path match {
+            case Some(existingMagPath) => mag.copy(path = Some(existingMagPath.resolvedIn(newBasePath)))
+            // If the mag does not have a path, it is an implicit path, we need to make it explicit.
+            case _ =>
+              mag.copy(
+                path = Some(newBasePath / layer.name / mag.mag.toMagLiteral(true))
+              )
+        },
+        attachmentMapping = _.resolvedIn(newBasePath)
+      )
     }
+    dataSource.copy(dataLayers = updatedDataLayers)
+  }
 
   private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =
     dataSource.dataLayers.map(dataLayer => {

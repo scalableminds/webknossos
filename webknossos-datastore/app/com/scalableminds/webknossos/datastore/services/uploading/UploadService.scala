@@ -69,7 +69,7 @@ object ReserveAdditionalInformation {
 case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
     datasetSizeBytes: Long,
-    dataSourceOpt: Option[DataSource], // must be set if needsConversion is false
+    dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier]
 )
 object ReportDatasetUploadParameters {
@@ -303,7 +303,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                      String.valueOf(currentChunkNumber))
             val errorMsg =
-              s"Error receiving chunk $currentChunkNumber for uploadId $uploadId (datsetId $datasetId): ${e.getMessage}"
+              s"Error receiving chunk $currentChunkNumber for uploadId $uploadId (datasetId $datasetId): ${e.getMessage}"
             logger.warn(errorMsg)
             Fox.failure(errorMsg)
         }
@@ -344,7 +344,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       datasetId <- getDatasetIdByUploadId(uploadId)
+      linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ = logger.info(s"Finishing dataset upload $uploadId of datasetId $datasetId ($dataSourceId)...")
+      _ <- Fox.fromBool(
+        !uploadInformation.needsConversion.getOrElse(false) || !linkedLayerIdentifiers.layersToLink
+          .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
@@ -367,7 +371,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             label = s"processing dataset at $unpackToDir")
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
       dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId)
-      linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
+
       _ <- remoteWebknossosClient.reportUpload(
         datasetId,
         ReportDatasetUploadParameters(
@@ -380,7 +384,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield datasetId
   }
 
-  private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: DataSource): Fox[Unit] =
+  private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: UsableDataSource): Fox[Unit] =
     for {
       filesToDelete <- findNonReferencedFiles(unpackedDir, dataSource)
       _ = if (filesToDelete.nonEmpty)
@@ -399,7 +403,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def moveUnpackedToTarget(unpackedDir: Path,
                                    needsConversion: Boolean,
                                    datasetId: ObjectId,
-                                   dataSourceId: DataSourceId): Fox[Option[DataSource]] =
+                                   dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       val forConversionPath =
         dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
@@ -410,7 +414,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       for {
         dataSourceFromDir <- Fox.successful(
           dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId))
-        _ <- deleteFilesNotReferencedInDataSource(unpackedDir, dataSourceFromDir)
+        usableDataSourceFromDir <- dataSourceFromDir.toUsable.toFox ?~> s"Invalid dataset uploaded: ${dataSourceFromDir.statusOpt
+          .getOrElse("")}"
+        _ <- deleteFilesNotReferencedInDataSource(unpackedDir, usableDataSourceFromDir)
         newBasePath <- if (dataStoreConfig.Datastore.S3Upload.enabled) {
           for {
             s3UploadBucket <- s3UploadBucketOpt.toFox
@@ -430,7 +436,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
           } yield UPath.fromLocalPath(finalUploadedLocalPath)
         }
-        dataSourceWithAdaptedPaths <- dataSourceService.resolvePathsInNewBasePath(dataSourceFromDir, newBasePath)
+        dataSourceWithAdaptedPaths = dataSourceService.resolvePathsInNewBasePath(usableDataSourceFromDir, newBasePath)
         _ = this.synchronized {
           PathUtils.deleteDirectoryRecursively(unpackedDir)
         }
@@ -564,25 +570,27 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
 
-  private def findNonReferencedFiles(unpackedDir: Path, dataSource: DataSource): Fox[List[Path]] =
+  private def findNonReferencedFiles(unpackedDir: Path, dataSource: UsableDataSource): Fox[List[Path]] = {
+    val explicitPaths: Set[Path] = dataSource.dataLayers
+      .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
+      .map(unpackedDir.resolve)
+      .toSet
+    val additionalMagPaths: Set[Path] = dataSource.dataLayers
+      .flatMap(layer =>
+        layer.mags.map(mag =>
+          mag.path match {
+            case Some(_) => None
+            case None    => Some(unpackedDir.resolve(List(layer.name, mag.mag.toMagLiteral(true)).mkString("/")))
+        }))
+      .flatten
+      .toSet
+
+    val allReferencedPaths = explicitPaths ++ additionalMagPaths
     for {
-      usableDataSource <- dataSource.toUsable.toFox ?~> "Data source is not usable"
-      explicitPaths: Set[Path] = usableDataSource.dataLayers
-        .flatMap(layer =>
-          layer.mags.map(mag =>
-            mag.path match {
-              case Some(_) => None
-              case None    => Some(unpackedDir.resolve(List(layer.name, mag.mag.toMagLiteral(true)).mkString("/")))
-          }))
-        .flatten
-        .toSet
-      neededPaths = usableDataSource.dataLayers
-        .flatMap(layer => layer.allExplicitPaths.flatMap(_.toLocalPath))
-        .map(unpackedDir.resolve)
-        .toSet ++ explicitPaths
       allFiles <- PathUtils.listFilesRecursive(unpackedDir, silent = true, maxDepth = 10).toFox
-      filesToDelete = allFiles.filterNot(file => neededPaths.exists(neededPath => file.startsWith(neededPath)))
+      filesToDelete = allFiles.filterNot(file => allReferencedPaths.exists(neededPath => file.startsWith(neededPath)))
     } yield filesToDelete
+  }
 
   private def cleanUpOnFailure[T](result: Box[T],
                                   datasetId: ObjectId,

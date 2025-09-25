@@ -64,7 +64,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName,
                                                   organization._id,
                                                   parameters.pathPrefix)
-      dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths, parameters.layersToLink)
+      dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths,
+                                                                                   parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
@@ -209,8 +210,6 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       TextUtils.normalizeStrong(attachmentName).getOrElse(s"$attachmentType-${ObjectId.generate}")
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
-
-
 
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
       implicit ec: ExecutionContext,

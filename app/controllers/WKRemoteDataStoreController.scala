@@ -16,8 +16,6 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-import mail.{MailchimpClient, MailchimpTag}
-import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
@@ -26,13 +24,11 @@ import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
-import models.user.{MultiUserDAO, User, UserDAO, UserService}
+import models.user.{User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import telemetry.SlackNotificationService
-import utils.WkConf
 
 import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
@@ -42,7 +38,6 @@ class WKRemoteDataStoreController @Inject()(
     datasetService: DatasetService,
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
-    analyticsService: AnalyticsService,
     userService: UserService,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
@@ -52,12 +47,8 @@ class WKRemoteDataStoreController @Inject()(
     folderDAO: FolderDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
-    multiUserDAO: MultiUserDAO,
     credentialDAO: CredentialDAO,
     annotationDAO: AnnotationDAO,
-    mailchimpClient: MailchimpClient,
-    slackNotificationService: SlackNotificationService,
-    conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -144,30 +135,20 @@ class WKRemoteDataStoreController @Inject()(
                           token: String,
                           datasetId: ObjectId): Action[ReportDatasetUploadParameters] =
     Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
-      dataStoreService.validateAccess(name, key) { dataStore =>
+      dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- Fox.runIf(!request.body.needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute = false))
-          _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, request.body.datasetSizeBytes))
-          _ = if (!request.body.needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+          _ <- datasetService.trackNewDataset(dataset,
+                                              user,
+                                              request.body.needsConversion,
+                                              request.body.datasetSizeBytes,
+                                              viaAddRoute = false)
           // TODO update dataset in db with layersToLink
-        } yield Ok(Json.obj("id" -> dataset._id))
+        } yield Ok
       }
     }
-
-  // TODO do this for the new add codepath
-  private def logUploadToSlack(user: User, datasetId: ObjectId, viaAddRoute: Boolean): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      resultLink = s"${conf.Http.uri}/datasets/$datasetId"
-      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
-      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
-                                        s"For organization: ${organization.name}. <$resultLink|Result>")
-    } yield ()
 
   def statusUpdate(name: String, key: String): Action[DataStoreStatus] = Action.async(validateJson[DataStoreStatus]) {
     implicit request =>

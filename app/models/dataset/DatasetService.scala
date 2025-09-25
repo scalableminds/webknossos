@@ -21,12 +21,16 @@ import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
-import models.user.{User, UserService}
+import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import mail.{MailchimpClient, MailchimpTag}
+import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
+import telemetry.SlackNotificationService
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.duration._
@@ -40,10 +44,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetMagsDAO: DatasetMagsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
+                               multiUserDAO: MultiUserDAO,
+                               mailchimpClient: MailchimpClient,
+                               analyticsService: AnalyticsService,
+                               slackNotificationService: SlackNotificationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               conf: WkConf,
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -545,6 +554,29 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Some(prefix) => s"$prefix-$datasetId"
       case None         => datasetId.toString
     }
+
+  def trackNewDataset(dataset: Dataset,
+                      user: User,
+                      needsConversion: Boolean,
+                      datasetSizeBytes: Long,
+                      viaAddRoute: Boolean): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(!needsConversion)(logDatasetUploadToSlack(user, dataset._id, viaAddRoute))
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext)
+      _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
+      _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+    } yield ()
+
+  private def logDatasetUploadToSlack(user: User, datasetId: ObjectId, viaAddRoute: Boolean): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      resultLink = s"${conf.Http.uri}/datasets/$datasetId"
+      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
+      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
+                                        s"For organization: ${organization.name}. <$resultLink|Result>")
+    } yield ()
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

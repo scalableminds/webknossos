@@ -26,6 +26,7 @@ import models.dataset.explore.{
 }
 import models.folder.FolderService
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -137,6 +138,7 @@ class DatasetController @Inject()(userService: UserService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
+                                  usedStorageService: UsedStorageService,
                                   conf: WkConf,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -231,6 +233,11 @@ class DatasetController @Inject()(userService: UserService,
           request.body.folderId,
           user
         )
+        _ <- datasetService.trackNewDataset(dataset,
+                                            user,
+                                            needsConversion = false,
+                                            datasetSizeBytes = 0,
+                                            viaAddRoute = false)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -649,6 +656,12 @@ class DatasetController @Inject()(userService: UserService,
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+        _ <- datasetService.trackNewDataset(dataset,
+                                            request.identity,
+                                            needsConversion = false,
+                                            datasetSizeBytes = 0,
+                                            viaAddRoute = false)
       } yield Ok
     }
 

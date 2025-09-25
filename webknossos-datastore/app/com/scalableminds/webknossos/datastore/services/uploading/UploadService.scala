@@ -359,9 +359,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             dataSourceId,
                             needsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      postProcessingResult <- Fox
-        .runIf(!needsConversion)(exploreProcessUploadedDataSourceIfNeeded(needsConversion, unpackToDir, dataSourceId))
-        .shiftBox
+      postProcessingResult <- exploreUploadedDataSourceIfNeeded(needsConversion, unpackToDir, dataSourceId).shiftBox
       _ <- cleanUpOnFailure(postProcessingResult,
                             datasetId,
                             dataSourceId,
@@ -439,10 +437,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield Some(dataSourceWithAdaptedPaths)
     }
 
-  private def exploreProcessUploadedDataSourceIfNeeded(datasetNeedsConversion: Boolean,
-                                                       unpackToDir: Path,
-                                                       dataSourceId: DataSourceId): Fox[Unit] =
-    if (datasetNeedsConversion)
+  private def exploreUploadedDataSourceIfNeeded(needsConversion: Boolean,
+                                                unpackToDir: Path,
+                                                dataSourceId: DataSourceId): Fox[Unit] =
+    if (needsConversion)
       Fox.successful(())
     else {
       for {

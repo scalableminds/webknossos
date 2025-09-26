@@ -3,6 +3,10 @@ const path = require("node:path");
 const fs = require("node:fs");
 const os = require("node:os");
 
+const express = require("express");
+
+const app = express();
+
 const srcPath = path.resolve(__dirname, "frontend/javascripts/");
 const outputPath  = path.resolve(__dirname, "public/bundle/");
 const protoPath = path.join(__dirname, "webknossos-datastore/proto");
@@ -27,6 +31,11 @@ const target = browserslistToEsbuild([
   "last 1 iOS versions",
 ]);
 
+function now() {
+  const d = new Date();
+  return d.toISOString().replace("T", " ").replace("Z", "");
+}
+
 async function build(env = {}) {
   const isProduction = env.production || process.env.NODE_ENV === "production";
   const isWatch = env.watch;
@@ -37,10 +46,40 @@ async function build(env = {}) {
     ? path.join(os.tmpdir(), "webknossos-esbuild-dev")
     : outputPath;
 
+  console.log("buildOutDir", buildOutDir);
+
   if (isWatch) {
     // Ensure a clean, stable directory for development builds
     fs.rmSync(buildOutDir, { recursive: true, force: true });
     fs.mkdirSync(buildOutDir, { recursive: true });
+  }
+
+  let onBuildDone = () => {}
+
+  // Track ongoing builds so that incoming requests can be paused until all builds are finished.
+  let currentBuildCount = 0;
+  let buildStartTime = null;
+  let buildCounterPlugin = {
+    name: 'buildCounterPlugin',
+    setup(build) {
+      build.onStart(() => {
+        if (currentBuildCount === 0) {
+          buildStartTime = performance.now();
+        }
+        currentBuildCount++;
+        console.log(now(), 'build started. currentBuildCount=', currentBuildCount)
+      })
+      build.onEnd(() => {
+        currentBuildCount--;
+        if (currentBuildCount === 0) {
+          console.log("Build took", performance.now() - buildStartTime);
+        }
+        console.log(now(), 'build ended. currentBuildCount=', currentBuildCount)
+        if (currentBuildCount === 0) {
+          onBuildDone();
+        }
+      })
+    },
   }
 
   const plugins = [
@@ -59,7 +98,8 @@ async function build(env = {}) {
       ],
     }),
     createWorkerPlugin({ logLevel: env.logLevel }), // Resolves import Worker from myFunc.worker;
-    esbuildPluginWorker() // Resolves new Worker(myWorker.js)
+    esbuildPluginWorker(), // Resolves new Worker(myWorker.js)
+    buildCounterPlugin
   ];
 
 
@@ -103,7 +143,7 @@ async function build(env = {}) {
     alias: {
       react: path.resolve(__dirname, "node_modules/react"),
     },
-    plugins: plugins,
+    plugins,
     external: ["/assets/images/*", "fs"],
     logLevel: env.logLevel || "info",
     legalComments: isProduction ? "inline" : "none",
@@ -117,21 +157,36 @@ async function build(env = {}) {
   if (env.watch) {
     // Development server mode
     const ctx = await esbuild.context(buildOptions);
-    
-    const { host, port } = await ctx.serve({
-      servedir: buildOutDir,
-      port: env.PORT || 9002,
-      onRequest: (args) => {
-        if (env.logLevel === "verbose") {
-          console.log(`[${args.method}] ${args.path} - status ${args.status}`);
-        }
-      },
+    const port = env.PORT || 9002;
+
+    // queue for waiting requests
+    let waiting = [];
+
+    function gateMiddleware(req, res, next) {
+      if (currentBuildCount === 0) {
+        return next(); // allow immediately
+      }
+
+      // hold request
+      waiting.push({ req, res, next });
+    }
+
+    app.use("/", gateMiddleware, express.static(buildOutDir));
+
+    onBuildDone = function releaseRequests() {
+      const queued = waiting;
+      waiting = [];
+      queued.forEach(({ next }) => {
+        return next();
+      });
+    }
+
+    app.listen(port, "127.0.0.1", () => {
+      console.log(`Server running at http://localhost:${port}/assets/bundle/`);
     });
     
-    console.log(`Development server running at http://${host}:${port}`);
+    console.log(`Development server running at http://localhost:${port}`);
     console.log(`Serving files from temporary directory: ${buildOutDir}`);
-    
-    await ctx.watch();
     
     process.on("SIGINT", async () => {
       await ctx.dispose();

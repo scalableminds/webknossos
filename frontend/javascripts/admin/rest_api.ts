@@ -855,6 +855,10 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
+export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+  args.join("::"),
+);
+
 export function getSegmentVolumes(
   requestUrl: string,
   mag: Vector3,
@@ -1927,23 +1931,24 @@ export function computeAdHocMesh(
 }
 
 export function getBucketPositionsForAdHocMesh(
-  tracingStoreUrl: string,
-  tracingId: string,
+  requestUrl: string,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);
     const positions = await Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
       {
         data: {
           cubeSize,
           mag,
           additionalCoordinates,
+          mappingName,
         },
         method: "POST",
       },

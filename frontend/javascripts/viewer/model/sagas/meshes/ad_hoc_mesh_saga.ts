@@ -1,7 +1,7 @@
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
-  hasSegmentIndexInDataStore,
+  hasSegmentIndexInDataStoreCached,
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import ThreeDMap from "libs/ThreeDMap";
@@ -322,8 +322,9 @@ function* loadFullAdHocMesh(
 
   const cubeSize = marchingCubeSizeInTargetMag();
   const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
-  const datasetId = yield* select((state) => state.dataset.id);
-  const datastoreUrl = yield* select((state) => state.dataset.dataStore.url);
+  const dataset = yield* select((state) => state.dataset);
+  const datasetId = dataset.id;
+  const datastoreUrl = dataset.dataStore.url;
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -338,13 +339,11 @@ function* loadFullAdHocMesh(
     useDataStore = false;
   }
 
-  const dataset = yield* select((state) => state.dataset);
-
   let isStaticSegmentationLayerWithSegmentIndex = false;
 
   if (visibleSegmentationLayer != null && volumeTracing == null) {
     isStaticSegmentationLayerWithSegmentIndex = yield* call(
-      hasSegmentIndexInDataStore,
+      hasSegmentIndexInDataStoreCached,
       dataset.dataStore.url,
       dataset.id,
       visibleSegmentationLayer?.name,
@@ -365,12 +364,6 @@ function* loadFullAdHocMesh(
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
   const requestUrl = useDataStore ? dataStoreUrl : tracingStoreUrl;
-
-  // TODO: also use segment index if there is no volume tracing, but a static segmentation layer that has a segment index file.
-  //       build requestUrl to go to the dataset’s datastore instead.
-  //       use hasSegmentIndexInDataStore from rest_api. (should probably be cached)
-  //       let’s skip the volumeTracing+editableMapping case for this issue,
-  //       even though it could also be added by combining the segment index entries for the oversegment ids
 
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(

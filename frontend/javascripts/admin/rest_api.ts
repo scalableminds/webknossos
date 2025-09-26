@@ -855,6 +855,8 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
+export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore);
+
 export function getSegmentVolumes(
   requestUrl: string,
   mag: Vector3,

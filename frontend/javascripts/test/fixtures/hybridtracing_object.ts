@@ -18,7 +18,7 @@ export const colorLayer: APIColorLayer = {
     height: 256,
     depth: 256,
   },
-  resolutions: [
+  mags: [
     [1, 1, 1],
     [2, 2, 1],
     [4, 4, 1],

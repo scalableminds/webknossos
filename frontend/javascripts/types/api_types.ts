@@ -92,7 +92,7 @@ export type CoordinateTransformation = AffineTransformation | ThinPlateSplineTra
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
-  readonly resolutions: Array<Vector3>;
+  readonly mags: Array<Vector3>;
   readonly elementClass: ElementClass;
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalAxes: Array<AdditionalAxis> | null;

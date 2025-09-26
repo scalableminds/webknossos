@@ -21,8 +21,8 @@ const zoomedOutState = update(initialState, {
     dataSource: {
       dataLayers: {
         [0]: {
-          // More resolutions are needed to reach the state where all tools are disabled.
-          resolutions: {
+          // More mags are needed to reach the state where all tools are disabled.
+          mags: {
             $set: [
               [1, 1, 1],
               [2, 2, 2],
@@ -35,7 +35,7 @@ const zoomedOutState = update(initialState, {
           },
         },
         [1]: {
-          resolutions: {
+          mags: {
             $set: [
               [1, 1, 1],
               [2, 2, 2],

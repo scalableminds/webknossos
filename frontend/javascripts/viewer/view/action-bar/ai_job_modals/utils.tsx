@@ -43,11 +43,11 @@ export const getBestFittingMagComparedToTrainingDS = (
 ) => {
   if (jobType === APIJobType.INFER_MITOCHONDRIA) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
-    const magInfo = getMagInfo(colorLayer.resolutions);
+    const magInfo = getMagInfo(colorLayer.mags);
     return magInfo.getFinestMag();
   }
   const modelScale = MEAN_VX_SIZE[jobType];
-  let closestMagOfCurrentDS = colorLayer.resolutions[0];
+  let closestMagOfCurrentDS = colorLayer.mags[0];
   let bestDifference = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -56,7 +56,7 @@ export const getBestFittingMagComparedToTrainingDS = (
 
   const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
 
-  for (const mag of colorLayer.resolutions) {
+  for (const mag of colorLayer.mags) {
     const diff = datasetScaleInNm.map((dim, i) =>
       Math.abs(Math.log(dim * mag[i]) - Math.log(modelScale[i])),
     );

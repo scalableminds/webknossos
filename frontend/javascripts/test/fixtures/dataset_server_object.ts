@@ -10,7 +10,7 @@ const sampleColorLayer: APIColorLayer = {
     height: 10240,
     depth: 10240,
   },
-  resolutions: [
+  mags: [
     [1, 1, 1],
     [2, 2, 2],
     [32, 32, 32], // unsorted on purpose
@@ -33,7 +33,7 @@ const sampleSegmentationLayer: APISegmentationLayer = {
     height: 10240,
     depth: 10240,
   },
-  resolutions: [
+  mags: [
     [1, 1, 1],
     [2, 2, 2],
     [32, 32, 32], // unsorted on purpose

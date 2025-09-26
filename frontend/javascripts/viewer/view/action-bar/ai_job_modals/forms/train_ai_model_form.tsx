@@ -112,7 +112,7 @@ type TrainingAnnotation = {
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);
-  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+  return colorLayer != null ? getMagInfo(colorLayer.mags).getMagList() : null;
 };
 
 const getTrainingAnnotations = (values: any) => {

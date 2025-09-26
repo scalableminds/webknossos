@@ -148,7 +148,7 @@ export function* prepareQuickSelect(
   const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
-    _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
+    _.intersectionBy(colorLayer.mags, volumeLayer.mags, (mag) => mag.join("-")),
   );
   const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,

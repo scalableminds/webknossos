@@ -51,7 +51,7 @@ describe("DataCube", () => {
 
   beforeEach<TestContext>(async (context) => {
     const mockedLayer = {
-      resolutions: [
+      mags: [
         [1, 1, 1],
         [2, 2, 2],
         [4, 4, 4],
@@ -60,7 +60,7 @@ describe("DataCube", () => {
         [32, 32, 32],
       ] as Vector3[],
     };
-    const magInfo = new MagInfo(mockedLayer.resolutions);
+    const magInfo = new MagInfo(mockedLayer.mags);
     const cube = new DataCube(
       new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
       [],
@@ -275,9 +275,9 @@ describe("DataCube", () => {
 describe.skip("DataCube Benchmark", () => {
   it("Benchmark", () => {
     const mockedLayer = {
-      resolutions: [[1, 1, 1]] as Vector3[],
+      mags: [[1, 1, 1]] as Vector3[],
     };
-    const magInfo = new MagInfo(mockedLayer.resolutions);
+    const magInfo = new MagInfo(mockedLayer.mags);
     const cube = new DataCube(
       new BoundingBox({ min: [1024, 1024, 1024], max: [2048, 2048, 2048] }),
       [],

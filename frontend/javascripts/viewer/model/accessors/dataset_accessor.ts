@@ -42,7 +42,7 @@ function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    infos[layer.name] = getMagInfo(layer.resolutions);
+    infos[layer.name] = getMagInfo(layer.mags);
   }
 
   return infos;
@@ -67,7 +67,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
   const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const mag of layer.resolutions) {
+    for (const mag of layer.mags) {
       const key = maxValue(mag);
 
       if (magUnionDict[key] == null) {
@@ -92,7 +92,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMag(layer.resolutions),
+    convertToDenseMag(layer.mags),
   );
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];
@@ -136,7 +136,7 @@ function _getMagInfoOfVisibleSegmentationLayer(state: WebknossosState): MagInfo 
     return new MagInfo([]);
   }
 
-  return getMagInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.mags);
 }
 
 export const getMagInfoOfVisibleSegmentationLayer = memoizeOne(

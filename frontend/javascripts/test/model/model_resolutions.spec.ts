@@ -4,7 +4,7 @@ import type { Vector3 } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
 import { convertToDenseMag } from "viewer/model/helpers/mag_info";
 
-describe("Model resolutions", () => {
+describe("Model mags", () => {
   it("Simple convertToDenseMag", () => {
     const denseMags = convertToDenseMag([
       [2, 2, 1],
@@ -22,7 +22,7 @@ describe("Model resolutions", () => {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
+            mags: [
               [16, 16, 2],
               [2, 2, 1],
               [4, 4, 1],
@@ -31,7 +31,7 @@ describe("Model resolutions", () => {
             ] as Vector3[],
           },
           {
-            resolutions: [[32, 32, 4]] as Vector3[],
+            mags: [[32, 32, 4]] as Vector3[],
           },
         ],
       },
@@ -56,7 +56,7 @@ describe("Model resolutions", () => {
       ] as Vector3[],
     };
 
-    const densify = (layer: { resolutions: Vector3[] }) => convertToDenseMag(layer.resolutions);
+    const densify = (layer: { mags: Vector3[] }) => convertToDenseMag(layer.mags);
 
     expect(densify(dataset.dataSource.dataLayers[0])).toEqual(expectedMags[0]);
     expect(densify(dataset.dataSource.dataLayers[1])).toEqual(expectedMags[1]);
@@ -78,7 +78,7 @@ describe("Model resolutions", () => {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
+            mags: [
               [4, 4, 1],
               [8, 8, 1],
               [16, 16, 2],
@@ -86,7 +86,7 @@ describe("Model resolutions", () => {
             ],
           },
           {
-            resolutions: [
+            mags: [
               [2, 2, 1],
               [8, 8, 1],
               [32, 32, 4],
@@ -105,7 +105,7 @@ describe("Model resolutions", () => {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
+            mags: [
               [4, 4, 1],
               [8, 8, 1],
               [16, 16, 2],
@@ -113,7 +113,7 @@ describe("Model resolutions", () => {
             ],
           },
           {
-            resolutions: [
+            mags: [
               [2, 2, 1],
               [8, 8, 2],
               [32, 32, 4],

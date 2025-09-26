@@ -917,7 +917,7 @@ class PlaneMaterialFactory {
     const state = Store.getState();
     for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
       const layer = getLayerByName(state.dataset, layerName);
-      const magInfo = getMagInfo(layer.resolutions);
+      const magInfo = getMagInfo(layer.mags);
       // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
       // to determine a representative mag.
       const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);

@@ -148,7 +148,7 @@ export default function AddVolumeLayerModal({
   const magInfo =
     selectedSegmentationLayer == null
       ? getSomeMagInfoForDataset(dataset)
-      : getMagInfo(selectedSegmentationLayer.resolutions);
+      : getMagInfo(selectedSegmentationLayer.mags);
   const [magIndices, setMagIndices] = useState([0, 10000]);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>

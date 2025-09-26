@@ -855,7 +855,9 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
-export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore);
+export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+  args.join("::"),
+);
 
 export function getSegmentVolumes(
   requestUrl: string,

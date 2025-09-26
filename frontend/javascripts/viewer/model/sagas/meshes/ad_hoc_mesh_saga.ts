@@ -324,7 +324,7 @@ function* loadFullAdHocMesh(
   const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const dataset = yield* select((state) => state.dataset);
   const datasetId = dataset.id;
-  const datastoreUrl = dataset.dataStore.url;
+  const dataStoreHost = dataset.dataStore.url;
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -339,14 +339,15 @@ function* loadFullAdHocMesh(
     useDataStore = false;
   }
 
+  const maybeFallbackLayerName = layer.fallbackLayer != null ? layer.fallbackLayer : layer.name;
   let isStaticSegmentationLayerWithSegmentIndex = false;
 
-  if (visibleSegmentationLayer != null && volumeTracing == null) {
+  if (volumeTracing == null) {
     isStaticSegmentationLayerWithSegmentIndex = yield* call(
       hasSegmentIndexInDataStoreCached,
       dataset.dataStore.url,
       dataset.id,
-      visibleSegmentationLayer?.name,
+      maybeFallbackLayerName,
     );
   }
   // Segment stats can only be used for volume tracings that have a segment index
@@ -359,9 +360,7 @@ function* loadFullAdHocMesh(
   const usePositionsFromSegmentIndex =
     usePositionsFromSegmentIndexForVolumeTracing || isStaticSegmentationLayerWithSegmentIndex;
 
-  const dataStoreUrl = `${datastoreUrl}/data/datasets/${datasetId}/layers/${
-    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-  }`;
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${maybeFallbackLayerName}`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
   const requestUrl = useDataStore ? dataStoreUrl : tracingStoreUrl;
 

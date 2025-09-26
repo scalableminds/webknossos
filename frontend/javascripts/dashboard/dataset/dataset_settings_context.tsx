@@ -6,9 +6,8 @@ import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_for
 
 export type DataSourceEditMode = "simple" | "advanced";
 
-export type FormData = {
+export type DatasetSettingsFormData = {
   dataSource: APIDataSource;
-  dataSourceJson: string;
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
@@ -16,17 +15,18 @@ export type FormData = {
 };
 
 export type DatasetSettingsContextValue = {
-  form: FormInstance<FormData>;
+  form: FormInstance<DatasetSettingsFormData>;
   isLoading: boolean;
   dataset: APIDataset | null | undefined;
   datasetId: string;
   datasetDefaultConfiguration: DatasetConfiguration | null | undefined;
-  activeDataSourceEditMode: DataSourceEditMode;
   isEditingMode: boolean;
   handleSubmit: () => void;
   handleCancel: () => void;
-  handleDataSourceEditModeChange: (activeEditMode: DataSourceEditMode) => void;
-  onValuesChange: (changedValues: FormData, allValues: FormData) => void;
+  onValuesChange: (
+    changedValues: DatasetSettingsFormData,
+    allValues: DatasetSettingsFormData,
+  ) => void;
   getFormValidationSummary: () => Record<string, any>;
   hasFormErrors: boolean;
 };

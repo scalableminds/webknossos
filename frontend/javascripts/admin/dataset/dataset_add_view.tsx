@@ -110,7 +110,7 @@ function DatasetAddView() {
 
   return (
     <React.Fragment>
-      <Layout>
+      <Layout style={{ minHeight: "100vh", backgroundColor: "var(--ant-layout-body-bg)" }}>
         <Content>
           <Tabs defaultActiveKey={defaultActiveKey} className="container" items={tabs} />
         </Content>

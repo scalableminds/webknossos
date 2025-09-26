@@ -11,18 +11,11 @@ import { Form, type FormInstance } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import { jsonStringify, parseMaybe } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type {
-  APIDataSource,
-  APIDataset,
-  MutableAPIDataSource,
-  MutableAPIDataset,
-} from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
   EXPECTED_TRANSFORMATION_LENGTH,
@@ -35,7 +28,7 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import type { DataSourceEditMode, FormData } from "./dataset_settings_context";
+import type { DatasetSettingsFormData } from "./dataset_settings_context";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 
@@ -45,51 +38,7 @@ type DatasetSettingsProviderProps = {
   isEditingMode: boolean;
   onComplete?: () => void;
   onCancel?: () => void;
-  form?: FormInstance<FormData>;
-};
-
-export const syncDataSourceFields = (
-  form: FormInstance, // Keep form as a prop for this utility function
-  syncTargetTabKey: DataSourceEditMode,
-  // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
-  // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
-  syncDatasetName = false,
-): void => {
-  if (!form) {
-    return;
-  }
-
-  if (syncTargetTabKey === "advanced") {
-    // Copy from simple to advanced: update json
-    const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
-    if (syncDatasetName && dataSourceFromSimpleTab) {
-      dataSourceFromSimpleTab.id ??= {};
-      dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
-    }
-    form.setFieldsValue({
-      dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
-    });
-  } else {
-    const dataSourceFromAdvancedTab = parseMaybe(
-      form.getFieldValue("dataSourceJson"),
-    ) as ArbitraryObject | null;
-    // Copy from advanced to simple: update form values
-    if (syncDatasetName && dataSourceFromAdvancedTab?.id?.name) {
-      form.setFieldsValue({
-        dataset: {
-          name: dataSourceFromAdvancedTab.id.name,
-        },
-      });
-    }
-    form.setFieldsValue({
-      dataSource: dataSourceFromAdvancedTab,
-    });
-    form.setFieldsValue({
-      datasetRotation: getRotationFromCoordinateTransformations(
-        dataSourceFromAdvancedTab as MutableAPIDataSource,
-      ),
-    });
-  }
+  form?: FormInstance<DatasetSettingsFormData>;
 };
 
 export function getRotationFromCoordinateTransformations(
@@ -125,7 +74,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   onCancel,
   form: formProp, // In case of Remote Dataset Upload, we start with a prefilled form containing the DS information
 }) => {
-  const [form] = Form.useForm<FormData>(formProp);
+  const [form] = Form.useForm<DatasetSettingsFormData>(formProp);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -136,9 +85,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     DatasetConfiguration | null | undefined
   >(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeDataSourceEditMode, setActiveDataSourceEditMode] = useState<"simple" | "advanced">(
-    "simple",
-  );
   const [savedDataSourceOnServer, setSavedDataSourceOnServer] = useState<
     APIDataSource | null | undefined
   >(null);
@@ -149,7 +95,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId, true);
+      let fetchedDataset = await getDataset(datasetId);
       const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);
@@ -165,7 +111,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       }
 
       form.setFieldsValue({
-        dataSourceJson: jsonStringify(dataSource),
         dataset: {
           name: fetchedDataset.name,
           isPublic: fetchedDataset.isPublic || false,
@@ -224,11 +169,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       return formErrors;
     }
 
-    if (
-      hasFormError(err, "dataSource") ||
-      hasFormError(err, "dataSourceJson") ||
-      hasFormError(err, "datasetRotation")
-    ) {
+    if (hasFormError(err, "dataSource") || hasFormError(err, "datasetRotation")) {
       formErrors.data = true;
     }
 
@@ -272,7 +213,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
     if (_.size(validationSummary) === 1 && validationSummary.data) {
       try {
-        const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
+        const dataSource = form.getFieldValue("dataSource");
         const didNotEditDatasource = !didDatasourceChange(dataSource);
         return didNotEditDatasource;
       } catch (_e) {
@@ -285,14 +226,14 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
   const submitForm = useCallback(async () => {
     // Call getFieldsValue() with "True" to get all values from form not just those that are visible in the current view
-    const formValues: FormData = form.getFieldsValue(true);
+    const formValues: DatasetSettingsFormData = form.getFieldsValue(true);
     const datasetChangeValues = { ...formValues.dataset };
 
     if (datasetChangeValues.sortingKey != null) {
       datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
     }
 
-    const dataSource = JSON.parse(formValues.dataSourceJson);
+    const dataSource = formValues.dataSource;
 
     if (dataset != null && didDatasourceChange(dataSource)) {
       if (didDatasourceIdChange(dataSource)) {
@@ -373,34 +314,19 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm, switchToProblematicTab]);
 
   const handleSubmit = useCallback(() => {
-    syncDataSourceFields(form, activeDataSourceEditMode === "simple" ? "advanced" : "simple");
+    form.validateFields().then(submitForm).catch(handleValidationFailed);
+  }, [form, submitForm, handleValidationFailed]);
 
-    const afterForceUpdateCallback = () => {
-      setTimeout(() => form.validateFields().then(submitForm).catch(handleValidationFailed), 0);
-    };
-
-    // Force update pattern: Setting state to its current value triggers a re-render
-    // This ensures all form fields are mounted before validation
-    setActiveDataSourceEditMode((prev) => prev);
-    setTimeout(afterForceUpdateCallback, 0);
-  }, [form, activeDataSourceEditMode, submitForm, handleValidationFailed]);
-
-  const onValuesChange = useCallback((_changedValues: FormData, _allValues: FormData) => {
-    setHasUnsavedChanges(true);
-  }, []);
+  const onValuesChange = useCallback(
+    (_changedValues: DatasetSettingsFormData, _allValues: DatasetSettingsFormData) => {
+      setHasUnsavedChanges(true);
+    },
+    [],
+  );
 
   const handleCancel = useCallback(() => {
     onCancel();
   }, [onCancel]);
-
-  const handleDataSourceEditModeChange = useCallback(
-    (activeEditMode: DataSourceEditMode) => {
-      syncDataSourceFields(form, activeEditMode);
-      form.validateFields();
-      setActiveDataSourceEditMode(activeEditMode);
-    },
-    [form],
-  );
 
   useBeforeUnload(hasUnsavedChanges, messages["dataset.leave_with_unsaved_changes"]);
 
@@ -422,11 +348,9 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     dataset,
     datasetId,
     datasetDefaultConfiguration,
-    activeDataSourceEditMode,
     isEditingMode,
     handleSubmit,
     handleCancel,
-    handleDataSourceEditModeChange,
     onValuesChange,
     getFormValidationSummary,
     hasFormErrors,

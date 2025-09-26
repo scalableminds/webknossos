@@ -36,11 +36,6 @@ Data Source Tab: Configure the core settings for your dataset
 ///
 
 
-### Advanced View
-
-The `Advanced` view lets you edit the underlying [JSON configuration](../data/concepts.md#dataset-metadata) directly. This is only recommended for users familiar with the `datasource-properties.json` format.
-
-
 ## Sharing & Permissions Tab
 
 This tab allows you to control who can access your dataset.

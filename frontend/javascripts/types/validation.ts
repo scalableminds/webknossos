@@ -56,13 +56,6 @@ export const validateObjectWithType = (type: string, json: Record<string, any>) 
   }
 };
 
-export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
-
-export const isDatasourceJSONValid = (json: Record<string, any>) =>
-  validator.validate(json, {
-    $ref: "#/definitions/types::DatasourceConfiguration",
-  }).valid;
-
 export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
 
 export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
@@ -80,15 +73,6 @@ export const validateUrlStateJSON = (value: string) => {
     // let lodash handle everything else
     return undefined;
   });
-};
-
-export const isValidJSON = (json: string) => {
-  try {
-    JSON.parse(json);
-    return true;
-  } catch (_ex) {
-    return false;
-  }
 };
 
 export function syncValidator<T>(validateValueFn: (arg0: T) => boolean, errMessage: string) {

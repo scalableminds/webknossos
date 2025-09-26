@@ -353,7 +353,6 @@ export async function setupWebknossosForTesting(
   vi.mocked(getDataset).mockImplementation(
     async (
       _datasetId: string,
-      _includePaths?: boolean | null | undefined,
       _sharingToken?: string | null | undefined,
       _options: RequestOptions = {},
     ) => {

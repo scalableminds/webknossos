@@ -14,7 +14,7 @@ export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
 export type UpdateTemporarySettingAction = ReturnType<typeof updateTemporarySettingAction>;
 export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySettingAction>;
-type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
+export type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 export type SetViewModeAction = ReturnType<typeof setViewModeAction>;
 type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
@@ -213,6 +213,7 @@ export const setMappingAction = (
     showLoadingIndicator,
     isMergerModeMapping,
   }: OptionalMappingProperties = {},
+  isUnsyncedWithServer: boolean = false,
 ) =>
   ({
     type: "SET_MAPPING",
@@ -224,6 +225,7 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    isUnsyncedWithServer,
   }) as const;
 
 export const setMappingNameAction = (

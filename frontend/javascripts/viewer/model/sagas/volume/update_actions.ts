@@ -895,24 +895,30 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
+  agglomerateId: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Removes the edges between segmentId1 and segmentId2 that exist in the agglomerate graph.
+   * If the edge removal leads to an actual split of the two agglomerates,
+   * the agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   * The other agglomerate will be assigned a new id (largestAgglomerateId + 1).
+   */
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId: number; // Unused in back-end.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    agglomerateId?: number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
@@ -920,34 +926,37 @@ export function splitAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
+      agglomerateId: Number(agglomerateId),
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: NumberLike,
-  agglomerateId2: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
+  agglomerateId1: NumberLike,
+  agglomerateId2: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Merges the agglomerates that belong to segmentId1 and segmentId2.
+   * The agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   */
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number; // unused in backend
-    agglomerateId2: number; // unused in backend
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    agglomerateId1?: number;
+    agglomerateId2?: number;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3;
   };
 } {
   return {
@@ -955,11 +964,10 @@ export function mergeAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId1: Number(agglomerateId1),
-      agglomerateId2: Number(agglomerateId2),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
+      agglomerateId1: Number(agglomerateId1),
+      agglomerateId2: Number(agglomerateId2),
     },
   } as const;
 }

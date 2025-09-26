@@ -95,6 +95,7 @@ class Mappings {
   }
 
   async updateMappingTextures(mapping: Mapping | null | undefined): Promise<void> {
+    console.log("Mapping.ts: updateMappingTextures");
     if (mapping == null) return;
     if (this.cuckooTable == null) {
       throw new Error("cuckooTable null when updateMappingTextures was called.");
@@ -141,6 +142,7 @@ class Mappings {
     this.previousMapping = mapping;
 
     message.destroy(MAPPING_MESSAGE_KEY);
+    console.log("Mapping.ts: finishMappingInitializationAction");
     Store.dispatch(finishMappingInitializationAction(this.layerName));
   }
 

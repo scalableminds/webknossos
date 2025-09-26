@@ -674,10 +674,7 @@ function _getActiveMagInfo(state: WebknossosState) {
     enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
   );
   const activeMagOfEnabledLayers = Object.fromEntries(
-    enabledLayers.map((l) => [
-      l.name,
-      getMagInfo(l.mags).getMagByIndex(activeMagIndices[l.name]),
-    ]),
+    enabledLayers.map((l) => [l.name, getMagInfo(l.mags).getMagByIndex(activeMagIndices[l.name])]),
   );
 
   const isActiveMagGlobal =

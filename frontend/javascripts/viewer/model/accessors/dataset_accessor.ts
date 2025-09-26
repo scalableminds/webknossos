@@ -91,9 +91,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 });
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
-  const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMag(layer.mags),
-  );
+  const allLayerMags = dataset.dataSource.dataLayers.map((layer) => convertToDenseMag(layer.mags));
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];
 }

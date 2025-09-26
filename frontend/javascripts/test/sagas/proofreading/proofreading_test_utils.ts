@@ -276,6 +276,16 @@ class BackendMock {
     return this.updateActionLog.slice(firstUnseenVersionIndex);
   };
 
+  getPositionForSegmentInAgglomerate = async (
+    _datastoreUrl: string,
+    _datasetId: string,
+    _layerName: string,
+    _mappingName: string,
+    segmentId: number,
+  ): Promise<Vector3> => {
+    return [segmentId, segmentId, segmentId];
+  };
+
   planVersionInjection(
     targetVersion: number,
     updateActions: UpdateActionWithoutIsolationRequirement[],
@@ -344,6 +354,9 @@ export function mockInitialBucketAndAgglomerateData(
   backendMock.receivedDataPerSaveRequest = context.receivedDataPerSaveRequest;
   mocks.sendSaveRequestWithToken.mockImplementation(backendMock.sendSaveRequestWithToken);
   mocks.getUpdateActionLog.mockImplementation(backendMock.getUpdateActionLog);
+  mocks.getPositionForSegmentInAgglomerate.mockImplementation(
+    backendMock.getPositionForSegmentInAgglomerate,
+  );
 
   return backendMock;
 }

@@ -42,6 +42,7 @@ import {
   getDataset,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
+  getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
   sendSaveRequestWithToken,
   type MinCutTargetEdge,
@@ -80,6 +81,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     getNeighborsForAgglomerateNode: Mock<typeof getNeighborsForAgglomerateNode>;
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
+    getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -189,6 +191,17 @@ vi.mock("admin/rest_api.ts", async () => {
         }),
     ),
     getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getPositionForSegmentInAgglomerate: vi.fn(
+      (
+        _datastoreUrl: string,
+        _datasetId: string,
+        _layerName: string,
+        _mappingName: string,
+        _segmentId: number,
+      ) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
   };
 });
 
@@ -381,11 +394,12 @@ export async function setupWebknossosForTesting(
   testContext.mocks = {
     Request: vi.mocked(Request),
     getCurrentMappingEntriesFromServer,
-    getEdgesForAgglomerateMinCut,
+    getEdgesForAgglomerateMinCut: vi.mocked(getEdgesForAgglomerateMinCut),
     acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
     getNeighborsForAgglomerateNode: vi.mocked(getNeighborsForAgglomerateNode),
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
+    getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>

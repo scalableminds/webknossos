@@ -772,6 +772,24 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
 
+  def findAllStorageRelevantMags(organizationId: String,
+                                 dataStoreId: String,
+                                 datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
+    for {
+      storageRelevantMags <- run(q"""SELECT
+            dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+            FROM (
+              SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
+              FROM webknossos.dataset_mags AS mag
+              JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+              WHERE ds._organization = $organizationId
+                AND ds._dataStore = $dataStoreId
+                ${datasetIdOpt.map(datasetId => q"AND ds._id = $datasetId").getOrElse(q"")}
+            ) AS ranked
+            WHERE rn = 1;""".as[DataSourceMagRow])
+    } yield storageRelevantMags.toList
+
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
@@ -1039,6 +1057,16 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
   }
 }
 
+case class StorageRelevantDataLayerAttachment(
+    _dataset: ObjectId,
+    layerName: String,
+    name: String,
+    path: String,
+    `type`: LayerAttachmentType.LayerAttachmentType,
+    _organization: String,
+    datasetDirectoryName: String,
+)
+
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
@@ -1151,6 +1179,49 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                    AND type = $attachmentType
          """.asUpdate)
     } yield ()
+
+  implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
+    GetResult(
+      r =>
+        StorageRelevantDataLayerAttachment(
+          ObjectId(r.nextString()),
+          r.nextString(),
+          r.nextString(),
+          r.nextString(), {
+            val format = r.nextString()
+            LayerAttachmentType
+              .fromString(format)
+              .getOrElse(
+                // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+                throw new IllegalArgumentException(
+                  s"Invalid LayerAttachmentDataformat value: '$format'"
+                )
+              )
+          },
+          r.nextString(),
+          r.nextString(),
+      ))
+
+  def findAllStorageRelevantAttachments(organizationId: String,
+                                        dataStoreId: String,
+                                        datasetIdOpt: Option[ObjectId]): Fox[List[StorageRelevantDataLayerAttachment]] =
+    for {
+      storageRelevantAttachments <- run(q"""SELECT
+                                            _dataset, layerName, name, path, type, _organization, directoryName
+                                            FROM (
+                                              SELECT
+                                                att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName,
+                                                ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn
+                                              FROM webknossos.dataset_layer_attachments AS att
+                                              JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+                                              WHERE ds._organization = $organizationId
+                                                AND ds._dataStore = $dataStoreId
+                                                ${datasetIdOpt
+        .map(datasetId => q"AND ds._id = $datasetId")
+        .getOrElse(q"")}
+                                            ) AS ranked
+                                            WHERE rn = 1;""".as[StorageRelevantDataLayerAttachment])
+    } yield storageRelevantAttachments.toList
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -1,8 +1,10 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
@@ -89,6 +91,12 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
           .take(maxItems)
       } else List.empty
     } yield listing
+
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      localPath <- vaultPathToLocalPath(path)
+      usedStorageBytes <- tryo(FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
+    } yield usedStorageBytes
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] =
     for {

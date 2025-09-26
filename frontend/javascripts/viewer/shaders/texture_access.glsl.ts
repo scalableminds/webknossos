@@ -129,10 +129,6 @@ export const getColorForCoords: ShaderModule = {
 
       uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
 
-      <% if (!isFragment) { %>
-        outputCompressedEntry[globalLayerIndex] = compressedEntry;
-      <% } %>
-
       uint compressedBytes = compressedEntry.a;
       uint foundMagIdx = compressedBytes >> (32u - 5u);
       uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
@@ -189,6 +185,8 @@ export const getColorForCoords: ShaderModule = {
 
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
+      returnValue[0] = vec4(0.0);
+      returnValue[1] = vec4(0.0);
 
       if (worldPositionUVW.x < 0. || worldPositionUVW.y < 0. || worldPositionUVW.z < 0.) {
         // Negative coordinates would likely produce incorrect bucket look ups due to casting

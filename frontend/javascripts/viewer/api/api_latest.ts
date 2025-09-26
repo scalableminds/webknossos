@@ -57,6 +57,7 @@ import {
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
   getPosition,
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
@@ -2575,12 +2576,18 @@ class DataApi {
    * api.data.setMeshVisibility(segmentId, false);
    */
   setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
+    if (
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
+      null
+    ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
@@ -2597,12 +2604,18 @@ class DataApi {
    * api.data.removeMesh(segmentId, layerName);
    */
   removeMesh(segmentId: number, layerName?: string): void {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
+    if (
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
+      null
+    ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(
@@ -2619,12 +2632,16 @@ class DataApi {
    * api.data.resetMeshes();
    */
   resetMeshes(layerName?: string) {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].meshes || EMPTY_OBJECT,
+      Store.getState().localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey] ||
+        EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {

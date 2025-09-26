@@ -55,6 +55,10 @@ trait DataSourceValidation {
       check(
         dataSource.dataLayers.map(_.name).forall(!_.startsWith(".")),
         "Layer names must not start with dot."
+      ),
+      check(
+        dataSource.dataLayers.flatMap(_.attachments).forall(!_.containsDuplicateNames),
+        "Layer attachments must have unique names in their respective category."
       )
     ).flatten
 

@@ -345,7 +345,7 @@ class PlaneView {
             return null;
           }
           // If the proofreading tool is not active, pretend that
-          // activeUnmappedSegmentId is null so that no super-voxel
+          // activeUnmappedSegmentId is null so that no supervoxel
           // is highlighted.
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
             ? segmentationTracing.activeUnmappedSegmentId

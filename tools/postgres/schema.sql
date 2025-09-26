@@ -332,7 +332,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id_old TEXT CONSTRAINT _id_old_objectId CHECK (_id_old ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   _id TEXT PRIMARY KEY,

@@ -549,13 +549,15 @@ export function* tryToIncorporateActions(
   return { success: true };
 }
 
-function getAllUnknownSegmentIdsInPendingUpdates(
+function* getAllUnknownSegmentIdsInPendingUpdates(
   saveQueue: SaveQueueEntry[],
-  activeMappingByLayer: Record<string, ActiveMappingInfo>,
-): Record<string, number[]> {
+): Saga<Record<string, number[]>> {
+  const activeMappingByLayer = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer,
+  );
   const idsToRequest = {} as Record<string, number[]>;
-  for (const saveQueueEntry of saveQueue){
-    for(const action of saveQueueEntry.actions){
+  for (const saveQueueEntry of saveQueue) {
+    for (const action of saveQueueEntry.actions) {
       switch (action.name) {
         case "mergeAgglomerate":
         case "splitAgglomerate": {
@@ -575,15 +577,15 @@ function getAllUnknownSegmentIdsInPendingUpdates(
             adaptToType(segmentId2),
           );
           if (!upToDateAgglomerateId1) {
-            if(!(actionTracingId in idsToRequest)){
-            idsToRequest[actionTracingId] = [];
-          }
+            if (!(actionTracingId in idsToRequest)) {
+              idsToRequest[actionTracingId] = [];
+            }
             idsToRequest[actionTracingId].push(segmentId1);
           }
           if (!upToDateAgglomerateId2) {
-            if(!(actionTracingId in idsToRequest)){
-            idsToRequest[actionTracingId] = [];
-          }
+            if (!(actionTracingId in idsToRequest)) {
+              idsToRequest[actionTracingId] = [];
+            }
             idsToRequest[actionTracingId].push(segmentId2);
           }
         }
@@ -593,28 +595,39 @@ function getAllUnknownSegmentIdsInPendingUpdates(
   return idsToRequest;
 }
 
-function* addMissingSegmentsToMapping(idsToRequest: Record<string, number[]>): Saga<Record<string, Mapping>> {
-  const missingMappingInfo = {} as Record<string, Mapping>;
-  for(const volumeTracingId of Object.keys(idsToRequest)){
-    if (idsToRequest[volumeTracingId].length === 0) {
-      continue;
-    }
+function* addMissingSegmentsToLoadedMappings(idsToRequest: Record<string, number[]>): Saga<void> {
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const version = yield* select((state) => state.annotation.version);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
-  // Ask the server to map the (split) segment ids. This creates a partial mapping
-  // that only contains these ids.
-  const mappingWithMissingIds = yield* call(
-    getAgglomeratesForSegmentsFromTracingstore,
-    tracingStoreUrl,
-    volumeTracingId,
-    idsToRequest[volumeTracingId],
-    annotationId,
-    version,
+  const activeMappingByLayer = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  missingMappingInfo[volumeTracingId] = mappingWithMissingIds;
-}
-return missingMappingInfo;
+  for (const volumeTracingId of Object.keys(idsToRequest)) {
+    if (idsToRequest[volumeTracingId].length === 0) {
+      continue;
+    }
+    const activeMapping = activeMappingByLayer[volumeTracingId];
+    // Ask the server to map the (split) segment ids. This creates a partial mapping
+    // that only contains these ids.
+    const mappingWithMissingIds = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
+      tracingStoreUrl,
+      volumeTracingId,
+      idsToRequest[volumeTracingId],
+      annotationId,
+      version,
+    );
+    const mergedMapping = new Map(
+      Array.from((activeMapping.mapping ?? new Map()) as NumberLikeMap).concat(
+        Array.from(mappingWithMissingIds as NumberLikeMap),
+      ),
+    );
+    yield* put(
+      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+        mapping: mergedMapping as Mapping,
+      }),
+    );
+  }
 }
 
 function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
@@ -628,11 +641,11 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
     }
 > {
   const saveQueue = yield* select((state) => state.save.queue);
+  const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
+  yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  const idsToFetch = getAllUnknownSegmentIdsInPendingUpdates(saveQueue, activeMappingByLayer);
-  const missingMappingInfo = yield* call(addMissingSegmentsToMapping, idsToFetch);
 
   let success = true;
   const updatedSaveQueue = saveQueue.map((saveQueueEntry) => ({
@@ -642,11 +655,11 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
         switch (action.name) {
           case "mergeAgglomerate":
           case "splitAgglomerate": {
-            const { segmentId1, segmentId2 , actionTracingId} = action.value;
+            const { segmentId1, segmentId2, actionTracingId } = action.value;
             const upToDateMapping = activeMappingByLayer[actionTracingId]?.mapping;
             if (!upToDateMapping) {
               console.error(
-                "Found proofreading action without matching mapping in save queue.",
+                "Found proofreading action without matching mapping in save queue. This should never occur.",
                 action,
               );
               success = false;
@@ -654,57 +667,13 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
             }
             if (segmentId1 == null || segmentId2 == null) {
               console.error(
-                "Found proofreading action without given segmentIds in save queue.",
+                "Found proofreading action without given segmentIds in save queue. This should never occur.",
                 action,
               );
               success = false;
               return null;
-            }
-            
-            const adaptToType =
-              upToDateMapping && isNumberMap(upToDateMapping)
-                ? (el: number) => el
-                : (el: number) => BigInt(el);
-            let upToDateAgglomerateId1 = (upToDateMapping as NumberLikeMap).get(
-              adaptToType(segmentId1),
-            ) ?? (missingMappingInfo[actionTracingId]as NumberLikeMap)?.get(adaptToType(segmentId1));
-            let upToDateAgglomerateId2 = (upToDateMapping as NumberLikeMap).get(
-              adaptToType(segmentId2),
-            ) ?? (missingMappingInfo[actionTracingId]as NumberLikeMap)?.get(adaptToType(segmentId2));
-            // TODOM continue.
-            if (!upToDateAgglomerateId1) {
-              segmentsToAgglomerateIds[actionTracingId].set(segmentId1, Number(upToDateAgglomerateId1));
-            } else {
-              idsToRequest.push(upToDateAgglomerateId1);
             }
 
-            if (upToDateAgglomerateId2) {
-              segmentsToAgglomerateIds[actionTracingId].set(segmentId2, Number(upToDateAgglomerateId2));
-            } else {
-              idsToRequest.push(upToDateAgglomerateId2);
-            }
-            return idsToRequest;
-
-          }
-          /*case "splitAgglomerate": {
-            const upToDateMapping = activeMappingByLayer[action.value.actionTracingId]?.mapping;
-            if (!upToDateMapping) {
-              console.error(
-                "Found split proofreading action without matching mapping in save queue.",
-                action,
-              );
-              success = false;
-              return null;
-            }
-            const { segmentId1, segmentId2 } = action.value;
-            if (segmentId1 == null || segmentId2 == null) {
-              console.error(
-                "Found split proofreading action without given segmentIds in save queue.",
-                action,
-              );
-              success = false;
-              return null;
-            }
             const adaptToType =
               upToDateMapping && isNumberMap(upToDateMapping)
                 ? (el: number) => el
@@ -715,20 +684,32 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
             let upToDateAgglomerateId2 = (upToDateMapping as NumberLikeMap).get(
               adaptToType(segmentId2),
             );
-            if (upToDateAgglomerateId1 !== upToDateAgglomerateId2) {
-              console.warn(
-                "Detected pending agglomerate split edge action where both unmapped segments are no longer part of the same agglomerate.",
+            if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+              console.error(
+                "Found proofreading action without loaded agglomerate ids. This should never occur.",
+                action,
               );
+              success = false;
               return null;
             }
-            const updatedAction: SplitAgglomerateUpdateAction = {
-              name: action.name,
-              value: {
-                ...action.value,
-                agglomerateId: Number(upToDateAgglomerateId1),
-              },
-            };
-            return updatedAction;*/
+            if (action.name === "mergeAgglomerate") {
+              return {
+                name: action.name,
+                value: {
+                  ...action.value,
+                  agglomerateId1: Number(upToDateAgglomerateId1),
+                  agglomerateId2: Number(upToDateAgglomerateId2),
+                },
+              } satisfies MergeAgglomerateUpdateAction;
+            } else {
+              return {
+                name: action.name,
+                value: {
+                  ...action.value,
+                  agglomerateId: Number(upToDateAgglomerateId1),
+                },
+              } satisfies SplitAgglomerateUpdateAction;
+            }
           }
           default:
             return action;

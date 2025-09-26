@@ -307,7 +307,7 @@ function _DownloadModalView({
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, annotation);
-  const selectedLayerMagInfo = getMagInfo(selectedLayer.resolutions);
+  const selectedLayerMagInfo = getMagInfo(selectedLayer.mags);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,

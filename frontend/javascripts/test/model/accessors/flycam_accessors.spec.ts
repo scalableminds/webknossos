@@ -26,7 +26,7 @@ const initialState: WebknossosState = {
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
-          resolutions: [
+          mags: [
             [1, 1, 1],
             [2, 2, 2],
             [4, 4, 4],
@@ -40,7 +40,7 @@ const initialState: WebknossosState = {
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
-          resolutions: [
+          mags: [
             [1, 1, 1],
             [2, 2, 2],
           ],

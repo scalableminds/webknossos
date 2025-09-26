@@ -622,7 +622,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
       boundingBox: convertBoundingBoxProtoToObject(tracing.boundingBox),
-      resolutions: tracingMags,
+      mags: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)

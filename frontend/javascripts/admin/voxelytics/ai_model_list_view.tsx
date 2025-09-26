@@ -153,7 +153,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       return getMagInfo(mags);
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.resolutions);
+      return getMagInfo(segmentationLayer.mags);
     }
   };
 

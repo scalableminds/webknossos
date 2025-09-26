@@ -314,14 +314,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, [isOnlyDatasourceIncorrectAndNotEdited, dataset, submitForm, switchToProblematicTab]);
 
   const handleSubmit = useCallback(() => {
-    const afterForceUpdateCallback = () => {
-      setTimeout(() => form.validateFields().then(submitForm).catch(handleValidationFailed), 0);
-    };
-
-    // Force update pattern: Setting state to its current value triggers a re-render
-    // This ensures all form fields are mounted before validation
-    // setActiveDataSourceEditMode((prev) => prev);
-    setTimeout(afterForceUpdateCallback, 0);
+    form.validateFields().then(submitForm).catch(handleValidationFailed);
   }, [form, submitForm, handleValidationFailed]);
 
   const onValuesChange = useCallback(

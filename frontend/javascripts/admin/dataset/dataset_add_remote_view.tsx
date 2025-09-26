@@ -12,12 +12,11 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { groupBy } from "lodash";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
-import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -31,27 +30,23 @@ const mergeNewLayers = (
     return newDatasource;
   }
 
-  const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
-  const groupedLayers: Record<string, DataLayer[]> = groupBy(
-    allLayers,
-    (layer: DataLayer) => layer.name,
-  );
-
-  const uniqueLayers: DataLayer[] = [];
-  for (const [name, layerGroup] of Utils.entries(groupedLayers)) {
-    if (layerGroup.length === 1) {
-      uniqueLayers.push(layerGroup[0]);
-    } else {
-      layerGroup.forEach((layer, idx) => {
-        const layerName = idx === 0 ? name : `${name}_${idx + 1}`;
-        uniqueLayers.push({ ...layer, name: layerName });
-      });
+  // Keep existing layer names; only rename incoming layers if a collision occurs.
+  const taken = new Set(existingDatasource.dataLayers.map((l) => l.name));
+  const uniquify = (base: string) => {
+    if (!taken.has(base)) {
+      taken.add(base);
+      return base;
     }
-  }
-
+    let i = 2;
+    while (taken.has(`${base}_${i}`)) i += 1;
+    const unique = `${base}_${i}`;
+    taken.add(unique);
+    return unique;
+  };
+  const newUnique = newDatasource.dataLayers.map((l) => ({ ...l, name: uniquify(l.name) }));
   return {
     ...existingDatasource,
-    dataLayers: uniqueLayers,
+    dataLayers: existingDatasource.dataLayers.concat(newUnique),
   };
 };
 

@@ -16,7 +16,7 @@ import {
   Space,
   Tooltip,
 } from "antd";
-import { FormItemWithInfo, RetryingErrorBoundary } from "dashboard/dataset/helper_components";
+import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
@@ -33,21 +33,13 @@ import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
-  // Using the return value of useWatch for the `dataSource` var
-  // yields outdated values. Therefore, the hook only exists for listening.
-  // TODO: The "preserve" option probably fixes this, e.g. useWatch("dataSource", { form, preserve: true });
-  Form.useWatch("dataSource", { form, preserve: true });
-  // Then, the newest value can be retrieved with getFieldValue
-  const dataSource = form.getFieldValue("dataSource");
+  const dataSource = Form.useWatch("dataSource", { form, preserve: true });
 
   return (
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
 
-      {/* TODO do we still  need this error boundary? */}
-      <RetryingErrorBoundary>
-        <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
-      </RetryingErrorBoundary>
+      <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
     </div>
   );
 }
@@ -131,13 +123,12 @@ function SimpleDatasetForm({
                   />
                   {activeUser?.isSuperUser && dataset ? (
                     <Tooltip title="Inspect the full data source JSON response from the server. This is shown to super users only.">
-                      <a
+                      <Button
                         href={`/api/datasets/${dataset?.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                      >
-                        <Button icon={<ExportOutlined />} />
-                      </a>
+                        icon={<ExportOutlined />}
+                      />
                     </Tooltip>
                   ) : null}
                   <Tooltip title="Copy dataset ID">

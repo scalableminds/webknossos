@@ -41,6 +41,7 @@ import {
   acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
+  getEditableAgglomerateSkeleton,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -82,6 +83,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
+    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -202,6 +204,15 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    getEditableAgglomerateSkeleton: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _agglomerateId: number,
+      ): Promise<ArrayBuffer> => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
   };
 });
 
@@ -209,10 +220,15 @@ vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("viewer/model/helpers/proto_helpers", () => {
+vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
+  const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
   return {
+    PROTO_FILES: originalProtoHelperModule.PROTO_FILES,
+    PROTO_TYPES: originalProtoHelperModule.PROTO_TYPES,
     parseProtoTracing: vi.fn(),
     parseProtoAnnotation: vi.fn(),
+    serializeProtoListOfLong: vi.fn(),
+    parseProtoListOfLong: vi.fn(),
   };
 });
 
@@ -400,6 +416,7 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
+    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>

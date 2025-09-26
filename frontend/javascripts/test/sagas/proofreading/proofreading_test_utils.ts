@@ -27,6 +27,10 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import type { NeighborInfo } from "admin/rest_api";
+import {
+  createSkeletonTracingFromAdjacency,
+  encodeServerTracing,
+} from "./proofreading_skeleton_test_utils";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -313,6 +317,24 @@ class BackendMock {
       data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
     });
   }
+
+  getEditableAgglomerateSkeleton = async (
+    _tracingStoreUrl: string,
+    _tracingId: string,
+    agglomerateId: number,
+  ): Promise<ArrayBuffer> => {
+    const version = this.agglomerateMapping.currentVersion;
+    const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
+    // TODOM: createSkeletonTracingFromAdjacency expects an unmapped id and not an agglomerateId
+    const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
+      mapping,
+      agglomerateId,
+      "agglomerateSkeleton",
+      version,
+    );
+
+    return encodeServerTracing(agglomerateSkeletonAsServerTracing, "skeleton");
+  };
 }
 
 export function mockInitialBucketAndAgglomerateData(
@@ -356,6 +378,9 @@ export function mockInitialBucketAndAgglomerateData(
   mocks.getUpdateActionLog.mockImplementation(backendMock.getUpdateActionLog);
   mocks.getPositionForSegmentInAgglomerate.mockImplementation(
     backendMock.getPositionForSegmentInAgglomerate,
+  );
+  mocks.getEditableAgglomerateSkeleton.mockImplementation(
+    backendMock.getEditableAgglomerateSkeleton,
   );
 
   return backendMock;

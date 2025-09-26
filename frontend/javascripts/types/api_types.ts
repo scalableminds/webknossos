@@ -953,7 +953,8 @@ export type SkeletonUserState = {
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
-  // This is done to simplify the selection for the type.
+  // This is done to simplify the selection for the type.#
+  datasetName: string; // still part of the proto file, might be outdated. Do not rely on correct values.
   typ: "Skeleton";
   activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: BoundingBoxProto;

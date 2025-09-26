@@ -22,7 +22,7 @@ const preTrainedModels: PretrainedModel[] = [
   {
     name: "Neuron Segmentation",
     comment:
-      "Run our pre-trained, advanced neuron segmentation and reconstrution pipeline. Optimized dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
+      "Run our pre-trained, advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "neuron-segmentation",
     jobType: APIJobType.INFER_NEURONS,
     image: "/assets/images/neuron_inferral_example.jpg",

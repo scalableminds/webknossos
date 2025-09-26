@@ -1,6 +1,7 @@
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
+  hasSegmentIndexInDataStore,
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import ThreeDMap from "libs/ThreeDMap";
@@ -321,6 +322,8 @@ function* loadFullAdHocMesh(
 
   const cubeSize = marchingCubeSizeInTargetMag();
   const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
+  const datasetId = yield* select((state) => state.dataset.id);
+  const datastoreUrl = yield* select((state) => state.dataset.dataStore.url);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -335,12 +338,33 @@ function* loadFullAdHocMesh(
     useDataStore = false;
   }
 
+  const dataset = yield* select((state) => state.dataset);
+
+  let isStaticSegmentationLayerWithSegmentIndex = false;
+
+  if (visibleSegmentationLayer != null && volumeTracing == null) {
+    isStaticSegmentationLayerWithSegmentIndex = yield* call(
+      hasSegmentIndexInDataStore,
+      dataset.dataStore.url,
+      dataset.id,
+      visibleSegmentationLayer?.name,
+    );
+  }
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
-  const usePositionsFromSegmentIndex =
+  const usePositionsFromSegmentIndexForVolumeTracing =
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.hasEditableMapping &&
     visibleSegmentationLayer?.tracingId != null;
+
+  const usePositionsFromSegmentIndex =
+    usePositionsFromSegmentIndexForVolumeTracing || isStaticSegmentationLayerWithSegmentIndex;
+
+  const dataStoreUrl = `${datastoreUrl}/data/datasets/${datasetId}/layers/${
+    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
+  }`;
+  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
+  const requestUrl = useDataStore ? dataStoreUrl : tracingStoreUrl;
 
   // TODO: also use segment index if there is no volume tracing, but a static segmentation layer that has a segment index file.
   //       build requestUrl to go to the dataset’s datastore instead.
@@ -350,13 +374,13 @@ function* loadFullAdHocMesh(
 
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-        tracingStoreHost,
-        layer,
+        requestUrl,
         segmentId,
         cubeSize,
         mag,
         clippedPosition,
         additionalCoordinates,
+        mappingName,
       )
     : [clippedPosition];
 
@@ -397,22 +421,22 @@ function* loadFullAdHocMesh(
 }
 
 function* getChunkPositionsFromSegmentIndex(
-  tracingStoreHost: string,
-  layer: DataLayer,
+  requestUrl: string,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  mappingName: string | null | undefined,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
-    tracingStoreHost,
-    layer.name,
+    requestUrl,
     segmentId,
     cubeSize,
     mag,
     additionalCoordinates,
+    mappingName,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];

@@ -113,20 +113,20 @@ class DSMeshController @Inject()(
 
   private def surfaceFromStlBuffer(dataBuffer: ByteBuffer, numberOfTriangles: Int) = {
     val normalOffset = 12
-    var surfaceSum = 0.0f
+    var surfaceSumMutable = 0.0f
     val headerOffset = 84
     val bytesPerTriangle = 50
     for (triangleIndex <- 0 until numberOfTriangles) {
       val triangleVerticesOffset = headerOffset + triangleIndex * bytesPerTriangle + normalOffset
-      val v1x = dataBuffer.getFloat(triangleVerticesOffset)
-      val v1y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 0)
-      val v1z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 1)
-      val v2x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 2)
-      val v2y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 3)
-      val v2z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 4)
-      val v3x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 5)
-      val v3y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 6)
-      val v3z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 7)
+      val v1x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 0)
+      val v1y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 1)
+      val v1z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 2)
+      val v2x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 3)
+      val v2y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 4)
+      val v2z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 5)
+      val v3x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 6)
+      val v3y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 7)
+      val v3z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 8)
 
       val vec1x = v2x - v1x
       val vec1y = v2y - v1y
@@ -141,9 +141,9 @@ class DSMeshController @Inject()(
 
       val magnitude = Math.sqrt(crossx * crossx + crossy * crossy + crossz * crossz).toFloat
 
-      surfaceSum = surfaceSum + (magnitude / 2.0f)
+      surfaceSumMutable = surfaceSumMutable + (magnitude / 2.0f)
     }
-    surfaceSum
+    surfaceSumMutable
   }
 
 }

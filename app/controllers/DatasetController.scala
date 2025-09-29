@@ -235,11 +235,11 @@ class DatasetController @Inject()(userService: UserService,
           user,
           isVirtual = true
         )
-        _ <- datasetService.trackNewDataset(dataset,
-                                            user,
-                                            needsConversion = false,
-                                            datasetSizeBytes = 0,
-                                            viaAddRoute = false)
+        _ = datasetService.trackNewDataset(dataset,
+                                           user,
+                                           needsConversion = false,
+                                           datasetSizeBytes = 0,
+                                           viaAddRoute = false)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -659,11 +659,11 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
-        _ <- datasetService.trackNewDataset(dataset,
-                                            request.identity,
-                                            needsConversion = false,
-                                            datasetSizeBytes = 0,
-                                            viaAddRoute = false)
+        _ = datasetService.trackNewDataset(dataset,
+                                           request.identity,
+                                           needsConversion = false,
+                                           datasetSizeBytes = 0,
+                                           viaAddRoute = false)
       } yield Ok
     }
 

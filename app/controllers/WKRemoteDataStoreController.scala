@@ -132,11 +132,11 @@ class WKRemoteDataStoreController @Inject()(
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- datasetService.trackNewDataset(dataset,
-                                              user,
-                                              request.body.needsConversion,
-                                              request.body.datasetSizeBytes,
-                                              viaAddRoute = false)
+          _ = datasetService.trackNewDataset(dataset,
+                                             user,
+                                             request.body.needsConversion,
+                                             request.body.datasetSizeBytes,
+                                             viaAddRoute = false)
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)

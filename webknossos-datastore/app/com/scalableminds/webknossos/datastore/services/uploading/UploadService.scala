@@ -159,6 +159,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def uploadDirectoryFor(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
 
+  private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(trashDir).resolve(s"uploadBackup__$uploadId")
+
   private def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
 
@@ -200,7 +203,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
       )
       _ = logger.info(
-        f"Reserving dataset upload ${reserveUploadInfo.uploadId} for dataset ${reserveUploadAdditionalInfo.newDatasetId} ($newDataSourceId)...")
+        f"Reserving ${uploadFullName(reserveUploadInfo.uploadId, reserveUploadAdditionalInfo.newDatasetId, newDataSourceId)}...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
@@ -263,6 +266,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       datasetId <- getDatasetIdByUploadId(uploadId)
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
@@ -304,7 +308,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                      String.valueOf(currentChunkNumber))
             val errorMsg =
-              s"Error receiving chunk $currentChunkNumber for uploadId $uploadId (datasetId $datasetId): ${e.getMessage}"
+              s"Error receiving chunk $currentChunkNumber for ${uploadFullName(uploadId, datasetId, dataSourceId)}: ${e.getMessage}"
             logger.warn(errorMsg)
             Fox.failure(errorMsg)
         }
@@ -319,13 +323,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       knownUpload <- isKnownUpload(uploadId)
     } yield
       if (knownUpload) {
-        logger.info(f"Cancelling dataset upload of uploadId $uploadId (datasetId $datasetId)...")
+        logger.info(f"Cancelling ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
         for {
           _ <- removeFromRedis(uploadId)
           _ <- PathUtils.deleteDirectoryRecursively(uploadDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
         } yield ()
       } else Fox.failure(s"Unknown upload")
   }
+
+  private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
+    s"upload $uploadId of dataset $datasetId ($dataSourceId)"
 
   private def assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir: Path, uploadId: String): Fox[Unit] =
     for {
@@ -346,15 +353,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       datasetId <- getDatasetIdByUploadId(uploadId)
       linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
-      _ = logger.info(s"Finishing dataset upload $uploadId of datasetId $datasetId ($dataSourceId)...")
+      _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
       _ <- Fox.fromBool(
         !uploadInformation.needsConversion.getOrElse(false) || !linkedLayerIdentifiers.layersToLink
           .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
+      _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
       _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
-
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
@@ -392,7 +399,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         logger.info(s"Uploaded dataset contains files not referenced in the datasource. Deleting $filesToDelete...")
       _ = filesToDelete.foreach(file => {
         try {
-          // TODO move to trash instead?
           Files.deleteIfExists(file)
         } catch {
           case e: Exception =>
@@ -425,7 +431,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/"
             _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
             _ = Instant.logSince(beforeS3Upload,
-                                 s"Forwarding of uploaded of dataset $datasetId ($dataSourceId) to S3",
+                                 s"Forwarding of uploaded dataset $datasetId ($dataSourceId) to S3",
                                  logger)
             endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
             newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
@@ -792,6 +798,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         } yield ()
       }
     } yield ()
+
+  private def backupRawUploadedData(uploadDir: Path, backupDir: Path): Box[Unit] =
+    // Backed up within .trash (old files regularly deleted by cronjob)
+    tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
 
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Fox[Unit] = {
     this.synchronized {

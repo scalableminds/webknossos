@@ -204,4 +204,3 @@ Note that you can enable *Classic Controls* in the left sidebar.
 Classic controls are provided for backward compatibility for long-time users and are not recommended for new user accounts.
 Hence, Classic controls are disabled by default, and WEBKNOSSOS uses a more intuitive behavior which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes). The right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
 With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.
-

@@ -343,7 +343,8 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   const { mappingName, mappingType, mappingStatus } = mappingInfo;
   if (
     mappingName == null ||
-    mappingType !== "HDF5" ||
+    mappingType == null ||
+    mappingType === "JSON" ||
     mappingStatus === MappingStatusEnum.DISABLED
   ) {
     Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");
@@ -1627,7 +1628,7 @@ function* gatherInfoForOperation(
     // The action was triggered via a data viewport (not 3D). In this case,
     // the active segment's position can be used as a source.
     if (activeUnmappedSegmentId != null) {
-      // The user has selected a super-voxel in the 3D viewport and then clicked
+      // The user has selected a supervoxel in the 3D viewport and then clicked
       // in a data viewport to select the second merge partner. However, this mix
       // is currently not supported.
       Toast.warning(MISSING_INFORMATION_WARNING);
@@ -1654,7 +1655,7 @@ function* gatherInfoForOperation(
 
   // The action was triggered in the 3D viewport. In this case, we don't have
   // a mouse position and also the active segment position isn't necessarily
-  // a position of the clicked super-voxel.
+  // a position of the clicked supervoxel.
   if (
     action.agglomerateId == null ||
     activeCellId == null ||
@@ -1686,7 +1687,7 @@ function* gatherInfoForOperation(
   } else {
     // When splitting two segments, we don't really have reliable positions at hand.
     // For the source position, we cannot rely on the active segment position, because
-    // the active super-voxel doesn't necessarily match the last click position within
+    // the active supervoxel doesn't necessarily match the last click position within
     // the data viewports.
     // For the target position, we also don't have reliable information available.
     [sourcePosition, targetPosition] = yield* all([

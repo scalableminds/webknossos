@@ -21,12 +21,15 @@ import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
-import models.user.{User, UserService}
+import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import mail.{MailchimpClient, MailchimpTag}
+import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
+import telemetry.SlackNotificationService
 import utils.WkConf
 
 import javax.inject.Inject
@@ -41,12 +44,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetMagsDAO: DatasetMagsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
+                               multiUserDAO: MultiUserDAO,
+                               mailchimpClient: MailchimpClient,
+                               analyticsService: AnalyticsService,
+                               slackNotificationService: SlackNotificationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
-                               rpc: RPC,
-                               conf: WkConf)(implicit ec: ExecutionContext)
+                               conf: WkConf,
+                               rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -78,39 +85,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  // TODO may get isVirtual=true too. Change to createVirtualDataset?
-  def createPreliminaryDataset(newDatasetId: ObjectId,
-                               datasetName: String,
-                               datasetDirectoryName: String,
-                               organizationId: String,
-                               dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource =
-      UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId), None, DataSourceStatus.notYetUploaded)
-    createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
-  }
-
-  def createVirtualDataset(datasetName: String,
-                           dataStore: DataStore,
-                           dataSource: UsableDataSource,
-                           folderId: Option[String],
-                           user: User): Fox[Dataset] =
-    for {
-      _ <- assertValidDatasetName(datasetName)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      folderId <- ObjectId.fromString(folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
-      _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-      newDatasetId = ObjectId.generate
-      directoryName = generateDirectoryName(datasetName, newDatasetId)
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               dataSource.copy(id = DataSourceId(directoryName, organization._id)),
-                               isVirtual = true)
-      datasetId = dataset._id
-      _ <- datasetDAO.updateFolder(datasetId, folderId)(GlobalAccessContext)
-      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
-    } yield dataset
-
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
@@ -122,6 +96,29 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       // Only list pending uploads since the two last weeks.
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
+
+  def createAndSetUpDataset(datasetName: String,
+                            dataStore: DataStore,
+                            dataSource: DataSource,
+                            folderId: Option[ObjectId],
+                            user: User,
+                            isVirtual: Boolean): Fox[Dataset] =
+    for {
+      _ <- assertValidDatasetName(datasetName)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
+      newDatasetId = ObjectId.generate
+      directoryName = generateDirectoryName(datasetName, newDatasetId)
+      dataset <- createDataset(dataStore,
+                               newDatasetId,
+                               datasetName,
+                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
+                               isVirtual = isVirtual)
+      datasetId = dataset._id
+      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
+      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
+    } yield dataset
 
   def createDataset(
       dataStore: DataStore,
@@ -217,7 +214,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
         case _ =>
-          insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
+          createDataset(dataStore, ObjectId.generate, dataSource.id.directoryName, dataSource).map(ds => Some(ds._id))
       }
     }
   }
@@ -262,11 +259,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.successful(None)
       }
     }).flatten
-
-  private def insertNewDataset(dataSource: DataSource, datasetName: String, dataStore: DataStore) =
-    publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
-    }
 
   def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
       implicit ctx: DBAccessContext,
@@ -368,16 +360,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             )
         }
     }
-
-  private def publicationForFirstDataset: Fox[Option[ObjectId]] =
-    if (conf.WebKnossos.SampleOrganization.enabled) {
-      datasetDAO.isEmpty.map { isEmpty =>
-        if (isEmpty)
-          Some(ObjectId("5c766bec6c01006c018c7459"))
-        else
-          None
-      }
-    } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,
@@ -562,6 +544,29 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Some(prefix) => s"$prefix-$datasetId"
       case None         => datasetId.toString
     }
+
+  def trackNewDataset(dataset: Dataset,
+                      user: User,
+                      needsConversion: Boolean,
+                      datasetSizeBytes: Long,
+                      viaAddRoute: Boolean): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(!needsConversion)(logDatasetUploadToSlack(user, dataset._id, viaAddRoute))
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext)
+      _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
+      _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+    } yield ()
+
+  private def logDatasetUploadToSlack(user: User, datasetId: ObjectId, viaAddRoute: Boolean): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      resultLink = s"${conf.Http.uri}/datasets/$datasetId"
+      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
+      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
+                                        s"For organization: ${organization.name}. <$resultLink|Result>")
+    } yield ()
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

@@ -1,37 +1,37 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  UnusableDataSource
+}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
-  LegacyLinkedLayerIdentifier,
+  ReportDatasetUploadParameters,
   ReserveAdditionalInformation,
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-import mail.{MailchimpClient, MailchimpTag}
-import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
-import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.TeamDAO
-import models.user.{MultiUserDAO, User, UserDAO, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
+import models.user.UserDAO
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import telemetry.SlackNotificationService
-import utils.WkConf
 
 import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
@@ -41,22 +41,16 @@ class WKRemoteDataStoreController @Inject()(
     datasetService: DatasetService,
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
-    analyticsService: AnalyticsService,
-    userService: UserService,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
+    layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
     datasetLayerDAO: DatasetLayerDAO,
     userDAO: UserDAO,
-    folderDAO: FolderDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
-    multiUserDAO: MultiUserDAO,
     credentialDAO: CredentialDAO,
     annotationDAO: AnnotationDAO,
-    mailchimpClient: MailchimpClient,
-    slackNotificationService: SlackNotificationService,
-    conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -79,27 +73,22 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
-          folderId = uploadInfo.folderId.getOrElse(organization._rootFolder)
-          _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-          layersToLinkWithDirectoryName <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
-            validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          newDatasetId = ObjectId.generate
+          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
+            layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
             datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
-          // TODO pass isVirtual
-          dataset <- datasetService.createPreliminaryDataset(newDatasetId,
-                                                             uploadInfo.name,
-                                                             datasetService.generateDirectoryName(uploadInfo.name,
-                                                                                                  newDatasetId),
-                                                             uploadInfo.organization,
-                                                             dataStore) ?~> "dataset.upload.creation.failed"
-          _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
+          preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
+          dataset <- datasetService.createAndSetUpDataset(
+            uploadInfo.name,
+            dataStore,
+            preliminaryDataSource,
+            uploadInfo.folderId,
+            user,
+            // For the moment, the convert_to_wkw job can only fill the dataset if it is not virtual.
+            isVirtual = !uploadInfo.needsConversion.getOrElse(false)
+          ) ?~> "dataset.upload.creation.failed"
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
-          _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
-          additionalInfo = ReserveAdditionalInformation(dataset._id,
-                                                        dataset.directoryName,
-                                                        if (layersToLinkWithDirectoryName.isEmpty) None
-                                                        else Some(layersToLinkWithDirectoryName))
+          additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
       }
     }
@@ -133,61 +122,36 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  private def validateLayerToLink(layerIdentifier: LegacyLinkedLayerIdentifier, requestingUser: User)(
-      implicit ec: ExecutionContext,
-      m: MessagesProvider): Fox[LegacyLinkedLayerIdentifier] =
-    for {
-      organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
-        "organization.notFound",
-        layerIdentifier.getOrganizationId) ~> NOT_FOUND
-      datasetBox <- datasetDAO
-        .findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
-          AuthorizedAccessContext(requestingUser))
-        .shiftBox
-      dataset <- datasetBox match {
-        case Full(ds) => Fox.successful(ds)
-        case _ =>
-          ObjectId
-            .fromString(layerIdentifier.dataSetName)
-            .flatMap(interpretedAsId => datasetDAO.findOne(interpretedAsId)(AuthorizedAccessContext(requestingUser))) ?~> Messages(
-            "dataset.notFound",
-            layerIdentifier.dataSetName)
-      }
-      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
-      _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
-    } yield layerIdentifier.copy(datasetDirectoryName = Some(dataset.directoryName))
-
   def reportDatasetUpload(name: String,
                           key: String,
                           token: String,
-                          datasetDirectoryName: String,
-                          datasetSizeBytes: Long,
-                          needsConversion: Boolean,
-                          viaAddRoute: Boolean): Action[AnyContent] =
-    Action.async { implicit request =>
-      dataStoreService.validateAccess(name, key) { dataStore =>
+                          datasetId: ObjectId): Action[ReportDatasetUploadParameters] =
+    Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, user._organization)(
-            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName) ~> NOT_FOUND
-          _ <- Fox.runIf(!needsConversion && !viaAddRoute)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- Fox.runIf(!needsConversion)(logUploadToSlack(user, dataset._id, viaAddRoute))
-          _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
-          _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
-        } yield Ok(Json.obj("id" -> dataset._id))
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+          _ = datasetService.trackNewDataset(dataset,
+                                             user,
+                                             request.body.needsConversion,
+                                             request.body.datasetSizeBytes,
+                                             viaAddRoute = false)
+          dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
+            implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
+            layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
+          }
+          _ <- Fox.runOptional(dataSourceWithLinkedLayersOpt) { dataSource =>
+            logger.info(s"Updating dataset $datasetId in database after upload reported from datastore $name.")
+            datasetDAO.updateDataSource(datasetId,
+                                        dataset._dataStore,
+                                        dataSource.hashCode(),
+                                        dataSource,
+                                        isUsable = true)(GlobalAccessContext)
+          }
+        } yield Ok
       }
     }
-
-  private def logUploadToSlack(user: User, datasetId: ObjectId, viaAddRoute: Boolean): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      resultLink = s"${conf.Http.uri}/datasets/$datasetId"
-      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
-      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
-                                        s"For organization: ${organization.name}. <$resultLink|Result>")
-    } yield ()
 
   def statusUpdate(name: String, key: String): Action[DataStoreStatus] = Action.async(validateJson[DataStoreStatus]) {
     implicit request =>
@@ -243,11 +207,11 @@ class WKRemoteDataStoreController @Inject()(
   /**
     * Called by the datastore after a dataset has been deleted on disk.
     */
-  def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
+  def deleteDataset(name: String, key: String): Action[ObjectId] = Action.async(validateJson[ObjectId]) {
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).shiftBox
+          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
           _ <- existingDatasetBox match {
             case Full(dataset) =>
               for {
@@ -273,7 +237,7 @@ class WKRemoteDataStoreController @Inject()(
             "organization.notFound",
             organizationId) ~> NOT_FOUND
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
-            GlobalAccessContext)
+            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }

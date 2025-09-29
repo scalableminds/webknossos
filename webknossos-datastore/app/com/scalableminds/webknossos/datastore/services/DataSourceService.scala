@@ -9,13 +9,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{
-  DatasetDeleter,
-  IntervalScheduler,
-  PathSchemes,
-  UPath,
-  MagLinkInfo
-}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, MagLinkInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
@@ -229,9 +223,9 @@ class DataSourceService @Inject()(
     }
   }
 
-  def exploreMappings(organizationId: String, datasetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
@@ -273,58 +267,26 @@ class DataSourceService @Inject()(
                              existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
-      UnusableDataSource(id, None, "Not imported yet.")
+      UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
     }
   }
 
-  // Prepend newBasePath to all (relative) paths in mags and attachments of the data source.
-  def prependAllPaths(dataSource: DataSource, newBasePath: String): Fox[DataSource] = {
-    val replaceUri = (uri: URI) => {
-      val isRelativeFilePath = (uri.getScheme == null || uri.getScheme.isEmpty || uri.getScheme == PathSchemes.schemeFile) && !uri.isAbsolute
-      uri.getPath match {
-        case pathStr if isRelativeFilePath =>
-          new URI(uri.getScheme,
-                  uri.getUserInfo,
-                  uri.getHost,
-                  uri.getPort,
-                  newBasePath + pathStr,
-                  uri.getQuery,
-                  uri.getFragment)
-        case _ => uri
-      }
-    }
-
-    dataSource.toUsable match {
-      case Some(usableDataSource) =>
-        val updatedDataLayers = usableDataSource.dataLayers.map {
-          case layerWithMagLocators: StaticLayer =>
-            layerWithMagLocators.mapped(
-              magMapping = mag =>
-                mag.path match {
-                  case Some(pathStr) => mag.copy(path = Some(replaceUri(new URI(pathStr)).toString))
-                  // If the mag does not have a path, it is an implicit path, we need to make it explicit.
-                  case _ =>
-                    mag.copy(
-                      path = Some(
-                        new URI(newBasePath)
-                          .resolve(List(layerWithMagLocators.name, mag.mag.toMagLiteral(true)).mkString("/"))
-                          .toString))
-              },
-              attachmentMapping = attachment =>
-                DataLayerAttachments(
-                  attachment.meshes.map(a => a.copy(path = replaceUri(a.path))),
-                  attachment.agglomerates.map(a => a.copy(path = replaceUri(a.path))),
-                  attachment.segmentIndex.map(a => a.copy(path = replaceUri(a.path))),
-                  attachment.connectomes.map(a => a.copy(path = replaceUri(a.path))),
-                  attachment.cumsum.map(a => a.copy(path = replaceUri(a.path)))
+  def resolvePathsInNewBasePath(dataSource: UsableDataSource, newBasePath: UPath): UsableDataSource = {
+    val updatedDataLayers = dataSource.dataLayers.map { layer =>
+      layer.mapped(
+        magMapping = mag =>
+          mag.path match {
+            case Some(existingMagPath) => mag.copy(path = Some(existingMagPath.resolvedIn(newBasePath)))
+            // If the mag does not have a path, it is an implicit path, we need to make it explicit.
+            case _ =>
+              mag.copy(
+                path = Some(newBasePath / layer.name / mag.mag.toMagLiteral(true))
               )
-            )
-          case layer => layer
-        }
-        Fox.successful(usableDataSource.copy(dataLayers = updatedDataLayers))
-      case None =>
-        Fox.failure("Cannot replace paths of unusable datasource")
+        },
+        attachmentMapping = _.resolvedIn(newBasePath)
+      )
     }
+    dataSource.copy(dataLayers = updatedDataLayers)
   }
 
   private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =
@@ -377,7 +339,7 @@ class DataSourceService @Inject()(
     }
 
     val allPaths = dataSource.allExplicitPaths
-    val sharedPath = commonPrefix(allPaths)
+    val sharedPath = commonPrefix(allPaths.map(_.toString))
     val matchingCredentials = globalCredentials.filter(c => sharedPath.startsWith(c.name))
     matchingCredentials.nonEmpty && sharedPath.startsWith("s3")
   }
@@ -458,15 +420,15 @@ class DataSourceService @Inject()(
         .flatMap(layerInfo => layerInfo.magLinkInfos.filter(_.linkedMags.nonEmpty))
         .toSet
       linkedMagPaths = magsLinkedByOtherDatasets.flatMap(_.linkedMags).flatMap(_.path)
-      paths = dataSource.allExplicitPaths.filterNot(path => linkedMagPaths.contains(path))
+      paths = dataSource.allExplicitPaths.filterNot(path => linkedMagPaths.contains(path.toString))
       _ <- Fox.runIf(paths.nonEmpty)({
         for {
           // Assume everything is in the same bucket
           firstPath <- paths.headOption.toFox
           bucket <- S3DataVault
-            .hostBucketFromUri(new URI(firstPath))
+            .hostBucketFromUri(new URI(firstPath.toString))
             .toFox ?~> s"Could not determine S3 bucket from path $firstPath"
-          prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path)).toFox))
+          prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path.toString)).toFox))
           keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(bucket, _)).map(_.flatten)
           uniqueKeys = keys.distinct
           _ = logger.info(

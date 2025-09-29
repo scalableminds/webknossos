@@ -5,6 +5,9 @@ WEBKNOSSOS supports several modes for displaying your dataset & interacting with
 Switch between different view modes using the buttons in the toolbar.
 
 ![Switch between different annotation modes using the buttons in the toolbar](../images/view_modes.png)
+/// caption
+Switch between different annotation modes using the buttons in the toolbar
+///
 
 ## Orthogonal Mode
 
@@ -22,6 +25,9 @@ Oblique mode lets you slice the data at any angle.
 Unlike Orthogonal mode, you can rotate the camera and slice the data in any direction.  For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
 
 ![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](../images/tracing_ui_obliquemode.jpeg)
+/// caption
+Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.
+///
 
 ## Flight Mode
 
@@ -29,14 +35,26 @@ Flight mode gives you another way to slice the data.
 Unlike Oblique mode, Flight mode projects the data on a sphere around the camera.  For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
 
 ![Annotate processes, e.g. neurites, efficiently in Flight mode](../images/tracing_ui_flightmode.jpeg)
+/// caption
+Annotate processes, e.g. neurites, efficiently in Flight mode
+///
 
 Spherical projection makes it easier to rotate the camera, because the pixels near the center of the screen stay in place.
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.
 
 ![Spherical projection of the Flight mode](../images/tracing_ui_flightmode_schema.jpeg)
+/// caption
+Spherical projection of the Flight mode
+///
 ![Seamless rotation and navigation in the Flight mode](../images/tracing_ui_flightmode_rotate.gif)
+/// caption
+Seamless rotation and navigation in the Flight mode
+///
 
 ![Changing the radius of the spherical projection](../images/tracing_ui_flightmode_radius.gif)
+/// caption
+Changing the radius of the spherical projection
+///
 
 You can annotate structures faster in Flight mode.
 Seasoned annotators can follow tube-like structures, such as dendrites or axons, as if they are flying through them, much like in racing game or flight simulator.

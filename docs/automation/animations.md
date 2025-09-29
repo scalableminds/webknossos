@@ -44,4 +44,4 @@ You can choose between two resolutions for your animation video:
 ### Layer & Bounding Box
 
 - **Layer:** Select the data layer to be used for the animation.
-- **Bounding Box:** Choose the bounding box for the animation. By default, the entire layer is selected. You can create custom bounding boxes using the [bounding box tool](../ui/toolbar.md#measurement-tools).
+- **Bounding Box:** Choose the bounding box for the animation. By default, the entire layer is selected. You can create custom bounding boxes using the [bounding box tool](../ui/toolbar.md#measurement-and-analysis).

@@ -287,7 +287,7 @@ describe("DType Dataset Rendering", () => {
               for (const action of actions) {
                 window.webknossos.DEV.store.dispatch(action);
               }
-              await window.webknossos.DEV.api.tracing.save();;
+              await window.webknossos.DEV.api.tracing.save();
             }, actions);
             console.timeEnd("evaluate");
 

@@ -339,7 +339,6 @@ function* loadFullAdHocMesh(
     useDataStore = false;
   }
 
-  const maybeFallbackLayerName = layer.fallbackLayer != null ? layer.fallbackLayer : layer.name;
   let isStaticSegmentationLayerWithSegmentIndex = false;
 
   if (volumeTracing == null) {
@@ -347,7 +346,7 @@ function* loadFullAdHocMesh(
       hasSegmentIndexInDataStoreCached,
       dataset.dataStore.url,
       dataset.id,
-      maybeFallbackLayerName,
+      layer.name,
     );
   }
   // Segment stats can only be used for volume tracings that have a segment index
@@ -360,7 +359,7 @@ function* loadFullAdHocMesh(
   const usePositionsFromSegmentIndex =
     usePositionsFromSegmentIndexForVolumeTracing || isStaticSegmentationLayerWithSegmentIndex;
 
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${maybeFallbackLayerName}`;
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${layer.name}`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
   const requestUrl = useDataStore ? dataStoreUrl : tracingStoreUrl;
 

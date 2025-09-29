@@ -237,7 +237,7 @@ class WKRemoteDataStoreController @Inject()(
             "organization.notFound",
             organizationId) ~> NOT_FOUND
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
-            GlobalAccessContext)
+            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }

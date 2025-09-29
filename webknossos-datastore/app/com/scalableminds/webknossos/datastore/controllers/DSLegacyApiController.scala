@@ -116,11 +116,19 @@ class DSLegacyApiController @Inject()(
       }
     }
 
-  private def adaptLayerToLink(legacyLayerToLink: LegacyLinkedLayerIdentifier): Fox[LinkedLayerIdentifier] =
+  private def adaptLayerToLink(legacyLayerToLink: LegacyLinkedLayerIdentifier): Fox[LinkedLayerIdentifier] = {
+    val asObjectIdOpt = ObjectId.fromStringSync(legacyLayerToLink.dataSetName)
     for {
-      datasetId <- remoteWebknossosClient.getDatasetId(legacyLayerToLink.getOrganizationId,
-                                                       legacyLayerToLink.dataSetName)
+      datasetId <- asObjectIdOpt match {
+        case Some(asObjectId) =>
+          // Client already used datasetId in the dataSetName field. The libs did this for a while.
+          Fox.successful(asObjectId)
+        case None =>
+          // dataSetName is not an objectId. Assume directoryName. Resolve with remoteWebknossosClient.
+          remoteWebknossosClient.getDatasetId(legacyLayerToLink.getOrganizationId, legacyLayerToLink.dataSetName)
+      }
     } yield LinkedLayerIdentifier(datasetId, legacyLayerToLink.layerName, legacyLayerToLink.newLayerName)
+  }
 
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access

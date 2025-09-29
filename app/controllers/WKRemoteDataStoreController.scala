@@ -78,11 +78,15 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
             datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
           preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
-          dataset <- datasetService.createVirtualDataset(uploadInfo.name,
-                                                         dataStore,
-                                                         preliminaryDataSource,
-                                                         uploadInfo.folderId,
-                                                         user) ?~> "dataset.upload.creation.failed"
+          dataset <- datasetService.createAndSetUpDataset(
+            uploadInfo.name,
+            dataStore,
+            preliminaryDataSource,
+            uploadInfo.folderId,
+            user,
+            // For the moment, the convert_to_wkw job can only fill the dataset if it is not virtual.
+            isVirtual = !uploadInfo.needsConversion.getOrElse(false)
+          ) ?~> "dataset.upload.creation.failed"
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))

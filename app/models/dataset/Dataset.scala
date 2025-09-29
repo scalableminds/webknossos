@@ -663,6 +663,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
+  def makeVirtual(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(q"UPDATE webknossos.datasets SET isVirtual = ${true} WHERE _id = $datasetId".asUpdate)
+    } yield ()
+
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
                            dataStoreName: String,
                            organizationId: Option[String],

@@ -108,7 +108,8 @@ class DSLegacyApiController @Inject()(
             initialTeams = request.body.initialTeams,
             folderId = request.body.folderId,
             requireUniqueName = request.body.requireUniqueName,
-            isVirtual = None
+            isVirtual = None,
+            needsConversion = None
           )
           result <- Fox.fromFuture(dataSourceController.reserveUpload()(request.withBody(adaptedRequestBody)))
         } yield result
@@ -140,7 +141,8 @@ class DSLegacyApiController @Inject()(
               request.body.initialTeamIds,
               request.body.folderId,
               Some(request.body.requireUniqueName),
-              None
+              None,
+              needsConversion = None
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield

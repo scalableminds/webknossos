@@ -85,28 +85,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  def createVirtualDataset(datasetName: String,
-                           dataStore: DataStore,
-                           dataSource: DataSource,
-                           folderId: Option[ObjectId],
-                           user: User): Fox[Dataset] =
-    for {
-      _ <- assertValidDatasetName(datasetName)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
-      newDatasetId = ObjectId.generate
-      directoryName = generateDirectoryName(datasetName, newDatasetId)
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
-                               isVirtual = true)
-      datasetId = dataset._id
-      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
-      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
-    } yield dataset
-
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
@@ -118,6 +96,29 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       // Only list pending uploads since the two last weeks.
       createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
+
+  def createAndSetUpDataset(datasetName: String,
+                            dataStore: DataStore,
+                            dataSource: DataSource,
+                            folderId: Option[ObjectId],
+                            user: User,
+                            isVirtual: Boolean): Fox[Dataset] =
+    for {
+      _ <- assertValidDatasetName(datasetName)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
+      newDatasetId = ObjectId.generate
+      directoryName = generateDirectoryName(datasetName, newDatasetId)
+      dataset <- createDataset(dataStore,
+                               newDatasetId,
+                               datasetName,
+                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
+                               isVirtual = isVirtual)
+      datasetId = dataset._id
+      _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
+      _ <- addUploader(dataset, user._id)(GlobalAccessContext)
+    } yield dataset
 
   def createDataset(
       dataStore: DataStore,

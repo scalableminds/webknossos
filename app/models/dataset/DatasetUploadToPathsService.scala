@@ -97,6 +97,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                   requestingUser._organization,
                                                   parameters.pathPrefix)
       _ <- assertValidDataSource(dataSourceWithPaths).toFox
+      _ <- datasetDAO.makeVirtual(dataset._id)
       _ <- datasetDAO.updateDataSource(dataset._id,
                                        dataset._dataStore,
                                        dataSourceWithPaths.hashCode(),

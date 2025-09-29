@@ -45,11 +45,12 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      dataset <- datasetService.createVirtualDataset(composeRequest.newDatasetName,
-                                                     dataStore,
-                                                     dataSource,
-                                                     Some(composeRequest.targetFolderId),
-                                                     user)
+      dataset <- datasetService.createAndSetUpDataset(composeRequest.newDatasetName,
+                                                      dataStore,
+                                                      dataSource,
+                                                      Some(composeRequest.targetFolderId),
+                                                      user,
+                                                      isVirtual = true)
 
     } yield (dataSource, dataset._id)
 

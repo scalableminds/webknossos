@@ -205,12 +205,13 @@ class DatasetController @Inject()(userService: UserService,
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
         _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
-        newDataset <- datasetService.createVirtualDataset(
+        newDataset <- datasetService.createAndSetUpDataset(
           request.body.datasetName,
           dataStore,
           dataSource,
           folderIdOpt,
-          request.identity
+          request.identity,
+          isVirtual = true
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -226,12 +227,13 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
         _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
-        dataset <- datasetService.createVirtualDataset(
+        dataset <- datasetService.createAndSetUpDataset(
           name,
           dataStore,
           request.body.dataSource,
           request.body.folderId,
-          user
+          user,
+          isVirtual = true
         )
         _ <- datasetService.trackNewDataset(dataset,
                                             user,

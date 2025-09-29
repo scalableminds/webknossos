@@ -54,7 +54,8 @@ case class ReserveUploadInformation(
     initialTeams: List[ObjectId], // team ids
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
-    isVirtual: Option[Boolean] // Only set (to false) for legacy manual uploads
+    isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
+    needsConversion: Option[Boolean] // None means false
 )
 object ReserveUploadInformation {
   implicit val jsonFormat: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]

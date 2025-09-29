@@ -1,5 +1,6 @@
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { createDebouncedAbortableParameterlessCallable } from "libs/async/debounced_abortable_saga";
+import Toast from "libs/toast";
 import { call } from "redux-saga/effects";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -126,6 +127,10 @@ class PushQueue {
     const batch: DataBucket[] = Array.from(this.pendingBuckets);
     this.pendingBuckets = new Set();
 
+    console.log("Flushed and snapshotted buckets:", batch.length);
+    if (batch.length > 500) {
+      Toast.warning(`Saving ${batch.length} annotated buckets may take a while.`);
+    }
     // Fire and forget. The correct transaction ordering is ensured
     // within pushTransaction.
     this.pushTransaction(batch);

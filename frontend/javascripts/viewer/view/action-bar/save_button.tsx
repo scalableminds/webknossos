@@ -18,7 +18,7 @@ import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 
-const SAVE_POLLING_INTERVAL = 1000 * 60; // 1s TODO_C
+const SAVE_POLLING_INTERVAL = 1000; // 1s
 
 const UNSAVED_WARNING_THRESHOLD = 2 * 60 * 1000; // 2 min
 

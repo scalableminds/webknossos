@@ -29,5 +29,8 @@ Depending on the job workflow you may:
 - download the data, e.g., [Tiff export](../data/export_ui.md)
 
 ![Overview of the Jobs page](../images/jobs.jpeg)
+/// caption
+Overview of the Jobs page
+///
 
-We constantly monitor job executions. In rare cases, jobs can fail, and we aim to re-run them as quickly as possible. In case you run into any trouble please [contact us](mailto:hello@webknossos.org).
+We constantly monitor job executions. In rare cases, jobs can fail, and we aim to re-run them as quickly as possible. In case you run into any trouble, please [contact us](mailto:hello@webknossos.org).

@@ -8,7 +8,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
@@ -22,15 +21,21 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   ChunkGridSpecification,
   ChunkKeyEncoding,
   ChunkKeyEncodingConfiguration,
+  NgffZarr3GroupHeader,
   TransposeCodecConfiguration,
   TransposeSetting,
-  Zarr3ArrayHeader,
-  NgffZarr3GroupHeader
+  Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataFormat, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  DataFormat,
+  DataLayer,
+  ElementClass,
+  StaticSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -44,6 +49,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
+import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
 class VolumeTracingZarrStreamingController @Inject()(
@@ -269,15 +275,22 @@ class VolumeTracingZarrStreamingController @Inject()(
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          zarrLayer = ZarrSegmentationLayer(
-            name = tracingName.getOrElse(tracingId),
+          layerName = tracingName.getOrElse(tracingId)
+          zarrLayer = StaticSegmentationLayer(
+            name = layerName,
+            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.mags.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
-            mappings = None,
-            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1),
-            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
+            mags = tracing.mags.toList.map(
+              m =>
+                MagLocator(m,
+                           Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
+                           None,
+                           Some(AxisOrder.cxyz),
+                           None,
+                           None)),
+            mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))
       }

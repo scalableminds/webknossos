@@ -311,6 +311,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
     "The annotation was successfully locked. Reloading this annotation ...",
+  "proofreading.multi_cut.different_agglomerate_selected": `The selected segment belongs to a different agglomerate than the one that is currently partitioned via selections. If you want to split this other agglomerate please clear your current selection with "ESC" first.`,
+  "proofreading.multi_cut.empty_partition":
+    "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
+  "proofreading.multi_cut.no_valid_agglomerate":
+    "No agglomerate for the selected segments could be found. Please retry with a new selection.",
+  "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -354,7 +360,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.name.already_taken":
     "This name is already being used by a different dataset. Please choose a different name.",
   "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
-  "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
   "dataset.import.required.name": "Please provide a name for the dataset.",

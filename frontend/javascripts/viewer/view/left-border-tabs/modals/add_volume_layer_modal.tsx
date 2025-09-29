@@ -201,7 +201,7 @@ export default function AddVolumeLayerModal({
       let maybeMappingName = null;
       if (
         mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType === "HDF5"
+        mappingInfo.mappingType !== "JSON"
       ) {
         maybeMappingName = mappingInfo.mappingName;
       }

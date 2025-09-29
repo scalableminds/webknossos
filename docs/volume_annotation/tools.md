@@ -35,7 +35,7 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
     The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
 
 ![Proofreading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
-**Proofreading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/proofreading_tool.md).
+**Proofreading**: Fix merge and split errors in automated segmentations using the underlying supervoxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/proofreading_tool.md).
 
 
 In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.

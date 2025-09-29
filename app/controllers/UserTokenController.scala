@@ -18,6 +18,7 @@ import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.{Box, Full}
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
@@ -86,7 +87,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Result] =
+      implicit ec: ExecutionContext,
+      mp: MessagesProvider): Fox[Result] =
     if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -198,10 +200,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String,
-                                  mode: AccessMode,
-                                  userBox: Box[User],
-                                  token: Option[String]): Fox[UserAccessAnswer] =
+  private def handleTracingAccess(tracingId: String, mode: AccessMode, userBox: Box[User], token: Option[String])(
+      implicit mp: MessagesProvider): Fox[UserAccessAnswer] =
     if (tracingId == TracingId.dummy)
       Fox.successful(UserAccessAnswer(granted = true))
     else
@@ -210,10 +210,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         result <- handleAnnotationAccess(annotation._id.toString, mode, userBox, token)
       } yield result
 
-  private def handleAnnotationAccess(annotationId: String,
-                                     mode: AccessMode,
-                                     userBox: Box[User],
-                                     token: Option[String]): Fox[UserAccessAnswer] = {
+  private def handleAnnotationAccess(annotationId: String, mode: AccessMode, userBox: Box[User], token: Option[String])(
+      implicit mp: MessagesProvider): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
@@ -230,7 +228,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         annotationId <- ObjectId.fromString(annotationId)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
+          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext, mp)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox

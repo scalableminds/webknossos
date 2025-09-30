@@ -133,7 +133,7 @@ class PushQueue {
         </>,
         { sticky: true },
       );
-      ensuredconsole.warn(warningMessage + " For more info, visit: " + linkToDocs);
+      console.warn(warningMessage + " For more info, visit: " + linkToDocs);
     }
 
     this.waitTimeStartTimeStamp = null;

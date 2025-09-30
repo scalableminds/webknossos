@@ -256,10 +256,9 @@ class WKRemoteTracingStoreClient(
                                    startVersion: Long): Fox[Long] =
     (editedMappingEdgesZip, editedMappingBaseMappingName) match {
       case (Some(zipfile), Some(baseMappingName)) =>
-        rpc(s"${tracingStore.url}/tracings/mapping/save")
+        rpc(s"${tracingStore.url}/tracings/mapping/$newTracingId}/save")
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("annotationId" -> annotationId.toString)
-          .addQueryString("newTracingId" -> newTracingId)
           .addQueryString("baseMappingName" -> baseMappingName)
           .addQueryString("startVersion" -> startVersion.toString)
           .postFileWithJsonResponse[Long](zipfile)

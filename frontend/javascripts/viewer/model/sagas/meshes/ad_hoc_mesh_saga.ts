@@ -48,7 +48,7 @@ import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/pos
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
-import Store from "viewer/store";
+import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
 
@@ -294,6 +294,25 @@ function removeMeshWithoutVoxels(
   }
 }
 
+function* getUsePositionsFromSegmentIndex(
+  volumeTracing: VolumeTracing | null | undefined,
+  dataset: StoreDataset,
+  layerName: string,
+  maybeTracingId?: string | null,
+): Saga<boolean> {
+  if (volumeTracing == null) {
+    return yield* call(
+      hasSegmentIndexInDataStoreCached,
+      dataset.dataStore.url,
+      dataset.id,
+      layerName,
+    );
+  }
+  return (
+    volumeTracing?.hasSegmentIndex && !volumeTracing.hasEditableMapping && maybeTracingId != null
+  );
+}
+
 function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
@@ -339,25 +358,15 @@ function* loadFullAdHocMesh(
     useDataStore = false;
   }
 
-  let isStaticSegmentationLayerWithSegmentIndex = false;
-
-  if (volumeTracing == null) {
-    isStaticSegmentationLayerWithSegmentIndex = yield* call(
-      hasSegmentIndexInDataStoreCached,
-      dataset.dataStore.url,
-      dataset.id,
-      layer.name,
-    );
-  }
-  // Segment stats can only be used for volume tracings that have a segment index
+  // Segment stats can only be used for segmentation layers that have a segment index
   // and that don't have editable mappings.
-  const usePositionsFromSegmentIndexForVolumeTracing =
-    volumeTracing?.hasSegmentIndex &&
-    !volumeTracing.hasEditableMapping &&
-    visibleSegmentationLayer?.tracingId != null;
 
-  const usePositionsFromSegmentIndex =
-    usePositionsFromSegmentIndexForVolumeTracing || isStaticSegmentationLayerWithSegmentIndex;
+  const usePositionsFromSegmentIndex = getUsePositionsFromSegmentIndex(
+    volumeTracing,
+    dataset,
+    layer.name,
+    visibleSegmentationLayer?.tracingId,
+  );
 
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${layer.name}`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;

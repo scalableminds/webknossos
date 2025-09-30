@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
 import type { Vector3 } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
-import { convertToDenseMag } from "viewer/model/helpers/mag_info";
+import { convertToDenseMags } from "viewer/model/helpers/mag_info";
 
 describe("Model mags", () => {
-  it("Simple convertToDenseMag", () => {
-    const denseMags = convertToDenseMag([
+  it("Simple convertToDenseMags", () => {
+    const denseMags = convertToDenseMags([
       [2, 2, 1],
       [4, 4, 2],
     ]);
@@ -17,7 +17,7 @@ describe("Model mags", () => {
     ]);
   });
 
-  it("Complex convertToDenseMag", () => {
+  it("Complex convertToDenseMags", () => {
     const dataset = {
       dataSource: {
         dataLayers: [
@@ -57,7 +57,7 @@ describe("Model mags", () => {
     };
 
     const densify = (layer: { mags: { mag: Vector3 }[] }) =>
-      convertToDenseMag(layer.mags.map((magInfo) => magInfo.mag));
+      convertToDenseMags(layer.mags.map((magInfo) => magInfo.mag));
 
     expect(densify(dataset.dataSource.dataLayers[0])).toEqual(expectedMags[0]);
     expect(densify(dataset.dataSource.dataLayers[1])).toEqual(expectedMags[1]);

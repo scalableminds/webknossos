@@ -28,7 +28,7 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
+import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magInfo) => magInfo.mag));
@@ -93,7 +93,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMag(layer.mags.map((magInfo) => magInfo.mag)),
+    convertToDenseMags(layer.mags.map((magInfo) => magInfo.mag)),
   );
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];

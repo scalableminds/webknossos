@@ -292,7 +292,7 @@ function _DownloadModalView({
     (tracing) => tracing.additionalAxes.length > 0,
   );
   const hasVolumes = hasVolumeTracings(annotation);
-  const initialFileFormatToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
+  const initialFileFormatToDownload = hasVolumes ? "zarr3" : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);

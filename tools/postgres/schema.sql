@@ -59,6 +59,9 @@ CREATE TABLE webknossos.annotation_layers(
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
   name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
+  hasEditableMapping BOOLEAN,
+  fallbackLayerName TEXT,
+  mappingName TEXT,
   UNIQUE (name, _annotation) DEFERRABLE INITIALLY DEFERRED,
   PRIMARY KEY (_annotation, tracingId),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')

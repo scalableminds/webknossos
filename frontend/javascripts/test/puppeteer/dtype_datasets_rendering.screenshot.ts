@@ -238,11 +238,11 @@ describe("DType Dataset Rendering", () => {
             }
 
             await page.evaluate(async (actions) => {
-              await window.webknossos.apiReady().then(async () => {
+              await window.webknossos.apiReady().then(async (api) => {
                 for (const action of actions) {
                   window.webknossos.DEV.store.dispatch(action);
                 }
-                await window.webknossos.DEV.api.tracing.save();
+                await api.tracing.save();
               });
             }, actions);
           };

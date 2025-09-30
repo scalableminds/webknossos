@@ -169,7 +169,6 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationId: activeUser.organization,
-        voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
         layers: layersWithTransforms,
       });
 

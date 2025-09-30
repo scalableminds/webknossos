@@ -17,7 +17,6 @@ case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: ObjectId,
     organizationId: String,
-    voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
 
@@ -94,7 +93,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
-      (layers, voxelSize) <- adaptLayersAndVoxelSize(layersAndVoxelSizes, Some(composeRequest.voxelSize))
+      (layers, voxelSize) <- adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
       dataSource = UsableDataSource(
         DataSourceId(datasetDirectoryName, organizationId),
         layers,

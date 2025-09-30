@@ -67,7 +67,6 @@ import {
   type ServerTracing,
   type ShortLink,
   type TracingType,
-  type VoxelSize,
   type VoxelyticsChunkStatistics,
   type VoxelyticsLogLine,
   type VoxelyticsWorkflowListing,
@@ -1086,7 +1085,6 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationId: string;
-  voxelSize: VoxelSize;
   layers: LayerLink[];
 };
 

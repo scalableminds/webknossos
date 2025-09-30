@@ -125,11 +125,13 @@ class PushQueue {
       //TODO_C
       const warningMessage =
         "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
-      const linkToDocs = "https://docs.webknossos.org/webknossos/index.html";
+      const linkToDocs =
+        "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
       Toast.warning(
         <>
-          {warningMessage} Read more in the <a href={linkToDocs}>docs</a>.{" "}
-          {/*TODO_C insert right link*/}
+          {warningMessage}
+          <br />
+          See the <a href={linkToDocs}>docs</a>.
         </>,
         { sticky: true },
       );

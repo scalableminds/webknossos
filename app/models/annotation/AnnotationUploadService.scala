@@ -21,9 +21,14 @@ import play.api.i18n.MessagesProvider
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
+case class UploadedVolumeLayer(tracing: VolumeTracing,
+                               dataZipLocation: String,
+                               name: Option[String],
+                               editedMappingEdgesLocation: Option[String],
+                               editedMappingBaseMappingName: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
+
 }
 
 case class SharedParsingParameters(useZipName: Boolean,

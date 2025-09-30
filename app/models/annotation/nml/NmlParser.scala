@@ -91,9 +91,12 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
             segmentGroups = v.segmentGroups,
             hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             editPositionAdditionalCoordinates = nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
+            additionalAxes = nmlParams.additionalAxisProtos,
+            hasEditableMapping = v.editedMappingEdgesLocation.isDefined
           ),
           basePath.getOrElse("") + v.dataZipPath,
+          basePath.getOrElse("") + v.editedMappingEdgesLocation,
+          v.editedMappingBaseMappingName,
           v.name,
         )
       }
@@ -220,7 +223,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").getOrElse(List())
+          extractSegmentGroups(node \ "groups").getOrElse(List()),
+          getSingleAttributeOpt(node, "editedMappingEdgesLocation"),
+          getSingleAttributeOpt(node, "editedMappingBaseMappingName")
         )
       }
     )

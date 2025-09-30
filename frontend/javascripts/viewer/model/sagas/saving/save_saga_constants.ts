@@ -21,3 +21,5 @@ export const MAXIMUM_ACTION_COUNT_PER_BATCH = 1000;
 //   mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
 // } as const;
 export const MAXIMUM_ACTION_COUNT_PER_SAVE = 3000;
+
+export const BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD = 4000;

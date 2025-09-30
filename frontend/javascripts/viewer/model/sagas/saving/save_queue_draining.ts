@@ -64,7 +64,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    const time1 = Date.now();
     yield* put(setSaveBusyAction(true));
 
     // Send (parts of) the save queue to the server.
@@ -99,9 +98,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       }
     }
     yield* put(setSaveBusyAction(false));
-    console.log(
-      `Saving iteration took ${Date.now() - time1} ms, forcePush: ${forcePush}, saved ${savedItemCount} items`,
-    );
   }
 }
 

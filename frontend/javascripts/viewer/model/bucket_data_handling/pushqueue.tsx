@@ -8,6 +8,7 @@ import { createCompressedUpdateBucketActions } from "viewer/model/bucket_data_ha
 import Store from "viewer/store";
 import { escalateErrorAction } from "../actions/actions";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD } from "../sagas/saving/save_saga_constants";
 import type { UpdateActionWithoutIsolationRequirement } from "../sagas/volume/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
@@ -120,6 +121,21 @@ class PushQueue {
   };
 
   private flushAndSnapshot() {
+    if (this.pendingBuckets.size > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD / 1000) {
+      //TODO_C
+      const warningMessage =
+        "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+      const linkToDocs = "https://docs.webknossos.org/webknossos/index.html";
+      Toast.warning(
+        <>
+          {warningMessage} Read more in the <a href={linkToDocs}>docs</a>.{" "}
+          {/*TODO_C insert right link*/}
+        </>,
+        { sticky: true },
+      );
+      ensuredconsole.warn(warningMessage + " For more info, visit: " + linkToDocs);
+    }
+
     this.waitTimeStartTimeStamp = null;
     // Flush pendingBuckets. Note that it's important to do this synchronously.
     // Otherwise, other actors might add to pendingBuckets concurrently during the flush,
@@ -127,10 +143,6 @@ class PushQueue {
     const batch: DataBucket[] = Array.from(this.pendingBuckets);
     this.pendingBuckets = new Set();
 
-    console.log("Flushed and snapshotted buckets:", batch.length);
-    if (batch.length > 500) {
-      Toast.warning(`Saving ${batch.length} annotated buckets may take a while.`);
-    }
     // Fire and forget. The correct transaction ordering is ensured
     // within pushTransaction.
     this.pushTransaction(batch);

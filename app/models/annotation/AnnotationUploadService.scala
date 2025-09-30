@@ -29,6 +29,9 @@ case class UploadedVolumeLayer(tracing: VolumeTracing,
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
 
+  def getEditableMappingEdgesZipFrom(otherFiles: Map[String, File]): Option[File] =
+    editedMappingEdgesLocation.flatMap(otherFiles.get)
+
 }
 
 case class SharedParsingParameters(useZipName: Boolean,

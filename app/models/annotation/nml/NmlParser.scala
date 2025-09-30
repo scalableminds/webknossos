@@ -92,10 +92,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
             hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             editPositionAdditionalCoordinates = nmlParams.editPositionAdditionalCoordinates,
             additionalAxes = nmlParams.additionalAxisProtos,
-            hasEditableMapping = v.editedMappingEdgesLocation.isDefined
+            hasEditableMapping = if (v.editedMappingEdgesLocation.isDefined) Some(true) else None
           ),
           basePath.getOrElse("") + v.dataZipPath,
-          basePath.getOrElse("") + v.editedMappingEdgesLocation,
+          v.editedMappingEdgesLocation.map(location => basePath.getOrElse("") + location),
           v.editedMappingBaseMappingName,
           v.name,
         )

@@ -1124,7 +1124,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetMag =
       fallbackLayerInfo != null
-        ? fallbackLayerInfo.mags
+        ? fallbackLayerInfo.mags.map(({ mag }) => mag)
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
           getWidestMags(this.props.dataset);
@@ -1133,7 +1133,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const volumeTracingMags = segmentationLayer.mags;
 
-    const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
+    const sourceMag = _.minBy(volumeTracingMags.map((magInfo) => magInfo.mag, getMaxDim));
     if (sourceMag === undefined) {
       return [];
     }

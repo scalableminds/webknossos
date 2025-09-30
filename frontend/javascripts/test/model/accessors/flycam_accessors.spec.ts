@@ -8,7 +8,7 @@ import defaultState from "viewer/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 const boundingBox = {
-  topLeft: [0, 0, 0],
+  topLeft: [0, 0, 0] as Vector3,
   width: 100,
   height: 100,
   depth: 100,
@@ -23,28 +23,25 @@ const initialState: WebknossosState = {
       dataLayers: [
         {
           name: "layer1",
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
           mags: [
-            [1, 1, 1],
-            [2, 2, 2],
-            [4, 4, 4],
-            [8, 8, 8],
-            [16, 16, 16],
+            { mag: [1, 1, 1] },
+            { mag: [2, 2, 2] },
+            { mag: [4, 4, 4] },
+            { mag: [8, 8, 8] },
+            { mag: [16, 16, 16] },
           ],
           category: "color",
+          additionalAxes: [],
         },
         {
           name: "layer2",
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
-          mags: [
-            [1, 1, 1],
-            [2, 2, 2],
-          ],
+          mags: [{ mag: [1, 1, 1] }, { mag: [2, 2, 2] }],
           category: "color",
+          additionalAxes: [],
         },
       ],
     },

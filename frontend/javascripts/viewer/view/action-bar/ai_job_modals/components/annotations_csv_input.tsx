@@ -100,14 +100,16 @@ export function AnnotationsCsvInput({
             id: largestId + 1,
           });
         }
-
+        const volumeTracingMags = volumeServerTracings.map(({ mags }) =>
+          mags
+            ? mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))
+            : [{ mag: [1, 1, 1] as Vector3 }],
+        );
         return {
           annotation,
           dataset,
           volumeTracings,
-          volumeTracingMags: volumeServerTracings.map(({ mags }) =>
-            mags ? mags.map(Utils.point3ToVector3) : ([[1, 1, 1]] as Vector3[]),
-          ),
+          volumeTracingMags,
           userBoundingBoxes: userBoundingBoxes || [],
         };
       }),

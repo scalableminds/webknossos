@@ -16,7 +16,7 @@ class DataLayer {
   pushQueue: PushQueue;
   mappings: Mappings | null | undefined;
   layerRenderingManager: LayerRenderingManager;
-  mags: Array<Vector3>;
+  mags: Array<{ mag: Vector3 }>;
   fallbackLayer: string | null | undefined;
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;

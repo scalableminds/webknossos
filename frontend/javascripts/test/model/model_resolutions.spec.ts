@@ -23,15 +23,15 @@ describe("Model mags", () => {
         dataLayers: [
           {
             mags: [
-              [16, 16, 2],
-              [2, 2, 1],
-              [4, 4, 1],
-              [8, 8, 1],
-              [32, 32, 4],
-            ] as Vector3[],
+              { mag: [16, 16, 2] },
+              { mag: [2, 2, 1] },
+              { mag: [4, 4, 1] },
+              { mag: [8, 8, 1] },
+              { mag: [32, 32, 4] },
+            ] as { mag: Vector3 }[],
           },
           {
-            mags: [[32, 32, 4]] as Vector3[],
+            mags: [{ mag: [32, 32, 4] }] as { mag: Vector3 }[],
           },
         ],
       },
@@ -56,7 +56,8 @@ describe("Model mags", () => {
       ] as Vector3[],
     };
 
-    const densify = (layer: { mags: Vector3[] }) => convertToDenseMag(layer.mags);
+    const densify = (layer: { mags: { mag: Vector3 }[] }) =>
+      convertToDenseMag(layer.mags.map((magInfo) => magInfo.mag));
 
     expect(densify(dataset.dataSource.dataLayers[0])).toEqual(expectedMags[0]);
     expect(densify(dataset.dataSource.dataLayers[1])).toEqual(expectedMags[1]);

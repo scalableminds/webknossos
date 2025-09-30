@@ -47,7 +47,7 @@ export const getBestFittingMagComparedToTrainingDS = (
     return magInfo.getFinestMag();
   }
   const modelScale = MEAN_VX_SIZE[jobType];
-  let closestMagOfCurrentDS = colorLayer.mags[0];
+  let closestMagOfCurrentDS = colorLayer.mags[0].mag;
   let bestDifference = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -56,13 +56,13 @@ export const getBestFittingMagComparedToTrainingDS = (
 
   const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
 
-  for (const mag of colorLayer.mags) {
+  for (const magInfo of colorLayer.mags) {
     const diff = datasetScaleInNm.map((dim, i) =>
-      Math.abs(Math.log(dim * mag[i]) - Math.log(modelScale[i])),
+      Math.abs(Math.log(dim * magInfo.mag[i]) - Math.log(modelScale[i])),
     );
     if (bestDifference[0] > diff[0]) {
       bestDifference = diff;
-      closestMagOfCurrentDS = mag;
+      closestMagOfCurrentDS = magInfo.mag;
     }
   }
   const maxDistance = Math.max(...bestDifference);
@@ -125,7 +125,7 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingMags: Vector3[][];
+  volumeTracingMags: { mag: Vector3 }[][];
 };
 
 export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(

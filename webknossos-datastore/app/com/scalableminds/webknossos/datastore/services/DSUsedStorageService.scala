@@ -59,7 +59,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
           path
       })
       // Check to only measure remote paths that are part of a vault that is configured.
-      (absoluteUpathsToMeasure, absoluteUpathsToSkip) = absoluteUpaths.partition(
+      (absoluteUpathsToMeasure, _absoluteUpathsToSkip) = absoluteUpaths.partition(
         path =>
           path.isLocal || config.Datastore.DataVaults.credentials.exists(
             vaultCredentialConfig =>
@@ -77,7 +77,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
       }
       failedPaths = pathsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
       _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
-        s"Failed to measure storage for ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
+        s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
         else "."}"))
     } yield successfulStorageUsedBoxes
   }

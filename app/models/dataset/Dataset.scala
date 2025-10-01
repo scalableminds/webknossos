@@ -738,7 +738,7 @@ case class MagWithPaths(layerName: String,
 
 case class DataSourceMagRow(_dataset: ObjectId,
                             dataLayerName: String,
-                            mag: String,
+                            mag: Vec3Int,
                             path: Option[String],
                             realPath: Option[String],
                             hasLocalData: Boolean,
@@ -755,12 +755,14 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)).toFox ?~> "could not parse mag"
+      mag <- Vec3Int
+        .fromList(parseArrayLiteral(row.mag).map(_.toInt))
+        .toFox ?~> "Could not parse mag of dataset_mags row."
     } yield MagWithPaths(row.datalayername, mag, row.path, row.realpath, hasLocalData = row.haslocaldata)
 
   private def parseMag(magArrayLiteral: String): Fox[Vec3Int] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
+      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "Could not parse mag."
     } yield mag
 
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
@@ -824,25 +826,37 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     GetResult(
-      r =>
-        DataSourceMagRow(ObjectId(r.nextString()),
-                         r.nextString(),
-                         r.nextString(),
-                         r.nextStringOption(),
-                         r.nextStringOption(),
-                         r.nextBoolean(),
-                         r.nextString(),
-                         r.nextString()))
-
-  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): Fox[List[DataSourceMagInfo]] =
-    for {
-      mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
-      dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
-      magInfos = rows.toList.zip(mags).zip(dataSources).map {
-        case ((row, mag), dataSource) =>
-          DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
+      r => {
+        val datasetId = ObjectId(r.nextString())
+        val layerName = r.nextString()
+        val magLiteral = r.nextString()
+        val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(magLiteral).map(_.toInt))
+        DataSourceMagRow(
+          datasetId,
+          layerName,
+          parsedMagOpt.getOrElse(
+            // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+            throw new IllegalArgumentException(
+              s"Invalid mag literal for dataset $datasetId with value: '$magLiteral'"
+            )
+          ),
+          r.nextStringOption(),
+          r.nextStringOption(),
+          r.nextBoolean(),
+          r.nextString(),
+          r.nextString()
+        )
       }
-    } yield magInfos
+    )
+
+  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): List[DataSourceMagInfo] = {
+    val mags = rows.map(_.mag)
+    val dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
+    rows.toList.zip(mags).zip(dataSources).map {
+      case ((row, mag), dataSource) =>
+        DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
+    }
+  }
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
     for {
@@ -851,7 +865,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE _dataset = $datasetId
             AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
-      magInfos <- rowsToMagInfos(rows)
+      magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
   def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
@@ -860,7 +874,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             FROM webknossos.dataset_mags
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE realPath = $realPath""".as[DataSourceMagRow])
-      magInfos <- rowsToMagInfos(rows)
+      magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =

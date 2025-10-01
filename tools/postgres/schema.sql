@@ -357,7 +357,7 @@ CREATE TABLE webknossos.organizations(
 CREATE TABLE webknossos.organization_usedStorage_mags (
     _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
     layerName TEXT NOT NULL,
-    mag TEXT NOT NULL, -- Could also go for webknossos.VECTOR3, but would make things maybe a little more complicated
+    mag webknossos.VECTOR3 NOT NULL,
     path TEXT NOT NULL,
     _organization TEXT NOT NULL,
     usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
@@ -927,6 +927,10 @@ ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_usedStorage_mags
+  ADD CONSTRAINT mag_ref FOREIGN KEY (_dataset, layerName, mag) REFERENCES webknossos.dataset_mags(_dataset, dataLayerName, mag) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_usedStorage_attachments
+  ADD CONSTRAINT attachments__ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_additionalAxes

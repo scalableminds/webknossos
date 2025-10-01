@@ -1,6 +1,7 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
@@ -38,7 +39,7 @@ case class Organization(
 case class DatasetMagStorageReport(
     _dataset: ObjectId,
     layerName: String,
-    mag: String,
+    mag: Vec3Int,
     path: String,
     _organization: String,
     usedStorageBytes: Long,

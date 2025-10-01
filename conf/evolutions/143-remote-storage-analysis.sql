@@ -12,7 +12,8 @@ CREATE TABLE webknossos.organization_usedStorage_mags (
     _organization TEXT NOT NULL,
     usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
     lastUpdated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (_dataset, layerName, mag)
+    PRIMARY KEY (_dataset, layerName, mag),
+    CONSTRAINT mags_ref FOREIGN KEY (_dataset, layerName, mag) REFERENCES webknossos.dataset_mags(_dataset, dataLayerName, mag) ON DELETE CASCADE DEFERRABLE
 );
 
 CREATE TABLE webknossos.organization_usedStorage_attachments (
@@ -24,7 +25,8 @@ CREATE TABLE webknossos.organization_usedStorage_attachments (
     _organization TEXT NOT NULL,
     usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
     lastUpdated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (_dataset, layerName, name, type)
+    PRIMARY KEY (_dataset, layerName, name, type),
+    CONSTRAINT attachments__ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE
 );
 
 -- Reset all storage scan timestamps to fill the new webknossos.organization_usedStorage table

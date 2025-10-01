@@ -2,7 +2,6 @@ package models.storage
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -27,7 +26,6 @@ import play.api.inject.ApplicationLifecycle
 import utils.WkConf
 import utils.sql.SqlEscaping
 
-import java.net.URI
 import java.nio.file.Paths
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -103,18 +101,13 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       relevantMagsForStorageReporting <- datasetMagDAO.findAllStorageRelevantMags(organization._id,
                                                                                   dataStore.name,
                                                                                   datasetIdOpt)
-      relevantPathsAndUnparsableMags = relevantMagsForStorageReporting.map(resolveMagRowPath)
-      unparsableMags = relevantPathsAndUnparsableMags.collect { case Right(mag) => mag }.distinctBy(_._dataset)
-      relevantMagsWithValidPaths = relevantPathsAndUnparsableMags.collect { case Left(magWithPaths) => magWithPaths }
-      relevantMagPaths = relevantPathsAndUnparsableMags.collect { case Left((_, paths)) => paths }.flatten
-      _ = Fox.runIfSeqNonEmpty(unparsableMags)(logger.error(
-        s"Found dataset mags with unparsable mag literals in datastore ${dataStore.name} of organization ${organization._id} with dataset ids : ${unparsableMags
-          .map(_._dataset)}"))
+      relevantMagsWithPaths = relevantMagsForStorageReporting.map(resolveMagRowPath)
+      relevantMagPaths = relevantMagsWithPaths.flatMap(_._2)
       relevantAttachments <- datasetLayerAttachmentsDAO.findAllStorageRelevantAttachments(organization._id,
                                                                                           dataStore.name,
                                                                                           datasetIdOpt)
       relevantAttachmentsWithResolvedPaths = relevantAttachments.map(resolveAttachmentPath)
-      pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithValidPaths,
+      pathToArtifactLookupMap = buildPathToStorageArtifactMap(relevantMagsWithPaths,
                                                               relevantAttachmentsWithResolvedPaths)
       relevantAttachmentPaths = relevantAttachmentsWithResolvedPaths.map(_.path)
       relevantPaths = relevantMagPaths ++ relevantAttachmentPaths
@@ -122,30 +115,17 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       storageReports = buildStorageReportsForPathReports(organization._id, reports, pathToArtifactLookupMap)
     } yield storageReports
 
-  private def resolveMagRowPath(mag: DataSourceMagRow): Either[(DataSourceMagRow, List[String]), DataSourceMagRow] =
+  private def resolveMagRowPath(mag: DataSourceMagRow): (DataSourceMagRow, List[String]) =
     mag.realPath match {
-      case Some(realPath) => Left((mag, List(realPath)))
+      case Some(realPath) => (mag, List(realPath))
       case None =>
         mag.path match {
-          case Some(path) => Left((mag, List(path)))
+          case Some(path) => (mag, List(path))
           case None =>
             val layerPath = Paths.get(mag.directoryName).resolve(mag.dataLayerName)
-            val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(mag.mag).map(_.toInt))
-
-            parsedMagOpt match {
-              case Some(parsedMag) =>
-                Left(
-                  (
-                    mag,
-                    List(
-                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = true)).toString,
-                      layerPath.resolve(parsedMag.toMagLiteral(allowScalar = false)).toString
-                    )
-                  )
-                )
-              case None =>
-                Right(mag)
-            }
+            (mag,
+             List(layerPath.resolve(mag.mag.toMagLiteral(allowScalar = true)).toString,
+                  layerPath.resolve(mag.mag.toMagLiteral(allowScalar = false)).toString).distinct)
         }
     }
 
@@ -197,32 +177,34 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
       pathToArtifactMap: Map[String, Either[DataSourceMagRow, StorageRelevantDataLayerAttachment]])
     : (List[DatasetMagStorageReport], List[DataLayerAttachmentStorageReport]) = {
     val reports: List[Either[DatasetMagStorageReport, DataLayerAttachmentStorageReport]] =
-      pathReports.flatMap(pathReport => {
-        pathToArtifactMap.get(pathReport.path) match {
-          case Some(Left(mag)) =>
-            Some(
-              Left(
-                DatasetMagStorageReport(mag._dataset,
-                                        mag.dataLayerName,
-                                        mag.mag,
-                                        pathReport.path,
-                                        organizationId,
-                                        pathReport.usedStorageBytes)))
-          case Some(Right(attachment)) =>
-            Some(
-              Right(
-                DataLayerAttachmentStorageReport(attachment._dataset,
-                                                 attachment.layerName,
-                                                 attachment.name,
-                                                 pathReport.path,
-                                                 attachment.`type`,
-                                                 organizationId,
-                                                 pathReport.usedStorageBytes)))
-          case None =>
-            logger.warn(s"Could not find artifact for path ${pathReport.path} in pathToArtifactMap")
-            None
+      pathReports.flatMap { pathReport =>
+        pathToArtifactMap.get(pathReport.path).map {
+          case Left(mag) =>
+            Left(
+              DatasetMagStorageReport(
+                mag._dataset,
+                mag.dataLayerName,
+                mag.mag,
+                pathReport.path,
+                organizationId,
+                pathReport.usedStorageBytes
+              ))
+          case Right(attachment) =>
+            Right(
+              DataLayerAttachmentStorageReport(
+                attachment._dataset,
+                attachment.layerName,
+                attachment.name,
+                pathReport.path,
+                attachment.`type`,
+                organizationId,
+                pathReport.usedStorageBytes
+              ))
+        } orElse {
+          logger.warn(s"Could not find artifact for path ${pathReport.path} in pathToArtifactMap")
+          None
         }
-      })
+      }
     val magReports = reports.collect { case Left(r)         => r }
     val attachmentReports = reports.collect { case Right(r) => r }
     (magReports, attachmentReports)

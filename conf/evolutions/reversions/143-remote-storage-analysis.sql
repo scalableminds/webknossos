@@ -21,7 +21,7 @@ CREATE TABLE webknossos.organization_usedStorage(
 -- 3. Reset all storage scan timestamps to fill the new webknossos.organization_usedStorage table
 UPDATE webknossos.organizations
 SET lastStorageScanTime = '1970-01-01T00:00:00.000Z'
-WHERE _id IS NULL;
+WHERE isDeleted IS FALSE;
 
 -- 4. Revert schema version
 UPDATE webknossos.releaseInformation SET schemaVersion = 142;

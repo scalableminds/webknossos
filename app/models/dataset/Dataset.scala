@@ -779,6 +779,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       storageRelevantMags <- run(q"""SELECT
             dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
             FROM (
+              -- rn is the rank of the mags with the same path. We only retrieve the oldest mag with the same path to measure each mag only once.
               SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
                      ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.path ORDER BY ds.created ASC) AS rn
               FROM webknossos.dataset_mags AS mag
@@ -1209,6 +1210,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       storageRelevantAttachments <- run(q"""SELECT
                                             _dataset, layerName, name, path, type, _organization, directoryName
                                             FROM (
+                                              -- rn is the rank of the attachments with the same path. We only retrieve the
+                                              -- oldest attachment with the same path to measuring an attachment only once.
                                               SELECT
                                                 att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName,
                                                 ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn

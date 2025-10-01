@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.PathStorageReport
 import com.typesafe.scalalogging.LazyLogging
@@ -151,13 +151,14 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
 
   private def resolveAttachmentPath(
       attachment: StorageRelevantDataLayerAttachment): StorageRelevantDataLayerAttachment = {
-    val uri = new URI(attachment.path)
-    if (uri.getScheme == null) {
-      val datasetPath = Paths.get(attachment.datasetDirectoryName)
-      val attachmentPath = datasetPath.resolve(attachment.path).normalize()
-      attachment.copy(path = attachmentPath.toString)
-    } else {
-      attachment
+    val upathBox = UPath.fromString(attachment.path)
+    upathBox match {
+      case Full(upath) if upath.isLocal && upath.isRelative =>
+        val datasetPath = Paths.get(attachment.datasetDirectoryName)
+        val attachmentPath = datasetPath.resolve(attachment.path).normalize()
+        attachment.copy(path = attachmentPath.toString)
+      case _ =>
+        attachment
     }
   }
 

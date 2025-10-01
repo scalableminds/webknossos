@@ -79,10 +79,6 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
       _ <- Fox.runIfSeqNonEmpty(failedPaths)(
         logger.error(
           s"Failed to measure storage for paths ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}."))
-      _ <- Fox.runIfSeqNonEmpty(absoluteUpathsToSkip)(
-        logger.error(
-          s"Did not measure storage for ${paths.length} paths as they are remote and not in a registered remote vault.")
-      )
     } yield successfulStorageUsedBoxes
   }
 }

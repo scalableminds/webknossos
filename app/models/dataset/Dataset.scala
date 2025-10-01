@@ -1195,7 +1195,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
               .getOrElse(
                 // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
                 throw new IllegalArgumentException(
-                  s"Invalid LayerAttachmentDataformat value: '$format'"
+                  s"Invalid LayerAttachmentType value: '$format'"
                 )
               )
           },

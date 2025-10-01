@@ -870,6 +870,48 @@ export function getSegmentVolumes(
   );
 }
 
+type SegmentStatisticsParametersMeshBased = {
+  mag: Vector3;
+  segmentIds: number[];
+  mappingName?: string | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  meshFileName?: string | null;
+  lod?: number;
+  seedPosition?: Vector3;
+};
+
+export function getSegmentSurfaceArea(
+  //                     tracings/volume/:tracingId/...
+  // data/datasets/:datasetId/layers/:dataLayerName/...
+  requestUrl: string,
+  mag: Vector3,
+  lod: number | undefined,
+  seedPosition: Vector3 | undefined | null,
+  meshFileName: string | undefined | null,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  return doWithToken((token) => {
+    const data: SegmentStatisticsParametersMeshBased = {
+      mag,
+      segmentIds,
+      mappingName,
+      additionalCoordinates,
+      lod,
+      meshFileName,
+      seedPosition,
+    };
+    return Request.sendJSONReceiveJSON(
+      `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
+      {
+        data,
+        method: "POST",
+      },
+    );
+  });
+}
+
 export function getSegmentBoundingBoxes(
   requestUrl: string,
   mag: Vector3,

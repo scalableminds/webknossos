@@ -1,5 +1,5 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
+import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
   Dropdown,
@@ -18,7 +18,12 @@ import type {
 } from "antd/es/menu/interface";
 import { AsyncIconButton } from "components/async_clickables";
 import FastTooltip from "components/fast_tooltip";
-import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import {
+  formatLengthAsVx,
+  formatNumberToArea,
+  formatNumberToLength,
+  formatNumberToVolume,
+} from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -1396,7 +1401,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition > 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
+          segmentIdAtPosition !== 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -1415,9 +1420,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          segmentIdAtPosition > 0 ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition > 0 ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition > 0 ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== 0 ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== 0 ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== 0 ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
@@ -1682,7 +1687,7 @@ function ContextMenuInner() {
   });
   const isLoadingMessage = "loading";
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
-  const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
+  const [segmentVolumeLabel, boundingBoxInfoLabel, segmentSurfaceAreaLabel] = useFetch(
     async () => {
       const { annotation, flycam } = Store.getState();
       // The value that is returned if the context menu is closed is shown if it's still loading
@@ -1715,6 +1720,17 @@ function ContextMenuInner() {
           additionalCoordinates,
           mappingName,
         );
+        const lod = 0; // todop
+        const [surfaceArea] = await getSegmentSurfaceArea(
+          requestUrl,
+          layersFinestMag,
+          lod,
+          globalPosition,
+          currentMeshFile?.name,
+          [clickedSegmentOrMeshId],
+          additionalCoordinates,
+          mappingName,
+        );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
@@ -1722,6 +1738,7 @@ function ContextMenuInner() {
         return [
           formatNumberToVolume(volumeInUnit3, LongUnitToShortUnitMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+          formatNumberToArea(surfaceArea, LongUnitToShortUnitMap[voxelSize.unit]),
         ];
       } catch (_error) {
         const notFetchedMessage = "could not be fetched";
@@ -1797,7 +1814,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position:{" "}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
           {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
         </>,
@@ -1810,7 +1827,8 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
+          {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
         </>,
       ),
@@ -1847,9 +1865,19 @@ function ContextMenuInner() {
         </>,
       ),
     );
-  }
 
-  if (areSegmentStatisticsAvailable) {
+    infoRows.push(
+      getInfoMenuItem(
+        "volumeInfo",
+        <>
+          <i className="fas fa-expand-alt segment-context-icon" />
+          Surface Area: {segmentSurfaceAreaLabel}
+          {copyIconWithTooltip(segmentSurfaceAreaLabel as string, "Copy surface area")}
+          {refreshButton}
+        </>,
+      ),
+    );
+
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",

@@ -76,9 +76,9 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
           PathStorageReport(vaultPath.toUPath.toString, usedStorageBytes)
       }
       failedPaths = pathsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
-      _ <- Fox.runIfSeqNonEmpty(failedPaths)(
-        logger.error(
-          s"Failed to measure storage for paths ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}."))
+      _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
+        s"Failed to measure storage for ${paths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
+        else "."}"))
     } yield successfulStorageUsedBoxes
   }
 }

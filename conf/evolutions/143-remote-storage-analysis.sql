@@ -26,11 +26,11 @@ CREATE TABLE webknossos.organization_usedStorage_attachments (
     usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
     lastUpdated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (_dataset, layerName, name, type),
-    CONSTRAINT attachments__ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE
+    CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE
 );
 
 -- Add indexes to make retrieving total used storage of an organization fast
-CREATE INDEX ON organization_usedStorage_mags(_organization);
+CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
 CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 
 -- Reset all storage scan timestamps to fill the new webknossos.organization_usedStorage table

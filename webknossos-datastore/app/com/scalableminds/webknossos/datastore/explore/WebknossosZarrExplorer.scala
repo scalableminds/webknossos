@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Failure, Fox, Full}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, StaticLayer, UsableDataSource}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,28 +23,39 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) { layer =>
         for {
-          mags <- adaptMags(layer.mags, remotePath / layer.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+          headerFilename <- headerFilename(layer).toFox
+          mags <- adaptMags(layer.mags, remotePath, layer.name, headerFilename, credentialId)
         } yield layer.mapped(newMags = Some(mags))
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale
 
+  private def headerFilename(layer: StaticLayer): Box[String] =
+    layer.dataFormat match {
+      case DataFormat.zarr  => Full(ZarrHeader.FILENAME_DOT_ZARRAY)
+      case DataFormat.zarr3 => Full(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+      case _                => Failure(s"Invalid layer dataformat ${layer.dataFormat}, can only explore zarr, zarr3 as WebknossosZarr")
+    }
+
   private def adaptMags(mags: List[MagLocator],
-                        remoteLayerPath: VaultPath,
+                        remoteDatasetPath: VaultPath,
+                        layerName: String,
                         headerFilename: String,
                         credentialId: Option[String])(implicit tc: TokenContext): Fox[List[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
-        magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
+        magPath <- fixRemoteMagPath(m, remoteDatasetPath, layerName, headerFilename)
       } yield m.copy(path = magPath, credentialId = credentialId))
 
-  private def fixRemoteMagPath(mag: MagLocator, remoteLayerPath: VaultPath, headerFilename: String)(
-      implicit tc: TokenContext): Fox[Option[UPath]] =
+  private def fixRemoteMagPath(mag: MagLocator,
+                               remoteDatasetPath: VaultPath,
+                               layerName: String,
+                               headerFilename: String)(implicit tc: TokenContext): Fox[Option[UPath]] =
     mag.path match {
-      case Some(path) => Fox.successful(Some(path))
+      case Some(path) => Fox.successful(Some(path.resolvedIn(remoteDatasetPath.toUPath)))
       case None       =>
         // Only scalar mag paths are attempted for now
-        val magPath = remoteLayerPath / mag.mag.toMagLiteral(allowScalar = true)
+        val magPath = remoteDatasetPath / layerName / mag.mag.toMagLiteral(allowScalar = true)
         val magHeaderPath = magPath / headerFilename
         for {
           _ <- magHeaderPath.readBytes() ?~> s"Could not find $magPath"

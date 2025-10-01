@@ -472,7 +472,7 @@ export const getSegmentationAlphaIncrement: ShaderModule = {
       if (isProofreading) {
         if (isActiveCell) {
           return (isHoveredUnmappedSegment
-            ? 0.4     // Highlight the hovered super-voxel of the active segment
+            ? 0.4     // Highlight the hovered supervoxel of the active segment
             : (isHoveredSegment
               ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
               : 0.0

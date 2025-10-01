@@ -58,7 +58,6 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   private val organizationCountToScanPerTick = config.WebKnossos.FetchUsedStorage.scansPerTick
   private val MaxStoragePathRequestsPerRequest = 200
 
-
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
   override protected def tick(): Fox[Unit] =

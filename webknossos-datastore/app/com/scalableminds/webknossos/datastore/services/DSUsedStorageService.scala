@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject

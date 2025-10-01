@@ -781,7 +781,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             FROM (
               -- rn is the rank of the mags with the same path. We only retrieve the oldest mag with the same path to measure each mag only once.
               SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
-                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY mag.realPath ORDER BY ds.created ASC) AS rn
+                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY COALESCE(mag.realPath, mag.path) ORDER BY ds.created ASC) AS rn
               FROM webknossos.dataset_mags AS mag
               JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
               WHERE ds._organization = $organizationId

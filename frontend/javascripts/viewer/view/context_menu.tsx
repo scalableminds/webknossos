@@ -80,6 +80,7 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getCurrentMappingName,
   getSegmentsForLayer,
   hasAgglomerateMapping,
   hasConnectomeFile,
@@ -1677,14 +1678,7 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useWkSelector((state) => {
-    if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
-    const mappingInfo = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    );
-    return mappingInfo.mappingName;
-  });
+  const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
   const isLoadingMessage = "loading";
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
   const [segmentVolumeLabel, boundingBoxInfoLabel, segmentSurfaceAreaLabel] = useFetch(

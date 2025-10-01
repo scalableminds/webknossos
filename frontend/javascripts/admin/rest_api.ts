@@ -877,7 +877,7 @@ type SegmentStatisticsParametersMeshBased = {
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
   lod?: number;
-  seedPosition?: Vector3;
+  seedPosition?: Vector3 | null;
 };
 
 export function getSegmentSurfaceArea(

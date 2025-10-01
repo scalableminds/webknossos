@@ -1,4 +1,4 @@
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
+import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
@@ -11,7 +11,10 @@ import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getCurrentMappingName,
+  getVolumeTracingById,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
@@ -116,6 +119,13 @@ export function SegmentStatisticsModal({
     additionalCoordinates,
     ", ",
   );
+  const currentMeshFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      : null,
+  );
+  const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
+
   const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
@@ -130,20 +140,32 @@ export function SegmentStatisticsModal({
         );
         return mappingInfo.mappingName;
       };
+      const lod = 0; // todop;
+      const segmentIds = segments.map((segment) => segment.id);
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
           requestUrl,
           layersFinestMag,
-          segments.map((segment) => segment.id),
+          segmentIds,
           additionalCoordinates,
           maybeGetMappingName(),
         ),
         getSegmentBoundingBoxes(
           requestUrl,
           layersFinestMag,
-          segments.map((segment) => segment.id),
+          segmentIds,
           additionalCoordinates,
           maybeGetMappingName(),
+        ),
+        getSegmentSurfaceArea(
+          requestUrl,
+          layersFinestMag,
+          lod,
+          null,
+          currentMeshFile?.name,
+          segmentIds,
+          additionalCoordinates,
+          mappingName,
         ),
       ]).then(
         (response) => {

@@ -172,12 +172,16 @@ object Zarr3ArrayHeader extends JsonImplicits {
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
         fill_value_raw = json \ "fill_value"
-        fill_value <- fill_value_raw
-          .validate[String]
-          .map(Left(_))
-          .orElse(fill_value_raw.validate[Number].map(Right(_)))
-          .orElse(fill_value_raw.validate[Boolean])
-          .map(asBool => Left(asBool.toString))
+        fill_value <- (fill_value_raw.validate[String],
+                       fill_value_raw.validate[Number],
+                       fill_value_raw.validate[Boolean]) match {
+          case (asStr: JsSuccess[String], _, _) =>
+            asStr.flatMap(value => JsSuccess[Either[String, Number]](Left(value)))
+          case (_, asNum: JsSuccess[Number], _) =>
+            asNum.flatMap(value => JsSuccess[Either[String, Number]](Right(value)))
+          case (_, _, asBool: JsSuccess[Boolean]) =>
+            asBool.flatMap(value => JsSuccess[Either[String, Number]](Left(value.toString)))
+        }
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
         codecs = readCodecs(codecsJsValue)

@@ -95,9 +95,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
             hasEditableMapping = if (v.editedMappingEdgesLocation.isDefined) Some(true) else None
           ),
           basePath.getOrElse("") + v.dataZipPath,
-          v.editedMappingEdgesLocation.map(location => basePath.getOrElse("") + location),
-          v.editedMappingBaseMappingName,
           v.name,
+          v.editedMappingEdgesLocation.map(location => basePath.getOrElse("") + location),
+          v.editedMappingBaseMappingName
         )
       }
       skeletonTracing: SkeletonTracing = SkeletonTracing(

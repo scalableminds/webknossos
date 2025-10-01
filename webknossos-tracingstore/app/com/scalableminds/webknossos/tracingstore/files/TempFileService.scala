@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.io.FileUtils
 
+import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -39,12 +40,24 @@ trait TempFileService extends LazyLogging {
     path
   }
 
+  def createDirectory(prefix: String = "tmpDir", lifeTime: FiniteDuration = 2 hours): Path = {
+    ensureParent()
+    val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
+    logger.debug(f"Creating temp dir at $path")
+    Files.createDirectory(path)
+    activeTempFiles.add((path, Instant.now + lifeTime))
+    path
+  }
+
   private def cleanUpExpiredFiles(): Fox[Unit] = {
     val now = Instant.now
     activeTempFiles.foreach {
       case (path, expiryTime) =>
         if (expiryTime < now) {
-          tryo(Files.delete(path))
+          if (Files.isDirectory(path))
+            tryo(FileUtils.deleteDirectory(path.toFile))
+          else
+            tryo(Files.delete(path))
           activeTempFiles.remove((path, expiryTime))
         }
     }

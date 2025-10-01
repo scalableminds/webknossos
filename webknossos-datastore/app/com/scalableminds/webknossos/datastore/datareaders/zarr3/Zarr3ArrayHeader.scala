@@ -171,7 +171,13 @@ object Zarr3ArrayHeader extends JsonImplicits {
         data_type <- (json \ "data_type").validate[String]
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
-        fill_value <- (json \ "fill_value").validate[Either[String, Number]]
+        fill_value_raw = json \ "fill_value"
+        fill_value <- fill_value_raw
+          .validate[String]
+          .map(Left(_))
+          .orElse(fill_value_raw.validate[Number].map(Right(_)))
+          .orElse(fill_value_raw.validate[Boolean])
+          .map(asBool => Left(asBool.toString))
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
         codecs = readCodecs(codecsJsValue)

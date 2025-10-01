@@ -41,6 +41,8 @@ object PathStorageUsageResponse {
   implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
 }
 
+case class PathPair(original: String, upath: UPath)
+
 class DSUsedStorageService @Inject()(config: DataStoreConfig,
                                      remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
@@ -51,31 +53,40 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
       tc: TokenContext): Fox[List[PathStorageReport]] = {
     val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
     for {
-      upaths <- Fox.serialCombined(paths)(UPath.fromString(_).toFox)
-      absoluteUpaths = upaths.map(path => {
-        if (path.getScheme.isEmpty || path.isLocal) {
-          UPath.fromLocalPath(organizationDirectory.resolve(path.toLocalPathUnsafe).normalize().toAbsolutePath)
+      // Keep track of original path as its UPath might be normalized and turned into an absolute path.
+      // The original path is needed in the returned storage reports to enable the core backend matching with the
+      // requested paths and their mags / attachments.
+      pathPairs <- Fox.serialCombined(paths) { path =>
+        UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
+      }
+      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair => {
+        if (pathPair.upath.getScheme.isEmpty || pathPair.upath.isLocal) {
+          pathPair.copy(
+            upath = UPath.fromLocalPath(
+              organizationDirectory.resolve(pathPair.upath.toLocalPathUnsafe).normalize().toAbsolutePath))
         } else
-          path
+          pathPair
       })
       // Check to only measure remote paths that are part of a vault that is configured.
-      (absoluteUpathsToMeasure, _absoluteUpathsToSkip) = absoluteUpaths.partition(
+      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(
         path =>
-          path.isLocal || config.Datastore.DataVaults.credentials.exists(
+          path.upath.isLocal || config.Datastore.DataVaults.credentials.exists(
             vaultCredentialConfig =>
               UPath
                 .fromString(vaultCredentialConfig.getString("name"))
-                .map(registeredPath => path.startsWith(registeredPath))
+                .map(registeredPath => path.upath.startsWith(registeredPath))
                 .getOrElse(false)))
-      vaultPaths <- Fox.serialCombined(absoluteUpathsToMeasure)(upath =>
-        remoteSourceDescriptorService.vaultPathFor(upath))
-      usedBytes <- Fox.fromFuture(Fox.serialSequence(vaultPaths)(vaultPath => vaultPath.getUsedStorageBytes))
-      pathsWithStorageUsedBox = vaultPaths.zip(usedBytes)
-      successfulStorageUsedBoxes = pathsWithStorageUsedBox.collect {
-        case (vaultPath, Full(usedStorageBytes)) =>
-          PathStorageReport(vaultPath.toUPath.toString, usedStorageBytes)
+      vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
+        remoteSourceDescriptorService.vaultPathFor(pathPair.upath))
+      usedBytes <- Fox.fromFuture(
+        Fox.serialSequence(vaultPathsForPathPairsToMeasure)(vaultPath => vaultPath.getUsedStorageBytes))
+      pathPairsWithStorageUsedBox = pathPairsToMeasure.zip(usedBytes)
+      successfulStorageUsedBoxes = pathPairsWithStorageUsedBox.collect {
+        case (pathPair, Full(usedStorageBytes)) =>
+          // Use original path to create the storage report to enable matching in core backend. See comment above.
+          PathStorageReport(pathPair.original, usedStorageBytes)
       }
-      failedPaths = pathsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
+      failedPaths = pathPairsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
       _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
         s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
         else "."}"))

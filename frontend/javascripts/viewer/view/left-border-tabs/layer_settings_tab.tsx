@@ -1133,7 +1133,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const volumeTracingMags = segmentationLayer.mags;
 
-    const sourceMag = _.minBy(volumeTracingMags.map((magInfo) => magInfo.mag), getMaxDim);
+    const sourceMag = _.minBy(
+      volumeTracingMags.map((magInfo) => magInfo.mag),
+      getMaxDim,
+    );
     if (sourceMag === undefined) {
       return [];
     }

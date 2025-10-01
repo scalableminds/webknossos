@@ -351,7 +351,7 @@ class DataSourceController @Inject()(
   def measureUsedStorage(organizationId: String): Action[PathStorageUsageRequest] =
     Action.async(validateJson[PathStorageUsageRequest]) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             before <- Instant.nowFox
             pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)

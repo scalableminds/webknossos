@@ -29,9 +29,9 @@ To share a dataset privately, follow these steps:
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it.
 
-![Configure the Dataset Sharing](../images/dataset_general.jpeg)
+![Configure the Dataset Sharing](../images/dataset_settings_sharing.jpeg)
 /// caption
-Configure the Dataset Sharing
+Copy the private sharing link from the dataset settings.
 ///
 
 To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
@@ -61,9 +61,9 @@ To share a dataset publicly, follow these steps:
 4. Copy the sharing link and distribute it to your colleagues through email, social media, messengers, etc.
 5. (Recommended. From the `Metadata` tab, add/edit the dataset's description and give it a more appropriate title (`Display name`)).
 
-![The Metadata tab overview](../images/metadata_tab.jpeg)
+![The Metadata tab overview](../images/dataset_settings_metadata.jpeg)
 /// caption
-The Metadata tab overview
+It is recommended to add a description before sharing a dataset publicly.
 ///
 
 !!!info

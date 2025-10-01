@@ -56,7 +56,7 @@ export function extendPricingPlan(organization: APIOrganization) {
           Extend your plan now for uninterrupted access to WEBKNOSSOS.
         </p>
         <p style={{ marginRight: "30%" }}>
-          Expired plans will be downgraded to the Basic plan and you might lose access to some
+          Expired plans will be downgraded to the Personal plan and you might lose access to some
           WEBKNOSSOS features and see restrictions on the number of permitted user accounts and your
           included storage space quota.
         </p>
@@ -169,7 +169,7 @@ function upgradePricingPlan(
 
   if (targetPlan === undefined) {
     switch (organization.pricingPlan) {
-      case PricingPlanEnum.Basic: {
+      case PricingPlanEnum.Personal: {
         target = "TeamAndPower";
         break;
       }

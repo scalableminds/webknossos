@@ -292,7 +292,7 @@ function _DownloadModalView({
     (tracing) => tracing.additionalAxes.length > 0,
   );
   const hasVolumes = hasVolumeTracings(annotation);
-  const initialFileFormatToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
+  const initialFileFormatToDownload = hasVolumes ? "zarr3" : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
@@ -544,6 +544,10 @@ function _DownloadModalView({
           >
             {hasVolumes ? (
               <>
+                <Radio value="zarr3" style={radioButtonStyle}>
+                  Include volume annotations as Zarr
+                  <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
+                </Radio>
                 <Tooltip
                   title={
                     isVolumeNDimensional ? "WKW is not supported for n-dimensional volumes." : null
@@ -554,10 +558,6 @@ function _DownloadModalView({
                     <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
                   </Radio>
                 </Tooltip>
-                <Radio value="zarr3" style={radioButtonStyle}>
-                  Include volume annotations as Zarr
-                  <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
-                </Radio>
               </>
             ) : null}
             <Radio value="nml" style={radioButtonStyle}>

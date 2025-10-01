@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   PathSchemes,
   SegmentIndexData,
   SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased,
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
@@ -616,21 +617,21 @@ class DataSourceController @Inject()(
       }
     }
 
-  def getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParameters] =
-    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+  def getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             val fullMeshRequest = FullMeshRequest(
-              meshFileName = None,
-              lod = None,
+              meshFileName = request.body.meshFileName,
+              lod = request.body.lod,
               segmentId = segmentId,
               mappingName = request.body.mappingName,
               mappingType = request.body.mappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
               mag = Some(request.body.mag),
-              seedPosition = None,
+              seedPosition = request.body.seedPosition,
               additionalCoordinates = request.body.additionalCoordinates,
             )
             for {

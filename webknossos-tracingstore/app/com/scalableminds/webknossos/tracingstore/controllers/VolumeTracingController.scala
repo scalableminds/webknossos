@@ -13,7 +13,8 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   ProtoGeometryImplicits,
-  SegmentStatisticsParameters
+  SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
@@ -347,8 +348,8 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def getSegmentSurfaceArea(tracingId: String): Action[SegmentStatisticsParameters] =
-    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+  def getSegmentSurfaceArea(tracingId: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
@@ -356,14 +357,14 @@ class VolumeTracingController @Inject()(
           baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             val fullMeshRequest = FullMeshRequest(
-              meshFileName = None,
-              lod = None,
+              meshFileName = request.body.meshFileName,
+              lod = request.body.lod,
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
               mag = Some(request.body.mag),
-              seedPosition = None,
+              seedPosition = request.body.seedPosition,
               additionalCoordinates = request.body.additionalCoordinates,
             )
             for {

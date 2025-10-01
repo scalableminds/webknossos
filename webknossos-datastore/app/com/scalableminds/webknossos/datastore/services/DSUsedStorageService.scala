@@ -11,18 +11,6 @@ import play.api.libs.json.{Json, OFormat}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class DirectoryStorageReport(
-    organizationId: String,
-    datasetName: String,
-    layerName: String,
-    magOrDirectoryName: String,
-    usedStorageBytes: Long
-)
-
-object DirectoryStorageReport {
-  implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
-}
-
 case class PathStorageUsageRequest(paths: List[String])
 object PathStorageUsageRequest {
   implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]

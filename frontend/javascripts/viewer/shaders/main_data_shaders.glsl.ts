@@ -23,6 +23,7 @@ import {
   getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
 import compileShader from "./shader_module_system";
+import { getColorForCoords } from "./texture_access.glsl";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -60,6 +61,7 @@ export type Params = {
   voxelSizeFactor: Vector3;
   voxelSizeFactorInverted: Vector3;
   isOrthogonal: boolean;
+  useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
 
@@ -138,7 +140,6 @@ uniform vec3 bboxMax;
 uniform vec3 positionOffset;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
-uniform bool useBilinearFiltering;
 uniform float blendMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
@@ -276,7 +277,6 @@ void main() {
             <%= name %>_data_texture_width,
             <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             transformedCoordUVW,
-            false,
             fallbackGray,
             !<%= name %>_has_transform
           );
@@ -450,9 +450,9 @@ ${compileShader(
   isFlightMode,
   transDim,
   getAbsoluteCoords,
+  getColorForCoords,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
-  getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentId : null,
   getMagnification,
   almostEq,

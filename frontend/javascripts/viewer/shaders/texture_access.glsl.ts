@@ -205,19 +205,17 @@ export const getColorForCoords: ShaderModule = {
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
       bool beSafe = isFlycamRotated || !<%= isOrthogonal %>;
-      {
-        renderedMagIdx = outputMagIdx[globalLayerIndex];
-        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
-        vec3 absoluteBucketPosition = div(coords, bucketWidth);
-        offsetInBucket = mod(coords, bucketWidth);
-        vec3 offsetInBucketUVW = transDim(offsetInBucket);
-        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
-            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-            || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
-            || isNan(offsetInBucketUVW.z)
-          ) {
-          beSafe = true;
-        }
+      renderedMagIdx = outputMagIdx[globalLayerIndex];
+      vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+      vec3 absoluteBucketPosition = div(coords, bucketWidth);
+      offsetInBucket = mod(coords, bucketWidth);
+      vec3 offsetInBucketUVW = transDim(offsetInBucket);
+      if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+          || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+          || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
+          || isNan(offsetInBucketUVW.z)
+        ) {
+        beSafe = true;
       }
 
 

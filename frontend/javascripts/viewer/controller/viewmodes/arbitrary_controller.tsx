@@ -328,6 +328,10 @@ class ArbitraryController extends React.PureComponent<Props> {
         },
       ),
       listenToStoreProperty(
+        (state) => state.datasetConfiguration.interpolation,
+        (interpolation) => this.plane.setLinearInterpolationEnabled(interpolation),
+      ),
+      listenToStoreProperty(
         (state) => state.temporaryConfiguration.flightmodeRecording,
         (isRecording) => {
           if (isRecording) {

@@ -104,11 +104,10 @@ const getMaybeFilteredColor: ShaderModule = {
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW,
-      bool suppressBilinearFiltering,
       bool supportsPrecomputedBucketAddress
     ) {
       vec4 color;
-      if (!suppressBilinearFiltering && useBilinearFiltering) {
+      <% if (useInterpolation) { %>
         <% if (isOrthogonal) { %>
           if(isFlycamRotated){
             color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
@@ -118,9 +117,9 @@ const getMaybeFilteredColor: ShaderModule = {
         <% } else { %>
           color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } %>
-      } else {
+      <% } else { %>
         color = getColorForCoords(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
-      }
+      <% } %>
       return color;
     }
   `,
@@ -138,13 +137,12 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       float d_texture_width,
       float packingDegree,
       vec3 worldPositionUVW,
-      bool suppressBilinearFiltering,
       vec4 fallbackColor,
       bool supportsPrecomputedBucketAddress
     ) {
       MaybeFilteredColor maybe_filtered_color;
       maybe_filtered_color.used_fallback_color = false;
-      maybe_filtered_color.color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering, supportsPrecomputedBucketAddress);
+      maybe_filtered_color.color = getMaybeFilteredColor(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
 
       if (maybe_filtered_color.color.a < 0.0) {
         // Render gray for not-yet-existing data

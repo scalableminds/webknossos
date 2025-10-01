@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsArray, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
 
@@ -181,6 +181,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
             asNum.flatMap(value => JsSuccess[Either[String, Number]](Right(value)))
           case (_, _, asBool: JsSuccess[Boolean]) =>
             asBool.flatMap(value => JsSuccess[Either[String, Number]](Left(value.toString)))
+          case _ => JsError("Could not parse fill_value as string, number or boolean value.")
         }
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]

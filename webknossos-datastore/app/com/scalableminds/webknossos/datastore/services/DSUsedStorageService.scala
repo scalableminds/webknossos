@@ -74,7 +74,9 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
           // Use original path to create the storage report to enable matching in core backend. See comment above.
           PathStorageReport(pathPair.original, usedStorageBytes)
       }
-      failedPaths = pathPairsWithStorageUsedBox.filter(p => p._2.isEmpty).map(_._1)
+      failedPaths = pathPairsWithStorageUsedBox.collect {
+        case (pair, box) if box.isEmpty => pair.original
+      }
       _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
         s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
         else "."}"))

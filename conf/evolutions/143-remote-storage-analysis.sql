@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS webknossos.organization_usedStorage;
 CREATE TABLE webknossos.organization_usedStorage_mags (
     _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
     layerName TEXT NOT NULL,
-    mag TEXT NOT NULL, -- Could also go for webknossos.VECTOR3, but would make things maybe a little more complicated
+    mag webknossos.VECTOR3 NOT NULL,
     path TEXT NOT NULL,
     _organization TEXT NOT NULL,
     usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
@@ -28,6 +28,10 @@ CREATE TABLE webknossos.organization_usedStorage_attachments (
     PRIMARY KEY (_dataset, layerName, name, type),
     CONSTRAINT attachments__ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE
 );
+
+-- Add indexes to make retrieving total used storage of an organization fast
+CREATE INDEX ON organization_usedStorage_mags(_organization);
+CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 
 -- Reset all storage scan timestamps to fill the new webknossos.organization_usedStorage table
 UPDATE webknossos.organizations

@@ -172,6 +172,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                     reserveUploadAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
+      _ <- Fox.fromBool(
+        !reserveUploadInfo.needsConversion.getOrElse(false) || !reserveUploadInfo.layersToLink
+          .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
                                              String.valueOf(reserveUploadInfo.totalFileCount))
       _ <- Fox.runOptional(reserveUploadInfo.totalFileSizeInBytes) { fileSize =>
@@ -354,9 +357,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       datasetId <- getDatasetIdByUploadId(uploadId)
       linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-      _ <- Fox.fromBool(
-        !uploadInformation.needsConversion.getOrElse(false) || !linkedLayerIdentifiers.layersToLink
-          .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId)).toFox

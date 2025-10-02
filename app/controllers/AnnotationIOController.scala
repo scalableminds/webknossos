@@ -145,7 +145,7 @@ class AnnotationIOController @Inject()(
                                                      AnnotationType.Explorational,
                                                      name,
                                                      description,
-                                                     ObjectId.generate)
+                                                     newAnnotationId)
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,

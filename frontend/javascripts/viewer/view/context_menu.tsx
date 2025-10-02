@@ -1687,7 +1687,7 @@ function ContextMenuInner() {
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
-      const infoForRequestUrl = {
+      const layerSourceInfo = {
         dataset,
         annotation,
         tracingId,
@@ -1699,14 +1699,14 @@ function ContextMenuInner() {
 
       try {
         const [segmentSize] = await getSegmentVolumes(
-          infoForRequestUrl,
+          layerSourceInfo,
           layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          infoForRequestUrl,
+          layerSourceInfo,
           layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,

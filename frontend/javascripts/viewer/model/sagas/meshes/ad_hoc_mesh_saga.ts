@@ -347,8 +347,13 @@ function* loadFullAdHocMesh(
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   const annotation = yield* select((state) => state.annotation);
   const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+  if (visibleSegmentationLayer == null) {
+    throw new Error(
+      "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+    );
+  }
   // Fetch from datastore if no volumetracing ...
-  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
+  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
   if (meshExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
     forceUsingDataStore = meshExtraInfo.useDataStore;
@@ -364,17 +369,15 @@ function* loadFullAdHocMesh(
     volumeTracing,
     dataset,
     layer.name,
-    visibleSegmentationLayer?.tracingId,
+    visibleSegmentationLayer.tracingId,
   );
 
   const layerSourceInfo: LayerSourceInfo = {
     dataset,
     annotation,
-    tracingId: visibleSegmentationLayer?.tracingId,
+    tracingId: visibleSegmentationLayer.tracingId,
     visibleSegmentationLayerName:
-      visibleSegmentationLayer?.tracingId == null
-        ? visibleSegmentationLayer?.name
-        : visibleSegmentationLayer?.fallbackLayer,
+      visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
     forceUsingDataStore,
   };
 

@@ -5,7 +5,7 @@ export type LayerSourceInfo = {
   dataset: APIDataset;
   annotation: StoreAnnotation | null;
   tracingId: string | undefined;
-  visibleSegmentationLayerName: string | null | undefined;
+  visibleSegmentationLayerName: string;
   forceUsingDataStore?: boolean | undefined | null;
 };
 

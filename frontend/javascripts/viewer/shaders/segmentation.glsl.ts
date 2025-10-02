@@ -11,6 +11,7 @@ import {
   jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
+import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
@@ -389,7 +390,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [convertCellIdToRGB, attemptMappingLookUp],
+  requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>

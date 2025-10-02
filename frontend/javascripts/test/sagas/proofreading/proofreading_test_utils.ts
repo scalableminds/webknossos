@@ -208,9 +208,9 @@ class BackendMock {
     // Process received update actions and update agglomerateMapping.
     for (const item of newItems) {
       console.log("pushing to server: v=", item.version, "with", item.value);
-      let agglomerateActionCounter = 0;
+      let isFirstUpdateAction = true;
       for (const updateAction of item.value) {
-        const bumpVersion = agglomerateActionCounter === 0;
+        const bumpVersion = isFirstUpdateAction;
         if (updateAction.name === "mergeAgglomerate") {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
@@ -226,7 +226,7 @@ class BackendMock {
             updateAction.value.segmentId2,
             bumpVersion,
           );
-          agglomerateActionCounter++;
+          isFirstUpdateAction = false;
         } else if (updateAction.name === "splitAgglomerate") {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
@@ -242,10 +242,13 @@ class BackendMock {
             updateAction.value.segmentId2,
             bumpVersion,
           );
-          agglomerateActionCounter++;
+          isFirstUpdateAction = false;
         } else {
           // We need the agglomerate mapping to be in sync
-          this.agglomerateMapping.bumpVersion();
+          if (bumpVersion) {
+            this.agglomerateMapping.bumpVersion();
+          }
+          isFirstUpdateAction = false;
         }
       }
 

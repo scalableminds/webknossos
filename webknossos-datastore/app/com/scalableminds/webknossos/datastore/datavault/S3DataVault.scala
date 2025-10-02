@@ -139,6 +139,33 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     } yield s3SubPrefixes.map(_.prefix())
   }
 
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
+    def fetchBatchRecursive(prefixKey: String,
+                            client: S3AsyncClient,
+                            continuationToken: Option[String],
+                            alreadyMeasuredSize: Long): Fox[Long] = {
+      val builder = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefixKey).maxKeys(1000)
+      continuationToken.foreach(builder.continuationToken)
+      val request = builder.build()
+
+      for {
+        objectListing <- notFoundToFailure(client.listObjectsV2(request).asScala)
+        totalCurrentSize = objectListing.contents().asScala.map(_.size()).foldLeft(alreadyMeasuredSize)(_ + _)
+        result <- if (objectListing.isTruncated)
+          fetchBatchRecursive(prefixKey, client, Option(objectListing.nextContinuationToken()), totalCurrentSize)
+        else
+          Fox.successful(totalCurrentSize)
+      } yield result
+    }
+
+    for {
+      rawPrefix <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      // add a trailing slash only if it's missing
+      prefixKey = if (rawPrefix.endsWith("/")) rawPrefix else rawPrefix + "/"
+      client <- clientFox
+      totalSize <- fetchBatchRecursive(prefixKey, client, None, 0)
+    } yield totalSize
+  }
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential
 

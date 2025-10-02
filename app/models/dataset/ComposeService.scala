@@ -3,6 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.explore.ExploreLayerUtils
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import models.user.User
@@ -36,7 +37,8 @@ object ComposeRequestLayer {
 
 class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDAO, datasetService: DatasetService)(
     implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends ExploreLayerUtils
+    with FoxImplicits {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(
       implicit ctx: DBAccessContext,
@@ -54,8 +56,9 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
 
     } yield (dataSource, dataset._id)
 
-  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(implicit ctx: DBAccessContext,
-                                                                          mp: MessagesProvider): Fox[StaticLayer] =
+  private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[(StaticLayer, VoxelSize)] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
@@ -68,7 +71,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       editedLayer = layer.mapped(name = composeLayer.newName,
                                  coordinateTransformations =
                                    applyCoordinateTransformations(layer.coordinateTransformations))
-    } yield editedLayer
+    } yield (editedLayer, usableDataSource.scale)
 
   private def isComposable(composeRequest: ComposeRequest)(implicit ctx: DBAccessContext): Fox[Boolean] =
     // Check that all datasets are on the same data store
@@ -87,14 +90,18 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_))
+      layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
+      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty)) {
+        adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
+      } else {
+        Fox.successful(layersAndVoxelSizes.map(_._1), composeRequest.voxelSize)
+      }
       dataSource = UsableDataSource(
         DataSourceId(datasetDirectoryName, organizationId),
         layers,
-        composeRequest.voxelSize,
+        voxelSize,
         None
       )
-
     } yield dataSource
 
 }

@@ -343,6 +343,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
+      needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
     await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);

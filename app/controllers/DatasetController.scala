@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -25,6 +26,7 @@ import models.dataset.explore.{
 }
 import models.folder.FolderService
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -52,12 +54,6 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
-}
-
-case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-
-object LinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -121,7 +117,7 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[String], dataStoreName: String)
+case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[ObjectId], dataStoreName: String)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -142,6 +138,7 @@ class DatasetController @Inject()(userService: UserService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
+                                  usedStorageService: UsedStorageService,
                                   conf: WkConf,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -208,12 +205,13 @@ class DatasetController @Inject()(userService: UserService,
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
         _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
-        newDataset <- datasetService.createVirtualDataset(
+        newDataset <- datasetService.createAndSetUpDataset(
           request.body.datasetName,
           dataStore,
           dataSource,
-          folderIdOpt.map(_.toString),
-          request.identity
+          folderIdOpt,
+          request.identity,
+          isVirtual = true
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -229,13 +227,19 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
         _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
-        dataset <- datasetService.createVirtualDataset(
+        dataset <- datasetService.createAndSetUpDataset(
           name,
           dataStore,
           request.body.dataSource,
           request.body.folderId,
-          user
+          user,
+          isVirtual = true
         )
+        _ = datasetService.trackNewDataset(dataset,
+                                           user,
+                                           needsConversion = false,
+                                           datasetSizeBytes = 0,
+                                           viaAddRoute = false)
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -654,6 +658,12 @@ class DatasetController @Inject()(userService: UserService,
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+        _ = datasetService.trackNewDataset(dataset,
+                                           request.identity,
+                                           needsConversion = false,
+                                           datasetSizeBytes = 0,
+                                           viaAddRoute = false)
       } yield Ok
     }
 

@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
+ # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
  # changed in v11: Datasets reserveManualUpload flow via WK side. Note: older versions of the route are *not* supported for security reasons.
  # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a dataset id instead of a name and organization id tuple.
    # Requests to the TracingStore and DatasStore need to address a dataset based on its directoryName and organization id.
@@ -15,6 +16,7 @@
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
 
+->       /v12/                                                                webknossos.latest.Routes
 ->       /v11/                                                                webknossos.latest.Routes
 ->       /v10/                                                                webknossos.latest.Routes
 ->       /v9/                                                                 webknossos.latest.Routes

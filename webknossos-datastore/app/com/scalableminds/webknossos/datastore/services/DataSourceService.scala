@@ -202,9 +202,9 @@ class DataSourceService @Inject()(
     }
   }
 
-  def exploreMappings(organizationId: String, datasetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
@@ -246,8 +246,26 @@ class DataSourceService @Inject()(
                              existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
-      UnusableDataSource(id, None, "Not imported yet.")
+      UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
     }
+  }
+
+  def resolvePathsInNewBasePath(dataSource: UsableDataSource, newBasePath: UPath): UsableDataSource = {
+    val updatedDataLayers = dataSource.dataLayers.map { layer =>
+      layer.mapped(
+        magMapping = mag =>
+          mag.path match {
+            case Some(existingMagPath) => mag.copy(path = Some(existingMagPath.resolvedIn(newBasePath)))
+            // If the mag does not have a path, it is an implicit path, we need to make it explicit.
+            case _ =>
+              mag.copy(
+                path = Some(newBasePath / layer.name / mag.mag.toMagLiteral(true))
+              )
+        },
+        attachmentMapping = _.resolvedIn(newBasePath)
+      )
+    }
+    dataSource.copy(dataLayers = updatedDataLayers)
   }
 
   private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =

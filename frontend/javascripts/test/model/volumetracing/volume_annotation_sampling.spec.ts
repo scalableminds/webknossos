@@ -68,7 +68,7 @@ describe("Volume Annotation Sampling", () => {
 
   beforeEach(() => {
     const mockedLayer = {
-      resolutions: [
+      mags: [
         [1, 1, 1],
         [2, 2, 2],
         [4, 4, 4],
@@ -77,7 +77,7 @@ describe("Volume Annotation Sampling", () => {
         [32, 32, 32],
       ] as Vector3[],
     };
-    const magInfo = new MagInfo(mockedLayer.resolutions);
+    const magInfo = new MagInfo(mockedLayer.mags);
     const cube = new DataCube(cubeBoundingBox, [], magInfo, "uint32", false, "layerName");
     const pullQueue = {
       add: vi.fn(),

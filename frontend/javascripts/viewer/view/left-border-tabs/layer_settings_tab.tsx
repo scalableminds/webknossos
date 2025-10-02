@@ -295,7 +295,7 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     const mags = magInfo.getMagList();
     return (
       <div>
@@ -1124,14 +1124,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetMag =
       fallbackLayerInfo != null
-        ? fallbackLayerInfo.resolutions
+        ? fallbackLayerInfo.mags.map(({ mag }) => mag)
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
           getWidestMags(this.props.dataset);
 
     const getMaxDim = (mag: Vector3) => Math.max(...mag);
 
-    const volumeTracingMags = segmentationLayer.mags;
+    const volumeTracingMags = segmentationLayer.mags.map((magInfo) => magInfo.mag);
 
     const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {

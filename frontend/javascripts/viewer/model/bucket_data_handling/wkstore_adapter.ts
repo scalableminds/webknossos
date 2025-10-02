@@ -199,7 +199,7 @@ export async function requestFromStore(
       : null;
   })();
 
-  const magInfo = getMagInfo(layerInfo.resolutions);
+  const magInfo = getMagInfo(layerInfo.mags);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? state.annotation.version

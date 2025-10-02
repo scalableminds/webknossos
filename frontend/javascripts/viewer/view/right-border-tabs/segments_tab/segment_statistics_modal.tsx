@@ -99,7 +99,7 @@ export function SegmentStatisticsModal({
   groupTree,
 }: Props) {
   const { dataset, annotation, temporaryConfiguration } = useWkSelector((state) => state);
-  const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
+  const magInfo = getMagInfo(visibleSegmentationLayer.mags);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are

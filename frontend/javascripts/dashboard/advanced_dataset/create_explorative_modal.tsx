@@ -94,7 +94,7 @@ export function RestrictMagnificationSlider({
   let lowestMagIndex = magInfo.getFinestMagIndex();
 
   if (selectedSegmentationLayer != null) {
-    const datasetFallbackLayerMagInfo = getMagInfo(selectedSegmentationLayer.resolutions);
+    const datasetFallbackLayerMagInfo = getMagInfo(selectedSegmentationLayer.mags);
     highestMagIndex = datasetFallbackLayerMagInfo.getCoarsestMagIndex();
     lowestMagIndex = datasetFallbackLayerMagInfo.getFinestMagIndex();
   }
@@ -197,7 +197,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const magInfo =
       selectedSegmentationLayer == null
         ? getSomeMagInfoForDataset(dataset)
-        : getMagInfo(selectedSegmentationLayer.resolutions);
+        : getMagInfo(selectedSegmentationLayer.mags);
     const highestMagIndex = magInfo.getCoarsestMagIndex();
     const lowestMagIndex = magInfo.getFinestMagIndex();
 

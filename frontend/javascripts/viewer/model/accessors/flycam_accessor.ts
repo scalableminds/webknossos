@@ -415,7 +415,7 @@ export function getCurrentMag(
   state: WebknossosState,
   layerName: string,
 ): Vector3 | null | undefined {
-  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).mags);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
   if (existingMagIndex == null) {
@@ -628,7 +628,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
     .map((layer: DataLayerType) => ({
       layer,
       activeMagIdx: activeMagIndices[layer.name],
-      magInfo: getMagInfo(layer.resolutions),
+      magInfo: getMagInfo(layer.mags),
     }))
     .filter(({ activeMagIdx, magInfo: magInfo }) => {
       const isPresent = magInfo.hasIndex(activeMagIdx);
@@ -674,10 +674,7 @@ function _getActiveMagInfo(state: WebknossosState) {
     enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
   );
   const activeMagOfEnabledLayers = Object.fromEntries(
-    enabledLayers.map((l) => [
-      l.name,
-      getMagInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
-    ]),
+    enabledLayers.map((l) => [l.name, getMagInfo(l.mags).getMagByIndex(activeMagIndices[l.name])]),
   );
 
   const isActiveMagGlobal =

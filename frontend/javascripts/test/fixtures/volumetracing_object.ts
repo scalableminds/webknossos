@@ -59,11 +59,7 @@ const stateWithoutDatasetInitialization = update(defaultState, {
           {
             // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
-            resolutions: [
-              [1, 1, 1],
-              [2, 2, 2],
-              [4, 4, 4],
-            ],
+            mags: [{ mag: [1, 1, 1] }, { mag: [2, 2, 2] }, { mag: [4, 4, 4] }],
             category: "segmentation",
             largestSegmentId: volumeTracing.largestSegmentId ?? 0,
             elementClass: "uint32",

@@ -687,7 +687,7 @@ class TracingApi {
       );
     }
 
-    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).resolutions);
+    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).mags);
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
     if (existingMagIndex == null) {
@@ -1873,7 +1873,7 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const magInfo = getMagInfo(layer.resolutions);
+      const magInfo = getMagInfo(layer.mags);
       zoomStep = magInfo.getFinestMagIndex();
     }
 
@@ -1930,7 +1930,7 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     let zoomStep;
 
     if (_zoomStep != null) {
@@ -1976,7 +1976,7 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     if (maybeMagIndex == null) {
       maybeMagIndex = getActiveMagIndexForLayer(state, layerName);
     }
@@ -2137,7 +2137,7 @@ class DataApi {
     magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).mags);
     magnification = magnification || magInfo.getFinestMag();
 
     const magString = magnification.join("-");

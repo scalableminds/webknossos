@@ -107,7 +107,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         viewMode,
         state.datasetConfiguration.loadingStrategy,
         state.dataset.dataSource.scale.factor,
-        getMagInfo(layer.resolutions).getDenseMags(),
+        getMagInfo(layer.mags).getDenseMags(),
         getViewportRects(state),
         Math.min(
           state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,

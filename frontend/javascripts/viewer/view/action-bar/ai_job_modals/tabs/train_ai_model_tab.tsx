@@ -18,7 +18,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
         annotation,
         layerName,
       );
-      return getMagInfo(segmentationLayer.resolutions);
+      return getMagInfo(segmentationLayer.mags);
     },
     [dataset, annotation],
   );

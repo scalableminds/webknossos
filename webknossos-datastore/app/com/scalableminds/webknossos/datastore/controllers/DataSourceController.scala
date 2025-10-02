@@ -389,6 +389,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  // TODO should not be a datastore route, have wk call this here
   def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
@@ -402,13 +403,14 @@ class DataSourceController @Inject()(
                 dataSourceId.directoryName,
                 Some(datasetId),
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
             } yield ()
           } else
             for {
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
+              _ <- Fox.runIf(dataSourceService.datasetInControlledS3(dataSource))(
+                dataSourceService.deleteFromControlledS3(dataSource, datasetId))
               _ = logger.warn(s"Tried to delete dataset ${dataSource.id} ($datasetId), but is not present on disk.")
             } yield ()
+          _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
         } yield Ok
       }
     }

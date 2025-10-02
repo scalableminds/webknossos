@@ -18,6 +18,17 @@ case class SegmentStatisticsParameters(mag: Vec3Int,
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
+case class SegmentStatisticsParametersMeshBased(mag: Vec3Int,
+                                                segmentIds: List[Long],
+                                                mappingName: Option[String],
+                                                additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                                meshFileName: Option[String],
+                                                lod: Option[Int],
+                                                seedPosition: Option[Vec3Int])
+object SegmentStatisticsParametersMeshBased {
+  implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
+    Json.format[SegmentStatisticsParametersMeshBased]
+}
 
 trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 

@@ -161,6 +161,16 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       }
     }
 
+  def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound" ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset)
+        } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
   def createTracing(name: String,
                     key: String,
                     annotationId: ObjectId,

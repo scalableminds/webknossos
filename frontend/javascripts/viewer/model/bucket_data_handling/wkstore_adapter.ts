@@ -5,7 +5,12 @@ import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
 import _ from "lodash";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  AdditionalCoordinate,
+} from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import {
@@ -22,13 +27,20 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_converter";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { updateBucket } from "viewer/model/sagas/volume/update_actions";
-import type { DataLayerType, VolumeTracing } from "viewer/store";
+import type { DataLayerType, StoreAnnotation, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ByteArraysToLz4Base64Worker from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import DecodeFourBitWorker from "viewer/workers/decode_four_bit.worker";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
+
+export type LayerSourceInfo = {
+  dataset: APIDataset;
+  annotation: StoreAnnotation | null;
+  tracingId: string | undefined;
+  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer;
+};
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 

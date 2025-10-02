@@ -80,6 +80,7 @@ import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import {
   parseProtoAnnotation,
   parseProtoListOfLong,
@@ -859,13 +860,24 @@ export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataS
   args.join("::"),
 );
 
+export function getVolumeRequestUrl(layerSourceInfo: LayerSourceInfo) {
+  const { dataset, annotation, visibleSegmentationLayer, tracingId } = layerSourceInfo;
+  if (annotation == null || tracingId == null) {
+    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer.name}`;
+  } else {
+    const tracingStoreHost = annotation?.tracingStore.url;
+    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
+  }
+}
+
 export function getSegmentVolumes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
+  const requestUrl = getVolumeRequestUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -875,12 +887,13 @@ export function getSegmentVolumes(
 }
 
 export function getSegmentBoundingBoxes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  const requestUrl = getVolumeRequestUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },

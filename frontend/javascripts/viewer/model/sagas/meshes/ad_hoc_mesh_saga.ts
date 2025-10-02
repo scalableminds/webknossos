@@ -360,7 +360,6 @@ function* loadFullAdHocMesh(
 
   // Segment stats can only be used for segmentation layers that have a segment index
   // and that don't have editable mappings.
-
   const usePositionsFromSegmentIndex = getUsePositionsFromSegmentIndex(
     volumeTracing,
     dataset,

@@ -451,10 +451,7 @@ class PlaneMaterialFactory {
         fragmentShader,
       }),
     ) as PlaneShaderMaterial;
-    // this.material.extensions = {
-    //   // Necessary for anti-aliasing via fwidth in shader
-    //   derivatives: true,
-    // };
+
     shaderEditor.addMaterial(this.shaderId, this.material);
 
     this.material.setPositionOffset = (x, y, z) => {

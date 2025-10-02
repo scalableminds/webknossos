@@ -134,7 +134,7 @@ export default function* watchTasksAsync(): Saga<void> {
   yield* call(ensureWkReady);
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (task == null || activeUser == null || !allowUpdate) return;
   yield* call(maybeActivateMergerMode, task.type);
   const { lastTaskTypeId } = activeUser;
@@ -149,7 +149,7 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const { allowUpdate } = yield* select((state) => state.annotation.restrictions);
+    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
 
     if (!allowUpdate) {
       // If updates are not allowed in general, we return here, since we don't

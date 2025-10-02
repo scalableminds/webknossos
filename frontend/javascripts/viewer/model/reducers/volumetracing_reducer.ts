@@ -319,6 +319,7 @@ export function serverVolumeToClientVolumeTracing(
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
+    proofreadingMarkerPosition: undefined,
   };
   return volumeTracing;
 }
@@ -493,6 +494,16 @@ function VolumeTracingReducer(
 
     case "REMOVE_SEGMENT": {
       return handleRemoveSegment(state, action);
+    }
+
+    case "UPDATE_PROOFREADING_MARKER_POSITION": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (volumeTracing) {
+        return updateVolumeTracing(state, volumeTracing.tracingId, {
+          proofreadingMarkerPosition: action.position,
+        });
+      }
+      return state;
     }
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {

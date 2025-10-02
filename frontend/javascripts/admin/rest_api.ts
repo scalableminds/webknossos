@@ -1938,14 +1938,14 @@ export function computeAdHocMesh(
 }
 
 export function getBucketPositionsForAdHocMesh(
-  dataSourceInfo: LayerSourceInfo,
+  layerSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
-  const requestUrl = getDataOrTracingStoreUrl(dataSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);

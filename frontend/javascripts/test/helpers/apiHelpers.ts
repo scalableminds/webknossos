@@ -84,6 +84,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
     getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    parseProtoTracing: Mock<typeof parseProtoTracing>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -225,7 +226,7 @@ vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   return {
     PROTO_FILES: originalProtoHelperModule.PROTO_FILES,
     PROTO_TYPES: originalProtoHelperModule.PROTO_TYPES,
-    parseProtoTracing: vi.fn(),
+    parseProtoTracing: vi.fn(originalProtoHelperModule.parseProtoTracing),
     parseProtoAnnotation: vi.fn(),
     serializeProtoListOfLong: vi.fn(),
     parseProtoListOfLong: vi.fn(),
@@ -417,6 +418,7 @@ export async function setupWebknossosForTesting(
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
     getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    parseProtoTracing: vi.mocked(parseProtoTracing),
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
@@ -448,7 +450,7 @@ export async function setupWebknossosForTesting(
     },
   );
 
-  vi.mocked(parseProtoTracing).mockImplementation(
+  testContext.mocks.parseProtoTracing.mockImplementation(
     (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
       const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
       if (tracing == null) {

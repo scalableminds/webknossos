@@ -224,7 +224,7 @@ class BinaryDataController @Inject()(
           adHocMeshRequest = AdHocMeshRequest(
             Some(dataSource.id),
             segmentationLayer,
-            request.body.cuboid(dataLayer),
+            request.body.cuboid,
             request.body.segmentId,
             request.body.voxelSizeFactorInUnit,
             tokenContextForRequest(request),

@@ -20,6 +20,7 @@ object ChunkTyper {
     case ArrayDataType.i8 | ArrayDataType.u8 => new LongChunkTyper(header)
     case ArrayDataType.f4                    => new FloatChunkTyper(header)
     case ArrayDataType.f8                    => new DoubleChunkTyper(header)
+    case ArrayDataType.bool                  => new BoolChunkTyper(header)
   }
 }
 
@@ -126,6 +127,20 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
       imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
+}
+
+class BoolChunkTyper(val header: DatasetHeader) extends ChunkTyper {
+
+  val ma2DataType: MADataType = MADataType.BOOLEAN
+
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
+    val typedStorage = new Array[Boolean](chunkShape.product)
+    bytes.zipWithIndex.foreach {
+      case (b, i) =>
+        typedStorage(i) = b != 0
+    }
+    MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
+  }
 }
 
 // In no-partial-copy shortcut, the MultiArray shape is never used, so it is just set to flat.

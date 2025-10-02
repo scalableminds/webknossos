@@ -437,6 +437,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       idInfoUpdaterTuples <- Fox.serialCombined(volumeWithEditableMapping) {
         case (volumeTracing, volumeTracingId) =>
           for {
+            _ <- Fox.successful(
+              logger.info(s"looking for editableMappingInfo at $volumeTracingId v${annotationWithTracings.version}"))
             editableMappingInfo <- getEditableMappingInfoRaw(volumeTracingId, Some(annotationWithTracings.version)) ?~> "getEditableMappingInfoRaw.failed"
             updater <- editableMappingUpdaterFor(annotationId,
                                                  volumeTracingId,

@@ -145,7 +145,7 @@ class AnnotationIOController @Inject()(
                                                      AnnotationType.Explorational,
                                                      name,
                                                      description,
-                                                     ObjectId.generate)
+                                                     newAnnotationId)
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,
@@ -179,6 +179,13 @@ class AnnotationIOController @Inject()(
         val idx = volumeLayerWithIndex._2
         val newTracingId = TracingId.generate
         for {
+          savedVersion <- client.saveEditableMappingIfPresent(
+            newAnnotationId,
+            newTracingId,
+            uploadedVolumeLayer.getEditableMappingEdgesZipFrom(otherFiles),
+            uploadedVolumeLayer.editedMappingBaseMappingName,
+            startVersion = 0L // TODO
+          )
           _ <- client.saveVolumeTracing(newAnnotationId,
                                         newTracingId,
                                         uploadedVolumeLayer.tracing,

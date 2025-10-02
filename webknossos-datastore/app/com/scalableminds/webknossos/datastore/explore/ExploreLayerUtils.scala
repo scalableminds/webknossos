@@ -18,7 +18,7 @@ import scala.util.Try
 
 trait ExploreLayerUtils extends FoxImplicits {
 
-  def adaptLayersAndVoxelSize(
+  protected def adaptLayersAndVoxelSize(
       layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
       preferredVoxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] =
     for {

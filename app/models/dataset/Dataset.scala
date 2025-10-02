@@ -738,7 +738,7 @@ case class MagWithPaths(layerName: String,
 
 case class DataSourceMagRow(_dataset: ObjectId,
                             dataLayerName: String,
-                            mag: String,
+                            mag: Vec3Int,
                             path: Option[String],
                             realPath: Option[String],
                             hasLocalData: Boolean,
@@ -755,12 +755,14 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)).toFox ?~> "could not parse mag"
+      mag <- Vec3Int
+        .fromList(parseArrayLiteral(row.mag).map(_.toInt))
+        .toFox ?~> "Could not parse mag of dataset_mags row."
     } yield MagWithPaths(row.datalayername, mag, row.path, row.realpath, hasLocalData = row.haslocaldata)
 
   private def parseMag(magArrayLiteral: String): Fox[Vec3Int] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
+      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "Could not parse mag."
     } yield mag
 
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
@@ -771,6 +773,25 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
           .as[DatasetMagsRow])
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
+
+  def findAllStorageRelevantMags(organizationId: String,
+                                 dataStoreId: String,
+                                 datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
+    for {
+      storageRelevantMags <- run(q"""SELECT
+            dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+            FROM (
+              -- rn is the rank of the mags with the same path. We only retrieve the oldest mag with the same path to measure each mag only once.
+              SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY COALESCE(mag.realPath, mag.path) ORDER BY ds.created ASC) AS rn
+              FROM webknossos.dataset_mags AS mag
+              JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
+              WHERE ds._organization = $organizationId
+                AND ds._dataStore = $dataStoreId
+                ${datasetIdOpt.map(datasetId => q"AND ds._id = $datasetId").getOrElse(q"")}
+            ) AS ranked
+            WHERE rn = 1;""".as[DataSourceMagRow])
+    } yield storageRelevantMags.toList
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
@@ -805,25 +826,37 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     GetResult(
-      r =>
-        DataSourceMagRow(ObjectId(r.nextString()),
-                         r.nextString(),
-                         r.nextString(),
-                         r.nextStringOption(),
-                         r.nextStringOption(),
-                         r.nextBoolean(),
-                         r.nextString(),
-                         r.nextString()))
-
-  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): Fox[List[DataSourceMagInfo]] =
-    for {
-      mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
-      dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
-      magInfos = rows.toList.zip(mags).zip(dataSources).map {
-        case ((row, mag), dataSource) =>
-          DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
+      r => {
+        val datasetId = ObjectId(r.nextString())
+        val layerName = r.nextString()
+        val magLiteral = r.nextString()
+        val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(magLiteral).map(_.toInt))
+        DataSourceMagRow(
+          datasetId,
+          layerName,
+          parsedMagOpt.getOrElse(
+            // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+            throw new IllegalArgumentException(
+              s"Invalid mag literal for dataset $datasetId with value: '$magLiteral'"
+            )
+          ),
+          r.nextStringOption(),
+          r.nextStringOption(),
+          r.nextBoolean(),
+          r.nextString(),
+          r.nextString()
+        )
       }
-    } yield magInfos
+    )
+
+  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): List[DataSourceMagInfo] = {
+    val mags = rows.map(_.mag)
+    val dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
+    rows.toList.zip(mags).zip(dataSources).map {
+      case ((row, mag), dataSource) =>
+        DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
+    }
+  }
 
   def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
     for {
@@ -832,7 +865,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE _dataset = $datasetId
             AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
-      magInfos <- rowsToMagInfos(rows)
+      magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
   def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
@@ -841,7 +874,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             FROM webknossos.dataset_mags
             INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
             WHERE realPath = $realPath""".as[DataSourceMagRow])
-      magInfos <- rowsToMagInfos(rows)
+      magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
@@ -1039,6 +1072,16 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
   }
 }
 
+case class StorageRelevantDataLayerAttachment(
+    _dataset: ObjectId,
+    layerName: String,
+    name: String,
+    path: String,
+    `type`: LayerAttachmentType.LayerAttachmentType,
+    _organization: String,
+    datasetDirectoryName: String,
+)
+
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
@@ -1151,6 +1194,51 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                    AND type = $attachmentType
          """.asUpdate)
     } yield ()
+
+  implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
+    GetResult(
+      r =>
+        StorageRelevantDataLayerAttachment(
+          ObjectId(r.nextString()),
+          r.nextString(),
+          r.nextString(),
+          r.nextString(), {
+            val format = r.nextString()
+            LayerAttachmentType
+              .fromString(format)
+              .getOrElse(
+                // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+                throw new IllegalArgumentException(
+                  s"Invalid LayerAttachmentType value: '$format'"
+                )
+              )
+          },
+          r.nextString(),
+          r.nextString(),
+      ))
+
+  def findAllStorageRelevantAttachments(organizationId: String,
+                                        dataStoreId: String,
+                                        datasetIdOpt: Option[ObjectId]): Fox[List[StorageRelevantDataLayerAttachment]] =
+    for {
+      storageRelevantAttachments <- run(q"""SELECT
+                                            _dataset, layerName, name, path, type, _organization, directoryName
+                                            FROM (
+                                              -- rn is the rank of the attachments with the same path. We only retrieve the
+                                              -- oldest attachment with the same path to measuring an attachment only once.
+                                              SELECT
+                                                att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName,
+                                                ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn
+                                              FROM webknossos.dataset_layer_attachments AS att
+                                              JOIN webknossos.datasets AS ds ON att._dataset = ds._id
+                                              WHERE ds._organization = $organizationId
+                                                AND ds._dataStore = $dataStoreId
+                                                ${datasetIdOpt
+        .map(datasetId => q"AND ds._id = $datasetId")
+        .getOrElse(q"")}
+                                            ) AS ranked
+                                            WHERE rn = 1;""".as[StorageRelevantDataLayerAttachment])
+    } yield storageRelevantAttachments.toList
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -237,11 +237,12 @@ describe("DType Dataset Rendering", () => {
               actions.push(updateLayerSettingAction(layerName, "intensityRange", intensityRange));
             }
 
-            await page.evaluate((actions) => {
-              return window.webknossos.apiReady().then(() => {
+            await page.evaluate(async (actions) => {
+              await window.webknossos.apiReady().then(async (api) => {
                 for (const action of actions) {
                   window.webknossos.DEV.store.dispatch(action);
                 }
+                await api.tracing.save();
               });
             }, actions);
           };
@@ -282,10 +283,11 @@ describe("DType Dataset Rendering", () => {
             ];
 
             console.time("evaluate");
-            await page.evaluate((actions) => {
+            await page.evaluate(async (actions) => {
               for (const action of actions) {
                 window.webknossos.DEV.store.dispatch(action);
               }
+              await window.webknossos.DEV.api.tracing.save();
             }, actions);
             console.timeEnd("evaluate");
 

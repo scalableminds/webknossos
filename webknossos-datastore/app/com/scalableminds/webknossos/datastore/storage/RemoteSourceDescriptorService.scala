@@ -48,6 +48,12 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor)
     } yield vaultPath
 
+  def vaultPathFor(upath: UPath)(implicit ec: ExecutionContext): Fox[VaultPath] = {
+    val credentialBox = findGlobalCredentialFor(Some(upath))
+    val remoteSourceDescriptor = RemoteSourceDescriptor(upath, credentialBox)
+    dataVaultService.getVaultPath(remoteSourceDescriptor)
+  }
+
   def removeVaultFromCache(attachment: LayerAttachment)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       credentialBox <- credentialFor(attachment).shiftBox

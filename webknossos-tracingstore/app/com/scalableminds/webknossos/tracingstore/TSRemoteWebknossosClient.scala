@@ -5,12 +5,13 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
@@ -43,6 +44,7 @@ class TSRemoteWebknossosClient @Inject()(
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
 ) extends RemoteWebknossosClient
+    with FoxImplicits
     with LazyLogging {
 
   private val tracingStoreKey: String = config.Tracingstore.key
@@ -53,6 +55,7 @@ class TSRemoteWebknossosClient @Inject()(
   private lazy val datasetIdByAnnotationIdCache: AlfuCache[ObjectId, ObjectId] = AlfuCache()
   private lazy val annotationIdByTracingIdCache: AlfuCache[String, ObjectId] =
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
+  private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
 
   def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
@@ -124,6 +127,19 @@ class TSRemoteWebknossosClient @Inject()(
             SkeletonTracingWithUpdatedTreeIds(skeletonTracing, Set.empty))
     }
   }
+
+  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(implicit tc: TokenContext,
+                                                              ec: ExecutionContext): Fox[VoxelSize] =
+    voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
+
+  private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext,
+                                                             ec: ExecutionContext): Fox[VoxelSize] =
+    for {
+      datasetId <- getDatasetIdForAnnotation(annotationId)
+      result <- rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasources/$datasetId")
+        .getWithJsonResponse[DataSource]
+      scale <- result.voxelSizeOpt.toFox ?~> "Could not determine voxel size of dataset"
+    } yield scale
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")

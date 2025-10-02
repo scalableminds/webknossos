@@ -339,6 +339,34 @@ class DatasetController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(usersJs))
   }
 
+  // Note that dataSource is also included in the full publicWrites. This
+  def readDataSource(datasetId: ObjectId,
+                     // Optional sharing token allowing access to datasets your team does not normally have access to.")
+                     sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      log() {
+        val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ~> NOT_FOUND
+          _ <- Fox.runOptional(request.identity)(user =>
+            datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
+          // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
+          dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
+          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
+          _ = request.identity.map { user =>
+            analyticsService.track(OpenDatasetEvent(user, dataset))
+            if (dataset.isPublic) {
+              mailchimpClient.tagUser(user, MailchimpTag.HasViewedPublishedDataset)
+            }
+            userDAO.updateLastActivity(user._id)
+          }
+        } yield {
+          Ok(Json.toJson(js))
+        }
+      }
+    }
+
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
            sharingToken: Option[String]): Action[AnyContent] =

@@ -80,7 +80,10 @@ import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import {
+  type LayerSourceInfo,
+  getDataOrTracingStoreUrl,
+} from "viewer/model/bucket_data_handling/wkstore_adapter";
 import {
   parseProtoAnnotation,
   parseProtoListOfLong,
@@ -860,17 +863,6 @@ export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataS
   args.join("::"),
 );
 
-export function getVolumeRequestUrl(layerSourceInfo: LayerSourceInfo) {
-  const { dataset, annotation, visibleSegmentationLayerName, tracingId, forceUsingDataStore } =
-    layerSourceInfo;
-  if (annotation == null || tracingId == null || forceUsingDataStore) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayerName}`;
-  } else {
-    const tracingStoreHost = annotation?.tracingStore.url;
-    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
-  }
-}
-
 export function getSegmentVolumes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
@@ -878,7 +870,7 @@ export function getSegmentVolumes(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
-  const requestUrl = getVolumeRequestUrl(layerSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -894,7 +886,7 @@ export function getSegmentBoundingBoxes(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
-  const requestUrl = getVolumeRequestUrl(layerSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -1898,13 +1890,13 @@ type MeshRequest = {
 };
 
 export function computeAdHocMesh(
-  dataSourceInfo: LayerSourceInfo,
+  layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const requestUrl = getVolumeRequestUrl(dataSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
     additionalCoordinates,
@@ -1953,7 +1945,7 @@ export function getBucketPositionsForAdHocMesh(
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
-  const requestUrl = getVolumeRequestUrl(dataSourceInfo);
+  const requestUrl = getDataOrTracingStoreUrl(dataSourceInfo);
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);

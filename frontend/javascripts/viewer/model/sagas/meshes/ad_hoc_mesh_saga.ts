@@ -366,7 +366,7 @@ function* loadFullAdHocMesh(
     visibleSegmentationLayer?.tracingId,
   );
 
-  const dataSourceInfo: LayerSourceInfo = {
+  const layerSourceInfo: LayerSourceInfo = {
     dataset,
     annotation,
     tracingId: visibleSegmentationLayer?.tracingId,
@@ -379,7 +379,7 @@ function* loadFullAdHocMesh(
 
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-        dataSourceInfo,
+        layerSourceInfo,
         segmentId,
         cubeSize,
         mag,
@@ -409,7 +409,7 @@ function* loadFullAdHocMesh(
       magInfo,
       isInitialRequest,
       removeExistingMesh && isInitialRequest,
-      dataSourceInfo,
+      layerSourceInfo,
       !usePositionsFromSegmentIndex,
     );
     isInitialRequest = false;
@@ -426,7 +426,7 @@ function* loadFullAdHocMesh(
 }
 
 function* getChunkPositionsFromSegmentIndex(
-  dataSourceInfo: LayerSourceInfo,
+  layerSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
@@ -436,7 +436,7 @@ function* getChunkPositionsFromSegmentIndex(
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
-    dataSourceInfo,
+    layerSourceInfo,
     segmentId,
     cubeSize,
     mag,
@@ -460,7 +460,7 @@ function* maybeLoadMeshChunk(
   magInfo: MagInfo,
   isInitialRequest: boolean,
   removeExistingMesh: boolean,
-  dataSourceInfo: LayerSourceInfo,
+  layerSourceInfo: LayerSourceInfo,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -484,7 +484,7 @@ function* maybeLoadMeshChunk(
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
-      mode: dataSourceInfo.forceUsingDataStore ? "view" : "annotation",
+      mode: layerSourceInfo.forceUsingDataStore ? "view" : "annotation",
     });
   }
 
@@ -501,7 +501,7 @@ function* maybeLoadMeshChunk(
           context: null,
           fn: computeAdHocMesh,
         },
-        dataSourceInfo,
+        layerSourceInfo,
         {
           positionWithPadding: paddedPositionWithinLayer,
           additionalCoordinates: additionalCoordinates || undefined,

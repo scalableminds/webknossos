@@ -370,7 +370,10 @@ function* loadFullAdHocMesh(
     dataset,
     annotation,
     tracingId: visibleSegmentationLayer?.tracingId,
-    visibleSegmentationLayer,
+    visibleSegmentationLayerName:
+      visibleSegmentationLayer?.tracingId == null
+        ? visibleSegmentationLayer?.name
+        : visibleSegmentationLayer?.fallbackLayer,
     forceUsingDataStore,
   };
 

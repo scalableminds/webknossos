@@ -1691,7 +1691,7 @@ function ContextMenuInner() {
         dataset,
         annotation,
         tracingId,
-        visibleSegmentationLayer,
+        visibleSegmentationLayerName: visibleSegmentationLayer.name,
       };
       const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
       const layersFinestMag = magInfo.getFinestMag();

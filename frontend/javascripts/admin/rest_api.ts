@@ -861,9 +861,10 @@ export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataS
 );
 
 export function getVolumeRequestUrl(layerSourceInfo: LayerSourceInfo) {
-  const { dataset, annotation, visibleSegmentationLayer, tracingId } = layerSourceInfo;
-  if (annotation == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer?.name}`;
+  const { dataset, annotation, visibleSegmentationLayerName, tracingId, forceUsingDataStore } =
+    layerSourceInfo;
+  if (annotation == null || tracingId == null || forceUsingDataStore) {
+    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayerName}`;
   } else {
     const tracingStoreHost = annotation?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;

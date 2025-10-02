@@ -104,7 +104,7 @@ export function SegmentStatisticsModal({
     dataset,
     annotation,
     tracingId: visibleSegmentationLayer.tracingId,
-    visibleSegmentationLayer,
+    visibleSegmentationLayerName: visibleSegmentationLayer.name,
   };
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);

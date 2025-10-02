@@ -5,12 +5,7 @@ import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
 import _ from "lodash";
-import type {
-  APIDataLayer,
-  APIDataset,
-  APISegmentationLayer,
-  AdditionalCoordinate,
-} from "types/api_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import {
@@ -39,7 +34,7 @@ export type LayerSourceInfo = {
   dataset: APIDataset;
   annotation: StoreAnnotation | null;
   tracingId: string | undefined;
-  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer | undefined | null;
+  visibleSegmentationLayerName: string | null | undefined;
   forceUsingDataStore?: boolean | undefined | null;
 };
 

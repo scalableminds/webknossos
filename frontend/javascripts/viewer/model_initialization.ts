@@ -216,6 +216,7 @@ export async function initialize(
     datasetId,
     version,
   );
+  assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
   maybeFixDatasetNameInURL(apiDataset, initialCommandType);
 
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
@@ -313,7 +314,7 @@ async function fetchParallel(
   version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
-    getDataset(datasetId, null, getSharingTokenFromUrlParameters()),
+    getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, version) : [],
   ]);
@@ -471,20 +472,30 @@ export function preprocessDataset(
   return mutableDataset as StoreDataset;
 }
 
-function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
+function assertUsableDataset(dataset: StoreDataset, initialCommandType: TraceOrViewCommand) {
   let error;
+  let annotationNote = "";
+  if (initialCommandType.type === ControlModeEnum.TRACE) {
+    annotationNote = `Failed to load annotation ${initialCommandType.annotationId}: `;
+  }
 
   if (!dataset) {
-    error = messages["dataset.does_not_exist"];
+    error = `${annotationNote}${messages["dataset.does_not_exist"]}`;
   } else if (!dataset.dataSource.dataLayers) {
-    error = `${messages["dataset.not_imported"]} '${dataset.name}'`;
+    let statusNote = ".";
+    if (dataset.dataSource.status) {
+      statusNote = `: ${dataset.dataSource.status}`;
+    }
+    error = `${annotationNote}Dataset ‘${dataset.name}’ (${dataset.id}) is not available${statusNote}`;
   }
 
   if (error) {
     Toast.error(error);
     throw HANDLED_ERROR;
   }
+}
 
+function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
   // Make sure subsequent fetch calls are always for the same dataset
   if (!initialFetch) {
     ErrorHandling.assert(

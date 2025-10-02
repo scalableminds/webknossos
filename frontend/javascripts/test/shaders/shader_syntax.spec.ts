@@ -48,6 +48,7 @@ describe("Shader syntax", () => {
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
       voxelSizeFactorInverted: [1, 1, 1],
+      useInterpolation: false,
       tpsTransformPerLayer: {},
     });
 
@@ -99,6 +100,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
@@ -144,6 +146,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      useInterpolation: true,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
@@ -181,6 +184,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
+      useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
@@ -226,6 +230,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
+      useInterpolation: true,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
@@ -262,6 +267,7 @@ describe("Shader syntax", () => {
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
+      useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });

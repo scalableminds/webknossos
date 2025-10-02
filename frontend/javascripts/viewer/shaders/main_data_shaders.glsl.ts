@@ -23,6 +23,7 @@ import {
   getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
 import compileShader from "./shader_module_system";
+import { getColorForCoords } from "./texture_access.glsl";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
@@ -60,6 +61,7 @@ export type Params = {
   voxelSizeFactor: Vector3;
   voxelSizeFactorInverted: Vector3;
   isOrthogonal: boolean;
+  useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
 
@@ -139,7 +141,6 @@ uniform vec3 globalPosition;
 uniform vec3 positionOffset;
 uniform vec3 proofreadingMarkerPosition;
 uniform float zoomValue;
-uniform bool useBilinearFiltering;
 uniform float blendMode;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
@@ -170,7 +171,6 @@ precision highp float;
 ${SHARED_UNIFORM_DECLARATIONS}
 
 flat in vec2 index;
-flat in uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
@@ -278,7 +278,6 @@ void main() {
             <%= name %>_data_texture_width,
             <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
             transformedCoordUVW,
-            false,
             fallbackGray,
             !<%= name %>_has_transform
           );
@@ -436,7 +435,6 @@ out mat4 savedModelMatrix;
 }) %>
 
 flat out vec2 index;
-flat out uvec4 outputCompressedEntry[<%= globalLayerCount %>];
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
@@ -453,9 +451,9 @@ ${compileShader(
   isFlightMode,
   transDim,
   getAbsoluteCoords,
+  getColorForCoords,
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
-  getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentId : null,
   getMagnification,
   almostEq,

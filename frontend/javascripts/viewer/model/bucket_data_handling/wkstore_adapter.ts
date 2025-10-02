@@ -39,7 +39,8 @@ export type LayerSourceInfo = {
   dataset: APIDataset;
   annotation: StoreAnnotation | null;
   tracingId: string | undefined;
-  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer;
+  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer | undefined | null;
+  forceUsingDataStore?: boolean | undefined | null;
 };
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);

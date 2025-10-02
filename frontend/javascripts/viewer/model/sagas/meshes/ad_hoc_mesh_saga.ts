@@ -42,6 +42,7 @@ import {
   type LoadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
+import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type DataLayer from "viewer/model/data_layer";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/position_converter";
@@ -340,22 +341,20 @@ function* loadFullAdHocMesh(
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
   const cubeSize = marchingCubeSizeInTargetMag();
-  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const dataset = yield* select((state) => state.dataset);
-  const datasetId = dataset.id;
-  const dataStoreHost = dataset.dataStore.url;
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  const annotation = yield* select((state) => state.annotation);
   const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
   // Fetch from datastore if no volumetracing ...
-  let useDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
+  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
   if (meshExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
-    useDataStore = meshExtraInfo.useDataStore;
+    forceUsingDataStore = meshExtraInfo.useDataStore;
   } else if (volumeTracing?.hasEditableMapping) {
     // ... or if an editable mapping is active.
-    useDataStore = false;
+    forceUsingDataStore = false;
   }
 
   // Segment stats can only be used for segmentation layers that have a segment index
@@ -367,13 +366,17 @@ function* loadFullAdHocMesh(
     visibleSegmentationLayer?.tracingId,
   );
 
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${layer.name}`;
-  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
-  const requestUrl = useDataStore ? dataStoreUrl : tracingStoreUrl;
+  const dataSourceInfo: LayerSourceInfo = {
+    dataset,
+    annotation,
+    tracingId: visibleSegmentationLayer?.tracingId,
+    visibleSegmentationLayer,
+    forceUsingDataStore,
+  };
 
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-        requestUrl,
+        dataSourceInfo,
         segmentId,
         cubeSize,
         mag,
@@ -403,7 +406,7 @@ function* loadFullAdHocMesh(
       magInfo,
       isInitialRequest,
       removeExistingMesh && isInitialRequest,
-      useDataStore,
+      dataSourceInfo,
       !usePositionsFromSegmentIndex,
     );
     isInitialRequest = false;
@@ -420,7 +423,7 @@ function* loadFullAdHocMesh(
 }
 
 function* getChunkPositionsFromSegmentIndex(
-  requestUrl: string,
+  dataSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
@@ -430,7 +433,7 @@ function* getChunkPositionsFromSegmentIndex(
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
-    requestUrl,
+    dataSourceInfo,
     segmentId,
     cubeSize,
     mag,
@@ -454,7 +457,7 @@ function* maybeLoadMeshChunk(
   magInfo: MagInfo,
   isInitialRequest: boolean,
   removeExistingMesh: boolean,
-  useDataStore: boolean,
+  dataSourceInfo: LayerSourceInfo,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -475,17 +478,10 @@ function* maybeLoadMeshChunk(
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(paddedPositionWithinLayer, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
-  const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
-  const datasetId = yield* select((state) => state.dataset.id);
-  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${
-    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-  }`;
-  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
-      mode: useDataStore ? "view" : "annotation",
+      mode: dataSourceInfo.forceUsingDataStore ? "view" : "annotation",
     });
   }
 
@@ -502,7 +498,7 @@ function* maybeLoadMeshChunk(
           context: null,
           fn: computeAdHocMesh,
         },
-        useDataStore ? dataStoreUrl : tracingStoreUrl,
+        dataSourceInfo,
         {
           positionWithPadding: paddedPositionWithinLayer,
           additionalCoordinates: additionalCoordinates || undefined,

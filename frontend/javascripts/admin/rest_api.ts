@@ -863,7 +863,7 @@ export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataS
 export function getVolumeRequestUrl(layerSourceInfo: LayerSourceInfo) {
   const { dataset, annotation, visibleSegmentationLayer, tracingId } = layerSourceInfo;
   if (annotation == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer.name}`;
+    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer?.name}`;
   } else {
     const tracingStoreHost = annotation?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
@@ -1897,12 +1897,13 @@ type MeshRequest = {
 };
 
 export function computeAdHocMesh(
-  requestUrl: string,
+  dataSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
+  const requestUrl = getVolumeRequestUrl(dataSourceInfo);
   const {
     positionWithPadding,
     additionalCoordinates,
@@ -1944,13 +1945,14 @@ export function computeAdHocMesh(
 }
 
 export function getBucketPositionsForAdHocMesh(
-  requestUrl: string,
+  dataSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
+  const requestUrl = getVolumeRequestUrl(dataSourceInfo);
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);

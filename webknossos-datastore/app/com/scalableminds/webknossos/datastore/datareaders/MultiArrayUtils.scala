@@ -19,6 +19,7 @@ object MultiArrayUtils extends LazyLogging {
       case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](length)
       case ArrayDataType.f4                    => new Array[Float](length)
       case ArrayDataType.f8                    => new Array[Double](length)
+      case ArrayDataType.bool                  => new Array[Boolean](length)
     }
   }
 
@@ -39,6 +40,7 @@ object MultiArrayUtils extends LazyLogging {
         else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fill.intValue)
         else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fill.shortValue)
         else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fill.byteValue)
+        else if (MADataType.BOOLEAN == dataType) while ({ iter.hasNext }) iter.setBooleanNext(false) // TODO use real value
         else throw new IllegalStateException
       }
       array

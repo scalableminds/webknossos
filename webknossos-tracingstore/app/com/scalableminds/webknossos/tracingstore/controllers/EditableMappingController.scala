@@ -258,6 +258,13 @@ class EditableMappingController @Inject()(
                                                      None,
                                                      None,
                                                      sharedChunkContentsCache)
+          numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
+          _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
+          _ = logger.info(s"Creating updates from $numEdges touched edges")
+          editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
+          _ = logger.info(s"editedEdges size: ${editedEdges.getSize}")
+          edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
+          _ = logger.info(s"edgeIsAddition size: ${edgeIsAddition.getSize}")
           // TODO build update actions from edited edges zip, store them, count up versions
           finalVersion = 0L // TODO
         } yield Ok(Json.toJson(finalVersion))

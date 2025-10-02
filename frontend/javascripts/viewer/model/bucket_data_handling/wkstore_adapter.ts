@@ -5,7 +5,7 @@ import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
 import _ from "lodash";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import {
@@ -22,21 +22,13 @@ import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_converter";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { updateBucket } from "viewer/model/sagas/volume/update_actions";
-import type { DataLayerType, StoreAnnotation, VolumeTracing } from "viewer/store";
+import type { DataLayerType, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ByteArraysToLz4Base64Worker from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import DecodeFourBitWorker from "viewer/workers/decode_four_bit.worker";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
-
-export type LayerSourceInfo = {
-  dataset: APIDataset;
-  annotation: StoreAnnotation | null;
-  tracingId: string | undefined;
-  visibleSegmentationLayerName: string | null | undefined;
-  forceUsingDataStore?: boolean | undefined | null;
-};
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 
@@ -270,17 +262,6 @@ export async function requestFromStore(
       isOnline: window.navigator.onLine,
     });
     throw errorResponse;
-  }
-}
-
-export function getDataOrTracingStoreUrl(layerSourceInfo: LayerSourceInfo) {
-  const { dataset, annotation, visibleSegmentationLayerName, tracingId, forceUsingDataStore } =
-    layerSourceInfo;
-  if (annotation == null || tracingId == null || forceUsingDataStore) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayerName}`;
-  } else {
-    const tracingStoreHost = annotation?.tracingStore.url;
-    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
   }
 }
 

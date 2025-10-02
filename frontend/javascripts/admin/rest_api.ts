@@ -83,7 +83,7 @@ import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   type LayerSourceInfo,
   getDataOrTracingStoreUrl,
-} from "viewer/model/bucket_data_handling/wkstore_adapter";
+} from "viewer/model/bucket_data_handling/wkstore_helper";
 import {
   parseProtoAnnotation,
   parseProtoListOfLong,

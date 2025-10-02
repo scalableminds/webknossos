@@ -42,7 +42,7 @@ import {
   type LoadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
-import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_helper";
 import type DataLayer from "viewer/model/data_layer";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/position_converter";

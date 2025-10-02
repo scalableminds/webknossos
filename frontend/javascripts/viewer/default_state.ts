@@ -246,7 +246,7 @@ const defaultState: WebknossosState = {
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
     showPythonClientModal: false,
-    aIJobModalState: "invisible",
+    aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},

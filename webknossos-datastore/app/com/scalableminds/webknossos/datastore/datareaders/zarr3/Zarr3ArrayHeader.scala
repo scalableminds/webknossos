@@ -43,7 +43,11 @@ case class Zarr3ArrayHeader(
 
   override lazy val order: ArrayOrder = getOrder
 
-  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
+  override lazy val byteOrder: ByteOrder = if (codecs.exists {
+                                                 case BytesCodecConfiguration(endian) if endian.contains("big") => true
+                                                 case _                                                         => false
+                                               }) ByteOrder.BIG_ENDIAN
+  else ByteOrder.LITTLE_ENDIAN
 
   private def zarr3DataType: Zarr3DataType =
     Zarr3DataType.fromString(data_type.left.getOrElse("extension")).getOrElse(raw)

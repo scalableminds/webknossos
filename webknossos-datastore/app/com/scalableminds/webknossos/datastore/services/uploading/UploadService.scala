@@ -298,11 +298,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       if (isNewChunk) {
         try {
           val bytes = Files.readAllBytes(chunkFile.toPath)
-          PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
-          val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
-          tempFile.seek((currentChunkNumber - 1) * chunkSize)
-          tempFile.write(bytes)
-          tempFile.close()
+          this.synchronized {
+            PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
+            val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
+            tempFile.seek((currentChunkNumber - 1) * chunkSize)
+            tempFile.write(bytes)
+            tempFile.close()
+          }
           Fox.successful(())
         } catch {
           case e: Exception =>
@@ -442,7 +444,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           } yield UPath.fromLocalPath(finalUploadedLocalPath)
         }
         dataSourceWithAdaptedPaths = dataSourceService.resolvePathsInNewBasePath(usableDataSourceFromDir, newBasePath)
-        _ = PathUtils.deleteDirectoryRecursively(unpackedDir)
+        _ = this.synchronized {
+          PathUtils.deleteDirectoryRecursively(unpackedDir)
+        }
       } yield Some(dataSourceWithAdaptedPaths)
     }
 
@@ -800,7 +804,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
 
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Fox[Unit] = {
-    PathUtils.deleteDirectoryRecursively(uploadDir)
+    this.synchronized {
+      PathUtils.deleteDirectoryRecursively(uploadDir)
+    }
     removeFromRedis(uploadId)
   }
 

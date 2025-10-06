@@ -1,37 +1,23 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{
-  TSChunkCacheService,
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService
-}
-import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingIOService,
   EditableMappingService,
-  MergeAgglomerateUpdateAction,
   MinCutParameters,
   NeighborsParameters,
-  SplitAgglomerateUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
-import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
-import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreImplicits
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -43,9 +29,6 @@ class EditableMappingController @Inject()(
     remoteWebknossosClient: TSRemoteWebknossosClient,
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
-    tracingDataStore: TracingDataStore,
-    tempFileService: TsTempFileService,
-    chunkCacheService: TSChunkCacheService,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -213,85 +196,12 @@ class EditableMappingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          _ <- tracingDataStore.editableMappingsInfo.put(tracingId,
-                                                         0L,
-                                                         toProtoBytes(editableMappingService.create(baseMappingName)))
-          _ = logger.info(s"stored editableMappingsInfo at $tracingId v0")
           editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zipFile.notFound"
-          unzippedDir = tempFileService.createDirectory()
-          _ <- ZipIO
-            .unzipToDirectory(editedEdgesZip,
-                              unzippedDir,
-                              includeHiddenFiles = true,
-                              List.empty,
-                              truncateCommonPrefix = false,
-                              excludeFromPrefix = None)
-            .toFox
-          unzippedVaultPath = new VaultPath(UPath.fromLocalPath(unzippedDir), FileSystemDataVault.create)
-          editedEdgesZarrArray <- Zarr3Array.open(unzippedVaultPath / "edges/",
-                                                  DataSourceId("dummy", "unused"),
-                                                  "layer",
-                                                  None,
-                                                  None,
-                                                  None,
-                                                  chunkCacheService.sharedChunkContentsCache)
-          edgeIsAdditionZarrArray <- Zarr3Array.open(unzippedVaultPath / "edgeIsAddition/",
-                                                     DataSourceId("dummy", "unused"),
-                                                     "layer",
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     chunkCacheService.sharedChunkContentsCache)
-          numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
-          _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
-          _ = logger.info(s"Creating updates from $numEdges touched edges")
-          editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
-          _ = logger.info(s"editedEdges size: ${editedEdges.getSize}")
-          edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
-          _ = logger.info(s"edgeIsAddition size: ${edgeIsAddition.getSize}")
-          now = Instant.now
-          updateActions: Seq[UpdateAction] = (0 until numEdges.toInt).map { edgeIndex =>
-            val edgeSrc = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 0)))
-            val edgeDst = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 1)))
-            val isAddition = edgeIsAddition.getBoolean(edgeIndex)
-            if (isAddition) {
-              MergeAgglomerateUpdateAction(
-                agglomerateId1 = 0,
-                agglomerateId2 = 0,
-                segmentPosition1 = None,
-                segmentPosition2 = None,
-                segmentId1 = Some(edgeSrc),
-                segmentId2 = Some(edgeDst),
-                mag = Vec3Int.ones,
-                actionTracingId = tracingId,
-                actionTimestamp = Some(now.epochMillis),
-                actionAuthorId = None,
-                info = None
-              )
-            } else {
-              SplitAgglomerateUpdateAction(
-                agglomerateId = 0,
-                segmentPosition1 = None,
-                segmentPosition2 = None,
-                segmentId1 = Some(edgeSrc),
-                segmentId2 = Some(edgeDst),
-                mag = Vec3Int.ones,
-                actionTracingId = tracingId,
-                actionTimestamp = Some(now.epochMillis),
-                actionAuthorId = None,
-                info = None
-              )
-            }
-          }
-          startVersionWithOffset = if (startVersion == 0L) startVersion + 1 else startVersion
-          _ <- Fox.serialCombined(updateActions.grouped(5).zipWithIndex) {
-            case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
-              val actionJson = Json.toJson(updateGroup)
-              tracingDataStore.annotationUpdates.put(annotationId.toString,
-                                                     updateGroupIndex + startVersionWithOffset,
-                                                     actionJson)
-          }
-          finalVersion = startVersionWithOffset + numEdges
+          finalVersion <- editableMappingIOService.initializeFromUploadedZip(tracingId,
+                                                                             annotationId,
+                                                                             startVersion,
+                                                                             baseMappingName,
+                                                                             editedEdgesZip)
         } yield Ok(Json.toJson(finalVersion))
       }
     }

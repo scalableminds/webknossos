@@ -1,8 +1,18 @@
 import _ from "lodash";
-import { DoubleSide, Matrix4, Mesh, PlaneGeometry, type Scene, ShaderMaterial } from "three";
+import {
+  DoubleSide,
+  Matrix4,
+  Mesh,
+  type Object3DEventMap,
+  PlaneGeometry,
+  type Scene,
+  ShaderMaterial,
+} from "three";
 import constants, { OrthoViews } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";
+import PlaneMaterialFactory, {
+  type PlaneShaderMaterial,
+} from "viewer/geometries/materials/plane_material_factory";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store from "viewer/store";
@@ -28,6 +38,7 @@ const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
 class ArbitraryPlane {
   meshes: ArbitraryMeshes;
+  plane!: Mesh<PlaneGeometry, PlaneShaderMaterial, Object3DEventMap>;
   isDirty: boolean;
   stopStoreListening: () => void;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'materialFactory' has no initializer and ... Remove this comment to see the full error message
@@ -95,8 +106,12 @@ class ArbitraryPlane {
     }
   }
 
+  setLinearInterpolationEnabled = (_enabled: boolean) => {
+    this.plane.material.updateUseInterpolation();
+  };
+
   createMeshes(): ArbitraryMeshes {
-    const adaptPlane = (_plane: Mesh<PlaneGeometry, ShaderMaterial>) => {
+    const adaptPlane = <M extends ShaderMaterial>(_plane: Mesh<PlaneGeometry, M>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
       _plane.material.side = DoubleSide;
@@ -105,7 +120,7 @@ class ArbitraryPlane {
 
     this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
-    const mainPlane = adaptPlane(
+    this.plane = adaptPlane(
       new Mesh(
         new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
         textureMaterial,
@@ -113,7 +128,7 @@ class ArbitraryPlane {
     );
     const debuggerPlane = renderDebuggerPlane ? adaptPlane(this.createDebuggerPlane()) : null;
     return {
-      mainPlane,
+      mainPlane: this.plane,
       debuggerPlane,
     };
   }

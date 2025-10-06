@@ -30,7 +30,6 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
-import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -264,10 +263,9 @@ class EditableMappingController @Inject()(
           edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
           _ = logger.info(s"edgeIsAddition size: ${edgeIsAddition.getSize}")
           now = Instant.now
-          // TODO build update actions from edited edges zip, store them, count up versions
           updateActions: Seq[UpdateAction] = (0 until numEdges.toInt).map { edgeIndex =>
             val edgeSrc = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 0)))
-            val edgeDst = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 0)))
+            val edgeDst = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 1)))
             val isAddition = edgeIsAddition.getBoolean(edgeIndex)
             if (isAddition) {
               MergeAgglomerateUpdateAction(

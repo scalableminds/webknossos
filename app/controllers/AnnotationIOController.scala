@@ -186,12 +186,16 @@ class AnnotationIOController @Inject()(
             uploadedVolumeLayer.editedMappingBaseMappingName,
             startVersion = 0L // TODO
           )
-          _ <- client.saveVolumeTracing(newAnnotationId,
-                                        newTracingId,
-                                        uploadedVolumeLayer.tracing,
-                                        uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                        dataSource = dataSource,
-                                        datasetId = datasetId)
+          mappingName = if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
+          else uploadedVolumeLayer.tracing.mappingName
+          _ <- client.saveVolumeTracing(
+            newAnnotationId,
+            newTracingId,
+            uploadedVolumeLayer.tracing.copy(mappingName = mappingName),
+            uploadedVolumeLayer.getDataZipFrom(otherFiles),
+            dataSource = dataSource,
+            datasetId = datasetId
+          )
         } yield
           AnnotationLayer(
             newTracingId,

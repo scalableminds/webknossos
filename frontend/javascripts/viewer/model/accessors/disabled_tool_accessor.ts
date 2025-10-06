@@ -333,11 +333,12 @@ function getDisabledVolumeInfo(state: WebknossosState) {
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
   const isSegmentationTracingVisibleForMag = labeledMag != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const isSegmentationTracingTransformed =
-    segmentationTracingLayer != null &&
-    getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
-      segmentationTracingLayer.tracingId
-    ] !== IdentityTransform;
+  const isSegmentationTracingTransformed = false;
+  // todop: set to true if not a 90 deg rotation
+    // segmentationTracingLayer != null &&
+    // getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
+    //   segmentationTracingLayer.tracingId
+    // ] !== IdentityTransform;
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
@@ -397,7 +398,8 @@ const _getDisabledInfoForTools = (
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
   const isFlycamRotated = isRotated(state.flycam);
-  const geometriesTransformed = areGeometriesTransformed(state);
+  // todop: check for 90 deg rotations
+  const geometriesTransformed = false; // areGeometriesTransformed(state);
   const areaMeasurementToolInfo = getAreaMeasurementToolInfo(isFlycamRotated);
   const skeletonToolInfo = getSkeletonToolInfo(
     hasSkeleton,

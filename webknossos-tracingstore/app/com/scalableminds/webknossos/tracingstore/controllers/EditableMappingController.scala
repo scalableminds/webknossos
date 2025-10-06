@@ -1,18 +1,20 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.{
+  TSChunkCacheService,
+  TSRemoteWebknossosClient,
+  TracingStoreAccessTokenService
+}
 import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingIOService,
@@ -43,25 +45,10 @@ class EditableMappingController @Inject()(
     editableMappingService: EditableMappingService,
     tracingDataStore: TracingDataStore,
     tempFileService: TsTempFileService,
+    chunkCacheService: TSChunkCacheService,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
-
-  // TODO unify with DS one
-  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
-    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
-
-    val maxSizeKiloBytes = Math.floor(10000000 / 1000.0).toInt
-
-    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
-      arrayBox match {
-        case Full(array) =>
-          (array.getSizeBytes / 1000L).toInt
-        case _ => 0
-      }
-
-    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
-  }
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
@@ -247,14 +234,14 @@ class EditableMappingController @Inject()(
                                                   None,
                                                   None,
                                                   None,
-                                                  sharedChunkContentsCache)
+                                                  chunkCacheService.sharedChunkContentsCache)
           edgeIsAdditionZarrArray <- Zarr3Array.open(unzippedVaultPath / "edgeIsAddition/",
                                                      DataSourceId("dummy", "unused"),
                                                      "layer",
                                                      None,
                                                      None,
                                                      None,
-                                                     sharedChunkContentsCache)
+                                                     chunkCacheService.sharedChunkContentsCache)
           numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
           _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
           _ = logger.info(s"Creating updates from $numEdges touched edges")
@@ -296,7 +283,7 @@ class EditableMappingController @Inject()(
               )
             }
           }
-          // TODO multiple actions in one version?
+          // TODO store multiple actions in one version?
           _ <- Fox.serialCombined(updateActions.zipWithIndex) {
             case (updateAction, actionIndex) =>
               val actionWrapped: Seq[UpdateAction] = Seq(updateAction)

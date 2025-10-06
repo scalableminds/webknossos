@@ -29,7 +29,10 @@ object MultiArrayUtils extends LazyLogging {
     MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType, shape: Array[Int], fillNum: Number, fillBool: Boolean): Box[MultiArray] = {
+  def createFilledArray(dataType: MADataType,
+                        shape: Array[Int],
+                        fillNum: Number,
+                        fillBool: Boolean): Box[MultiArray] = {
     val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
     tryo {

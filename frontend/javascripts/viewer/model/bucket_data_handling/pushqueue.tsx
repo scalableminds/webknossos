@@ -121,8 +121,7 @@ class PushQueue {
   };
 
   private flushAndSnapshot() {
-    if (this.pendingBuckets.size > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD / 1000) {
-      //TODO_C
+    if (this.pendingBuckets.size > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD) {
       const warningMessage =
         "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
       const linkToDocs =
@@ -131,7 +130,11 @@ class PushQueue {
         <>
           {warningMessage}
           <br />
-          See the <a href={linkToDocs}>docs</a>.
+          See the{" "}
+          <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
+            docs
+          </a>
+          .
         </>,
         { sticky: true },
       );

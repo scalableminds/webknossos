@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -13,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingIOService,
   EditableMappingService,
   MinCutParameters,
-  NeighborsParameters,
+  NeighborsParameters
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
@@ -197,11 +198,13 @@ class EditableMappingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zipFile.notFound"
+          before = Instant.now
           finalVersion <- editableMappingIOService.initializeFromUploadedZip(tracingId,
                                                                              annotationId,
                                                                              startVersion,
                                                                              baseMappingName,
                                                                              editedEdgesZip)
+          _ = Instant.logSince(before, s"Initializing editable mapping $tracingId from zip")
         } yield Ok(Json.toJson(finalVersion))
       }
     }

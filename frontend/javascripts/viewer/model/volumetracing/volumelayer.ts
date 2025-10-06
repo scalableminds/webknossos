@@ -174,10 +174,6 @@ class VolumeLayer {
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
   }
 
-  addContour(globalPos: Vector3): void {
-    this.updateArea(globalPos);
-  }
-
   updateArea(globalPos: Vector3): void {
     const pos = scaleGlobalPositionWithMagnification(globalPos, this.activeMag);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
@@ -342,7 +338,10 @@ class VolumeLayer {
   }
 
   createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
-    const map = this._createMap(width, height, fillValue);
+    const map = new Uint8Array(width * height);
+    if (fillValue !== 0) {
+      map.fill(fillValue);
+    }
 
     return new VoxelBuffer2D(
       map,
@@ -352,16 +351,6 @@ class VolumeLayer {
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
     );
-  }
-
-  _createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
-    const map = new Uint8Array(width * height);
-
-    if (fillValue !== 0) {
-      map.fill(fillValue);
-    }
-
-    return map;
   }
 
   getRectangleBetweenCircles(

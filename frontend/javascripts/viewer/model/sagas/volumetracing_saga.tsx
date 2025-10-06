@@ -89,6 +89,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import Dimensions from "../dimensions";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -235,11 +236,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
       ),
     );
     const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
+
+    const w = Dimensions.thirdDimensionForPlane(startEditingAction.planeId)
     const currentLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
-      startEditingAction.planeId,
+      window.hardPlaneId ?? startEditingAction.planeId,
       labeledMag,
+      startEditingAction.position[w]
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -286,7 +290,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing).
-        currentLayer.addContour(addToLayerAction.position);
+        currentLayer.updateArea(addToLayerAction.position);
       }
 
       if (isBrushTool(activeTool)) {

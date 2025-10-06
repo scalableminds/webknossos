@@ -686,10 +686,11 @@ function SkeletonTracingReducer(
 
   switch (action.type) {
     case "CREATE_NODE": {
-      if (areGeometriesTransformed(state)) {
-        // Don't create nodes if the skeleton layer is rendered with transforms.
-        return state;
-      }
+      // todop
+      // if (areGeometriesTransformed(state)) {
+      //   // Don't create nodes if the skeleton layer is rendered with transforms.
+      //   return state;
+      // }
 
       const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
         action;

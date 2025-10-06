@@ -201,6 +201,8 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
+  console.log("topLeft3DCoord", topLeft3DCoord)
+  console.log("bottomRight3DCoord", bottomRight3DCoord)
   for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(

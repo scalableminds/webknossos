@@ -29,18 +29,18 @@ object MultiArrayUtils extends LazyLogging {
     MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): Box[MultiArray] = {
+  def createFilledArray(dataType: MADataType, shape: Array[Int], fillNum: Number, fillBool: Boolean): Box[MultiArray] = {
     val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
     tryo {
-      if (fill != null) {
-        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fill.doubleValue)
-        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fill.floatValue)
-        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fill.longValue)
-        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fill.intValue)
-        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fill.shortValue)
-        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fill.byteValue)
-        else if (MADataType.BOOLEAN == dataType) while ({ iter.hasNext }) iter.setBooleanNext(false) // TODO use real value
+      if (fillNum != null) {
+        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fillNum.doubleValue)
+        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fillNum.floatValue)
+        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fillNum.longValue)
+        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fillNum.intValue)
+        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fillNum.shortValue)
+        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fillNum.byteValue)
+        else if (MADataType.BOOLEAN == dataType) while ({ iter.hasNext }) iter.setBooleanNext(fillBool)
         else throw new IllegalStateException
       }
       array

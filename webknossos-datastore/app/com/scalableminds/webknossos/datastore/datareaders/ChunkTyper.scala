@@ -38,7 +38,10 @@ abstract class ChunkTyper extends FoxImplicits {
     fillValueChunkCache.getOrLoad(chunkShape.mkString(","), _ => createFromFillValue(chunkShape).toFox)
 
   protected def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType, chunkShapeOrdered(chunkShape), header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType,
+                                      chunkShapeOrdered(chunkShape),
+                                      header.fillValueNumber,
+                                      header.fillValueBoolean)
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.
@@ -155,6 +158,6 @@ class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   override protected def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] = {
     val flatShape = Array(chunkShape.product * header.bytesPerElement)
-    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber, header.fillValueBoolean)
   }
 }

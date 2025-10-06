@@ -138,7 +138,6 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                                      0L,
                                                      toProtoBytes(editableMappingService.create(baseMappingName)))
       (editedEdges, edgeIsAddition) <- unzipAndReadZarr(editedEdgesZip)
-      numEdges = edgeIsAddition.getSize.toInt
       timestamp = Instant.now.epochMillis
       updateActions: Seq[UpdateAction] = (0 until edgeIsAddition.getSize.toInt).map { edgeIndex =>
         val edgeSrc = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 0)))
@@ -147,13 +146,14 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         buildUpdateActionFromEdge(edgeSrc, edgeDst, isAddition, tracingId, timestamp)
       }
       startVersionWithOffset = if (startVersion == 0L) startVersion + 1 else startVersion
-      _ <- Fox.serialCombined(updateActions.grouped(100).zipWithIndex) {
+      updatesGrouped = updateActions.grouped(100)
+      _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) {
         case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
           tracingDataStore.annotationUpdates.put(annotationId.toString,
                                                  updateGroupIndex + startVersionWithOffset,
                                                  Json.toJson(updateGroup))
       }
-      finalVersion = startVersionWithOffset + numEdges
+      finalVersion = startVersionWithOffset + updatesGrouped.length
     } yield finalVersion
 
   private def unzipAndReadZarr(editedEdgesZip: File)(implicit ec: ExecutionContext,

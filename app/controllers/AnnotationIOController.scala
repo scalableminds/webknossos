@@ -150,7 +150,7 @@ class AnnotationIOController @Inject()(
             description = annotation.description,
             version = 0L,
             annotationLayers = annotation.annotationLayers.map(_.toProto),
-            earliestAccessibleVersion = 0L // TODO earliestAccessibleVersion
+            earliestAccessibleVersion = earliestAccessibleVersion
           )
           _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
           _ <- annotationDAO.insertOne(annotation)
@@ -171,6 +171,9 @@ class AnnotationIOController @Inject()(
                                        datasetId: ObjectId): Fox[(List[AnnotationLayer], Long)] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List(), 0L)
+    else if (volumeLayersGrouped.exists(layersOfAnnotation =>
+               layersOfAnnotation.length != layersOfAnnotation.distinctBy(_.tracing.fallbackLayer).length))
+      Fox.failure("Cannot save annotation with multiple volume layers that have the same fallback segmentation layer.")
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(

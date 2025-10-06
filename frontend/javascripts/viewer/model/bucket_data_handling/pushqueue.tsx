@@ -1,6 +1,5 @@
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { createDebouncedAbortableParameterlessCallable } from "libs/async/debounced_abortable_saga";
-import Toast from "libs/toast";
 import { call } from "redux-saga/effects";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -8,7 +7,6 @@ import { createCompressedUpdateBucketActions } from "viewer/model/bucket_data_ha
 import Store from "viewer/store";
 import { escalateErrorAction } from "../actions/actions";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD } from "../sagas/saving/save_saga_constants";
 import type { UpdateActionWithoutIsolationRequirement } from "../sagas/volume/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
@@ -121,26 +119,6 @@ class PushQueue {
   };
 
   private flushAndSnapshot() {
-    if (this.pendingBuckets.size > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD) {
-      const warningMessage =
-        "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
-      const linkToDocs =
-        "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
-      Toast.warning(
-        <>
-          {warningMessage}
-          <br />
-          See the{" "}
-          <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
-            docs
-          </a>
-          .
-        </>,
-        { sticky: true },
-      );
-      console.warn(warningMessage + " For more info, visit: " + linkToDocs);
-    }
-
     this.waitTimeStartTimeStamp = null;
     // Flush pendingBuckets. Note that it's important to do this synchronously.
     // Otherwise, other actors might add to pendingBuckets concurrently during the flush,

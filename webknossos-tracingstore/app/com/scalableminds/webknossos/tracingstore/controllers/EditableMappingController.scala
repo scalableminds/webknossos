@@ -283,13 +283,10 @@ class EditableMappingController @Inject()(
               )
             }
           }
-          // TODO store multiple actions in one version?
-          _ <- Fox.serialCombined(updateActions.zipWithIndex) {
-            case (updateAction, actionIndex) =>
-              val actionWrapped: Seq[UpdateAction] = Seq(updateAction)
-              val actionJson = Json.toJson(actionWrapped)
-              logger.info(s"putting update action at ${annotationId} v${actionIndex + startVersion}")
-              tracingDataStore.annotationUpdates.put(annotationId.toString, actionIndex + startVersion, actionJson)
+          _ <- Fox.serialCombined(updateActions.grouped(100).zipWithIndex) {
+            case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
+              val actionJson = Json.toJson(updateGroup)
+              tracingDataStore.annotationUpdates.put(annotationId.toString, updateGroupIndex + startVersion, actionJson)
           }
           finalVersion = startVersion + numEdges
         } yield Ok(Json.toJson(finalVersion))

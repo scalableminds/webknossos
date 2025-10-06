@@ -214,9 +214,9 @@ class EditableMappingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- tracingDataStore.editableMappingsInfo.put(tracingId,
-                                                         startVersion,
+                                                         0L,
                                                          toProtoBytes(editableMappingService.create(baseMappingName)))
-          _ = logger.info(s"stored editableMappingsInfo at $tracingId v$startVersion")
+          _ = logger.info(s"stored editableMappingsInfo at $tracingId v0")
           editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zipFile.notFound"
           unzippedDir = tempFileService.createDirectory()
           _ <- ZipIO
@@ -283,12 +283,15 @@ class EditableMappingController @Inject()(
               )
             }
           }
-          _ <- Fox.serialCombined(updateActions.grouped(100).zipWithIndex) {
+          startVersionWithOffset = if (startVersion == 0L) startVersion + 1 else startVersion
+          _ <- Fox.serialCombined(updateActions.grouped(5).zipWithIndex) {
             case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
               val actionJson = Json.toJson(updateGroup)
-              tracingDataStore.annotationUpdates.put(annotationId.toString, updateGroupIndex + startVersion, actionJson)
+              tracingDataStore.annotationUpdates.put(annotationId.toString,
+                                                     updateGroupIndex + startVersionWithOffset,
+                                                     actionJson)
           }
-          finalVersion = startVersion + numEdges
+          finalVersion = startVersionWithOffset + numEdges
         } yield Ok(Json.toJson(finalVersion))
       }
     }

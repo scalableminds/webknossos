@@ -150,7 +150,7 @@ class AnnotationIOController @Inject()(
             description = annotation.description,
             version = 0L,
             annotationLayers = annotation.annotationLayers.map(_.toProto),
-            earliestAccessibleVersion = earliestAccessibleVersion
+            earliestAccessibleVersion = 0L // TODO earliestAccessibleVersion
           )
           _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
           _ <- annotationDAO.insertOne(annotation)

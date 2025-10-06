@@ -26,9 +26,7 @@ object Zarr3Array extends LazyLogging with FoxImplicits {
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
-      header <- JsonHelper
-        .parseAs[Zarr3ArrayHeader](headerBytes)
-        .toFox ?~> s"Could not parse array header at ${path / Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
+      header <- JsonHelper.parseAs[Zarr3ArrayHeader](headerBytes).toFox ?~> "Could not parse array header"
       array <- tryo(
         new Zarr3Array(path,
                        dataSourceId,

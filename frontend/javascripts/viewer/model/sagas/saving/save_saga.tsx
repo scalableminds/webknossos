@@ -187,7 +187,6 @@ function* getPollInterval(): Saga<number> {
 }
 
 function* checkNumberOfBucketsInQueue(): Saga<void> {
-  //yield* call(ensureWkReady);
   while (true) {
     console.log("Checking number of buckets in save queue...");
     const interval = yield* call(getPollInterval);

@@ -42,7 +42,7 @@ export class MagInfo {
     return magnificationMap;
   }
 
-  getDenseMags = memoizeOne(() => convertToDenseMag(this.getMagList()));
+  getDenseMags = memoizeOne(() => convertToDenseMags(this.getMagList()));
 
   getMagList = memoizeOne(() => Array.from(this.magnificationMap.values()));
 
@@ -224,7 +224,7 @@ export class MagInfo {
   }
 }
 
-export function convertToDenseMag(magnifications: Array<Vector3>): Array<Vector3> {
+export function convertToDenseMags(magnifications: Array<Vector3>): Array<Vector3> {
   // Each magnification entry can be characterized by it's greatest mag dimension.
   // E.g., the mag array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
   // a log zoomstep of 2 corresponds to the mag [2, 2, 1] (and not [4, 4, 2]).

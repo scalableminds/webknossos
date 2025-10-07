@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{LayerViewConfiguration, StaticLayer}
-import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json._
@@ -44,8 +44,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       layerType = new URI(source.value).getScheme
       name <- JsonHelper.as[JsString](obj \ "name").toFox
       upath <- UPath.fromString(source.value.substring(f"$layerType://".length)).toFox
-      remoteSourceDescriptor = RemoteSourceDescriptor(upath, None)
-      remotePath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
+      remotePath <- dataVaultService.vaultPathFor(upath) ?~> "dataVault.setup.failed"
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   LegacyDataVaultCredential,
-  RemoteSourceDescriptor,
+  CredentializedUPath,
   S3AccessKeyCredential
 }
 import com.scalableminds.util.tools.Box.tryo
@@ -182,14 +182,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 }
 
 object S3DataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient)(
-      implicit ec: ExecutionContext): S3DataVault = {
-    val credential = remoteSourceDescriptor.credential.flatMap {
+  def create(credentializedUpath: CredentializedUPath, ws: WSClient)(implicit ec: ExecutionContext): S3DataVault = {
+    val credential = credentializedUpath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, remoteSourceDescriptor.toUriUnsafe, ws, ec)
+    new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, ws, ec)
   }
 
   private def hostBucketFromUri(uri: URI): Option[String] = {

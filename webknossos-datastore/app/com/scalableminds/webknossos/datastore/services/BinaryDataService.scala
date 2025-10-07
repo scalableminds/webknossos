@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                        dataVaultServiceOpt: Option[DataVaultService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -82,7 +82,7 @@ class BinaryDataService(val dataBaseDir: Path,
               r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
               r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
-          dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
+          dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           dataSourceId,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
@@ -195,7 +195,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
-          request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
       datasetErrorLoggingService.withErrorLogging(
         dataSourceId,
         s"loading bucket for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",

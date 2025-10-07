@@ -4,6 +4,7 @@ import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
+import _ from "lodash";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getMagInfo, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -25,7 +26,6 @@ import {
   type SegmentHierarchyNode,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
-import _ from "lodash";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
@@ -34,7 +34,7 @@ const CONSOLE_ERROR_MESSAGE =
 
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
   const capitalizedUnit = _.capitalize(dataSourceUnit);
-  return `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`
+  return `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
 };
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
@@ -167,7 +167,6 @@ export function SegmentStatisticsModal({
           requestUrl,
           layersFinestMag,
           lod,
-          null,
           currentMeshFile?.name,
           segmentIds,
           additionalCoordinates,

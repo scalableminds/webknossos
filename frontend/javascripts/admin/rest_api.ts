@@ -881,12 +881,9 @@ type SegmentStatisticsParametersMeshBased = {
 };
 
 export function getSegmentSurfaceArea(
-  //                     tracings/volume/:tracingId/...
-  // data/datasets/:datasetId/layers/:dataLayerName/...
   requestUrl: string,
   mag: Vector3,
   lod: number | undefined,
-  seedPosition: Vector3 | undefined | null,
   meshFileName: string | undefined | null,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
@@ -900,7 +897,6 @@ export function getSegmentSurfaceArea(
       additionalCoordinates,
       lod,
       meshFileName,
-      seedPosition,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,

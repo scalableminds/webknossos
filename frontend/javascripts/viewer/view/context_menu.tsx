@@ -1731,7 +1731,6 @@ function ContextMenuInner() {
           requestUrl,
           layersFinestMag,
           lod,
-          globalPosition,
           currentMeshFile?.name,
           [clickedSegmentOrMeshId],
           additionalCoordinates,

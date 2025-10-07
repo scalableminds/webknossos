@@ -121,7 +121,13 @@ export type ApplicableSkeletonUpdateAction =
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
-  | DeleteUserBoundingBoxInSkeletonTracingAction;
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  // User specific actions
+  | UpdateActiveNodeUpdateAction
+  | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeGroupVisibilityUpdateAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateTreeGroupsExpandedStateAction;
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
@@ -133,7 +139,13 @@ export type ApplicableVolumeUpdateAction =
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
-  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction;
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
+  // User specific actions
+  | UpdateActiveSegmentIdUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
+  | UpdateSegmentGroupVisibilityVolumeAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction

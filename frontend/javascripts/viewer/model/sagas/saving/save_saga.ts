@@ -244,12 +244,18 @@ function* watchForSaveConflicts(): Saga<void> {
       let successfullyAppliedOwnUpdates = true;
       if (needsRebasing && !didAskUserToRefreshPage && saveQueueEntries.length > 0) {
         const { success, updatedSaveQueue } = yield* call(updateSaveQueueEntriesToStateAfterRebase);
-        successfullyAppliedOwnUpdates =
-          success &&
-          (yield* tryToIncorporateActions(
-            saveQueueEntriesToUpdateActionBatch(updatedSaveQueue, currentVersion),
+        if (success) {
+          const saveQueueAsUpdateActionBatches = saveQueueEntriesToUpdateActionBatch(
+            updatedSaveQueue,
+            currentVersion,
+          );
+          successfullyAppliedOwnUpdates = (yield* tryToIncorporateActions(
+            saveQueueAsUpdateActionBatches,
             true,
           )).success;
+        } else {
+          successfullyAppliedOwnUpdates = false;
+        }
       }
       if (didAskUserToRefreshPage || !successfullyAppliedOwnUpdates) {
         // The user was already notified about the current annotation being outdated.
@@ -304,24 +310,37 @@ export function* tryToIncorporateActions(
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
-        // Updates to user-specific state can be ignored:
+        // Updates to user-specific state can be ignored if not from the active user (areUnsavedChangesOfUser = true):
         //   Camera
         case "updateCamera":
-        case "updateTdCamera":
+        case "updateTdCamera": {
+          // Can always be ignored as not part of the rebased state, thus no replaying of the update action needed due to rebasing.
+          break;
+        }
         //   Active items
+
+        //   User specific skeleton actions -- only applied if coming from current user.
         case "updateActiveNode":
-        case "updateActiveSegmentId":
-        //   Visibilities
         case "updateTreeVisibility":
         case "updateTreeGroupVisibility":
+        case "updateUserBoundingBoxVisibilityInSkeletonTracing":
+        case "updateTreeGroupsExpandedState": {
+          if (areUnsavedChangesOfUser) {
+            yield* put(applySkeletonUpdateActionsFromServerAction([action]));
+          }
+          break;
+        }
+        //   User specific volume actions -- only applied if coming from current user.
+        case "updateActiveSegmentId":
         case "updateSegmentVisibility":
         case "updateSegmentGroupVisibility":
-        case "updateUserBoundingBoxVisibilityInSkeletonTracing":
         case "updateUserBoundingBoxVisibilityInVolumeTracing":
-        //   Group expansion
-        case "updateTreeGroupsExpandedState":
         case "updateSegmentGroupsExpandedState": {
-          // TODOM: --------------------- User specific actions must be reapplied if local actions!!!!!! ------------------------------------------
+          if (areUnsavedChangesOfUser) {
+            // TODOM: Missing actions still need support in applyVolumeUpdateActionsFromServerAction
+            // TODOM: --------------------- User specific actions must be reapplied if local actions!!!!!! ------------------------------------------
+            yield* put(applyVolumeUpdateActionsFromServerAction([action]));
+          }
           break;
         }
         /////////////

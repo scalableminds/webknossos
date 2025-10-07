@@ -12,6 +12,7 @@ import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 
 const updateAnnotation = (
   state: WebknossosState,
@@ -54,6 +55,27 @@ const updateUserBoundingBoxes = (
       ...maybeReadOnlyUpdater,
     },
   });
+};
+
+export const updateUserBoundingBox = (
+  state: WebknossosState,
+  action: ChangeUserBoundingBoxAction,
+) => {
+  const tracing = maybeGetSomeTracing(state.annotation);
+
+  if (tracing == null) {
+    return state;
+  }
+
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
+    bbox.id === action.id
+      ? {
+          ...bbox,
+          ...action.newProps,
+        }
+      : bbox,
+  );
+  return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
 };
 
 const maybeAddAdditionalCoordinatesToMeshState = (
@@ -152,21 +174,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
-        return state;
-      }
-
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
-        bbox.id === action.id
-          ? {
-              ...bbox,
-              ...action.newProps,
-            }
-          : bbox,
-      );
-      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBox(state, action);
       return updateKey(updatedState, "uiInformation", {
         activeUserBoundingBoxId: action.id,
       });

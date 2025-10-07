@@ -396,6 +396,39 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
 
     return result;
   }
+  /**
+   * Returns a human-readable string representation of this DiffableMap
+   * for debugging and comparison purposes.
+   *
+   * Example output:
+   * DiffableMap#12(size=4, batches=2) {
+   *   chunk[0]: { 1 => "A", 2 => "B" }
+   *   chunk[1]: { 3 => "C", 4 => null }
+   * }
+   */
+  toString(): string {
+    const id = this.getId?.() ?? "unknown";
+    const chunkSummaries = this.chunks.map((map, i) => {
+      // Format each chunk like: chunk[0]: { 1 => "A", 2 => "B" }
+      const entries = Array.from(map.entries())
+        .map(([k, v]) => {
+          const vStr =
+            v === null
+              ? "null"
+              : v === undefined
+                ? "undefined"
+                : typeof v === "object"
+                  ? JSON.stringify(v)
+                  : String(v);
+          return `${k} => ${vStr}`;
+        })
+        .join(", ");
+      return `  chunk[${i}]: { ${entries} }`;
+    });
+
+    const summary = `DiffableMap#${id}(size=${this.entryCount}, batches=${this.chunks.length}, itemsPerBatch=${this.itemsPerBatch})`;
+    return `${summary} {\n${chunkSummaries.join("\n")}\n}`;
+  }
 }
 
 /**

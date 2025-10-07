@@ -14,7 +14,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
-import type { SaveQueueEntry, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
@@ -23,7 +23,6 @@ import {
 } from "../volume/proofread_saga";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
-import { BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD } from "./save_saga_constants";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -138,6 +137,23 @@ function* watchForSaveConflicts(): Saga<void> {
     return false;
   }
 
+  function* getPollInterval(): Saga<number> {
+    const allowSave = yield* select((state) => state.annotation.restrictions.allowSave);
+    if (!allowSave) {
+      // The current user may not edit/save the annotation.
+      return VERSION_POLL_INTERVAL_READ_ONLY;
+    }
+
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (othersMayEdit) {
+      // Other users may edit the annotation.
+      return VERSION_POLL_INTERVAL_COLLAB;
+    }
+
+    // The current user is the only one who can edit the annotation.
+    return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
+  }
+
   yield* call(ensureWkReady);
 
   while (true) {
@@ -166,53 +182,6 @@ function* watchForSaveConflicts(): Saga<void> {
       break;
     }
   }
-}
-
-function* getPollInterval(): Saga<number> {
-  const allowSave = yield* select((state) => state.annotation.restrictions.allowSave);
-  if (!allowSave) {
-    // The current user may not edit/save the annotation.
-    return VERSION_POLL_INTERVAL_READ_ONLY;
-  }
-
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-  if (othersMayEdit) {
-    // Other users may edit the annotation.
-    return VERSION_POLL_INTERVAL_COLLAB;
-  }
-
-  // The current user is the only one who can edit the annotation.
-  return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
-}
-
-export function* checkNumberOfBucketsInQueue(saveQueue: SaveQueueEntry[]): Saga<void> {
-  console.log("Checking number of buckets in save queue...");
-  const saveQueueLength = saveQueue.reduce(
-    (sum, queueEntry) =>
-      sum + queueEntry.actions.filter((action) => action.name === "updateBucket").length,
-    0,
-  );
-  if (saveQueueLength > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD) {
-    const warningMessage =
-      "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
-    const linkToDocs =
-      "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
-    Toast.warning(
-      <>
-        {warningMessage}
-        <br />
-        See the{" "}
-        <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
-          docs
-        </a>
-        .
-      </>,
-      { sticky: true },
-    );
-    console.warn(warningMessage + " For more info, visit: " + linkToDocs);
-  }
-
-  console.log(`Save queue length: ${saveQueueLength}`, saveQueue);
 }
 
 export function* tryToIncorporateActions(

@@ -48,6 +48,26 @@ const warnAboutTooManyAllocations = _.once(() => {
   });
 });
 
+const warnAboutTooManyBuckets = _.once(() => {
+  const warningMessage =
+    "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+  const linkToDocs =
+    "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+  Toast.warning(
+    <>
+      {warningMessage}
+      <br />
+      See the{" "}
+      <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
+        docs
+      </a>
+      .
+    </>,
+    { sticky: true },
+  );
+  console.warn(warningMessage + " For more info, visit: " + linkToDocs);
+});
+
 class CubeEntry {
   data: Map<number, DataBucket>;
   boundary: Vector3;
@@ -390,7 +410,7 @@ class DataCube {
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
-    console.log("Adding bucket to garbage collection...", this.buckets.length);
+    this.checkNumberOfBucketsInQueue(this.buckets.length);
     if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
       let foundCollectibleBucket = false;
 
@@ -558,6 +578,15 @@ class DataCube {
           await bucket.label_DEPRECATED(labelFunc);
         }
       }
+    }
+  }
+
+  checkNumberOfBucketsInQueue(saveQueueLength: number) {
+    console.log("Checking number of buckets in save queue...", saveQueueLength);
+    if (saveQueueLength > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
+      warnAboutTooManyBuckets();
+
+      console.log(`update buckets: ${saveQueueLength}`);
     }
   }
 

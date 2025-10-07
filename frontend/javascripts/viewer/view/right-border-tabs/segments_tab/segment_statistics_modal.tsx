@@ -1,6 +1,6 @@
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
-import { formatNumberToVolume } from "libs/format_utils";
+import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
@@ -25,14 +25,17 @@ import {
   type SegmentHierarchyNode,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
+import _ from "lodash";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
 const CONSOLE_ERROR_MESSAGE =
   "Segment statistics could not be fetched due to the following reason:";
 
-const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) =>
-  `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${dataSourceUnit}3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
+const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
+  const capitalizedUnit = _.capitalize(dataSourceUnit);
+  return `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`
+};
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
@@ -55,6 +58,8 @@ type SegmentInfo = {
   volumeInUnit3: number;
   formattedSize: string;
   volumeInVoxel: number;
+  surfaceAreaInUnit2: number;
+  formattedSurfaceArea: string;
   boundingBoxTopLeft: Vector3;
   boundingBoxTopLeftAsString: string;
   boundingBoxPosition: Vector3;
@@ -78,6 +83,7 @@ const exportStatisticsToCSV = (
       row.groupName,
       row.volumeInVoxel,
       row.volumeInUnit3,
+      row.surfaceAreaInUnit2,
       ...row.boundingBoxTopLeft,
       ...row.boundingBoxPosition,
     ]);
@@ -171,6 +177,7 @@ export function SegmentStatisticsModal({
         (response) => {
           const segmentSizes = response[0];
           const boundingBoxes = response[1];
+          const surfaceAreasInUnit2 = response[2];
           const statisticsObjects = [];
           const additionalCoordStringForCsv =
             getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -178,6 +185,7 @@ export function SegmentStatisticsModal({
             // Segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];
             const currentBoundingBox = boundingBoxes[i];
+            const surfaceAreaInUnit2 = surfaceAreasInUnit2[i];
             const boundingBoxInMag1 = getBoundingBoxInMag1(currentBoundingBox, layersFinestMag);
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInUnit3 = voxelToVolumeInUnit(
@@ -195,9 +203,14 @@ export function SegmentStatisticsModal({
               groupId: currentGroupId,
               groupName: getGroupNameForId(currentGroupId),
               volumeInVoxel: currentSegmentSizeInVx,
-              volumeInUnit3: volumeInUnit3,
+              volumeInUnit3,
               formattedSize: formatNumberToVolume(
                 volumeInUnit3,
+                LongUnitToShortUnitMap[voxelSize.unit],
+              ),
+              surfaceAreaInUnit2,
+              formattedSurfaceArea: formatNumberToArea(
+                surfaceAreaInUnit2,
                 LongUnitToShortUnitMap[voxelSize.unit],
               ),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
@@ -227,6 +240,7 @@ export function SegmentStatisticsModal({
     { title: "Segment ID", dataIndex: "segmentId", key: "segmentId" },
     { title: "Segment Name", dataIndex: "segmentName", key: "segmentName" },
     { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
+    { title: "Surface Area", dataIndex: "formattedSurfaceArea", key: "formattedSurfaceArea" },
     {
       title: "Bounding Box\nTop Left Position",
       dataIndex: "boundingBoxTopLeftAsString",
@@ -269,7 +283,7 @@ export function SegmentStatisticsModal({
       open
       title="Segment Statistics"
       onCancel={onCancel}
-      width={700}
+      width={800}
       onOk={() =>
         !isErrorCase &&
         exportStatisticsToCSV(

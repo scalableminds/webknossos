@@ -1,14 +1,17 @@
 package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.services.DirectoryStorageReport
 import com.scalableminds.webknossos.schema.Tables._
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
+import slick.dbio.DBIO
+import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -31,6 +34,27 @@ case class Organization(
     lastTermsOfServiceAcceptanceVersion: Int = 0,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
+)
+
+case class DatasetMagStorageReport(
+    _dataset: ObjectId,
+    layerName: String,
+    mag: Vec3Int,
+    path: String,
+    _organization: String,
+    usedStorageBytes: Long,
+    lastUpdated: Instant = Instant.now,
+)
+
+case class DataLayerAttachmentStorageReport(
+    _dataset: ObjectId,
+    layerName: String,
+    name: String,
+    path: String,
+    `type`: LayerAttachmentType.LayerAttachmentType,
+    _organization: String,
+    usedStorageBytes: Long,
+    lastUpdated: Instant = Instant.now,
 )
 
 class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -155,14 +179,27 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()
 
+  // Note that storage reports are separated into two tables; one for dataset mags and one for attachments.
   def deleteUsedStorage(organizationId: String): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId".asUpdate)
+      _ <- run(
+        DBIO
+          .sequence(Seq(
+            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
+            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
+          ))
+          .transactionally)
     } yield ()
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".asUpdate)
+      _ <- run(
+        DBIO
+          .sequence(Seq(
+            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
+            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
+          ))
+          .transactionally)
     } yield ()
 
   def updateLastStorageScanTime(organizationId: String, time: Instant): Fox[Unit] =
@@ -170,45 +207,73 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       _ <- run(q"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId".asUpdate)
     } yield ()
 
-  def upsertUsedStorage(organizationId: String,
-                        dataStoreName: String,
-                        usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
-    val queries = usedStorageEntries.map(entry => q"""
-               WITH ds AS (
-                 SELECT _id
-                 FROM webknossos.datasets_
-                 WHERE _organization = $organizationId
-                 AND name = ${entry.datasetName}
-                 LIMIT 1
-               )
-               INSERT INTO webknossos.organization_usedStorage(
-                  _organization, _dataStore, _dataset, layerName,
-                  magOrDirectoryName, usedStorageBytes, lastUpdated)
-               SELECT
-                $organizationId, $dataStoreName, ds._id, ${entry.layerName},
-                ${entry.magOrDirectoryName}, ${entry.usedStorageBytes}, NOW()
-               FROM ds
-               ON CONFLICT (_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
-               DO UPDATE
-                 SET usedStorageBytes = ${entry.usedStorageBytes}, lastUpdated = NOW()
-               """.asUpdate)
+  def upsertUsedStorage(
+      datasetMagReports: List[DatasetMagStorageReport],
+      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport],
+  ): Fox[Unit] = {
+    val datasetMagReportsQueries = datasetMagReports.map(r => q"""
+          INSERT INTO webknossos.organization_usedStorage_mags (
+            _dataset, layerName, mag, path, _organization, usedStorageBytes, lastUpdated
+          )
+          VALUES (${r._dataset}, ${r.layerName}, ${r.mag}, ${r.path}, ${r._organization}, ${r.usedStorageBytes}, ${r.lastUpdated})
+          ON CONFLICT (_dataset, layerName, mag)
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            _organization = EXCLUDED._organization,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate)
+    val dataLayerAttachmentReportsQueries = dataLayerAttachmentReports.map(r => q"""
+          INSERT INTO webknossos.organization_usedStorage_attachments (
+            _dataset, layerName, name, path, type, _organization, usedStorageBytes, lastUpdated
+          )
+          VALUES (${r._dataset}, ${r.layerName}, ${r.name}, ${r.path}, ${r.`type`}, ${r._organization}, ${r.usedStorageBytes}, ${r.lastUpdated})
+          ON CONFLICT  (_dataset, layerName, name, type)
+          DO UPDATE SET
+            path = EXCLUDED.path,
+            _organization = EXCLUDED._organization,
+            usedStorageBytes = EXCLUDED.usedStorageBytes,
+            lastUpdated = EXCLUDED.lastUpdated;
+          """.asUpdate)
+
     for {
-      _ <- Fox.serialCombined(queries)(q => run(q))
+      _ <- run(DBIO.sequence(datasetMagReportsQueries ++ dataLayerAttachmentReportsQueries).transactionally)
     } yield ()
   }
 
   def getUsedStorage(organizationId: String): Fox[Long] =
     for {
-      rows <- run(
-        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
-          .as[Long])
+      rows <- run(q"""SELECT COALESCE(SUM(usedStorageBytes), 0) AS totalStorage
+              FROM (
+                SELECT usedStorageBytes
+                  FROM webknossos.organization_usedStorage_mags
+                WHERE _organization = $organizationId
+
+                UNION ALL
+
+                SELECT usedStorageBytes
+                FROM webknossos.organization_usedStorage_attachments
+                WHERE _organization = $organizationId
+              ) AS combined;
+      """.as[Long])
       firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
     for {
-      rows <- run(
-        q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long])
+      rows <- run(q"""SELECT COALESCE(SUM(usedStorageBytes), 0) AS totalStorage
+              FROM (
+                SELECT usedStorageBytes
+                  FROM webknossos.organization_usedStorage_mags
+                WHERE _dataset = $datasetId
+
+                UNION ALL
+
+                SELECT usedStorageBytes
+                FROM webknossos.organization_usedStorage_attachments
+                WHERE _dataset = $datasetId
+              ) AS combined;
+      """.as[Long])
       firstRow <- rows.headOption.toFox
     } yield firstRow
 

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(142);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(144);
 COMMIT TRANSACTION;
 
 
@@ -354,15 +354,27 @@ CREATE TABLE webknossos.organizations(
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
-CREATE TABLE webknossos.organization_usedStorage(
-  _organization TEXT NOT NULL,
-  _dataStore TEXT NOT NULL,
-  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
-  layerName TEXT NOT NULL,
-  magOrDirectoryName TEXT NOT NULL,
-  usedStorageBytes BIGINT NOT NULL,
-  lastUpdated TIMESTAMPTZ,
-  PRIMARY KEY(_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
+CREATE TABLE webknossos.organization_usedStorage_mags (
+    _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+    layerName TEXT NOT NULL,
+    mag webknossos.VECTOR3 NOT NULL,
+    path TEXT NOT NULL,
+    _organization TEXT NOT NULL,
+    usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
+    lastUpdated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (_dataset, layerName, mag)
+);
+
+CREATE TABLE webknossos.organization_usedStorage_attachments (
+    _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+    layerName TEXT NOT NULL,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
+    _organization TEXT NOT NULL,
+    usedStorageBytes BIGINT NOT NULL CHECK (usedStorageBytes >= 0),
+    lastUpdated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (_dataset, layerName, name, type)
 );
 
 -- Create the enum types for transaction states and credit states
@@ -837,6 +849,10 @@ CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
 CREATE INDEX ON webknossos.credit_transactions(credit_state);
+CREATE INDEX ON webknossos.dataset_mags(COALESCE(realPath, path));
+CREATE INDEX ON webknossos.dataset_layer_attachments(path);
+CREATE INDEX ON webknossos.organization_usedStorage_mags(_organization);
+CREATE INDEX ON webknossos.organization_usedStorage_attachments(_organization);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -915,6 +931,10 @@ ALTER TABLE webknossos.folder_paths
   ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organizations
   ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_usedStorage_mags
+  ADD CONSTRAINT mags_ref FOREIGN KEY (_dataset, layerName, mag) REFERENCES webknossos.dataset_mags(_dataset, dataLayerName, mag) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_usedStorage_attachments
+  ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_additionalAxes

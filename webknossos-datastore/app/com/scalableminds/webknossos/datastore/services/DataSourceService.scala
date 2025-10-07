@@ -131,10 +131,10 @@ class DataSourceService @Inject()(
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
     val resolvedMagPath = dataVaultService.resolveMagPath(
+      mag,
       absoluteDatasetPath,
       absoluteRealLayerPath,
       absoluteRealLayerPath.getFileName.toString,
-      mag
     )
     if (resolvedMagPath.isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
@@ -272,8 +272,7 @@ class DataSourceService @Inject()(
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
-        _ = dataLayer.mags.foreach(mag =>
-          dataVaultService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
         _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
           dataVaultService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length

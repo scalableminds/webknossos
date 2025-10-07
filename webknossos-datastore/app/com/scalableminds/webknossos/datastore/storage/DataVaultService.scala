@@ -31,8 +31,6 @@ class DataVaultService @Inject()(ws: WSClient,
     extends LazyLogging
     with FoxImplicits {
 
-  // TODO baseDir should be available here, not passed in
-
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
     AlfuCache(maxCapacity = 100)
 
@@ -44,11 +42,10 @@ class DataVaultService @Inject()(ws: WSClient,
   def vaultPathFor(localPath: Path)(implicit ec: ExecutionContext): Fox[VaultPath] =
     vaultPathFor(UPath.fromLocalPath(localPath))
 
-  // TODO move magLocator to first argument
-  def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
+  def vaultPathFor(magLocator: MagLocator, dataSourceId: DataSourceId, layerName: String)(
       implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      credentializedUpath <- credentializedUPathForMag(baseDir, datasetId, layerName, magLocator)
+      credentializedUpath <- credentializedUPathForMag(dataSourceId, layerName, magLocator)
       vaultPath <- vaultPathFor(credentializedUpath)
     } yield vaultPath
 
@@ -59,10 +56,10 @@ class DataVaultService @Inject()(ws: WSClient,
       vaultPath <- vaultPathFor(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield vaultPath
 
-  def removeVaultFromCache(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
+  def removeVaultFromCache(magLocator: MagLocator, datasetId: DataSourceId, layerName: String)(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      credentializedUpath <- credentializedUPathForMag(baseDir, datasetId, layerName, magLocator)
+      credentializedUpath <- credentializedUPathForMag(datasetId, layerName, magLocator)
       _ = removeVaultFromCache(credentializedUpath)
     } yield ()
 
@@ -72,18 +69,14 @@ class DataVaultService @Inject()(ws: WSClient,
       _ = removeVaultFromCache(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield ()
 
-  private def credentializedUPathForMag(
-      baseDir: Path,
-      datasetId: DataSourceId,
-      layerName: String,
-      magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[CredentializedUPath] =
+  private def credentializedUPathForMag(datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
+      implicit ec: ExecutionContext): Fox[CredentializedUPath] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
-      resolvedMagPath <- resolveMagPath(baseDir, datasetId, layerName, magLocator).toFox
+      resolvedMagPath <- resolveMagPath(datasetId, layerName, magLocator).toFox
     } yield CredentializedUPath(resolvedMagPath, credentialBox.toOption)
 
-  // TODO move magLocator to first argument
-  def resolveMagPath(localDatasetDir: Path, layerDir: Path, layerName: String, magLocator: MagLocator): UPath =
+  def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path, layerName: String): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
         if (magLocatorPath.isAbsolute) {
@@ -109,13 +102,11 @@ class DataVaultService @Inject()(ws: WSClient,
         }
     }
 
-  private def resolveMagPath(dataBaseDir: Path,
-                             dataSourceId: DataSourceId,
-                             layerName: String,
-                             magLocator: MagLocator): Box[UPath] = tryo {
-    val localDatasetDir = dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+  private def resolveMagPath(dataSourceId: DataSourceId, layerName: String, magLocator: MagLocator): Box[UPath] = tryo {
+    val localDatasetDir =
+      config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
-    resolveMagPath(localDatasetDir, localLayerDir, layerName, magLocator)
+    resolveMagPath(magLocator, localDatasetDir, localLayerDir, layerName)
   }
 
   private lazy val globalCredentials = {

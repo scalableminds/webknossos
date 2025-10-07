@@ -57,6 +57,7 @@ import {
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
   getPosition,
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
@@ -686,7 +687,7 @@ class TracingApi {
       );
     }
 
-    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).resolutions);
+    const magInfo = getMagInfo(getLayerByName(state.dataset, segmentationLayerName).mags);
     const theoreticalMagIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
     const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(theoreticalMagIndex);
     if (existingMagIndex == null) {
@@ -1872,7 +1873,7 @@ class DataApi {
       zoomStep = _zoomStep;
     } else {
       const layer = getLayerByName(Store.getState().dataset, layerName);
-      const magInfo = getMagInfo(layer.resolutions);
+      const magInfo = getMagInfo(layer.mags);
       zoomStep = magInfo.getFinestMagIndex();
     }
 
@@ -1929,7 +1930,7 @@ class DataApi {
     additionalCoordinates: AdditionalCoordinate[] | null = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     let zoomStep;
 
     if (_zoomStep != null) {
@@ -1975,7 +1976,7 @@ class DataApi {
       viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     if (maybeMagIndex == null) {
       maybeMagIndex = getActiveMagIndexForLayer(state, layerName);
     }
@@ -2136,7 +2137,7 @@ class DataApi {
     magnification?: Vector3,
   ): string {
     const { dataset } = Store.getState();
-    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).resolutions);
+    const magInfo = getMagInfo(getLayerByName(dataset, layerName, true).mags);
     magnification = magnification || magInfo.getFinestMag();
 
     const magString = magnification.join("-");
@@ -2575,12 +2576,18 @@ class DataApi {
    * api.data.setMeshVisibility(segmentId, false);
    */
   setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
+    if (
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
+      null
+    ) {
       Store.dispatch(updateMeshVisibilityAction(effectiveLayerName, segmentId, isVisible));
     } else {
       throw new Error(
@@ -2597,12 +2604,18 @@ class DataApi {
    * api.data.removeMesh(segmentId, layerName);
    */
   removeMesh(segmentId: number, layerName?: string): void {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-    if (Store.getState().localSegmentationData[effectiveLayerName].meshes?.[segmentId] != null) {
+    if (
+      state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[segmentId] !=
+      null
+    ) {
       Store.dispatch(removeMeshAction(effectiveLayerName, segmentId));
     } else {
       throw new Error(
@@ -2619,12 +2632,16 @@ class DataApi {
    * api.data.resetMeshes();
    */
   resetMeshes(layerName?: string) {
+    const state = Store.getState();
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const segmentIds = Object.keys(
-      Store.getState().localSegmentationData[effectiveLayerName].meshes || EMPTY_OBJECT,
+      Store.getState().localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey] ||
+        EMPTY_OBJECT,
     );
 
     for (const segmentId of segmentIds) {

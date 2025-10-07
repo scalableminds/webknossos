@@ -1695,7 +1695,7 @@ function ContextMenuInner() {
         tracingId,
         visibleSegmentationLayer,
       );
-      const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
+      const magInfo = getMagInfo(visibleSegmentationLayer.mags);
       const layersFinestMag = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
 

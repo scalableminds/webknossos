@@ -14,7 +14,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
-import type { SkeletonTracing, VolumeTracing } from "viewer/store";
+import type { SaveQueueEntry, SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
@@ -32,7 +32,6 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEvery("INITIALIZE_ANNOTATION_WITH_TRACINGS", setupSavingForAnnotation);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
-  yield* takeEvery("WK_READY", checkNumberOfBucketsInQueue);
 }
 
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
@@ -186,42 +185,34 @@ function* getPollInterval(): Saga<number> {
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
 
-function* checkNumberOfBucketsInQueue(): Saga<void> {
-  while (true) {
-    console.log("Checking number of buckets in save queue...");
-    const interval = yield* call(getPollInterval);
-    yield* call(sleep, interval);
-    const saveQueue = yield* select((state) => state.save.queue); //TODO_C remove
-    const saveQueueLength = yield* select((state) => {
-      return state.save.queue.reduce(
-        (sum, queueEntry) =>
-          sum + queueEntry.actions.filter((action) => action.name === "updateBucket").length,
-        0,
-      );
-    });
-
-    if (saveQueueLength > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD) {
-      const warningMessage =
-        "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
-      const linkToDocs =
-        "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
-      Toast.warning(
-        <>
-          {warningMessage}
-          <br />
-          See the{" "}
-          <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
-            docs
-          </a>
-          .
-        </>,
-        { sticky: true },
-      );
-      console.warn(warningMessage + " For more info, visit: " + linkToDocs);
-    }
-
-    console.log(`Save queue length: ${saveQueueLength}`, saveQueue);
+export function* checkNumberOfBucketsInQueue(saveQueue: SaveQueueEntry[]): Saga<void> {
+  console.log("Checking number of buckets in save queue...");
+  const saveQueueLength = saveQueue.reduce(
+    (sum, queueEntry) =>
+      sum + queueEntry.actions.filter((action) => action.name === "updateBucket").length,
+    0,
+  );
+  if (saveQueueLength > BUCKET_COUNT_PER_SAVE_WARNING_THRESHOLD) {
+    const warningMessage =
+      "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+    const linkToDocs =
+      "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+    Toast.warning(
+      <>
+        {warningMessage}
+        <br />
+        See the{" "}
+        <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
+          docs
+        </a>
+        .
+      </>,
+      { sticky: true },
+    );
+    console.warn(warningMessage + " For more info, visit: " + linkToDocs);
   }
+
+  console.log(`Save queue length: ${saveQueueLength}`, saveQueue);
 }
 
 export function* tryToIncorporateActions(

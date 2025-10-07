@@ -33,6 +33,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
+import { checkNumberOfBucketsInQueue } from "./save_saga";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
@@ -65,6 +66,8 @@ export function* pushSaveQueueAsync(): Saga<never> {
       forcePush: take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true));
+    saveQueue = yield* select((state) => state.save.queue);
+    yield* call(checkNumberOfBucketsInQueue, saveQueue);
 
     // Send (parts of) the save queue to the server.
     // There are two main cases:
@@ -236,9 +239,11 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
     const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
     return [segmentationLayer, segmentationMagInfo] as const;
   });
+  let counter = 0;
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
+        counter++;
         const { actionTracingId: tracingId } = updateAction.value;
         const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
@@ -264,6 +269,12 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
       }
     }
   }
+  console.log(
+    "Marking buckets as not dirty. save queue length: ",
+    saveQueue.length,
+    "updateBuckets: ",
+    counter,
+  );
 }
 
 export function toggleErrorHighlighting(state: boolean, permanentError: boolean = false): void {

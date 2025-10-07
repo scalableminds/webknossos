@@ -390,6 +390,7 @@ class DataCube {
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
+    console.log("Adding bucket to garbage collection...", this.buckets.length);
     if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
       let foundCollectibleBucket = false;
 

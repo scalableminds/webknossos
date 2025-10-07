@@ -26,13 +26,13 @@ import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFile
 import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.libs.Files
@@ -67,7 +67,7 @@ class DataSourceController @Inject()(
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
@@ -647,7 +647,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- Fox.successful(())
-          pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)
+          pathsAllowed = request.body.map(dataVaultService.pathIsAllowedToAddDirectly)
           result = request.body.zip(pathsAllowed).map {
             case (path, isAllowed) => PathValidationResult(path, isAllowed)
           }

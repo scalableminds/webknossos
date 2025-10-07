@@ -6,7 +6,7 @@ import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { createCompressedUpdateBucketActions } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Store from "viewer/store";
 import { escalateErrorAction } from "../actions/actions";
-import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { notifyAboutUpdateBucketAction, pushSaveQueueTransaction } from "../actions/save_actions";
 import type { UpdateActionWithoutIsolationRequirement } from "../sagas/volume/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
@@ -155,6 +155,8 @@ class PushQueue {
         createCompressedUpdateBucketActions(batch),
       );
       Store.dispatch(pushSaveQueueTransaction(items));
+      Store.dispatch(notifyAboutUpdateBucketAction(items.length));
+      console.log("notify about ", items.length, " items");
       // todo_c dispatch new action to count items including number. track the sum in sliding window of 120s
       // todo_c research data structure for sliding window
       this.compressingBucketCount -= batch.length;

@@ -5,8 +5,12 @@ import { sleep } from "libs/utils";
 import _ from "lodash";
 import { call, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
+import constants from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setVersionNumberAction } from "viewer/model/actions/save_actions";
+import {
+  type NotifyAboutUpdateBucketAction,
+  setVersionNumberAction,
+} from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
@@ -31,11 +35,65 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEvery("INITIALIZE_ANNOTATION_WITH_TRACINGS", setupSavingForAnnotation);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
+  yield* takeEvery("WK_READY", watchForNumberOfBucketsInSaveQueue);
 }
 
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 12 * 1000; //todo_c times ten, 120s
+
+function warnAboutTooManyBuckets() {
+  const warningMessage =
+    "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+  const linkToDocs =
+    "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+  Toast.warning(
+    <>
+      {warningMessage}
+      <br />
+      See the{" "}
+      <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
+        docs
+      </a>
+      .
+    </>,
+    { sticky: true },
+  );
+  console.warn(warningMessage + " For more info, visit: " + linkToDocs);
+}
+
+function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
+  let bucketsForCurrentInterval = 0;
+  let currentBuckets: Array<number> = [];
+  yield* call(
+    setInterval,
+    () => {
+      const sumOfBuckets = _.sum(currentBuckets);
+      console.log(
+        "new time interval is starting, resetting. before reset: buckets in last interval: ",
+        bucketsForCurrentInterval,
+        "currentBucketsArray: ",
+        currentBuckets,
+        "sumOfBuckets: ",
+        sumOfBuckets,
+      );
+      if (sumOfBuckets > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
+        warnAboutTooManyBuckets();
+      }
+      currentBuckets.push(bucketsForCurrentInterval);
+      if (currentBuckets.length > 12) {
+        currentBuckets.shift();
+      }
+      bucketsForCurrentInterval = 0;
+    },
+    CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL,
+  );
+  yield* takeEvery("NOTIFY_ABOUT_UPDATE_BUCKET_ACTION", (action: NotifyAboutUpdateBucketAction) => {
+    bucketsForCurrentInterval += action.count;
+    console.log("consuming action with ", action.count, " items");
+  });
+}
 
 function* watchForSaveConflicts(): Saga<void> {
   function* checkForNewVersion(): Saga<boolean> {

@@ -13,7 +13,8 @@ export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
   items: UpdateAction[];
   transactionId: string;
-}; // use saga to listen to these. measure how long this takes and whether it creates a lag todo_c
+};
+export type NotifyAboutUpdateBucketAction = ReturnType<typeof notifyAboutUpdateBucketAction>; // use saga to listen to these. measure how long this takes and whether it creates a lag todo_c
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;
@@ -31,6 +32,7 @@ export type SaveAction =
   | PushSaveQueueTransaction
   | SaveNowAction
   | ShiftSaveQueueAction
+  | NotifyAboutUpdateBucketAction
   | DiscardSaveQueuesAction
   | SetSaveBusyAction
   | SetLastSaveTimestampAction
@@ -60,6 +62,9 @@ export const pushSaveQueueTransactionIsolated = (
     items: [item],
     transactionId: getUid(),
   }) as const;
+
+export const notifyAboutUpdateBucketAction = (count: number) =>
+  ({ type: "NOTIFY_ABOUT_UPDATE_BUCKET_ACTION", count }) as const;
 
 export const saveNowAction = () =>
   ({

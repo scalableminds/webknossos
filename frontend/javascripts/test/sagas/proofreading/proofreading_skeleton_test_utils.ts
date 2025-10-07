@@ -76,7 +76,7 @@ export function createSkeletonTracingFromAdjacency(
   const componentNodeSet = new Set(componentNodes);
 
   const componentEdges: Edge[] = adjacencyList
-    .filter(([a, b]) => componentNodeSet.has(a) && componentNodeSet.has(b))
+    .filter(([a, b]) => componentNodeSet.has(a) && componentNodeSet.has(b) && a !== b)
     .map(([a, b]) => ({ source: a, target: b }));
 
   // Build ServerNode objects. Position = (n,n,n) as requested.

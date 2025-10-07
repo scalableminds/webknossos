@@ -355,16 +355,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       datasetId <- getDatasetIdByUploadId(uploadId)
-      linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
+      linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
-      _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
+      _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
       _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
-      unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
+      unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,
@@ -412,6 +412,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                    datasetId: ObjectId,
                                    dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
+      logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
       val forConversionPath =
         dataBaseDir.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
       for {
@@ -427,6 +428,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         newBasePath <- if (dataStoreConfig.Datastore.S3Upload.enabled) {
           for {
             s3UploadBucket <- s3UploadBucketOpt.toFox
+            _ = logger.info(s"finishUpload for $datasetId: Copying data to s3 bucket $s3UploadBucket...")
             beforeS3Upload = Instant.now
             s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/"
             _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
@@ -439,6 +441,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         } else {
           val finalUploadedLocalPath =
             dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
+          logger.info(s"finishUpload for $datasetId: Moving data to final local path $finalUploadedLocalPath...")
           for {
             _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
           } yield UPath.fromLocalPath(finalUploadedLocalPath)
@@ -768,7 +771,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       pathDepth(oneHeaderWkwPath) == 1
     }
 
-  private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
+  private def unpackDataset(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId): Fox[Unit] =
     for {
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
@@ -776,6 +779,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {
         firstFile.toFox.flatMap { file =>
+          logger.info(s"finishUpload for $datasetId: Unzipping dataset...")
           ZipIO
             .unzipToDirectory(
               new File(file.toString),
@@ -799,9 +803,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       }
     } yield ()
 
-  private def backupRawUploadedData(uploadDir: Path, backupDir: Path): Box[Unit] =
+  private def backupRawUploadedData(uploadDir: Path, backupDir: Path, datasetId: ObjectId): Box[Unit] = {
+    logger.info(s"finishUpload for $datasetId: Backing up raw uploaded data...")
     // Backed up within .trash (old files regularly deleted by cronjob)
     tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
+  }
 
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Fox[Unit] = {
     this.synchronized {

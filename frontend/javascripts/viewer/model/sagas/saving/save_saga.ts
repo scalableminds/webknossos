@@ -12,6 +12,7 @@ import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
   finishedApplyingMissingUpdatesAction,
+  finishedRebasingAction,
   prepareRebasingAction,
   replaceSaveQueueAction,
   setVersionNumberAction,
@@ -221,6 +222,8 @@ function* watchForSaveConflicts(): Saga<void> {
     }
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     const needsRebasing = WkDevFlags.liveCollab && othersMayEdit;
+
+    // TODOM: skip the whole rebasing in case no update actions from the backend were applied.
     if (needsRebasing) {
       // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
       // Then incorporate the actions from backend and then those from the user again. then resolve.
@@ -253,6 +256,9 @@ function* watchForSaveConflicts(): Saga<void> {
             saveQueueAsUpdateActionBatches,
             true,
           )).success;
+          if (successfullyAppliedOwnUpdates) {
+            yield* put(finishedRebasingAction());
+          }
         } else {
           successfullyAppliedOwnUpdates = false;
         }

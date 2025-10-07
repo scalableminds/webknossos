@@ -5,11 +5,12 @@
  */
 
 import { buffers } from "redux-saga";
-import { actionChannel, call, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
+  type FinishedRebasingAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -30,7 +31,13 @@ import {
   updateTdCamera,
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
-import type { CameraData, Flycam, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type {
+  CameraData,
+  Flycam,
+  SkeletonTracing,
+  VolumeTracing,
+  WebknossosState,
+} from "viewer/store";
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
@@ -81,9 +88,12 @@ export function* setupSavingForTracingType(
   const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-    | VolumeTracing
-    | SkeletonTracing;
+  function* getTracing(): Generator<unknown, VolumeTracing | SkeletonTracing, WebknossosState> {
+    return (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
+      | VolumeTracing
+      | SkeletonTracing;
+  }
+  let prevTracing = yield* getTracing();
 
   yield* call(ensureWkReady);
 
@@ -98,6 +108,12 @@ export function* setupSavingForTracingType(
         ]
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
+  );
+  yield* takeLatest(
+    "FINISHED_REBASING",
+    function* resetPrevTracing(_action: FinishedRebasingAction) {
+      prevTracing = yield* getTracing();
+    },
   );
 
   // See Model.ensureSavedState for an explanation of this action channel.
@@ -129,9 +145,7 @@ export function* setupSavingForTracingType(
         state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-      | VolumeTracing
-      | SkeletonTracing;
+    const tracing = yield* getTracing();
 
     const items = compactUpdateActions(
       Array.from(yield* call(performDiffTracing, prevTracing, tracing)),

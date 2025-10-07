@@ -34,6 +34,7 @@ export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebasingAction = ReturnType<typeof prepareRebasingAction>;
+export type FinishedRebasingAction = ReturnType<typeof finishedRebasingAction>;
 export type UpdateMappingRebaseInformationAction = ReturnType<
   typeof updateMappingRebaseInformationAction
 >;
@@ -205,6 +206,11 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
 export const prepareRebasingAction = () =>
   ({
     type: "PREPARE_REBASING",
+  }) as const;
+
+export const finishedRebasingAction = () =>
+  ({
+    type: "FINISHED_REBASING",
   }) as const;
 
 export const updateMappingRebaseInformationAction = (volumeLayerIdToUpdate: string) =>

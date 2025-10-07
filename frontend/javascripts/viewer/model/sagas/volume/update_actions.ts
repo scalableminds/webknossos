@@ -106,7 +106,7 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
-export type ApplicableSkeletonUpdateAction =
+type _ApplicableSkeletonUpdateAction =
   | UpdateTreeUpdateAction
   | UpdateNodeUpdateAction
   | CreateNodeUpdateAction
@@ -128,6 +128,16 @@ export type ApplicableSkeletonUpdateAction =
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | UpdateTreeGroupsExpandedStateAction;
+
+export type ApplicableSkeletonServerUpdateAction = AsServerAction<_ApplicableSkeletonUpdateAction>;
+export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = Omit<
+  T,
+  "value"
+> & {
+  value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+};
+export type ApplicableSkeletonUpdateAction =
+  WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction

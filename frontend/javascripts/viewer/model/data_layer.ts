@@ -16,7 +16,7 @@ class DataLayer {
   pushQueue: PushQueue;
   mappings: Mappings | null | undefined;
   layerRenderingManager: LayerRenderingManager;
-  mags: Array<Vector3>;
+  mags: Array<{ mag: Vector3 }>;
   fallbackLayer: string | null | undefined;
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;
@@ -37,7 +37,7 @@ class DataLayer {
         ? layerInfo.fallbackLayerInfo
         : null;
     this.isSegmentation = layerInfo.category === "segmentation";
-    this.mags = layerInfo.resolutions;
+    this.mags = layerInfo.mags;
 
     const { dataset } = Store.getState();
     ErrorHandling.assert(this.mags.length > 0, "Magnifications for layer cannot be empty");

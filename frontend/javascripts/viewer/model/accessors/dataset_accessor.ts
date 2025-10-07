@@ -28,11 +28,11 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
+import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
-function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
-  return new MagInfo(magnifications);
+function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
+  return new MagInfo(magnifications.map((magObj) => magObj.mag));
 }
 
 // Don't use memoizeOne here, since we want to cache the mags for all layers
@@ -43,7 +43,7 @@ function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    infos[layer.name] = getMagInfo(layer.resolutions);
+    infos[layer.name] = getMagInfo(layer.mags);
   }
 
   return infos;
@@ -68,7 +68,8 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
   const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const mag of layer.resolutions) {
+    for (const magObj of layer.mags) {
+      const mag = magObj.mag;
       const key = maxValue(mag);
 
       if (magUnionDict[key] == null) {
@@ -93,7 +94,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMag(layer.resolutions),
+    convertToDenseMags(layer.mags.map((magObj) => magObj.mag)),
   );
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];
@@ -137,7 +138,7 @@ function _getMagInfoOfVisibleSegmentationLayer(state: WebknossosState): MagInfo 
     return new MagInfo([]);
   }
 
-  return getMagInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.mags);
 }
 
 export const getMagInfoOfVisibleSegmentationLayer = memoizeOne(

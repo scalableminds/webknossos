@@ -1236,7 +1236,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     }
   }
 
-  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const magInfo = getMagInfo(volumeTracingLayer.mags);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
   const agglomerateFileMag = isSkeletonProofreading

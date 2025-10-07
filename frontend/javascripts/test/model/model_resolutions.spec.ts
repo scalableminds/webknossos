@@ -57,7 +57,7 @@ describe("Model mags", () => {
     };
 
     const densify = (layer: { mags: { mag: Vector3 }[] }) =>
-      convertToDenseMags(layer.mags.map((magInfo) => magInfo.mag));
+      convertToDenseMags(layer.mags.map((magObj) => magObj.mag));
 
     expect(densify(dataset.dataSource.dataLayers[0])).toEqual(expectedMags[0]);
     expect(densify(dataset.dataSource.dataLayers[1])).toEqual(expectedMags[1]);

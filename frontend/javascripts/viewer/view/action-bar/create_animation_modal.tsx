@@ -66,13 +66,13 @@ function selectMagForTextureCreation(
   let bestMag = colorLayer.mags[0].mag;
   let bestDifference = Number.POSITIVE_INFINITY;
 
-  for (const magInfo of colorLayer.mags) {
-    const size = longestSide / magInfo.mag[dimensionLongestSide];
+  for (const magObj of colorLayer.mags) {
+    const size = longestSide / magObj.mag[dimensionLongestSide];
     const diff = Math.abs(TARGET_TEXTURE_SIZE - size);
 
     if (bestDifference > diff) {
       bestDifference = diff;
-      bestMag = magInfo.mag;
+      bestMag = magObj.mag;
     }
   }
 

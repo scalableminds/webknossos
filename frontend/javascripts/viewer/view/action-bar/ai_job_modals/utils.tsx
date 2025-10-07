@@ -56,13 +56,13 @@ export const getBestFittingMagComparedToTrainingDS = (
 
   const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
 
-  for (const magInfo of colorLayer.mags) {
+  for (const magObj of colorLayer.mags) {
     const diff = datasetScaleInNm.map((dim, i) =>
-      Math.abs(Math.log(dim * magInfo.mag[i]) - Math.log(modelScale[i])),
+      Math.abs(Math.log(dim * magObj.mag[i]) - Math.log(modelScale[i])),
     );
     if (bestDifference[0] > diff[0]) {
       bestDifference = diff;
-      closestMagOfCurrentDS = magInfo.mag;
+      closestMagOfCurrentDS = magObj.mag;
     }
   }
   const maxDistance = Math.max(...bestDifference);

@@ -39,7 +39,7 @@ vi.mock("viewer/store", function () {
                 url: "url",
                 name: "layername",
                 category: "color",
-                mags: [[1, 1, 1]],
+                mags: [{ mag: [1, 1, 1] }],
               },
             ],
           },

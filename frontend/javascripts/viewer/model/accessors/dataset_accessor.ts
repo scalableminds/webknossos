@@ -31,7 +31,7 @@ import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/d
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
-  return new MagInfo(magnifications.map((magInfo) => magInfo.mag));
+  return new MagInfo(magnifications.map((magObj) => magObj.mag));
 }
 
 // Don't use memoizeOne here, since we want to cache the mags for all layers
@@ -67,8 +67,8 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
   const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const magInfo of layer.mags) {
-      const mag = magInfo.mag;
+    for (const magObj of layer.mags) {
+      const mag = magObj.mag;
       const key = maxValue(mag);
 
       if (magUnionDict[key] == null) {
@@ -93,7 +93,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMags(layer.mags.map((magInfo) => magInfo.mag)),
+    convertToDenseMags(layer.mags.map((magObj) => magObj.mag)),
   );
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];

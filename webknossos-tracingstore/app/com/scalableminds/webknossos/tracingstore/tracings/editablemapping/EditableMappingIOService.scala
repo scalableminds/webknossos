@@ -145,16 +145,15 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         val isAddition = edgeIsAddition.getBoolean(edgeIndex)
         buildUpdateActionFromEdge(edgeSrc, edgeDst, isAddition, tracingId, timestamp)
       }
-      startVersionWithOffset = if (startVersion == 0L) startVersion + 1 else startVersion
       updatesGrouped = updateActions.grouped(100)
       _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) {
         case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
           tracingDataStore.annotationUpdates.put(annotationId.toString,
-                                                 updateGroupIndex + startVersionWithOffset,
+                                                 startVersion + updateGroupIndex,
                                                  Json.toJson(updateGroup))
       }
-      finalVersion = startVersionWithOffset + updatesGrouped.length
-    } yield finalVersion
+      numberOfSavedVersions = updatesGrouped.length
+    } yield numberOfSavedVersions
 
   private def unzipAndReadZarr(editedEdgesZip: File)(implicit ec: ExecutionContext,
                                                      tc: TokenContext): Fox[(MultiArray, MultiArray)] = {

@@ -180,7 +180,7 @@ class AnnotationIOController @Inject()(
                _.exists(_.editedMappingEdgesLocation.isDefined))) {
       Fox.failure("Cannot merge multiple annotations with editable mapping (proofreading) edges.")
     } else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
-      var layerUpdatesStartVersionMutable = 0L
+      var layerUpdatesStartVersionMutable = 1L
       for {
         annotationLayers <- Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) {
           volumeLayerWithIndex =>
@@ -188,7 +188,7 @@ class AnnotationIOController @Inject()(
             val idx = volumeLayerWithIndex._2
             val newTracingId = TracingId.generate
             for {
-              latestSavedUpdatesVersion <- client.saveEditableMappingIfPresent(
+              numberOfSavedVersions <- client.saveEditableMappingIfPresent(
                 newAnnotationId,
                 newTracingId,
                 uploadedVolumeLayer.getEditableMappingEdgesZipFrom(otherFiles),
@@ -196,7 +196,7 @@ class AnnotationIOController @Inject()(
                 startVersion = layerUpdatesStartVersionMutable
               )
               // The next layer’s update actions then need to start after this one
-              _ = layerUpdatesStartVersionMutable = latestSavedUpdatesVersion + 1L
+              _ = layerUpdatesStartVersionMutable = layerUpdatesStartVersionMutable + numberOfSavedVersions
               mappingName = if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
               else uploadedVolumeLayer.tracing.mappingName
               _ <- client.saveVolumeTracing(

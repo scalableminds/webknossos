@@ -199,13 +199,13 @@ class EditableMappingController @Inject()(
         for {
           editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zipFile.notFound"
           before = Instant.now
-          finalVersion <- editableMappingIOService.initializeFromUploadedZip(tracingId,
-                                                                             annotationId,
-                                                                             startVersion,
-                                                                             baseMappingName,
-                                                                             editedEdgesZip)
+          numberOfSavedVersions <- editableMappingIOService.initializeFromUploadedZip(tracingId,
+                                                                                      annotationId,
+                                                                                      startVersion,
+                                                                                      baseMappingName,
+                                                                                      editedEdgesZip)
           _ = Instant.logSince(before, s"Initializing editable mapping $tracingId from zip")
-        } yield Ok(Json.toJson(finalVersion))
+        } yield Ok(Json.toJson(numberOfSavedVersions))
       }
     }
 

@@ -376,9 +376,8 @@ function* loadFullAdHocMesh(
     dataset,
     annotation,
     tracingId: visibleSegmentationLayer.tracingId,
-    visibleSegmentationLayerName:
-      visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
-    forceUsingDataStore,
+    segmentationLayerName: visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
+    useDataStore: forceUsingDataStore,
   };
 
   let positionsToRequest = usePositionsFromSegmentIndex
@@ -488,7 +487,7 @@ function* maybeLoadMeshChunk(
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
-      mode: layerSourceInfo.forceUsingDataStore ? "view" : "annotation",
+      mode: layerSourceInfo.useDataStore ? "view" : "annotation",
     });
   }
 

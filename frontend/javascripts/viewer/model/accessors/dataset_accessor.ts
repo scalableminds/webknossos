@@ -29,6 +29,7 @@ import type {
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);
@@ -456,7 +457,7 @@ export function hasVisibleUint64Segmentation(state: WebknossosState) {
   return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
 }
 
-export function getVisibleSegmentationLayers(state: WebknossosState): Array<APISegmentationLayer> {
+function _getVisibleSegmentationLayers(state: WebknossosState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
   const segmentationLayers = getSegmentationLayers(state.dataset);
@@ -465,6 +466,8 @@ export function getVisibleSegmentationLayers(state: WebknossosState): Array<APIS
   );
   return visibleSegmentationLayers;
 }
+
+export const getVisibleSegmentationLayers = reuseInstanceOnEquality(_getVisibleSegmentationLayers);
 
 export function getSegmentationLayerWithMappingSupport(
   state: WebknossosState,
@@ -501,7 +504,7 @@ export function getFirstSegmentationLayer(
 
   return null;
 }
-export function getSegmentationLayers(
+export function _getSegmentationLayers(
   dataset: APIMaybeUnimportedDataset,
 ): Array<APISegmentationLayer> {
   if (!dataset.isActive) {
@@ -513,6 +516,9 @@ export function getSegmentationLayers(
   ) as APISegmentationLayer[];
   return segmentationLayers;
 }
+
+export const getSegmentationLayers = memoizeOne(_getSegmentationLayers);
+
 export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayers(dataset).length > 0;
 }
@@ -530,10 +536,12 @@ export function doesSupportVolumeWithFallback(
 
   return true;
 }
-export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
+function _getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));
 }
-export function getEnabledLayers(
+export const getColorLayers = memoizeOne(_getColorLayers);
+
+function _getEnabledLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,
   options: {
@@ -553,13 +561,13 @@ export function getEnabledLayers(
   });
 }
 
-export function getEnabledColorLayers(
-  dataset: APIDataset,
-  datasetConfiguration: DatasetConfiguration,
-) {
+export const getEnabledLayers = memoizeOne(_getEnabledLayers);
+
+function _getEnabledColorLayers(dataset: APIDataset, datasetConfiguration: DatasetConfiguration) {
   const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
   return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
+export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;

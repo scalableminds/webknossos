@@ -145,7 +145,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         val isAddition = edgeIsAddition.getBoolean(edgeIndex)
         buildUpdateActionFromEdge(edgeSrc, edgeDst, isAddition, tracingId, timestamp)
       }
-      updatesGrouped = updateActions.grouped(100)
+      updatesGrouped = updateActions.grouped(100).toSeq
       _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) {
         case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
           tracingDataStore.annotationUpdates.put(annotationId.toString,

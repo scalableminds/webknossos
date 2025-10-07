@@ -1122,7 +1122,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
     const { fallbackLayerInfo } = segmentationLayer;
-    const volumeTargetMag =
+    const volumeTargetMags =
       fallbackLayerInfo != null
         ? fallbackLayerInfo.mags.map(({ mag }) => mag)
         : // This is only a heuristic. At some point, user configuration
@@ -1138,7 +1138,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return [];
     }
 
-    const possibleMags = volumeTargetMag.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
+    const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
     const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
 

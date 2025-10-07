@@ -9,10 +9,11 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
-import { ControlModeEnum } from "viewer/constants";
+import constants, { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   setLastSaveTimestampAction,
@@ -35,6 +36,26 @@ import { Model } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
+
+const warnAboutTooManyBuckets = _.once(() => {
+  const warningMessage =
+    "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+  const linkToDocs =
+    "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+  Toast.warning(
+    <>
+      {warningMessage}
+      <br />
+      See the{" "}
+      <a href={linkToDocs} target="_blank" rel="noopener noreferrer">
+        docs
+      </a>
+      .
+    </>,
+    { sticky: true },
+  );
+  console.warn(warningMessage + " For more info, visit: " + linkToDocs);
+});
 
 export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
@@ -161,6 +182,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
 
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);
+        // todo_c check old save queue here
       } catch (error) {
         // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
         console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
@@ -236,9 +258,11 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
     const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
     return [segmentationLayer, segmentationMagInfo] as const;
   });
+  let bucketCounter = 0;
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
+        bucketCounter++;
         const { actionTracingId: tracingId } = updateAction.value;
         const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
@@ -263,6 +287,10 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
         }
       }
     }
+  }
+  console.log("Checking number of buckets in save queue...", bucketCounter);
+  if (bucketCounter > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
+    warnAboutTooManyBuckets();
   }
 }
 

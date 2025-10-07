@@ -13,7 +13,7 @@ export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
   items: UpdateAction[];
   transactionId: string;
-};
+}; // use saga to listen to these. measure how long this takes and whether it creates a lag todo_c
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueuesAction = ReturnType<typeof discardSaveQueuesAction>;

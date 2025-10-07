@@ -333,7 +333,7 @@ const Constants = {
   MIN_NODE_ID: 1,
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
-  MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT: 4000,
+  MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT: 400, //TODO_C 4k
   FLOOD_FILL_EXTENTS: {
     // In 2D mode, the third axis is set to 1 later in the code.
     _2D: (process.env.IS_TESTING ? [512, 512, 512] : [768, 768, 768]) as Vector3,

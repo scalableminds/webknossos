@@ -155,7 +155,8 @@ class PushQueue {
         createCompressedUpdateBucketActions(batch),
       );
       Store.dispatch(pushSaveQueueTransaction(items));
-
+      // todo_c dispatch new action to count items including number. track the sum in sliding window of 120s
+      // todo_c research data structure for sliding window
       this.compressingBucketCount -= batch.length;
     } catch (error) {
       // See other usage of escalateErrorAction for a detailed explanation.

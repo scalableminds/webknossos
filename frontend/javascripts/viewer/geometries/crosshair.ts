@@ -20,7 +20,6 @@ class Crosshair {
   SCALE_MIN: number;
   SCALE_MAX: number;
   scale: number;
-  isDirty: boolean;
 
   constructor(scale: number) {
     this.WIDTH = 256;
@@ -28,7 +27,6 @@ class Crosshair {
     this.SCALE_MIN = 0.01;
     this.SCALE_MAX = 1;
     this.scale = 0;
-    this.isDirty = true;
     this.mesh = this.createMesh();
     this.setScale(scale);
   }
@@ -62,7 +60,6 @@ class Crosshair {
     mesh.matrix.multiply(new Matrix4().makeTranslation(0, 0, 0.5));
     mesh.matrix.scale(new Vector3(this.scale, this.scale, this.scale));
     mesh.matrixWorldNeedsUpdate = true;
-    this.isDirty = false;
   }
 
   setScale(value: number) {
@@ -70,7 +67,6 @@ class Crosshair {
 
     if (value > SCALE_MIN && value < SCALE_MAX) {
       this.scale = value;
-      this.isDirty = true;
     }
   }
 

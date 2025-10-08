@@ -375,25 +375,23 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               value={this.props.datasetConfiguration.fourBit}
               onChange={this.onChangeDataset.fourBit}
             />
-            {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
-              <div>
-                <SwitchSetting
-                  label={
-                    <FastTooltip title={settingsTooltips.interpolation}>
-                      {settingsLabels.interpolation}
-                    </FastTooltip>
-                  }
-                  value={this.props.datasetConfiguration.interpolation}
-                  onChange={this.onChangeDataset.interpolation}
-                >
-                  {this.props.datasetConfiguration.interpolation && (
-                    <FastTooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
-                      {PERFORMANCE_WARNING_ICON}
-                    </FastTooltip>
-                  )}
-                </SwitchSetting>
-              </div>
-            )}
+            <div>
+              <SwitchSetting
+                label={
+                  <FastTooltip title={settingsTooltips.interpolation}>
+                    {settingsLabels.interpolation}
+                  </FastTooltip>
+                }
+                value={this.props.datasetConfiguration.interpolation}
+                onChange={this.onChangeDataset.interpolation}
+              >
+                {this.props.datasetConfiguration.interpolation && (
+                  <FastTooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
+                    {PERFORMANCE_WARNING_ICON}
+                  </FastTooltip>
+                )}
+              </SwitchSetting>
+            </div>
             <SwitchSetting
               label={
                 <FastTooltip title={settingsTooltips.antialiasRendering}>

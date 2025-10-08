@@ -1,100 +1,85 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.Box
-import com.scalableminds.util.tools.Box.tryo
-import org.apache.commons.io.FileUtils
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 
-import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class DirectoryStorageReport(
-    organizationId: String,
-    datasetName: String,
-    layerName: String,
-    magOrDirectoryName: String,
-    usedStorageBytes: Long
-)
-
-object DirectoryStorageReport {
-  implicit val jsonFormat: OFormat[DirectoryStorageReport] = Json.format[DirectoryStorageReport]
+case class PathStorageUsageRequest(paths: List[String])
+object PathStorageUsageRequest {
+  implicit val jsonFormat: OFormat[PathStorageUsageRequest] = Json.format[PathStorageUsageRequest]
 }
 
-class DSUsedStorageService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+case class PathStorageReport(
+    path: String,
+    usedStorageBytes: Long
+)
+object PathStorageReport {
+  implicit val jsonFormat: OFormat[PathStorageReport] = Json.format[PathStorageReport]
+}
+
+case class PathStorageUsageResponse(reports: List[PathStorageReport])
+object PathStorageUsageResponse {
+  implicit val jsonFormat: OFormat[PathStorageUsageResponse] = Json.format[PathStorageUsageResponse]
+}
+
+case class PathPair(original: String, upath: UPath)
+
+class DSUsedStorageService @Inject()(config: DataStoreConfig,
+                                     remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
     with LazyLogging {
 
-  private def noSymlinksFilter(p: Path) = !Files.isSymbolicLink(p)
-
-  def measureStorage(organizationId: String, datasetName: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
+  def measureStorageForPaths(paths: List[String], organizationId: String)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[PathStorageReport]] = {
     val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
-    if (Files.exists(organizationDirectory)) {
-      measureStorage(organizationId, datasetName, organizationDirectory)
-    } else Fox.successful(List())
+    for {
+      // Keep track of original path as its UPath might be normalized and turned into an absolute path.
+      // The original path is needed in the returned storage reports to enable the core backend matching with the
+      // requested paths and their mags / attachments.
+      pathPairs <- Fox.serialCombined(paths) { path =>
+        UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
+      }
+      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair => {
+        if (pathPair.upath.getScheme.isEmpty || pathPair.upath.isLocal) {
+          pathPair.copy(
+            upath = UPath.fromLocalPath(
+              organizationDirectory.resolve(pathPair.upath.toLocalPathUnsafe).normalize().toAbsolutePath))
+        } else
+          pathPair
+      })
+      // Check to only measure remote paths that are part of a vault that is configured.
+      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(
+        path =>
+          path.upath.isLocal || config.Datastore.DataVaults.credentials.exists(
+            vaultCredentialConfig =>
+              UPath
+                .fromString(vaultCredentialConfig.getString("name"))
+                .map(registeredPath => path.upath.startsWith(registeredPath))
+                .getOrElse(false)))
+      vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
+        remoteSourceDescriptorService.vaultPathFor(pathPair.upath))
+      usedBytes <- Fox.fromFuture(
+        Fox.serialSequence(vaultPathsForPathPairsToMeasure)(vaultPath => vaultPath.getUsedStorageBytes))
+      pathPairsWithStorageUsedBox = pathPairsToMeasure.zip(usedBytes)
+      successfulStorageUsedBoxes = pathPairsWithStorageUsedBox.collect {
+        case (pathPair, Full(usedStorageBytes)) =>
+          // Use original path to create the storage report to enable matching in core backend. See comment above.
+          PathStorageReport(pathPair.original, usedStorageBytes)
+      }
+      failedPaths = pathPairsWithStorageUsedBox.collect {
+        case (pair, box) if box.isEmpty => pair.original
+      }
+      _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
+        s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
+        else "."}"))
+    } yield successfulStorageUsedBoxes
   }
-
-  def measureStorage(organizationId: String, datasetName: Option[String], organizationDirectory: Path)(
-      implicit ec: ExecutionContext): Fox[List[DirectoryStorageReport]] = {
-    def selectedDatasetFilter(p: Path) = datasetName.forall(name => p.getFileName.toString == name)
-
-    for {
-      datasetDirectories <- PathUtils
-        .listDirectories(organizationDirectory, silent = true, noSymlinksFilter, selectedDatasetFilter)
-        .toFox ?~> "listdir.failed"
-      storageReportsNested <- Fox.serialCombined(datasetDirectories)(d => measureStorageForDataset(organizationId, d))
-    } yield storageReportsNested.flatten
-  }
-
-  private def measureStorageForDataset(organizationId: String,
-                                       datasetDirectory: Path): Fox[List[DirectoryStorageReport]] =
-    for {
-      layerDirectory <- PathUtils
-        .listDirectories(datasetDirectory, silent = true, noSymlinksFilter)
-        .toFox ?~> "listdir.failed"
-      storageReportsNested <- Fox.serialCombined(layerDirectory)(l =>
-        measureStorageForLayerDirectory(organizationId, datasetDirectory, l))
-    } yield storageReportsNested.flatten
-
-  private def measureStorageForLayerDirectory(organizationId: String,
-                                              datasetDirectory: Path,
-                                              layerDirectory: Path): Fox[List[DirectoryStorageReport]] =
-    for {
-      magOrOtherDirectory <- PathUtils
-        .listDirectories(layerDirectory, silent = true, noSymlinksFilter)
-        .toFox ?~> "listdir.failed"
-      storageReportsNested <- Fox.serialCombined(magOrOtherDirectory)(m =>
-        measureStorageForMagOrOtherDirectory(organizationId, datasetDirectory, layerDirectory, m).toFox)
-    } yield storageReportsNested
-
-  private def measureStorageForMagOrOtherDirectory(organizationId: String,
-                                                   datasetDirectory: Path,
-                                                   layerDirectory: Path,
-                                                   magOrOtherDirectory: Path): Box[DirectoryStorageReport] =
-    for {
-      usedStorageBytes <- measureStorage(magOrOtherDirectory)
-    } yield
-      DirectoryStorageReport(
-        organizationId,
-        datasetDirectory.getFileName.toString,
-        layerDirectory.getFileName.toString,
-        normalizeMagName(magOrOtherDirectory.getFileName.toString),
-        usedStorageBytes
-      )
-
-  private def normalizeMagName(name: String): String =
-    Vec3Int.fromMagLiteral(name, allowScalar = true) match {
-      case Some(mag) => mag.toMagLiteral(allowScalar = true)
-      case None      => name
-    }
-
-  def measureStorage(path: Path): Box[Long] =
-    tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue)
-
 }

@@ -20,11 +20,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DataSourceValidation
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
-  LinkedLayerIdentifier,
   ReserveAttachmentUploadToPathRequest,
-  ReserveDatasetUploadToPathsRequest,
-  ReserveDatasetUploadToPathsForPreliminaryRequest
+  ReserveDatasetUploadToPathsForPreliminaryRequest,
+  ReserveDatasetUploadToPathsRequest
 }
 import models.organization.OrganizationDAO
 import models.user.User
@@ -38,6 +38,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             organizationDAO: OrganizationDAO,
                                             datasetDAO: DatasetDAO,
                                             dataStoreDAO: DataStoreDAO,
+                                            layerToLinkService: LayerToLinkService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                             conf: WkConf)
     extends FoxImplicits
@@ -63,7 +64,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName,
                                                   organization._id,
                                                   parameters.pathPrefix)
-      dataSourceWithLayersToLink <- addLayersToLink(dataSourceWithPaths, parameters.layersToLink)
+      dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths,
+                                                                                   parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
@@ -95,6 +97,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                   requestingUser._organization,
                                                   parameters.pathPrefix)
       _ <- assertValidDataSource(dataSourceWithPaths).toFox
+      _ <- datasetDAO.makeVirtual(dataset._id)
       _ <- datasetDAO.updateDataSource(dataset._id,
                                        dataset._dataStore,
                                        dataSourceWithPaths.hashCode(),
@@ -208,33 +211,6 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       TextUtils.normalizeStrong(attachmentName).getOrElse(s"$attachmentType-${ObjectId.generate}")
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
-
-  private def addLayersToLink(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider,
-      ec: ExecutionContext): Fox[UsableDataSource] =
-    for {
-      linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
-      allLayers = linkedLayers ++ dataSource.dataLayers
-      _ <- Fox.fromBool(allLayers.length == allLayers.map(_.name).distinct.length) ?~> "dataset.duplicateLayerNames"
-    } yield dataSource.copy(dataLayers = allLayers)
-
-  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
-                                                                     ec: ExecutionContext,
-                                                                     mp: MessagesProvider): Fox[StaticLayer] =
-    for {
-      dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
-      usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer: StaticLayer <- usableDataSource.dataLayers
-        .find(_.name == layerToLink.layerName)
-        .toFox ?~> "dataset.layerToLink.layerNotFound"
-      newName = layerToLink.newLayerName.getOrElse(layer.name)
-      layerRenamed: StaticLayer <- layer match {
-        case l: StaticColorLayer        => Fox.successful(l.copy(name = newName))
-        case l: StaticSegmentationLayer => Fox.successful(l.copy(name = newName))
-        case _                          => Fox.failure("Unknown layer type for link")
-      }
-    } yield layerRenamed
 
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
       implicit ec: ExecutionContext,

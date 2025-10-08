@@ -21,7 +21,6 @@ import type {
   MenuItemType,
   SubMenuType,
 } from "antd/es/menu/interface";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import FastTooltip from "components/fast_tooltip";
 import {
   formatLengthAsVx,
@@ -36,6 +35,7 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
+import type { MenuInfo } from "rc-menu/lib/interface";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {

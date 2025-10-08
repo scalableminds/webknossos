@@ -443,17 +443,18 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
   // Thus, interpreting the name as the directory name should work, as changing the directory name is not possible.
   // This way of looking up datasets should only be used for backwards compatibility.
-  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByNameAndOrganization(directoryName: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE (directoryName = $name)
+                   WHERE (directoryName = $directoryName)
                    AND _organization = $organizationId
                    AND $accessQuery
                    ORDER BY created ASC
                    LIMIT 1""".as[DatasetsRow])
-      parsed <- parseFirst(r, s"$organizationId/$name")
+      parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
@@ -661,6 +662,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      isUsable = $isUsable,
                      status = $newStatus
                    WHERE _id = $id""".asUpdate)
+    } yield ()
+
+  def makeVirtual(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(q"UPDATE webknossos.datasets SET isVirtual = ${true} WHERE _id = $datasetId".asUpdate)
     } yield ()
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],

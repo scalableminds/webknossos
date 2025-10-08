@@ -41,6 +41,7 @@ import type {
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import { REBASING_BUSY_BLOCK_REASON } from "./save_saga";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
@@ -109,6 +110,7 @@ export function* setupSavingForTracingType(
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
   );
+  // TODOM: Check whether this saga actually pauses during rebasing.
   yield* takeLatest(
     "FINISHED_REBASING",
     function* resetPrevTracing(_action: FinishedRebasingAction) {
@@ -139,12 +141,18 @@ export function* setupSavingForTracingType(
       }
     }
 
-    // The allowUpdate setting could have changed in the meantime
+    // The allowUpdate setting could have changed in the meantime.
     const allowUpdate = yield* select(
       (state) =>
         state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    if (!allowUpdate) continue;
+    // Also ignore change in case busy blocked by currently ongoing annotation rebasing.
+    const isCurrentlyRebasing = yield* select(
+      (state) =>
+        state.uiInformation.busyBlockingInfo.isBusy &&
+        state.uiInformation.busyBlockingInfo.reason === REBASING_BUSY_BLOCK_REASON,
+    );
+    if (!allowUpdate || isCurrentlyRebasing) continue;
     const tracing = yield* getTracing();
 
     const items = compactUpdateActions(

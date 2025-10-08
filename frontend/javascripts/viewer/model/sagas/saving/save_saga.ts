@@ -4,8 +4,8 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { ColoredLogger, isNumberMap, sleep } from "libs/utils";
 import _ from "lodash";
-import { buffers } from "redux-saga";
-import { actionChannel, call, flush, fork, put, race, takeEvery } from "typed-redux-saga";
+import { buffers, type Channel } from "redux-saga";
+import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import {
@@ -26,7 +26,6 @@ import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { Model } from "viewer/singletons";
 import type {
-  ActiveMappingInfo,
   Mapping,
   NumberLike,
   NumberLikeMap,
@@ -34,7 +33,7 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
-import { takeEveryWithBatchActionSupport } from "../saga_helpers";
+import { enforceExecutionAsBusyBlocking, takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
 import type {
   MergeAgglomerateUpdateAction,
@@ -43,7 +42,7 @@ import type {
 } from "../volume/update_actions";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
-import { number } from "@scalableminds/prop-types";
+import type { Action } from "viewer/model/actions/actions";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -54,12 +53,29 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-// todop: restore to 10
+// TODOM: restore to original times
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 5 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
-function saveQueueEntriesToUpdateActionBatch(data: Array<SaveQueueEntry>, version: number) {
+function* getPollInterval(): Saga<number> {
+  const allowSave = yield* select((state) => state.annotation.restrictions.allowSave);
+  if (!allowSave) {
+    // The current user may not edit/save the annotation.
+    return VERSION_POLL_INTERVAL_READ_ONLY;
+  }
+
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  if (othersMayEdit) {
+    // Other users may edit the annotation.
+    return VERSION_POLL_INTERVAL_COLLAB;
+  }
+
+  // The current user is the only one who can edit the annotation.
+  return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
+}
+
+function saveQueueEntriesToServerUpdateActionBatches(data: Array<SaveQueueEntry>, version: number) {
   return data.map((entry) => ({
     version,
     value: entry.actions.map(
@@ -75,132 +91,228 @@ function saveQueueEntriesToUpdateActionBatch(data: Array<SaveQueueEntry>, versio
   }));
 }
 
-function* watchForSaveConflicts(): Saga<void> {
-  function* checkForAndTryToIncorporateNewVersion(): Saga<boolean> {
-    /*
-     * Checks whether there is a newer version on the server. If so,
-     * the saga tries to also update the current annotation to the newest
-     * state.
-     * If the update is not possible, the user will be notified that a newer
-     * version exists on the server. In that case, true will be returned (`didAskUserToRefreshPage`).
-     */
-    const allowSave = yield* select(
-      (state) =>
-        state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
-    );
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
+  const allowSave = yield* select(
+    (state) =>
+      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
+  );
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-    // TODOM
-    if (
-      (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
-      (!WkDevFlags.liveCollab && allowSave)
-    ) {
-      // The active user is currently the only one that is allowed to mutate the annotation.
-      // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
-      // between the page load and this check here.
-      // A race condition where
-      //   1) another user saves version X
-      //   2) we load the annotation but only get see version X - 1 (this is the race)
-      //   3) we acquire a mutex
-      // should not occur, because there is a grace period for which the mutex has to be free until it can
-      // be acquired again (see annotation.mutex.expiryTime in application.conf).
-      // The downside of an early return here is that we won't be able to warn the user early
-      // if the user opened the annotation in two tabs and mutated it there.
-      // However,
-      //   a) this scenario is pretty rare and the worst case is that they get a 409 error
-      //      during saving and
-      //   b) checking for newer versions when the active user may update the annotation introduces
-      //      a race condition between this saga and the actual save saga. Synchronizing these sagas
-      //      would be possible, but would add further complexity to the mission critical save saga.
-      return false;
-    }
-
-    const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
-    const volumeTracings = yield* select((state) => state.annotation.volumes);
-    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
-    const annotationId = yield* select((state) => state.annotation.annotationId);
-
-    const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
-      ...volumeTracings,
-      maybeSkeletonTracing,
-    ]);
-
-    if (tracings.length === 0) {
-      return false;
-    }
-
-    const versionOnClient = yield* select((state) => {
-      return state.annotation.version;
-    });
-
-    // Fetch all update actions that belong to a version that is newer than
-    // versionOnClient. If there are none, the array will be empty.
-    // The order is ascending in the version number ([v_n, v_(n+1), ...]).
-    const newerActions = yield* call(
-      getUpdateActionLog,
-      tracingStoreUrl,
-      annotationId,
-      versionOnClient + 1,
-      undefined,
-      false,
-      true,
-    );
-
-    const toastKey = "save_conflicts_warning";
-    if (newerActions.length > 0) {
-      try {
-        if ((yield* tryToIncorporateActions(newerActions, false)).success) {
-          return false;
-        }
-      } catch (exc) {
-        // Afterwards, the user will be asked to reload the page.
-        console.error("Error during application of update actions", exc);
-      }
-
-      const saveQueue = yield* select((state) => state.save.queue);
-
-      let msg = "";
-      if (!allowSave) {
-        msg =
-          "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
-      } else if (saveQueue.length > 0) {
-        msg =
-          "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
-      } else {
-        msg =
-          "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
-      }
-      Toast.warning(msg, {
-        sticky: true,
-        key: toastKey,
-      });
-      return true;
-    } else {
-      Toast.close(toastKey);
-    }
+  // TODOM
+  if (
+    (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
+    (!WkDevFlags.liveCollab && allowSave)
+  ) {
+    // The active user is currently the only one that is allowed to mutate the annotation.
+    // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
+    // between the page load and this check here.
+    // A race condition where
+    //   1) another user saves version X
+    //   2) we load the annotation but only get see version X - 1 (this is the race)
+    //   3) we acquire a mutex
+    // should not occur, because there is a grace period for which the mutex has to be free until it can
+    // be acquired again (see annotation.mutex.expiryTime in application.conf).
+    // The downside of an early return here is that we won't be able to warn the user early
+    // if the user opened the annotation in two tabs and mutated it there.
+    // However,
+    //   a) this scenario is pretty rare and the worst case is that they get a 409 error
+    //      during saving and
+    //   b) checking for newer versions when the active user may update the annotation introduces
+    //      a race condition between this saga and the actual save saga. Synchronizing these sagas
+    //      would be possible, but would add further complexity to the mission critical save saga.
     return false;
   }
 
-  function* getPollInterval(): Saga<number> {
-    const allowSave = yield* select((state) => state.annotation.restrictions.allowSave);
-    if (!allowSave) {
-      // The current user may not edit/save the annotation.
-      return VERSION_POLL_INTERVAL_READ_ONLY;
-    }
+  // Check for tracings which could need updating
+  const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
+  const volumeTracings = yield* select((state) => state.annotation.volumes);
 
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (othersMayEdit) {
-      // Other users may edit the annotation.
-      return VERSION_POLL_INTERVAL_COLLAB;
-    }
+  const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
+    ...volumeTracings,
+    maybeSkeletonTracing,
+  ]);
 
-    // The current user is the only one who can edit the annotation.
-    return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
+  if (tracings.length === 0) {
+    // If there are not tracings that could need updates, no update fetching is needed.
+    return false;
+  }
+  return true;
+}
+
+function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+  const annotationId = yield* select((state) => state.annotation.annotationId);
+  const versionOnClient = yield* select((state) => {
+    return state.annotation.version;
+  });
+
+  // Fetch all update actions that belong to a version that is newer than
+  // versionOnClient. If there are none, the array will be empty.
+  // The order is ascending in the version number ([v_n, v_(n+1), ...]).
+  const newerActions = yield* call(
+    getUpdateActionLog,
+    tracingStoreUrl,
+    annotationId,
+    versionOnClient + 1,
+    undefined,
+    false,
+    true,
+  );
+  return newerActions;
+}
+
+const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
+
+function* applyNewestMissingUpdateActions(
+  actions: APIUpdateActionBatch[],
+): Saga<{ successful: boolean }> {
+  if (actions.length === 0) {
+    Toast.close(SAVING_CONFLICT_TOAST_KEY);
+    return { successful: true };
+  }
+  const allowSave = yield* select(
+    (state) =>
+      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
+  );
+  try {
+    if ((yield* tryToIncorporateActions(actions, false)).success) {
+      // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
+      yield* put(finishedApplyingMissingUpdatesAction());
+      return { successful: true };
+    }
+  } catch (exc) {
+    // Afterwards, the user will be asked to reload the page.
+    console.error("Error during application of update actions", exc);
   }
 
+  const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
+
+  let msg = "";
+  if (!allowSave) {
+    msg =
+      "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
+  } else if (hasPendingUpdates) {
+    msg =
+      "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore. Please reload.";
+  } else {
+    msg =
+      "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
+  }
+  Toast.warning(msg, {
+    sticky: true,
+    key: SAVING_CONFLICT_TOAST_KEY,
+  });
+  return { successful: false };
+}
+
+function* prepareRebasing(): Saga<void> {
+  const everythingIsDiffedDeferred = new Deferred();
+  const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
+    everythingIsDiffedDeferred.resolve(null),
+  );
+  yield* put(action);
+  yield everythingIsDiffedDeferred.promise();
+  yield* put(prepareRebasingAction());
+}
+
+function* fulfillAllEnsureHasNewestVersionActions(
+  ensureHasNewestVersion: Action | undefined,
+  channel: Channel<EnsureHasNewestVersionAction>,
+) {
+  // drain all accumulated actions at once
+  const pendingActions: EnsureHasNewestVersionAction[] = yield* flush(channel);
+
+  // include the first action we already took from the race
+  const actionsToProcess = ensureHasNewestVersion
+    ? [ensureHasNewestVersion, ...pendingActions]
+    : pendingActions;
+
+  for (const action of actionsToProcess) {
+    (action as EnsureHasNewestVersionAction).callback();
+  }
+}
+
+function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
+  const saveQueueEntries = yield* select((state) => state.save.queue);
+  const currentVersion = yield* select((state) => state.annotation.version);
+  if (saveQueueEntries.length === 0) {
+    return { successful: true };
+  }
+  // Potentially update save queue entries to state after applying missing backend actions.
+  // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
+  // updateSaveQueueEntriesToStateAfterRebase might do some additional needed backend requests.
+  const { success, updatedSaveQueue } = yield* call(updateSaveQueueEntriesToStateAfterRebase);
+  if (success) {
+    const saveQueueAsServerUpdateActionBatches = saveQueueEntriesToServerUpdateActionBatches(
+      updatedSaveQueue,
+      currentVersion,
+    );
+    const successfullyAppliedSaveQueueUpdates = (yield* tryToIncorporateActions(
+      saveQueueAsServerUpdateActionBatches,
+      true,
+    )).success;
+    if (successfullyAppliedSaveQueueUpdates) {
+      yield* put(finishedRebasingAction());
+    }
+    return { successful: true };
+  } else {
+    return { successful: false };
+  }
+}
+
+type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
+function* performRebasing(): Saga<RebasingSuccessInfo> {
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
+  // Should not change during performRebasing saga as this should only be executed while busy blocking is active.
+  const saveQueueEntries = yield* select((state) => state.save.queue);
+
+  // Side note: In a scenario where a user has an annotation open who they are not allowed to edit but another user is actively editing
+  // This code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
+  // be ensured because not allowed to edit means the save queue would be empty. Thus no needsRebasing = true.
+  const needsRebasing =
+    WkDevFlags.liveCollab &&
+    othersMayEdit &&
+    missingUpdateActions.length > 0 &&
+    saveQueueEntries.length > 0;
+  if (needsRebasing) {
+    yield* call(prepareRebasing);
+  }
+
+  try {
+    if (missingUpdateActions.length > 0) {
+      const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+      if (!successful) {
+        return { successful: false, shouldTerminate: false };
+      }
+    }
+    if (needsRebasing) {
+      // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
+      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
+      if (!successful) {
+        return { successful: false, shouldTerminate: false };
+      }
+    }
+    return { successful: true, shouldTerminate: false };
+  } catch (exception) {
+    // If the version check fails for some reason, we don't want to crash the entire
+    // saga.
+    console.warn(exception);
+    // @ts-ignore
+    ErrorHandling.notify(exception);
+    Toast.error(
+      "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
+    );
+    // A hard error was thrown. Terminate this saga.
+    return { successful: false, shouldTerminate: true };
+  }
+}
+export const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
+
+function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkReady);
 
-  const channel = yield actionChannel(
+  const channel = yield* actionChannel(
     ["ENSURE_HAS_NEWEST_VERSION"],
     // If multiple actions are sent to this buffer (without consumption inbetween),
     // we want to flush them all at once. This is achieved by using an expanding buffer
@@ -217,80 +329,26 @@ function* watchForSaveConflicts(): Saga<void> {
       sleep: call(sleep, interval),
       ensureHasNewestVersion: take(channel),
     });
-    if (yield* select((state) => state.uiInformation.showVersionRestore)) {
+    const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
+    const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
+    if (shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
       continue;
     }
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    const needsRebasing = WkDevFlags.liveCollab && othersMayEdit;
-
-    // TODOM: skip the whole rebasing in case no update actions from the backend were applied.
-    if (needsRebasing) {
-      // TODOM: If force a diff again to not loose any updates and then directly afterward set the annotation in the store.
-      // Then incorporate the actions from backend and then those from the user again. then resolve.
-      const everythingIsDiffedDeferred = new Deferred();
-      const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
-        // TODOM: Ensure all tracings were diffed to save queue!!!
-        everythingIsDiffedDeferred.resolve(null),
-      );
-      yield* put(action);
-      yield everythingIsDiffedDeferred.promise();
-      yield* put(prepareRebasingAction());
-    }
-
-    try {
-      const didAskUserToRefreshPage = yield* call(checkForAndTryToIncorporateNewVersion);
-      if (needsRebasing && !didAskUserToRefreshPage) {
-        yield* put(finishedApplyingMissingUpdatesAction());
-      }
-      const saveQueueEntries = yield* select((state) => state.save.queue);
-      const currentVersion = yield* select((state) => state.annotation.version);
-      let successfullyAppliedOwnUpdates = true;
-      if (needsRebasing && !didAskUserToRefreshPage && saveQueueEntries.length > 0) {
-        const { success, updatedSaveQueue } = yield* call(updateSaveQueueEntriesToStateAfterRebase);
-        if (success) {
-          const saveQueueAsUpdateActionBatches = saveQueueEntriesToUpdateActionBatch(
-            updatedSaveQueue,
-            currentVersion,
-          );
-          successfullyAppliedOwnUpdates = (yield* tryToIncorporateActions(
-            saveQueueAsUpdateActionBatches,
-            true,
-          )).success;
-          if (successfullyAppliedOwnUpdates) {
-            yield* put(finishedRebasingAction());
-          }
-        } else {
-          successfullyAppliedOwnUpdates = false;
-        }
-      }
-      if (didAskUserToRefreshPage || !successfullyAppliedOwnUpdates) {
-        // The user was already notified about the current annotation being outdated.
-        // There is not much else we can do now. Sleep for 5 minutes.
-        yield* call(sleep, 5 * 60 * 1000);
-      } else {
-        // drain all accumulated actions at once
-        const pendingActions: EnsureHasNewestVersionAction[] = yield* flush(channel);
-
-        // include the first action we already took from the race
-        const actionsToProcess = ensureHasNewestVersion
-          ? [ensureHasNewestVersion, ...pendingActions]
-          : pendingActions;
-
-        for (const action of actionsToProcess) {
-          (action as EnsureHasNewestVersionAction).callback();
-        }
-      }
-    } catch (exception) {
-      // If the version check fails for some reason, we don't want to crash the entire
-      // saga.
-      console.warn(exception);
-      // @ts-ignore
-      ErrorHandling.notify(exception);
-      Toast.error(
-        "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
-      );
+    const { successful, shouldTerminate } = yield* call(
+      enforceExecutionAsBusyBlocking<RebasingSuccessInfo>,
+      performRebasing,
+      REBASING_BUSY_BLOCK_REASON,
+    );
+    if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
       break;
+    }
+    if (successful) {
+      yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
+    } else {
+      // The user was already notified about the current annotation being outdated.
+      // There is not much else we can do now. Sleep for 5 minutes.
+      yield* delay(5 * 60 * 1000);
     }
   }
 }
@@ -749,4 +807,4 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   return { success: false, updatedSaveQueue: undefined };
 }
 
-export default [setupSavingToServer, watchForSaveConflicts];
+export default [setupSavingToServer, watchForNewerAnnotationVersion];

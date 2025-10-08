@@ -5,7 +5,10 @@ import messages from "messages";
 import { call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
+import {
+  type SetBusyBlockingInfoAction,
+  setBusyBlockingInfoAction,
+} from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Store } from "viewer/singletons";
@@ -46,6 +49,21 @@ export function* takeEveryUnlessBusy<P extends ActionPattern>(
   }
 
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
+}
+
+export function* enforceExecutionAsBusyBlocking<T>(saga: () => Saga<T>, reason: string): Saga<T> {
+  let isBusy = (yield* select((state) => state.uiInformation.busyBlockingInfo)).isBusy;
+  while (isBusy) {
+    const blockingAction = (yield* take(
+      "SET_BUSY_BLOCKING_INFO_ACTION",
+    )) as SetBusyBlockingInfoAction;
+    isBusy = blockingAction.value.isBusy;
+  }
+
+  yield* put(setBusyBlockingInfoAction(true, reason));
+  const retVal = yield* call(saga);
+  yield* put(setBusyBlockingInfoAction(false));
+  return retVal;
 }
 
 type EnsureMappingIsLockedReturnType = {

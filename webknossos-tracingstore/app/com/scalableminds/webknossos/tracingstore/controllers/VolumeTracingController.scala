@@ -357,8 +357,8 @@ class VolumeTracingController @Inject()(
           baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             val fullMeshRequest = FullMeshRequest(
-              meshFileName = request.body.meshFileName,
-              lod = request.body.lod,
+              meshFileName = None, // Cannot use static meshfiles for dynamic volume layers
+              lod = None,
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),

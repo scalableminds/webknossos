@@ -137,6 +137,7 @@ class TSRemoteWebknossosClient @Inject()(
     for {
       datasetId <- getDatasetIdForAnnotation(annotationId)
       result <- rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasources/$datasetId")
+        .addQueryString("key" -> tracingStoreKey)
         .getWithJsonResponse[DataSource]
       scale <- result.voxelSizeOpt.toFox ?~> "Could not determine voxel size of dataset"
     } yield scale

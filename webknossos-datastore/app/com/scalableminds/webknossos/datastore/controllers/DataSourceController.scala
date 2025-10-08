@@ -618,10 +618,14 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          meshFileKeyOpt <- Fox.runOptional(request.body.meshFileName)(
+            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _))
+          mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
           surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             val fullMeshRequest = FullMeshRequest(
-              meshFileName = request.body.meshFileName,
-              lod = request.body.lod,
+              meshFileName =
+                if (mappingNameForMeshFile.contains(request.body.meshFileName)) request.body.meshFileName else None,
+              lod = None,
               segmentId = segmentId,
               mappingName = request.body.mappingName,
               mappingType = request.body.mappingName.map(_ => "HDF5"),

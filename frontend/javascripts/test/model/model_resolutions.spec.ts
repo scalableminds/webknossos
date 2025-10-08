@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
 import type { Vector3 } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
-import { convertToDenseMag } from "viewer/model/helpers/mag_info";
+import { convertToDenseMags } from "viewer/model/helpers/mag_info";
 
-describe("Model resolutions", () => {
-  it("Simple convertToDenseMag", () => {
-    const denseMags = convertToDenseMag([
+describe("Model mags", () => {
+  it("Simple convertToDenseMags", () => {
+    const denseMags = convertToDenseMags([
       [2, 2, 1],
       [4, 4, 2],
     ]);
@@ -17,21 +17,21 @@ describe("Model resolutions", () => {
     ]);
   });
 
-  it("Complex convertToDenseMag", () => {
+  it("Complex convertToDenseMags", () => {
     const dataset = {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
-              [16, 16, 2],
-              [2, 2, 1],
-              [4, 4, 1],
-              [8, 8, 1],
-              [32, 32, 4],
-            ] as Vector3[],
+            mags: [
+              { mag: [16, 16, 2] },
+              { mag: [2, 2, 1] },
+              { mag: [4, 4, 1] },
+              { mag: [8, 8, 1] },
+              { mag: [32, 32, 4] },
+            ] as { mag: Vector3 }[],
           },
           {
-            resolutions: [[32, 32, 4]] as Vector3[],
+            mags: [{ mag: [32, 32, 4] }] as { mag: Vector3 }[],
           },
         ],
       },
@@ -56,7 +56,8 @@ describe("Model resolutions", () => {
       ] as Vector3[],
     };
 
-    const densify = (layer: { resolutions: Vector3[] }) => convertToDenseMag(layer.resolutions);
+    const densify = (layer: { mags: { mag: Vector3 }[] }) =>
+      convertToDenseMags(layer.mags.map((magObj) => magObj.mag));
 
     expect(densify(dataset.dataSource.dataLayers[0])).toEqual(expectedMags[0]);
     expect(densify(dataset.dataSource.dataLayers[1])).toEqual(expectedMags[1]);
@@ -78,19 +79,15 @@ describe("Model resolutions", () => {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
-              [4, 4, 1],
-              [8, 8, 1],
-              [16, 16, 2],
-              [32, 32, 4],
+            mags: [
+              { mag: [4, 4, 1] },
+              { mag: [8, 8, 1] },
+              { mag: [16, 16, 2] },
+              { mag: [32, 32, 4] },
             ],
           },
           {
-            resolutions: [
-              [2, 2, 1],
-              [8, 8, 1],
-              [32, 32, 4],
-            ],
+            mags: [{ mag: [2, 2, 1] }, { mag: [8, 8, 1] }, { mag: [32, 32, 4] }],
           },
         ],
       },
@@ -105,19 +102,15 @@ describe("Model resolutions", () => {
       dataSource: {
         dataLayers: [
           {
-            resolutions: [
-              [4, 4, 1],
-              [8, 8, 1],
-              [16, 16, 2],
-              [32, 32, 4],
+            mags: [
+              { mag: [4, 4, 1] },
+              { mag: [8, 8, 1] },
+              { mag: [16, 16, 2] },
+              { mag: [32, 32, 4] },
             ],
           },
           {
-            resolutions: [
-              [2, 2, 1],
-              [8, 8, 2],
-              [32, 32, 4],
-            ],
+            mags: [{ mag: [2, 2, 1] }, { mag: [8, 8, 2] }, { mag: [32, 32, 4] }],
           },
         ],
       },

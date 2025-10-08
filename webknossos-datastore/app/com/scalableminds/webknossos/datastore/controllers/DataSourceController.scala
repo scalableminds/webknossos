@@ -186,14 +186,17 @@ class DataSourceController @Inject()(
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     log(Some(slackNotificationService.noticeFailedFinishUpload)) {
-      for {
-        datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
-        response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-          for {
-            datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-          } yield Ok(Json.obj("newDatasetId" -> datasetId))
-        }
-      } yield response
+      logTime(slackNotificationService.noticeSlowRequest) {
+        for {
+          datasetId <- uploadService
+            .getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
+          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+            for {
+              datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
+            } yield Ok(Json.obj("newDatasetId" -> datasetId))
+          }
+        } yield response
+      }
     }
   }
 
@@ -341,19 +344,19 @@ class DataSourceController @Inject()(
     }
   }
 
-  def measureUsedStorage(organizationId: String, datasetDirectoryName: Option[String] = None): Action[AnyContent] =
-    Action.async { implicit request =>
+  def measureUsedStorage(organizationId: String): Action[PathStorageUsageRequest] =
+    Action.async(validateJson[PathStorageUsageRequest]) { implicit request =>
       log() {
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             before <- Instant.nowFox
-            usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationId,
-                                                                                                   datasetDirectoryName)
+            pathStorageReports <- storageUsageService.measureStorageForPaths(request.body.paths, organizationId)
             _ = if (Instant.since(before) > (10 seconds)) {
-              val datasetLabel = datasetDirectoryName.map(n => s" dataset $n of").getOrElse("")
-              Instant.logSince(before, s"Measuring storage for$datasetLabel orga $organizationId", logger)
+              Instant.logSince(before,
+                               s"Measuring storage for orga $organizationId for ${request.body.paths.length} paths.",
+                               logger)
             }
-          } yield Ok(Json.toJson(usedStorageInBytes))
+          } yield Ok(Json.toJson(PathStorageUsageResponse(reports = pathStorageReports)))
         }
       }
     }

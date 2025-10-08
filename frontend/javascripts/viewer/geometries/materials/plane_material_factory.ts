@@ -63,6 +63,10 @@ type ShaderMaterialOptions = {
   polygonOffsetFactor?: number;
   polygonOffsetUnits?: number;
 };
+export type PlaneShaderMaterial = ShaderMaterial & {
+  setPositionOffset: (x: number, y: number, z: number) => void;
+  updateUseInterpolation: () => void;
+};
 const RECOMPILATION_THROTTLE_TIME = 500;
 export type Uniforms = Record<
   string,
@@ -116,7 +120,7 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
-  material: ShaderMaterial | undefined | null;
+  material: PlaneShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
   shaderId: number;
@@ -170,9 +174,6 @@ class PlaneMaterialFactory {
       },
       zoomValue: {
         value: 1,
-      },
-      useBilinearFiltering: {
-        value: true,
       },
       viewportExtent: {
         value: [0, 0],
@@ -449,22 +450,16 @@ class PlaneMaterialFactory {
         vertexShader: this.getVertexShader(),
         fragmentShader,
       }),
-    );
-    // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
-    this.material.extensions = {
-      // Necessary for anti-aliasing via fwidth in shader
-      // derivatives: true,
-    };
+    ) as PlaneShaderMaterial;
+
     shaderEditor.addMaterial(this.shaderId, this.material);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setPositionOffset' does not exist on typ... Remove this comment to see the full error message
     this.material.setPositionOffset = (x, y, z) => {
       this.uniforms.positionOffset.value.set(x, y, z);
     };
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
-    this.material.setUseBilinearFiltering = (isEnabled) => {
-      this.uniforms.useBilinearFiltering.value = isEnabled;
+    this.material.updateUseInterpolation = () => {
+      this.recomputeShaders();
     };
 
     this.material.side = DoubleSide;
@@ -917,7 +912,7 @@ class PlaneMaterialFactory {
     const state = Store.getState();
     for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
       const layer = getLayerByName(state.dataset, layerName);
-      const magInfo = getMagInfo(layer.resolutions);
+      const magInfo = getMagInfo(layer.mags);
       // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
       // to determine a representative mag.
       const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
@@ -981,7 +976,7 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
   }
 
-  getMaterial(): ShaderMaterial {
+  getMaterial(): PlaneShaderMaterial {
     if (this.material == null) {
       throw new Error("Tried to access material, but it is null.");
     }
@@ -1107,7 +1102,8 @@ class PlaneMaterialFactory {
   };
 
   getFragmentShaderWithUniforms(): [string, Uniforms] {
-    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
+    const state = Store.getState();
+    const { maximumLayerCountToRender } = state.temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
@@ -1118,9 +1114,10 @@ class PlaneMaterialFactory {
     );
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = Store.getState();
+    const { dataset } = state;
     const voxelSizeFactor = dataset.dataSource.scale.factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
+    const { interpolation } = state.datasetConfiguration;
     const code = getMainFragmentShader({
       globalLayerCount,
       orderedColorLayerNames,
@@ -1131,6 +1128,7 @@ class PlaneMaterialFactory {
       voxelSizeFactor,
       voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
+      useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [
@@ -1149,14 +1147,16 @@ class PlaneMaterialFactory {
   }
 
   getVertexShader(): string {
-    const { maximumLayerCountToRender } = Store.getState().temporaryConfiguration.gpuSetup;
+    const state = Store.getState();
+    const { maximumLayerCountToRender } = state.temporaryConfiguration.gpuSetup;
     const [colorLayerNames, segmentationLayerNames, orderedColorLayerNames, globalLayerCount] =
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = Store.getState();
+    const { dataset } = state;
     const voxelSizeFactor = dataset.dataSource.scale.factor;
     const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
+    const { interpolation } = state.datasetConfiguration;
 
     return getMainVertexShader({
       globalLayerCount,
@@ -1168,6 +1168,7 @@ class PlaneMaterialFactory {
       voxelSizeFactor,
       voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
+      useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }

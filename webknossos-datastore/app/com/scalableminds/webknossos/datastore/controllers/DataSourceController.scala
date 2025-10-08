@@ -186,14 +186,17 @@ class DataSourceController @Inject()(
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     log(Some(slackNotificationService.noticeFailedFinishUpload)) {
-      for {
-        datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
-        response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-          for {
-            datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-          } yield Ok(Json.obj("newDatasetId" -> datasetId))
-        }
-      } yield response
+      logTime(slackNotificationService.noticeSlowRequest) {
+        for {
+          datasetId <- uploadService
+            .getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
+          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+            for {
+              datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
+            } yield Ok(Json.obj("newDatasetId" -> datasetId))
+          }
+        } yield response
+      }
     }
   }
 

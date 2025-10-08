@@ -149,7 +149,7 @@ class DSLegacyApiController @Inject()(
               request.body.initialTeamIds,
               request.body.folderId,
               Some(request.body.requireUniqueName),
-              None,
+              Some(true),
               needsConversion = None
             )
           ) ?~> "dataset.upload.validation.failed"

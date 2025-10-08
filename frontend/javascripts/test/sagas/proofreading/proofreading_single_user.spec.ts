@@ -74,6 +74,8 @@ describe("Proofreading (Single User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
+            agglomerateId1: 1,
+            agglomerateId2: 4,
             segmentId1: 1,
             segmentId2: 4,
           },
@@ -137,6 +139,7 @@ describe("Proofreading (Single User)", () => {
           name: "splitAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
             segmentId1: 1,
             segmentId2: 2,
           },

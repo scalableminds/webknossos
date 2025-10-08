@@ -785,19 +785,31 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                                  dataStoreId: String,
                                  datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
     for {
-      storageRelevantMags <- run(q"""SELECT
-            dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM (
-              -- rn is the rank of the mags with the same path. We only retrieve the oldest mag with the same path to measure each mag only once.
-              SELECT ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
-                     ds._organization, ds.directoryName, ROW_NUMBER() OVER (PARTITION BY COALESCE(mag.realPath, mag.path) ORDER BY ds.created ASC) AS rn
+      storageRelevantMags <- run(q"""
+            WITH ranked AS (
+              SELECT
+                ds._id AS dataset_id, mag.dataLayerName, mag.mag, mag.path, mag.realPath, mag.hasLocalData,
+                ds._organization, ds._dataStore, ds.directoryName,
+                -- rn is the rank of the mags with the same path. It is used to deduplicate mags with the same path to
+                -- count each physical mag only once. Filtering is done below.
+                ROW_NUMBER() OVER (
+                  PARTITION BY COALESCE(mag.realPath, mag.path)
+                  ORDER BY ds.created ASC
+                ) AS rn
               FROM webknossos.dataset_mags AS mag
-              JOIN webknossos.datasets AS ds ON mag._dataset = ds._id
-              WHERE ds._organization = $organizationId
-                AND ds._dataStore = $dataStoreId
-                ${datasetIdOpt.map(datasetId => q"AND ds._id = $datasetId").getOrElse(q"")}
-            ) AS ranked
-            WHERE rn = 1;""".as[DataSourceMagRow])
+              JOIN webknossos.datasets AS ds
+                ON mag._dataset = ds._id
+            )
+            SELECT
+              dataset_id, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
+            FROM ranked
+            -- Filter !after! grouping mags with the same path,
+            -- so mags shared between organizations are deduplicated properly using rn.
+            WHERE rn = 1
+              AND ranked._organization = $organizationId
+              AND ranked._dataStore = $dataStoreId
+              ${datasetIdOpt.map(datasetId => q"AND ranked.dataset_id = $datasetId").getOrElse(q"")};
+            """.as[DataSourceMagRow])
     } yield storageRelevantMags.toList
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
@@ -1228,23 +1240,30 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                                         dataStoreId: String,
                                         datasetIdOpt: Option[ObjectId]): Fox[List[StorageRelevantDataLayerAttachment]] =
     for {
-      storageRelevantAttachments <- run(q"""SELECT
-                                            _dataset, layerName, name, path, type, _organization, directoryName
-                                            FROM (
-                                              -- rn is the rank of the attachments with the same path. We only retrieve the
-                                              -- oldest attachment with the same path to measuring an attachment only once.
-                                              SELECT
-                                                att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds.directoryName,
-                                                ROW_NUMBER() OVER (PARTITION BY att.path ORDER BY ds.created ASC) AS rn
-                                              FROM webknossos.dataset_layer_attachments AS att
-                                              JOIN webknossos.datasets AS ds ON att._dataset = ds._id
-                                              WHERE ds._organization = $organizationId
-                                                AND ds._dataStore = $dataStoreId
-                                                ${datasetIdOpt
-        .map(datasetId => q"AND ds._id = $datasetId")
-        .getOrElse(q"")}
-                                            ) AS ranked
-                                            WHERE rn = 1;""".as[StorageRelevantDataLayerAttachment])
+      storageRelevantAttachments <- run(q"""
+          WITH ranked AS (
+            SELECT
+              att._dataset, att.layerName, att.name, att.path, att.type, ds._organization, ds._dataStore, ds.directoryName,
+              -- rn is the rank of the attachments with the same path. It is used to deduplicate attachments with the same path
+               -- to count each physical attachment only once. Filtering is done below.
+              ROW_NUMBER() OVER (
+                PARTITION BY att.path
+                ORDER BY ds.created ASC
+              ) AS rn
+            FROM webknossos.dataset_layer_attachments AS att
+            JOIN webknossos.datasets AS ds
+              ON att._dataset = ds._id
+          )
+          SELECT
+            _dataset, layerName, name, path, type, _organization, directoryName
+          FROM ranked
+          -- Filter !after! grouping attachments with the same path,
+          -- so attachments shared between organizations are deduplicated properly using rn.
+          WHERE ranked.rn = 1
+            AND ranked._organization = $organizationId
+            AND ranked._dataStore = $dataStoreId
+            ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
+           """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
 }
 

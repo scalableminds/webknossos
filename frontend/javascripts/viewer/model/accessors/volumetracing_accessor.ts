@@ -202,7 +202,7 @@ function _getMagInfoOfActiveSegmentationTracingLayer(state: WebknossosState): Ma
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  return getMagInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.mags);
 }
 
 const getMagInfoOfActiveSegmentationTracingLayer = memoizeOne(
@@ -536,7 +536,7 @@ function _getRenderableMagForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const magInfo = getMagInfo(segmentationLayer.resolutions);
+  const magInfo = getMagInfo(segmentationLayer.mags);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 

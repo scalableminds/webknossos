@@ -114,7 +114,7 @@ export function* watchZ1Downsampling(): Saga<void> {
         // is no appropriate mag for that layer.
         break;
       }
-      const magInfo = getMagInfo(dataLayer.resolutions);
+      const magInfo = getMagInfo(dataLayer.mags);
       const bestExistingIndex = magInfo.getFinestMagIndex();
       const currentIndex = magInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {

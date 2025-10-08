@@ -190,7 +190,7 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const layer = getLayerByName(dataset, this.name);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     const maximumMagIndex = magInfo.getCoarsestMagIndex();
 
     if (logZoomStep > maximumMagIndex) {
@@ -199,7 +199,7 @@ export default class LayerRenderingManager {
       return;
     }
 
-    const mags = getMagInfo(layer.resolutions).getDenseMags();
+    const mags = getMagInfo(layer.mags).getDenseMags();
     const layerMatrix = invertAndTranspose(
       getTransformsForLayer(dataset, layer, datasetConfiguration.nativelyRenderedLayerName)
         .affineMatrix,

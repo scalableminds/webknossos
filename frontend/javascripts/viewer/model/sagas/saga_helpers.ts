@@ -51,18 +51,28 @@ export function* takeEveryUnlessBusy<P extends ActionPattern>(
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 
-export function* enforceExecutionAsBusyBlocking<T>(saga: () => Saga<T>, reason: string): Saga<T> {
-  let isBusy = (yield* select((state) => state.uiInformation.busyBlockingInfo)).isBusy;
-  while (isBusy) {
+export function* enforceExecutionAsBusyBlocking<T>(
+  saga: () => Saga<T>,
+  reason: string,
+  reasonWhitelist: string[] = [],
+): Saga<T> {
+  let busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+  const isNotWhitelistedReason = () =>
+    reasonWhitelist.some((reason) => reason === busyInfo.reason) == null;
+  while (busyInfo.isBusy && isNotWhitelistedReason()) {
     const blockingAction = (yield* take(
       "SET_BUSY_BLOCKING_INFO_ACTION",
     )) as SetBusyBlockingInfoAction;
-    isBusy = blockingAction.value.isBusy;
+    busyInfo = blockingAction.value;
   }
 
-  yield* put(setBusyBlockingInfoAction(true, reason));
+  if (!busyInfo.isBusy) {
+    yield* put(setBusyBlockingInfoAction(true, reason));
+  }
   const retVal = yield* call(saga);
-  yield* put(setBusyBlockingInfoAction(false));
+  if (!busyInfo.isBusy) {
+    yield* put(setBusyBlockingInfoAction(false));
+  }
   return retVal;
 }
 

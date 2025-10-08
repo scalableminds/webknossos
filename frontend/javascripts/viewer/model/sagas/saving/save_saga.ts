@@ -34,7 +34,11 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import { enforceExecutionAsBusyBlocking, takeEveryWithBatchActionSupport } from "../saga_helpers";
-import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import {
+  PROOFREADING_BUSY_REASON,
+  splitAgglomerateInMapping,
+  updateMappingWithMerge,
+} from "../volume/proofread_saga";
 import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
@@ -261,7 +265,7 @@ function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
 }
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
-function* performRebasing(): Saga<RebasingSuccessInfo> {
+function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
   // Should not change during performRebasing saga as this should only be executed while busy blocking is active.
@@ -331,13 +335,14 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     });
     const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
     const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
-    if (shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
+    if (!shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
       continue;
     }
     const { successful, shouldTerminate } = yield* call(
       enforceExecutionAsBusyBlocking<RebasingSuccessInfo>,
-      performRebasing,
+      performRebasingIfNecessary,
       REBASING_BUSY_BLOCK_REASON,
+      [PROOFREADING_BUSY_REASON],
     );
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.

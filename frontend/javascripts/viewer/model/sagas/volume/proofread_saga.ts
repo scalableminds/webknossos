@@ -105,6 +105,8 @@ function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   };
 }
 
+export const PROOFREADING_BUSY_REASON = "Proofreading in progress";
+
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkReady);
@@ -112,7 +114,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     runSagaAndCatchSoftError(handleSkeletonProofreadingAction),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
   yield* takeEvery(
@@ -122,17 +124,17 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEveryUnlessBusy(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE"],
     runSagaAndCatchSoftError(handleProofreadMergeOrMinCut),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEveryUnlessBusy(
     ["MIN_CUT_PARTITIONS", "ENTER"],
     runSagaAndCatchSoftError(performPartitionedMinCut),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
 
   yield* takeEvery(
@@ -997,9 +999,24 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
 
+  // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
+  // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated.
+
   activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
+
+  // TODOM: Do this agglomerate ID refresh for all other functions triggering proofreading actions in this saga!!!!
+  const adaptToType =
+    activeMapping.mapping && isNumberMap(activeMapping.mapping)
+      ? (el: number) => el
+      : (el: number) => BigInt(el);
+  const maybeUpdatedSourceAgglomerateId =
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
+    sourceAgglomerateId;
+  const maybeUpdatedTargetAgglomerateId =
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
+    targetAgglomerateId;
 
   // TODOM;: Check whether this can be removed.
   /*if (action.type === "PROOFREAD_MERGE") {
@@ -1009,16 +1026,20 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      sourceAgglomerateId,
-      targetAgglomerateId,
+      maybeUpdatedSourceAgglomerateId,
+      maybeUpdatedTargetAgglomerateId,
     );
   }*/
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
-    if (sourceAgglomerateId !== targetAgglomerateId) {
+    if (maybeUpdatedSourceAgglomerateId !== maybeUpdatedTargetAgglomerateId) {
+      const isOthersMayEditTurnedOn = yield* select((state) => state.annotation.othersMayEdit);
+      const additionalErrorExplanation = isOthersMayEditTurnedOn
+        ? " Maybe another user already splitted the agglomerate in the meantime."
+        : "";
       Toast.error(
-        "The selected positions are not part of the same agglomerate and cannot be split.",
+        `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,
       );
       return;
     }
@@ -1027,7 +1048,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // communication with the back-end).
     const splitMapping = yield* splitAgglomerateInMapping(
       activeMapping,
-      sourceAgglomerateId,
+      Number(maybeUpdatedSourceAgglomerateId),
       volumeTracingId,
     );
 
@@ -1042,7 +1063,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+    yield* put(removeSegmentAction(Number(maybeUpdatedTargetAgglomerateId), volumeTracingId));
   }
 
   /* Reload meshes */
@@ -1070,7 +1091,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       .filter((name) => name != null)
       .join(",");
     if (mergedName !== sourceAgglomerate.name) {
-      yield* put(updateSegmentAction(sourceAgglomerateId, { name: mergedName }, volumeTracingId));
+      yield* put(
+        updateSegmentAction(newSourceAgglomerateId, { name: mergedName }, volumeTracingId),
+      );
       Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
     }
   } else if (
@@ -1092,12 +1115,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: sourceAgglomerateId,
+      agglomerateId: Number(maybeUpdatedSourceAgglomerateId),
       newAgglomerateId: newSourceAgglomerateId,
       nodePosition: sourceInfo.position,
     },
     {
-      agglomerateId: targetAgglomerateId,
+      agglomerateId: Number(maybeUpdatedTargetAgglomerateId),
       newAgglomerateId: newTargetAgglomerateId,
       nodePosition: targetInfo.position,
     },

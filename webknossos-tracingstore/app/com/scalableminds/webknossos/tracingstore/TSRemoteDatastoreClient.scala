@@ -15,8 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryImplicits,
   SegmentIndexData
 }
-import com.scalableminds.webknossos.datastore.models.datasource.DataSource
-import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer

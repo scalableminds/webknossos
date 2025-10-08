@@ -146,7 +146,6 @@ export function SegmentStatisticsModal({
         );
         return mappingInfo.mappingName;
       };
-      const lod = 0; // todop;
       const segmentIds = segments.map((segment) => segment.id);
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
@@ -166,7 +165,6 @@ export function SegmentStatisticsModal({
         getSegmentSurfaceArea(
           requestUrl,
           layersFinestMag,
-          lod,
           currentMeshFile?.name,
           segmentIds,
           additionalCoordinates,

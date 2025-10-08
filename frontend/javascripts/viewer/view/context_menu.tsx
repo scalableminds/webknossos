@@ -1732,11 +1732,9 @@ function ContextMenuInner() {
           additionalCoordinates,
           mappingName,
         );
-        const lod = 0; // todop
         const [surfaceArea] = await getSegmentSurfaceArea(
           requestUrl,
           layersFinestMag,
-          lod,
           currentMeshFile?.name,
           [clickedSegmentOrMeshId],
           additionalCoordinates,

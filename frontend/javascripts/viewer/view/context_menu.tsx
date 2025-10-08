@@ -200,7 +200,7 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = (info: MenuInfo | undefined) => {
+const hideContextMenu = (info?: MenuInfo | undefined) => {
   if (info?.key === "load-stats") {
     return;
   }

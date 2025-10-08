@@ -21,6 +21,7 @@ import type {
   MenuItemType,
   SubMenuType,
 } from "antd/es/menu/interface";
+import type { MenuInfo } from "rc-menu/lib/interface";
 import FastTooltip from "components/fast_tooltip";
 import {
   formatLengthAsVx,
@@ -199,7 +200,12 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
+const hideContextMenu = (info: MenuInfo | undefined) => {
+  if (info?.key === "load-stats") {
+    return;
+  }
+  Store.dispatch(hideContextMenuAction());
+};
 
 export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
   onClick: hideContextMenu,

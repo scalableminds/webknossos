@@ -17,6 +17,7 @@ export type ToastConfig = {
   sticky?: boolean;
   timeout?: number;
   key?: string;
+  customFooter?: React.ReactNode;
   onClose?: () => void;
 };
 
@@ -150,6 +151,7 @@ const Toast = {
       style: {},
       className: "",
       onClose,
+      btn: config.customFooter,
     };
 
     if (type === "error") {

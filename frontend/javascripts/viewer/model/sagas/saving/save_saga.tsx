@@ -1,6 +1,8 @@
 import { getUpdateActionLog } from "admin/rest_api";
+import { Button, Space } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import UserLocalStorage from "libs/user_local_storage";
 import { sleep } from "libs/utils";
 import _ from "lodash";
 import { call, fork, put, takeEvery } from "typed-redux-saga";
@@ -43,11 +45,32 @@ const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 12 * 1000; //todo_c times ten, 120s
 
-function warnAboutTooManyBuckets() {
+const warnAboutTooManyBuckets = _.once((onClose) => {
   const warningMessage =
     "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
   const linkToDocs =
     "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+  const neverShowAgainRadioButton = (
+    <Button
+      onClick={() => {
+        UserLocalStorage.setItem("suppressBucketWarning", "true");
+        onClose();
+      }}
+    >
+      Never show this again
+    </Button>
+  );
+  const closeButton = (
+    <Button onClick={onClose} type="primary">
+      Close
+    </Button>
+  );
+  const footer = (
+    <Space>
+      {neverShowAgainRadioButton}
+      {closeButton}
+    </Space>
+  );
   Toast.warning(
     <>
       {warningMessage}
@@ -58,14 +81,23 @@ function warnAboutTooManyBuckets() {
       </a>
       .
     </>,
-    { sticky: true },
+    { sticky: true, customFooter: footer, onClose },
   );
   console.warn(warningMessage + " For more info, visit: " + linkToDocs);
-}
+});
 
 function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   let bucketsForCurrentInterval = 0;
   let currentBuckets: Array<number> = [];
+  const supressTooManyBucketsWarning = yield* call(
+    UserLocalStorage.getItem,
+    "suppressBucketWarning",
+  );
+  console.log("suppressBucketWarning is set to ", supressTooManyBucketsWarning);
+  let hasClosedTooManyBucketsWarning = false;
+  const onClose = () => {
+    hasClosedTooManyBucketsWarning = true;
+  };
   yield* call(
     setInterval,
     () => {
@@ -79,7 +111,9 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
         sumOfBuckets,
       );
       if (sumOfBuckets > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
-        warnAboutTooManyBuckets();
+        if (/**supressTooManyBucketsWarning !== "true" && */ !hasClosedTooManyBucketsWarning) {
+          warnAboutTooManyBuckets(onClose);
+        }
       }
       currentBuckets.push(bucketsForCurrentInterval);
       if (currentBuckets.length > 12) {

@@ -72,6 +72,7 @@ export default function VoxelValueTooltip() {
   const annotation = useWkSelector((state) => state.annotation);
   const flycamPosition = useWkSelector((state) => getPosition(state.flycam));
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const globalMousePosition = useWkSelector((state) => getGlobalMousePosition(state));
   const datasetScale = useWkSelector((state) =>
@@ -138,7 +139,7 @@ export default function VoxelValueTooltip() {
             layer.name,
             positionToPick.map((el) => Math.floor(el)) as Vector3,
             magIndex,
-            null,
+            additionalCoordinates,
           );
           return [getReadableNameForLayerName(dataset, annotation, layer.name), dataValue];
         }),

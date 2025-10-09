@@ -1,11 +1,11 @@
 import { getUpdateActionLog } from "admin/rest_api";
+import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
 import { call, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import constants from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { showTooManyBucketsWarningToastAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -45,6 +45,7 @@ const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 12 * 1000; //todo_c times ten, 120s
 
 function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
+  const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
   let bucketsForCurrentInterval = 0;
   let currentBuckets: Array<number> = [];
   yield* call(
@@ -59,7 +60,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
         "sumOfBuckets: ",
         sumOfBuckets,
       );
-      if (sumOfBuckets > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
+      if (sumOfBuckets > bucketSaveWarningThreshold) {
         Store.dispatch(showTooManyBucketsWarningToastAction());
       }
       currentBuckets.push(bucketsForCurrentInterval);
@@ -72,7 +73,6 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   );
   yield* takeEvery("NOTIFY_ABOUT_UPDATE_BUCKET_ACTION", (action: NotifyAboutUpdateBucketAction) => {
     bucketsForCurrentInterval += action.count;
-    console.log("consuming action with ", action.count, " items");
   });
 }
 

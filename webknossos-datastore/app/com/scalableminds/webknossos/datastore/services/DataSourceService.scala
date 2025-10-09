@@ -5,22 +5,43 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, MagLinkInfo, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentialConfigReader,
+  RemoteSourceDescriptorService,
+  S3AccessKeyCredential
+}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
+import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.{
+  Delete,
+  DeleteObjectsRequest,
+  DeleteObjectsResponse,
+  ListObjectsV2Request,
+  ObjectIdentifier
+}
 
 import java.io.File
+import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
+import scala.jdk.FutureConverters._
+import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -300,4 +321,121 @@ class DataSourceService @Inject()(
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
+  private lazy val globalCredentials = {
+    val res = config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }
+    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
+    res
+  }
+
+  def datasetInControlledS3(dataSource: UsableDataSource): Boolean = {
+    def commonPrefix(strings: Seq[String]): String = {
+      if (strings.isEmpty) return ""
+
+      strings.reduce { (a, b) =>
+        a.zip(b).takeWhile { case (c1, c2) => c1 == c2 }.map(_._1).mkString
+      }
+    }
+
+    val allPaths = dataSource.allExplicitPaths
+    val sharedPath = commonPrefix(allPaths.map(_.toString))
+    val matchingCredentials = globalCredentials.filter(c => sharedPath.startsWith(c.name))
+    matchingCredentials.nonEmpty && sharedPath.startsWith("s3")
+  }
+
+  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
+    config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }.collectFirst {
+      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
+          if config.Datastore.S3Upload.credentialName == credentialName =>
+        (accessKeyId, secretAccessKey)
+    }
+  private lazy val s3Client: S3AsyncClient = S3AsyncClient
+    .builder()
+    .credentialsProvider(
+      StaticCredentialsProvider.create(
+        AwsBasicCredentials.builder
+          .accessKeyId(s3UploadCredentialsOpt.getOrElse(("", ""))._1)
+          .secretAccessKey(s3UploadCredentialsOpt.getOrElse(("", ""))._2)
+          .build()
+      ))
+    .crossRegionAccessEnabled(true)
+    .forcePathStyle(true)
+    .endpointOverride(new URI(config.Datastore.S3Upload.endpoint))
+    .region(Region.US_EAST_1)
+    // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
+    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+    .build()
+
+  def deleteFromControlledS3(dataSource: UsableDataSource, datasetId: ObjectId): Fox[Unit] = {
+    def deleteBatch(bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
+      if (keys.isEmpty) Fox.empty
+      else {
+        Fox.fromFuture(
+          s3Client
+            .deleteObjects(
+              DeleteObjectsRequest
+                .builder()
+                .bucket(bucket)
+                .delete(
+                  Delete
+                    .builder()
+                    .objects(
+                      keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
+                    )
+                    .build()
+                )
+                .build()
+            )
+            .asScala)
+      }
+
+    def listKeysAtPrefix(bucket: String, prefix: String): Fox[Seq[String]] = {
+      def listRec(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
+        val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
+        val request = continuationToken match {
+          case Some(token) => builder.continuationToken(token).build()
+          case None        => builder.build()
+        }
+        for {
+          response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
+          keys = response.contents().asScala.map(_.key())
+          allKeys = acc ++ keys
+          result <- if (response.isTruncated) {
+            listRec(Option(response.nextContinuationToken()), allKeys)
+          } else {
+            Fox.successful(allKeys)
+          }
+        } yield result
+      }
+      listRec(None, Seq())
+    }
+
+    for {
+      _ <- Fox.successful(())
+      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(datasetId)
+      magsLinkedByOtherDatasets: Set[MagLinkInfo] = layersAndLinkedMags
+        .flatMap(layerInfo => layerInfo.magLinkInfos.filter(_.linkedMags.nonEmpty))
+        .toSet
+      linkedMagPaths = magsLinkedByOtherDatasets.flatMap(_.linkedMags).flatMap(_.path)
+      paths = dataSource.allExplicitPaths.filterNot(path => linkedMagPaths.contains(path.toString))
+      _ <- Fox.runIf(paths.nonEmpty)({
+        for {
+          // Assume everything is in the same bucket
+          firstPath <- paths.headOption.toFox
+          bucket <- S3DataVault
+            .hostBucketFromUri(new URI(firstPath.toString))
+            .toFox ?~> s"Could not determine S3 bucket from path $firstPath"
+          prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path.toString)).toFox))
+          keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(bucket, _)).map(_.flatten)
+          uniqueKeys = keys.distinct
+          _ = logger.info(
+            s"Deleting ${uniqueKeys.length} objects from controlled S3 bucket $bucket for dataset ${dataSource.id}")
+          _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(bucket, _)).map(_ => ())
+        } yield ()
+      })
+    } yield ()
+  }
 }

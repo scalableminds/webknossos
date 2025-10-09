@@ -396,7 +396,7 @@ class DataSourceController @Inject()(
 
   def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
@@ -407,13 +407,13 @@ class DataSourceController @Inject()(
                 dataSourceId.directoryName,
                 Some(datasetId),
                 reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
             } yield ()
           } else
             for {
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
-              _ = logger.warn(s"Tried to delete dataset ${dataSource.id} ($datasetId), but is not present on disk.")
+              _ <- Fox.runIf(dataSourceService.datasetInControlledS3(dataSource))(
+                dataSourceService.deleteFromControlledS3(dataSource, datasetId))
             } yield ()
+          _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
         } yield Ok
       }
     }

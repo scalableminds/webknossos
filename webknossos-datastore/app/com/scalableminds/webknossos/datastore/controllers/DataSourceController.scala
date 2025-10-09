@@ -36,6 +36,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
+import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -192,7 +193,8 @@ class DataSourceController @Inject()(
             .getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
+              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
+                                                                                    datasetId)
             } yield Ok(Json.obj("newDatasetId" -> datasetId))
           }
         } yield response

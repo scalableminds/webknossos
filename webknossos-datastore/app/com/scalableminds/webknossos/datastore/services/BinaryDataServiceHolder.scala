@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         remoteSourceDescriptorService: RemoteSourceDescriptorService,
                                         datasetErrorLoggingService: DSDatasetErrorLoggingService,
-                                        chunkCacheService: ChunkCacheService,
+                                        chunkCacheService: DSChunkCacheService,
                                         agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(

@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{
   ArrayArtifactHashing,
-  ChunkCacheService,
+  DSChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -59,7 +59,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
   }
 }
 
-class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
+class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService,
                                     remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
     with MeshFileUtils

@@ -25,7 +25,10 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
       val address: String = get[String]("tracingstore.redis.address")
       val port: Int = get[Int]("tracingstore.redis.port")
     }
-    val children = List(WebKnossos, Fossildb)
+    object Cache {
+      val chunkCacheMaxSizeBytes: Long = get[Long]("tracingstore.cache.chunkCacheMaxSizeBytes")
+    }
+    val children = List(WebKnossos, Fossildb, Redis, Cache)
   }
 
   object SlackNotifications {

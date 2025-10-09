@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiAr
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.services.{ChunkCacheService, DataConverter}
+import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, DataConverter}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray}
@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
-                                       chunkCacheService: ChunkCacheService)
+                                       chunkCacheService: DSChunkCacheService)
     extends DataConverter
     with AgglomerateFileUtils
     with LazyLogging {

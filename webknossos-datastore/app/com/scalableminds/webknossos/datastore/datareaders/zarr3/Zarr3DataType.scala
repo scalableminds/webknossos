@@ -24,7 +24,7 @@ object Zarr3DataType extends ExtendedEnumeration {
 
   def toArrayDataType(dataType: Zarr3DataType): ArrayDataType =
     dataType match {
-      case Zarr3DataType.bool       => ???
+      case Zarr3DataType.bool       => ArrayDataType.bool
       case Zarr3DataType.int8       => ArrayDataType.i1
       case Zarr3DataType.int16      => ArrayDataType.i2
       case Zarr3DataType.int32      => ArrayDataType.i4

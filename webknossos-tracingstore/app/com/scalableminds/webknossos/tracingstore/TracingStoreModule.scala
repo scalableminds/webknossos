@@ -25,6 +25,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[TSSlackNotificationService]).asEagerSingleton()
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[TSAnnotationService]).asEagerSingleton()
+    bind(classOf[TSChunkCacheService]).asEagerSingleton()
     bind(classOf[TemporaryTracingService]).asEagerSingleton()
     bind(classOf[TSDatasetErrorLoggingService]).asEagerSingleton()
   }

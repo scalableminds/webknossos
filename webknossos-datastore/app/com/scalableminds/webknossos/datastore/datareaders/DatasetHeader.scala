@@ -38,6 +38,12 @@ trait DatasetHeader {
       case Left(s)  => parseFillValueFromString(s)
     }
 
+  lazy val fillValueBoolean: Boolean =
+    fill_value match {
+      case Left("true") => true
+      case _            => false
+    }
+
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     datasetShape.flatMap { shape =>
       if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)

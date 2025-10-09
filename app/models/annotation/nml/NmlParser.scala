@@ -91,10 +91,13 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
             segmentGroups = v.segmentGroups,
             hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             editPositionAdditionalCoordinates = nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
+            additionalAxes = nmlParams.additionalAxisProtos,
+            hasEditableMapping = if (v.editedMappingEdgesLocation.isDefined) Some(true) else None
           ),
           basePath.getOrElse("") + v.dataZipPath,
           v.name,
+          v.editedMappingEdgesLocation.map(location => basePath.getOrElse("") + location),
+          v.editedMappingBaseMappingName
         )
       }
       skeletonTracing: SkeletonTracing = SkeletonTracing(
@@ -220,7 +223,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").getOrElse(List())
+          extractSegmentGroups(node \ "groups").getOrElse(List()),
+          getSingleAttributeOpt(node, "editedMappingEdgesLocation"),
+          getSingleAttributeOpt(node, "editedMappingBaseMappingName")
         )
       }
     )

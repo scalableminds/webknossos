@@ -98,7 +98,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresSchema(): Unit = {
-    logger.info("Checking database schema…")
+    logger.info("Checking database schema...")
 
     val errorMessageBuilder = mutable.ListBuffer[String]()
     val capturingProcessLogger =
@@ -115,7 +115,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Ensuring Postgres database…")
+    logger.info(s"Ensuring Postgres database...")
     val processLogger =
       ProcessLogger((o: String) => logger.info(s"dbtool: $o"), (e: String) => logger.error(s"dbtool: $e"))
 

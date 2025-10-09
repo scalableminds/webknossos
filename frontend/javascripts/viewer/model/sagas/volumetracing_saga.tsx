@@ -22,7 +22,7 @@ import {
   isTraceTool,
   isVolumeDrawingTool,
 } from "viewer/model/accessors/tool_accessor";
-import { calculateMaybeGlobalPos } from "viewer/model/accessors/view_mode_accessor";
+import { getGlobalMousePosition } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -605,22 +605,6 @@ function* maintainSegmentsMap(): Saga<void> {
   );
 }
 
-function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
-  return yield* select((state) => {
-    const mousePosition = state.temporaryConfiguration.mousePosition;
-
-    if (mousePosition) {
-      const [x, y] = mousePosition;
-      return calculateMaybeGlobalPos(state, {
-        x,
-        y,
-      })?.rounded;
-    }
-
-    return undefined;
-  });
-}
-
 function* updateHoveredSegmentId(): Saga<void> {
   const activeViewport = yield* select((store) => store.viewModeData.plane.activeViewport);
 
@@ -628,7 +612,7 @@ function* updateHoveredSegmentId(): Saga<void> {
     return;
   }
 
-  const globalMousePosition = yield* call(getGlobalMousePosition);
+  const globalMousePosition = yield* select(getGlobalMousePosition);
   const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,

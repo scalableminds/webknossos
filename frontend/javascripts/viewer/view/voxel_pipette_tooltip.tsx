@@ -1,40 +1,40 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
-import {
-  formatAreaAsVx,
-  formatLengthAsVx,
-  formatNumberToArea,
-  formatNumberToLength,
-} from "libs/format_utils";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
+import type { OrthoView, Vector3 } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import {
   calculateInViewportPos,
   calculateMaybePlaneScreenPos,
+  getGlobalMousePosition,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { api } from "viewer/singletons";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
 
-function DistanceEntry({ distance }: { distance: string }) {
+function VoxelValueEntry({ layerName, value }: { layerName: string; value: string }) {
   return (
     <div>
-      {distance}{" "}
+      <strong>{layerName}: </strong>
+      {value}{" "}
       <Tooltip title="Copy to clipboard">
         <CopyOutlined
           onClick={() => {
-            copyToClipboad(distance);
+            copyToClipboad(value);
           }}
         />
       </Tooltip>
@@ -61,33 +61,26 @@ function isPositionStillInPlane(
   return Math.abs(posInViewport[thirdDim]) < 1;
 }
 
-export default function DistanceMeasurementTooltip() {
+export default function VoxelValueTooltip() {
   const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
   );
-  const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
   const flycamPosition = useWkSelector((state) => getPosition(state.flycam));
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
-  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
-  const planeRatio = useWkSelector((state) =>
+  const globalMousePosition = useWkSelector((state) => getGlobalMousePosition(state));
+  const datasetScale = useWkSelector((state) =>
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
   );
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
-  const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
-  const activeGeometry =
-    activeTool === AnnotationTool.LINE_MEASUREMENT
-      ? lineMeasurementGeometry
-      : areaMeasurementGeometry;
-  const orthoView = activeGeometry.viewport;
+  const orthoView = useWkSelector((state) => state.viewModeData.plane.activeViewport);
+
+  const positionToPick = lastMeasuredGlobalPosition ?? globalMousePosition;
+
   const tooltipPosition = useWkSelector((state) =>
-    lastMeasuredGlobalPosition
-      ? calculateMaybePlaneScreenPos(state, lastMeasuredGlobalPosition, orthoView)
-      : null,
+    positionToPick ? calculateMaybePlaneScreenPos(state, positionToPick, orthoView) : null,
   );
-  // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const {
     left: viewportLeft,
     top: viewportTop,
@@ -95,8 +88,6 @@ export default function DistanceMeasurementTooltip() {
     height: viewportHeight,
   } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
-  // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
   useEffect(() => {
     if (
       lastMeasuredGlobalPosition &&
@@ -105,46 +96,54 @@ export default function DistanceMeasurementTooltip() {
         flycamRotation,
         flycamPosition,
         orthoView,
-        planeRatio,
+        datasetScale,
         zoomStep,
       )
     ) {
       dispatch(hideMeasurementTooltipAction());
-      activeGeometry.resetAndHide();
     }
   }, [
+    dispatch,
     lastMeasuredGlobalPosition,
     flycamRotation,
     flycamPosition,
     orthoView,
-    planeRatio,
+    datasetScale,
     zoomStep,
-    activeGeometry.resetAndHide,
   ]);
 
-  if (lastMeasuredGlobalPosition == null || tooltipPosition == null) {
+  const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
+
+  const layerNamesWithDataValue = useFetch(
+    async () => {
+      if (positionToPick == null) {
+        return null;
+      }
+
+      return Promise.all(
+        colorLayers.map(async (layer) => {
+          const dataValue = await api.data.getDataValue(
+            layer.name,
+            positionToPick.map((el) => Math.floor(el)) as Vector3,
+            0,
+            null,
+          );
+          return [layer.name, dataValue];
+        }),
+      );
+    },
+    [],
+    [positionToPick],
+  );
+
+  if (tooltipPosition == null) {
     return null;
   }
 
-  let valueInVx = "";
-  let valueInMetricUnit = "";
-  const notScalingFactor = [1, 1, 1] as Vector3;
-
-  if (activeTool === AnnotationTool.LINE_MEASUREMENT) {
-    const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
-  } else if (activeTool === AnnotationTool.AREA_MEASUREMENT) {
-    const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
-  }
+  const voxelValuesByLayer: Record<string, string> | null =
+    layerNamesWithDataValue != null ? Object.fromEntries(layerNamesWithDataValue) : null;
+  // todop: integrate
+  // state.temporaryConfiguration.hoveredSegmentId
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const left = clamp(
@@ -165,11 +164,15 @@ export default function DistanceMeasurementTooltip() {
       style={{
         left,
         top,
-        pointerEvents: isMeasuring ? "none" : "auto",
+        pointerEvents: lastMeasuredGlobalPosition == null ? "none" : "auto",
       }}
     >
-      <DistanceEntry distance={valueInMetricUnit} />
-      <DistanceEntry distance={valueInVx} />
+      Data values per layer:
+      {voxelValuesByLayer != null
+        ? Object.entries(voxelValuesByLayer).map(([layerName, value]) => (
+            <VoxelValueEntry key={layerName} layerName={layerName} value={value} />
+          ))
+        : "Loading..."}
     </div>
   );
 }

@@ -54,6 +54,8 @@ import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
+import VoxelValueTooltip from "../voxel_pipette_tooltip";
+import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 
 const { Sider } = Layout;
 
@@ -314,7 +316,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isUpdateTracingAllowed, distanceMeasurementTooltipPosition } = this.props;
+    const { isUpdateTracingAllowed } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -337,8 +339,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
         {status === "loaded" && <WkContextMenu />}
 
-        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
+        {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (
           <DistanceMeasurementTooltip />
+        )}
+
+        {status === "loaded" && this.props.activeTool === AnnotationTool.PICK_CELL && (
+          <VoxelValueTooltip />
         )}
 
         <NmlUploadZoneContainer
@@ -439,8 +445,7 @@ function mapStateToProps(state: WebknossosState) {
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    distanceMeasurementTooltipPosition:
-      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+    activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
     isWkReady: state.uiInformation.isWkReady,

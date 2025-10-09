@@ -7,11 +7,8 @@ import { clamp } from "libs/utils";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import type { OrthoView, Vector3 } from "viewer/constants";
-import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
-import getSceneController from "viewer/controller/scene_controller_provider";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import {
   calculateInViewportPos,
   calculateMaybePlaneScreenPos,

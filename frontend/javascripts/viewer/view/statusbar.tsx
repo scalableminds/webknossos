@@ -24,7 +24,6 @@ import {
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
 import {
-  calculateGlobalPos,
   getGlobalMousePosition,
   isPlaneMode as getIsPlaneMode,
 } from "viewer/model/accessors/view_mode_accessor";

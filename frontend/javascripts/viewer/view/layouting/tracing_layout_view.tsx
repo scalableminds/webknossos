@@ -20,6 +20,7 @@ import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction } from "viewer/model/actions/actions";
 import { resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -51,11 +52,10 @@ import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skel
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";
+import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
-import VoxelValueTooltip from "../voxel_pipette_tooltip";
-import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 
 const { Sider } = Layout;
 

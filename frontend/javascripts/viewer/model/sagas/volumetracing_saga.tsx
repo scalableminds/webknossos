@@ -2,7 +2,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "viewer/constants";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";

@@ -102,7 +102,6 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   );
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-  // TODOM
   if (
     (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
     (!WkDevFlags.liveCollab && allowSave)
@@ -504,34 +503,6 @@ export function* tryToIncorporateActions(
             agglomerateId2,
             false,
           );
-          // todop: segmentId1 and segmentId2 might not exist in the local mapping. this does not
-          // mean that the action can be ignored, though, because the agglomerates themselves might
-          // exist. we need to map the ids and find out whether these exist in the mapping.
-          // yield* call(
-          //   updateMappingWithMerge,
-          //   action.value.actionTracingId,
-          //   activeMapping,
-          //   action.value.segmentId1,
-          //   action.value.segmentId2,
-          // );
-          /*const layerName = action.value.actionTracingId;
-          const mappingInfo = yield* select((state) =>
-            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-          );
-          const dataset = yield* select((state) => state.dataset);
-          const layerInfo = getLayerByName(dataset, layerName);
-          const { mappingName } = mappingInfo;
-
-          if (mappingName == null) {
-            throw new Error(
-              "Could not apply splitAgglomerate because no active mapping was found.",
-            );
-          }
-          updateLocalHdf5FunctionByTracing[layerName] = function* () {
-            console.log("clearing and refreshing mapping because of split/merge action");
-            yield* call(clearActiveMapping, action.value.actionTracingId, activeMapping);
-            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
-          };*/
           break;
         }
         case "splitAgglomerate": {
@@ -600,7 +571,6 @@ export function* tryToIncorporateActions(
         }
       }
     }
-    ColoredLogger.logGreen("Setting local version to", actionBatch.version);
     yield* put(setVersionNumberAction(actionBatch.version));
     if (agglomerateIdsToRefresh.size > 0 && volumeTracingIdOfMapping) {
       const agglomerateIdToRefresh = agglomerateIdsToRefresh.values().next().value;
@@ -618,9 +588,6 @@ export function* tryToIncorporateActions(
         actionBatch.version,
       );
 
-      console.log(
-        "dispatch setMappingAction after loading updated mapping due to incorporating a split action",
-      );
       yield* put(
         setMappingAction(
           volumeTracingIdOfMapping,

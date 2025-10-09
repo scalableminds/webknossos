@@ -133,8 +133,6 @@ vi.mock("admin/rest_api.ts", async () => {
       segmentIdSet.has(id),
     ) as Vector2[];
     if (entries.length < segmentIdSet.size) {
-      console.log("entries", entries);
-      console.log("segmentIdSet", segmentIdSet);
       throw new Error(
         "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
       );

@@ -266,6 +266,8 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    // TODOM: shouldn't be necessary anymore as explicit action UPDATE_MAPPING_REBASE_INFORMATION was introduced
+    // to make updating the rebasing info less hidden / unexpected and thus more obvious
     /*case "FINISH_MAPPING_INITIALIZATION": {
       const mappingInfoOfLayer =
         state.temporaryConfiguration.activeMappingByLayer[action.layerName];

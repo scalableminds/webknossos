@@ -426,7 +426,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  let { agglomerateFileMag, getDataValue, activeMapping, volumeTracing } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  let { activeMapping } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   // Use untransformedPosition because agglomerate trees should not have
@@ -641,7 +642,6 @@ function* performMinCut(
       volumeTracingId,
       segmentsInfo,
     );
-    ColoredLogger.logBlue("About to delete the following edgesToRemove: ", edgesToRemove);
   } catch (exception) {
     console.error(exception);
     Toast.error("Could not determine which edges to delete for cut. Please try again.");
@@ -1042,7 +1042,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)),
     ) ?? targetAgglomerateId;
 
-  // TODOM;: Check whether this can be removed.
+  // TODOM: Check whether this can be removed.
   /*if (action.type === "PROOFREAD_MERGE") {
     ColoredLogger.logBlue("Calling updateMappingWithMerge again after saving was done.");
     // During saving, newer versions might have been pulled from the server.
@@ -1810,8 +1810,6 @@ function* gatherInfoForOperation(
     { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId, position: sourcePosition },
     { agglomerateId: action.agglomerateId, unmappedId: action.segmentId, position: targetPosition },
   ];
-
-  console.log("idInfos", idInfos);
 
   return idInfos;
 }

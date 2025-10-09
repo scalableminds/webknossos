@@ -16,7 +16,7 @@ import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   dispatchEnsureHasNewestVersionAsync,
-  dispatchEnsureMaySaveNowAsync,
+  dispatchEnsureHasAnnotationMutexAsync,
   doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
@@ -72,7 +72,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     if (othersMayEdit && WkDevFlags.liveCollab) {
       // Wait until we may save (due to mutex acquisition).
-      yield* call(dispatchEnsureMaySaveNowAsync, Store.dispatch);
+      yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
       // Wait until we have the newest version. This *must* happen after
       // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
       // race condition where the frontend thinks that it knows about the newest
@@ -100,7 +100,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     const itemCountToSave = forcePush
       ? Number.POSITIVE_INFINITY
       : yield* select((state) => state.save.queue.length);
-    console.log("itemCountToSave", itemCountToSave);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
       saveQueue = yield* select((state) => state.save.queue);
@@ -140,7 +139,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
   // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
     let exceptionDuringMarkBucketsAsNotDirty = false;
-    console.error("Sending save request to server");
+
     try {
       const startTime = Date.now();
       yield* call(

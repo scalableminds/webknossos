@@ -27,7 +27,7 @@ import {
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
 import {
-  type EnsureMaySaveNowAction,
+  type EnsureHasAnnotationMutexAction,
   type SetIsMutexAcquiredAction,
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
@@ -60,9 +60,9 @@ function* getDoesHaveMutex(): Saga<boolean> {
   return yield* select((state) => state.save.mutexState.hasAnnotationMutex);
 }
 
-function* resolveEnsureMaySaveNowActions(action: EnsureMaySaveNowAction) {
+function* resolveEnsureHasAnnotationMutexActions(action: EnsureHasAnnotationMutexAction) {
   /*
-   * For each EnsureMaySaveNowAction wait until we have the mutex. Then call
+   * For each EnsureHasAnnotationMutexAction wait until we have the mutex. Then call
    * the callback.
    */
   while (true) {
@@ -127,7 +127,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchForOthersMayEditChange, mutexLogicState);
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
-  yield* takeEvery("ENSURE_MAY_SAVE_NOW", resolveEnsureMaySaveNowActions);
+  yield* takeEvery("ENSURE_HAS_ANNOTATION_MUTEX", resolveEnsureHasAnnotationMutexActions);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit) {
@@ -348,9 +348,9 @@ function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void>
 
 function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<never> {
   while (true) {
-    // console.log("taking ENSURE_MAY_SAVE_NOW");
-    yield* take("ENSURE_MAY_SAVE_NOW");
-    // console.log("took ENSURE_MAY_SAVE_NOW");
+    // console.log("taking ENSURE_HAS_ANNOTATION_MUTEX");
+    yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
+    // console.log("took ENSURE_HAS_ANNOTATION_MUTEX");
     // TODOM: ensure tryAcquireMutexForSaving works correctly even when mutex not received initially.
     // Write tests for this!
     const { doneSaving } = yield* race({

@@ -28,7 +28,7 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
-export type EnsureMaySaveNowAction = ReturnType<typeof ensureMaySaveNowAction>;
+export type EnsureHasAnnotationMutexAction = ReturnType<typeof ensureHasAnnotationMutexAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
 export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
@@ -55,7 +55,7 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
-  | EnsureMaySaveNowAction
+  | EnsureHasAnnotationMutexAction
   | EnsureHasNewestVersionAction
   | DoneSavingAction
   | SetIsMutexAcquiredAction
@@ -158,15 +158,17 @@ export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: 
     callback,
   }) as const;
 
-export const ensureMaySaveNowAction = (callback: () => void) =>
+export const ensureHasAnnotationMutexAction = (callback: () => void) =>
   ({
-    type: "ENSURE_MAY_SAVE_NOW",
+    type: "ENSURE_HAS_ANNOTATION_MUTEX",
     callback,
   }) as const;
 
-export const dispatchEnsureMaySaveNowAsync = async (dispatch: Dispatch<any>): Promise<void> => {
+export const dispatchEnsureHasAnnotationMutexAsync = async (
+  dispatch: Dispatch<any>,
+): Promise<void> => {
   const readyDeferred = new Deferred();
-  const action = ensureMaySaveNowAction(() => readyDeferred.resolve(null));
+  const action = ensureHasAnnotationMutexAction(() => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };

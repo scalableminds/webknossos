@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_types";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -45,20 +45,6 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
     ("fallbackLayer" in segmentationLayer ? segmentationLayer.fallbackLayer : null) ||
     segmentationLayer.name
   );
-}
-
-export function getVolumeRequestUrl(
-  dataset: APIDataset,
-  annotation: StoreAnnotation | null,
-  tracingId: string | undefined,
-  visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
-) {
-  if (annotation == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.id}/layers/${visibleSegmentationLayer.name}`;
-  } else {
-    const tracingStoreHost = annotation?.tracingStore.url;
-    return `${tracingStoreHost}/tracings/volume/${tracingId}`;
-  }
 }
 
 export async function hasSegmentIndex(

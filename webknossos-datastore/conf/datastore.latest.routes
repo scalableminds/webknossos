@@ -98,6 +98,7 @@ POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex           
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentIndex/:segmentId                                                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentIndex(datasetId: ObjectId, dataLayerName: String, segmentId: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/volume                                                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentVolume(datasetId: ObjectId, dataLayerName: String)
 POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/boundingBox                                                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(datasetId: ObjectId, dataLayerName: String)
+POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/surfaceArea                                                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String)
 
 # DataSource management
 GET           /datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.testChunk(resumableChunkNumber: Int, resumableIdentifier: String)

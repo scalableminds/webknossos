@@ -72,7 +72,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
       before = Instant.now
-      voxelSize <- remoteDatastoreClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else

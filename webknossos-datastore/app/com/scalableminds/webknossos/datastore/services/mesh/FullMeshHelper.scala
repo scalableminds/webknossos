@@ -2,6 +2,8 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.draco.NativeDracoToStlConverter
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
@@ -73,4 +75,41 @@ trait FullMeshHelper extends LazyLogging {
   protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
     Instant.logSince(before, s"Served $lengthBytes-byte STL mesh via $label,", logger)
 
+  def surfaceAreaFromStlBytes(stlBytes: Array[Byte]): Box[Float] = tryo {
+    val dataBuffer = ByteBuffer.wrap(stlBytes)
+    dataBuffer.order(ByteOrder.LITTLE_ENDIAN)
+    val numberOfTriangles = dataBuffer.getInt(80)
+    val normalOffset = 12
+    var surfaceSumMutable = 0.0f
+    val headerOffset = 84
+    val bytesPerTriangle = 50
+    for (triangleIndex <- 0 until numberOfTriangles) {
+      val triangleVerticesOffset = headerOffset + triangleIndex * bytesPerTriangle + normalOffset
+      val v1x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 0)
+      val v1y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 1)
+      val v1z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 2)
+      val v2x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 3)
+      val v2y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 4)
+      val v2z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 5)
+      val v3x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 6)
+      val v3y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 7)
+      val v3z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 8)
+
+      val vec1x = v2x - v1x
+      val vec1y = v2y - v1y
+      val vec1z = v2z - v1z
+      val vec2x = v3x - v1x
+      val vec2y = v3y - v1y
+      val vec2z = v3z - v1z
+
+      val crossx = vec1y * vec2z - vec1z * vec2y
+      val crossy = vec1z * vec2x - vec1x * vec2z
+      val crossz = vec1x * vec2y - vec1y * vec2x
+
+      val magnitude = Math.sqrt(crossx * crossx + crossy * crossy + crossz * crossz).toFloat
+
+      surfaceSumMutable = surfaceSumMutable + (magnitude / 2.0f)
+    }
+    surfaceSumMutable
+  }
 }

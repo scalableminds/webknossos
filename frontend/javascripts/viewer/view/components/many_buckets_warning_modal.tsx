@@ -1,16 +1,24 @@
-import { Button, Radio, Space } from "antd";
+import { Button, Modal, Radio, Space } from "antd";
 import LinkButton from "components/link_button";
-import Toast from "libs/toast";
+import { useInterval } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
 import { useState } from "react";
+import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 
-export function TooManyBucketsWarningToast() {
+export function TooManyBucketsWarningModal() {
+  useInterval(() => {
+    UserLocalStorage.setItem("suppressBucketWarning", "false");
+    console.log("resetting suppressBucketWarning to false");
+  }, 60 * 1000); //TODO_C dev
   const supressTooManyBucketsWarning = UserLocalStorage.getItem("suppressBucketWarning");
   console.log("getting suppressBucketWarning", supressTooManyBucketsWarning);
-  const [isToastClosed, setIsToastClosed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
+  useReduxActionListener("SHOW_TOO_MANY_BUCKETS_WARNING_TOAST", () => setIsModalOpen(true));
   const onClose = () => {
-    setIsToastClosed(!isToastClosed);
+    setIsModalOpen(false);
+    console.log("set suppressBucketWarning", neverShowAgain.toString());
+    UserLocalStorage.setItem("suppressBucketWarning", neverShowAgain.toString());
   };
   const toggleNeverShowAgain = () => setNeverShowAgain(!neverShowAgain);
 
@@ -24,9 +32,7 @@ export function TooManyBucketsWarningToast() {
   const closeButton = (
     <Button
       onClick={() => {
-        setIsToastClosed(true);
-        console.log("set suppressBucketWarning", neverShowAgain.toString());
-        UserLocalStorage.setItem("suppressBucketWarning", neverShowAgain.toString());
+        onClose();
       }}
       type="primary"
     >
@@ -44,15 +50,16 @@ export function TooManyBucketsWarningToast() {
       {closeButton}
     </Space>
   );
-  if (supressTooManyBucketsWarning !== "true") {
-    Toast.warning(
-      <>
-        {warningMessage}
-        <br />
-        {neverShowAgainRadioButton}.
-      </>,
-      { sticky: true, customFooter: footer, onClose },
-    );
+  if (supressTooManyBucketsWarning !== "true" && isModalOpen) {
     console.warn(warningMessage + " For more info, visit: " + linkToDocs);
+    return (
+      <Modal footer={footer} open={isModalOpen} onCancel={onClose} title="Warning" mask={false}>
+        <>
+          {warningMessage}
+          <br />
+          {neverShowAgainRadioButton}.
+        </>
+      </Modal>
+    );
   }
 }

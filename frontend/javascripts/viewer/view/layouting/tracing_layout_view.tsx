@@ -50,6 +50,7 @@ import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
+import { TooManyBucketsWarningModal } from "../components/many_buckets_warning_toast";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -390,6 +391,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               }}
             >
               <MergerModeController />
+              <TooManyBucketsWarningModal />
               <div
                 id={canvasAndLayoutContainerID}
                 style={{

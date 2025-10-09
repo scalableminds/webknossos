@@ -7,6 +7,7 @@ import { call, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import constants from "viewer/constants";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { showTooManyBucketsWarningToastAction } from "viewer/model/actions/annotation_actions";
 import {
   type NotifyAboutUpdateBucketAction,
   setVersionNumberAction,
@@ -17,9 +18,8 @@ import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/posi
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
-import { TooManyBucketsWarningToast } from "viewer/view/components/many_buckets_warning_toast";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
 import {
@@ -60,7 +60,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
         sumOfBuckets,
       );
       if (sumOfBuckets > constants.MAX_BUCKET_COUNT_PER_SAVE_SOFT_LIMIT) {
-        TooManyBucketsWarningToast();
+        Store.dispatch(showTooManyBucketsWarningToastAction());
       }
       currentBuckets.push(bucketsForCurrentInterval);
       if (currentBuckets.length > 12) {

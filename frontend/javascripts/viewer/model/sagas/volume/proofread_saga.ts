@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { ColoredLogger, SoftError, isBigInt, isNumberMap } from "libs/utils";
+import { ColoredLogger, SoftError, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -143,6 +143,10 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
+}
+
+function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
+  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(
@@ -442,8 +446,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
-  const sourceAgglomerateId = sourceInfo.agglomerateId;
-  const targetAgglomerateId = targetInfo.agglomerateId;
+  let sourceAgglomerateId = sourceInfo.agglomerateId;
+  let targetAgglomerateId = targetInfo.agglomerateId;
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -511,6 +515,16 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
+
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  sourceAgglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)),
+    ) ?? sourceAgglomerateId;
+  targetAgglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)),
+    ) ?? targetAgglomerateId;
 
   // TODOM: just as below: check whether this is really needed
   /*
@@ -680,7 +694,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   const partitions = yield* select(
     (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
   );
-  const agglomerateId = partitions.agglomerateId;
+  let agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
     console.error(messages["proofreading.multi_cut.empty_partition"]);
     Toast.error(messages["proofreading.multi_cut.empty_partition"]);
@@ -692,7 +706,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     return;
   }
   const volumeTracingId = preparation.volumeTracing.tracingId;
-  const { agglomerateFileMag, activeMapping } = preparation;
+  const { agglomerateFileMag } = preparation;
   const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
 
   const items: UpdateActionWithoutIsolationRequirement[] = [];
@@ -717,6 +731,18 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
   yield* put(resetMultiCutToolPartitionsAction());
+
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId],
+  );
+
+  // The agglomerateId of the split agglomerate might have changed due to syncing with the server caused by Model.ensureSavedState.
+  // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  agglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])),
+    ) ?? agglomerateId;
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
@@ -924,8 +950,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
-  const sourceAgglomerateId = sourceInfo.agglomerateId;
-  const targetAgglomerateId = targetInfo.agglomerateId;
+  let sourceAgglomerateId = sourceInfo.agglomerateId;
+  let targetAgglomerateId = targetInfo.agglomerateId;
   const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
   const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
@@ -1006,17 +1032,15 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
-  // TODOM: Do this agglomerate ID refresh for all other functions triggering proofreading actions in this saga!!!!
-  const adaptToType =
-    activeMapping.mapping && isNumberMap(activeMapping.mapping)
-      ? (el: number) => el
-      : (el: number) => BigInt(el);
-  const maybeUpdatedSourceAgglomerateId =
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
-    sourceAgglomerateId;
-  const maybeUpdatedTargetAgglomerateId =
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
-    targetAgglomerateId;
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  sourceAgglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)),
+    ) ?? sourceAgglomerateId;
+  targetAgglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)),
+    ) ?? targetAgglomerateId;
 
   // TODOM;: Check whether this can be removed.
   /*if (action.type === "PROOFREAD_MERGE") {
@@ -1026,14 +1050,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       updateMappingWithMerge,
       volumeTracingId,
       activeMapping,
-      maybeUpdatedSourceAgglomerateId,
-      maybeUpdatedTargetAgglomerateId,
+      sourceAgglomerateId,
+      targetAgglomerateId,
     );
   }*/
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
-    if (maybeUpdatedSourceAgglomerateId !== maybeUpdatedTargetAgglomerateId) {
+    if (sourceAgglomerateId !== targetAgglomerateId) {
       const isOthersMayEditTurnedOn = yield* select((state) => state.annotation.othersMayEdit);
       const additionalErrorExplanation = isOthersMayEditTurnedOn
         ? " Maybe another user already splitted the agglomerate in the meantime."
@@ -1048,7 +1072,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // communication with the back-end).
     const splitMapping = yield* splitAgglomerateInMapping(
       activeMapping,
-      Number(maybeUpdatedSourceAgglomerateId),
+      sourceAgglomerateId,
       volumeTracingId,
     );
 
@@ -1063,7 +1087,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(Number(maybeUpdatedTargetAgglomerateId), volumeTracingId));
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
   }
 
   /* Reload meshes */
@@ -1115,12 +1139,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: Number(maybeUpdatedSourceAgglomerateId),
+      agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
       nodePosition: sourceInfo.position,
     },
     {
-      agglomerateId: Number(maybeUpdatedTargetAgglomerateId),
+      agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
       nodePosition: targetInfo.position,
     },
@@ -1144,7 +1168,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing, activeMapping } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   let idInfos;
@@ -1168,7 +1192,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   if (!idInfos) {
     return;
   }
-  const targetAgglomerateId = idInfos[0].agglomerateId;
+  let targetAgglomerateId = idInfos[0].agglomerateId;
   const targetSegmentId = idInfos[0].unmappedId;
 
   const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
@@ -1194,6 +1218,17 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
+
+  // Get active mapping after saving and thus syncing with the backend as this might have changed the mapping.
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+  );
+
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  targetAgglomerateId =
+    Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)),
+    ) ?? targetAgglomerateId;
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -1510,10 +1545,7 @@ function getSegmentIdsThatMapToAgglomerate(
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
-  const adaptToType =
-    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
-      ? (el: number) => BigInt(el)
-      : (el: number) => el;
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
 
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
@@ -1579,10 +1611,7 @@ function* mergeAgglomeratesInMapping(
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
 ): Saga<Mapping> {
-  const adaptToType =
-    activeMapping.mapping && isNumberMap(activeMapping.mapping)
-      ? (el: number) => el
-      : (el: number) => BigInt(el);
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
 
   const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
   const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
@@ -1653,10 +1682,7 @@ export function* removeAgglomerateFromActiveMapping(
 
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
-  const adaptToType =
-    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
-      ? (el: number) => BigInt(el)
-      : (el: number) => el;
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(agglomerateId);
 

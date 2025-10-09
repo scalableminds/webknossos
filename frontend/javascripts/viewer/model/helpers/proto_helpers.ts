@@ -10,12 +10,12 @@ import { isBigInt } from "libs/utils";
 import { Root } from "protobufjs/light";
 import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
 
-const PROTO_FILES = {
+export const PROTO_FILES = {
   skeleton: SkeletonTracingProto,
   volume: VolumeTracingProto,
 };
 const PROTO_PACKAGE = "com.scalableminds.webknossos.datastore";
-const PROTO_TYPES = {
+export const PROTO_TYPES = {
   skeleton: `${PROTO_PACKAGE}.SkeletonTracing`,
   volume: `${PROTO_PACKAGE}.VolumeTracing`,
 };

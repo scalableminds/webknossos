@@ -5,11 +5,12 @@
  */
 
 import { buffers } from "redux-saga";
-import { actionChannel, call, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
+  type FinishedRebasingAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -30,10 +31,17 @@ import {
   updateTdCamera,
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
-import type { CameraData, Flycam, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type {
+  CameraData,
+  Flycam,
+  SkeletonTracing,
+  VolumeTracing,
+  WebknossosState,
+} from "viewer/store";
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import { REBASING_BUSY_BLOCK_REASON } from "./save_saga";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
@@ -51,7 +59,7 @@ export function* setupSavingForAnnotation(
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const flycam = yield* select((state) => state.flycam);
@@ -81,9 +89,12 @@ export function* setupSavingForTracingType(
   const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-    | VolumeTracing
-    | SkeletonTracing;
+  function* getTracing(): Generator<unknown, VolumeTracing | SkeletonTracing, WebknossosState> {
+    return (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
+      | VolumeTracing
+      | SkeletonTracing;
+  }
+  let prevTracing = yield* getTracing();
 
   yield* call(ensureWkReady);
 
@@ -99,11 +110,19 @@ export function* setupSavingForTracingType(
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
   );
+  // TODOM: Check whether this saga actually pauses during rebasing.
+  yield* takeLatest(
+    "FINISHED_REBASING",
+    function* resetPrevTracing(_action: FinishedRebasingAction) {
+      prevTracing = yield* getTracing();
+    },
+  );
 
   // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
     "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
   );
+  let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
 
   while (true) {
     // Prioritize consumption of tracingActionChannel since we don't want to
@@ -113,25 +132,28 @@ export function* setupSavingForTracingType(
       yield* take(tracingActionChannel);
     } else {
       // Wait for either a user action or the "ensureAction".
-      const { ensureAction } = yield* race({
+      const actions = yield* race({
         _tracingAction: take(tracingActionChannel),
         ensureAction: take(ensureDiffedChannel),
       });
-      if (ensureAction != null) {
-        ensureAction.callback(tracingId);
-        continue;
+      if (actions.ensureAction != null) {
+        ensureAction = actions.ensureAction;
       }
     }
 
-    // The allowUpdate setting could have changed in the meantime
+    // The allowUpdate setting could have changed in the meantime.
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-      | VolumeTracing
-      | SkeletonTracing;
+    // Also ignore change in case busy blocked by currently ongoing annotation rebasing.
+    const isCurrentlyRebasing = yield* select(
+      (state) =>
+        state.uiInformation.busyBlockingInfo.isBusy &&
+        state.uiInformation.busyBlockingInfo.reason === REBASING_BUSY_BLOCK_REASON,
+    );
+    if (!allowUpdate || isCurrentlyRebasing) continue;
+    const tracing = yield* getTracing();
 
     const items = compactUpdateActions(
       Array.from(yield* call(performDiffTracing, prevTracing, tracing)),
@@ -144,6 +166,9 @@ export function* setupSavingForTracingType(
     }
 
     prevTracing = tracing;
+    if (ensureAction != null) {
+      ensureAction.callback(tracingId);
+    }
   }
 }
 

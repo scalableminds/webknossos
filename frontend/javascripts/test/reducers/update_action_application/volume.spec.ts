@@ -40,6 +40,7 @@ const initialState: WebknossosState = update(defaultVolumeState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     annotationType: { $set: "Explorational" },
   },
   dataset: {

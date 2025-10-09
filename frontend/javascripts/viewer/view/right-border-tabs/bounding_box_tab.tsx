@@ -33,7 +33,7 @@ export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
   const annotation = useWkSelector((state) => state.annotation);
-  const allowUpdate = annotation.restrictions.allowUpdate;
+  const allowUpdate = annotation.isUpdatingCurrentlyAllowed;
   const isLockedByOwner = annotation.isLockedByOwner;
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);

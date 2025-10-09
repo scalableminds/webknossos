@@ -10,11 +10,7 @@ import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga"
 import { Store } from "viewer/singletons";
 import { type SkeletonTracing, startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  expectedMappingAfterMerge,
-  expectedMappingAfterMergeRebase,
-  initialMapping,
-} from "./proofreading_fixtures";
+import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
@@ -114,15 +110,46 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
       // TODOM: The test seems to send infinite tree update actions.
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+      const updates = context.receivedDataPerSaveRequest;
+      console.log(updates);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      // Create first agglomerate tree (agglomerate 4: 4-5)
+      expect(latestUpdateActionRequestPayload[0].actions.map((action) => action.name)).toEqual([
+        "createTree",
+        "createNode",
+        "createNode",
+        "createNode",
+        "createEdge",
+        "createEdge",
+      ]);
+      // Create second agglomerate tree already merged due to injected update (agglomerate 4: 4-5-6-7)
+      expect(latestUpdateActionRequestPayload[1].actions.map((action) => action.name)).toEqual([
+        "createTree",
+        "createNode",
+        "createNode",
+        "createNode",
+        "createNode",
+        "createEdge",
+        "createEdge",
+        "createEdge",
+      ]);
+      // Merge both agglomerate trees
+      expect(latestUpdateActionRequestPayload[2].actions.map((action) => action.name)).toEqual([
+        "moveTreeComponent",
+        "deleteTree",
+        "createEdge",
+        "updateActiveNode",
+      ]);
 
-      expect(mergeSaveActionBatch).toEqual([
+      // Merge proofreading action
+      expect(latestUpdateActionRequestPayload[3].actions).toEqual([
         {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
-            segmentId1: 1,
+            segmentId1: 3,
             segmentId2: 4,
             agglomerateId1: 1,
             agglomerateId2: 4,
@@ -134,13 +161,28 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 1],
+          [7, 1],
+        ]),
+      );
     });
 
     await task.toPromise();
-  }, 8000);
-
-  // TODOM: Implement more tests for proofreading tree interactions.
+  });
+  // TODO: code interleaving test where version is injected after agglomerate trees are created and before the merge.
 });
 
-// TODO open skeleton interactions to test: ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],["DELETE_EDGE", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
+// TODOM: Implement more tests for proofreading tree interactions.
+
+// TODOM: Write test for backend manipulating same agglomerate skeleton
+
+// TODO open skeleton interactions to test: ,["DELETE_EDGE", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
+// TODOM: write tests for cutFromAllNeighbours
+// TODOM: write tests for partitionedMinCut

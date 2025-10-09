@@ -527,16 +527,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      //_ <- if (dataset.isVirtual) {
-      // At this point, we should also free space in S3 once implemented.
-      // Right now, we can just mark the dataset as deleted in the database.
-      //  datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
-      //} else {
-      //for {
+      dataSource <- dataSourceFor(dataset)
       datastoreClient <- clientFor(dataset)
       _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
-      //  } yield ()
-      //} ?~> "dataset.delete.failed"
     } yield ()
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =

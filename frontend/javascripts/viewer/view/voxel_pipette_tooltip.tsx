@@ -12,6 +12,7 @@ import {
   getColorLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getCurrentMagIndex,
   getPosition,
@@ -135,9 +136,16 @@ export default function VoxelValueTooltip() {
           // This is not ideal, but the downsides should be negligible (e.g., when
           // zooming, the data value won't be read again with the changed mag).
           const magIndex = getCurrentMagIndex(Store.getState(), layer.name);
+          const positionInLayer = globalToLayerTransformedPosition(
+            positionToPick,
+            layer.name,
+            layer.category,
+            Store.getState(),
+          );
+
           const dataValue = await api.data.getDataValue(
             layer.name,
-            positionToPick.map((el) => Math.floor(el)) as Vector3,
+            positionInLayer.map((el) => Math.floor(el)) as Vector3,
             magIndex,
             additionalCoordinates,
           );

@@ -4,24 +4,30 @@ import { Tooltip } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
+import _ from "lodash";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import type { OrthoView, Vector3 } from "viewer/constants";
-import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
+import {
+  getColorLayers,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  getCurrentMagIndex,
+  getPosition,
+  getRotationInRadian,
+} from "viewer/model/accessors/flycam_accessor";
 import {
   calculateInViewportPos,
   calculateMaybePlaneScreenPos,
   getGlobalMousePosition,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
+import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { api } from "viewer/singletons";
-
-const TOOLTIP_HEIGHT = 48;
-const ADDITIONAL_OFFSET = 12;
+import { Store, api } from "viewer/singletons";
 
 function VoxelValueEntry({ layerName, value }: { layerName: string; value: string }) {
   return (
@@ -62,6 +68,8 @@ export default function VoxelValueTooltip() {
   const lastMeasuredGlobalPosition = useWkSelector(
     (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
   );
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
   const flycamPosition = useWkSelector((state) => getPosition(state.flycam));
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
@@ -110,6 +118,8 @@ export default function VoxelValueTooltip() {
   ]);
 
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
+  const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
+  const layers = _.compact([visibleSegmentationLayer, ...colorLayers]);
 
   const layerNamesWithDataValue = useFetch(
     async () => {
@@ -118,14 +128,19 @@ export default function VoxelValueTooltip() {
       }
 
       return Promise.all(
-        colorLayers.map(async (layer) => {
+        layers.map(async (layer) => {
+          // getCurrentMagIndex depends on the current state, but we don't
+          // want to refetch these data values here every time the state changes.
+          // This is not ideal, but the downsides should be negligible (e.g., when
+          // zooming, the data value won't be read again with the changed mag).
+          const magIndex = getCurrentMagIndex(Store.getState(), layer.name);
           const dataValue = await api.data.getDataValue(
             layer.name,
             positionToPick.map((el) => Math.floor(el)) as Vector3,
-            0,
+            magIndex,
             null,
           );
-          return [layer.name, dataValue];
+          return [getReadableNameForLayerName(dataset, annotation, layer.name), dataValue];
         }),
       );
     },

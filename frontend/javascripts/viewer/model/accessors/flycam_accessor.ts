@@ -424,6 +424,24 @@ export function getCurrentMag(
   return magInfo.getMagByIndex(existingMagIndex);
 }
 
+/*
+  Returns the mag index that is supposed to be rendered for the given layer. The return mag
+  is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
+  because no appropriate mag exists.
+ */
+export function getCurrentMagIndex(
+  state: WebknossosState,
+  layerName: string,
+): number | null | undefined {
+  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).mags);
+  const magIndex = getActiveMagIndexForLayer(state, layerName);
+  const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
+  if (existingMagIndex == null) {
+    return null;
+  }
+  return existingMagIndex;
+}
+
 function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {
   const maxOfLayers = _.max(
     getDataLayers(state.dataset).map((layer) => {

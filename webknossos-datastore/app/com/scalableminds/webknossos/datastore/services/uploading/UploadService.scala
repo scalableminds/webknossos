@@ -349,12 +349,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       }
     } yield ()
 
-  def finishUpload(uploadInformation: UploadInformation)(implicit tc: TokenContext): Fox[ObjectId] = {
+  def finishUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = {
     val uploadId = uploadInformation.uploadId
 
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
-      datasetId <- getDatasetIdByUploadId(uploadId)
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
@@ -389,7 +388,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           linkedLayerIdentifiers.layersToLink.getOrElse(List.empty)
         )
       ) ?~> "reportUpload.failed"
-    } yield datasetId
+    } yield ()
   }
 
   private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: UsableDataSource): Fox[Unit] =

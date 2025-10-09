@@ -78,77 +78,77 @@ class DSRemoteWebknossosClient @Inject()(
 
   private def reportStatus(): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
   def reportDataSource(dataSource: DataSource): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .putJson(dataSource)
 
   def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
       unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedUploadsForUser")
-        .addQueryString("key" -> dataStoreKey)
-        .addQueryString("organizationName" -> organizationName)
+        .addQueryParam("key", dataStoreKey)
+        .addQueryParam("organizationName", organizationName)
         .withTokenFromContext
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
   def reportUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
-      .addQueryString("key" -> dataStoreKey)
-      .addQueryString("datasetId" -> datasetId.toString)
+      .addQueryParam("key", dataStoreKey)
+      .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
 
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
-      .addQueryString("key" -> dataStoreKey)
-      .addQueryStringOptional("organizationId", organizationId)
+      .addQueryParam("key", dataStoreKey)
+      .addQueryParam("organizationId", organizationId)
       .silent
       .putJson(dataSources)
 
   def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)
 
   def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId/paths")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .getWithJsonResponse[List[LayerMagLinkInfo]]
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
     for {
       reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
-        .addQueryString("key" -> dataStoreKey)
+        .addQueryParam("key", dataStoreKey)
         .withTokenFromContext
         .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
     } yield reserveUploadInfo
 
   def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .putJson(dataSource)
 
   def deleteDataset(datasetId: ObjectId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .postJson(datasetId)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
-      .addQueryString("jobId" -> jobId)
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("jobId", jobId)
+      .addQueryParam("key", dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
-      .addQueryString("key" -> dataStoreKey)
+      .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
@@ -159,7 +159,7 @@ class DSRemoteWebknossosClient @Inject()(
       _ =>
         for {
           tracingStoreInfo <- rpc(s"$webknossosUri/api/tracingstore")
-            .addQueryString("key" -> dataStoreKey)
+            .addQueryParam("key", dataStoreKey)
             .getWithJsonResponse[TracingStoreInfo]
         } yield tracingStoreInfo.url
     )
@@ -174,8 +174,8 @@ class DSRemoteWebknossosClient @Inject()(
       (accessToken, tc.userTokenOpt),
       _ =>
         rpc(s"$webknossosUri/api/annotations/source/$accessToken")
-          .addQueryString("key" -> dataStoreKey)
-          .addQueryStringOptional("userToken", tc.userTokenOpt)
+          .addQueryParam("key", dataStoreKey)
+          .addQueryParam("userToken", tc.userTokenOpt)
           .getWithJsonResponse[AnnotationSource]
     )
 
@@ -187,8 +187,8 @@ class DSRemoteWebknossosClient @Inject()(
       credentialId,
       _ =>
         rpc(s"$webknossosUri/api/datastores/$dataStoreName/findCredential")
-          .addQueryString("credentialId" -> credentialId)
-          .addQueryString("key" -> dataStoreKey)
+          .addQueryParam("credentialId", credentialId)
+          .addQueryParam("key", dataStoreKey)
           .silent
           .getWithJsonResponse[DataVaultCredential]
     )
@@ -196,7 +196,7 @@ class DSRemoteWebknossosClient @Inject()(
   def getDataSource(datasetId: ObjectId): Fox[DataSource] =
     for {
       dataSource <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId")
-        .addQueryString("key" -> dataStoreKey)
+        .addQueryParam("key", dataStoreKey)
         .getWithJsonResponse[DataSource] ?~> "Failed to get data source from remote webknossos"
     } yield dataSource
 
@@ -208,9 +208,9 @@ class DSRemoteWebknossosClient @Inject()(
       (organizationId, datasetDirectoryName),
       _ =>
         rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetId")
-          .addQueryString("key" -> dataStoreKey)
-          .addQueryString("organizationId" -> organizationId)
-          .addQueryString("datasetDirectoryName" -> datasetDirectoryName)
+          .addQueryParam("key", dataStoreKey)
+          .addQueryParam("organizationId", organizationId)
+          .addQueryParam("datasetDirectoryName", datasetDirectoryName)
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
 }

@@ -56,21 +56,21 @@ class TSRemoteWebknossosClient @Inject()(
 
   def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdatesReport): Fox[WSResponse] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("key", tracingStoreKey)
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
 
   def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")
-      .addQueryString("annotationId" -> annotationId.toString)
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("annotationId", annotationId)
+      .addQueryParam("key", tracingStoreKey)
       .withTokenFromContext
       .silent
       .getWithJsonResponse[UsableDataSource]
 
   def getDataStoreUriForDataset(datasetId: ObjectId): Fox[String] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataStoreUri/$datasetId")
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("key", tracingStoreKey)
       .silent
       .getWithJsonResponse[String]
 
@@ -79,8 +79,8 @@ class TSRemoteWebknossosClient @Inject()(
       annotationId,
       aId =>
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasetId")
-          .addQueryString("annotationId" -> aId.toString)
-          .addQueryString("key" -> tracingStoreKey)
+          .addQueryParam("annotationId", aId)
+          .addQueryParam("key", tracingStoreKey)
           .silent
           .getWithJsonResponse[ObjectId]
     )
@@ -90,16 +90,16 @@ class TSRemoteWebknossosClient @Inject()(
       tracingId,
       tracingId =>
         rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/annotationId")
-          .addQueryString("tracingId" -> tracingId)
-          .addQueryString("key" -> tracingStoreKey)
+          .addQueryParam("tracingId", tracingId)
+          .addQueryParam("key", tracingStoreKey)
           .silent
           .getWithJsonResponse[ObjectId]
     ) ?~> "annotation.idForTracing.failed"
 
   def updateAnnotation(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")
-      .addQueryString("annotationId" -> annotationId.toString)
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("annotationId", annotationId)
+      .addQueryParam("key", tracingStoreKey)
       .silent
       .postProto(annotationProto)
 
@@ -107,9 +107,9 @@ class TSRemoteWebknossosClient @Inject()(
                        layerParameters: AnnotationLayerParameters,
                        previousVersion: Long): Fox[Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = {
     val req = rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/createTracing")
-      .addQueryString("annotationId" -> annotationId.toString)
-      .addQueryString("previousVersion" -> previousVersion.toString) // used for fetching old precedence layers
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("annotationId", annotationId)
+      .addQueryParam("previousVersion", previousVersion) // used for fetching old precedence layers
+      .addQueryParam("key", tracingStoreKey)
     layerParameters.typ match {
       case AnnotationLayerType.Volume =>
         req
@@ -127,7 +127,7 @@ class TSRemoteWebknossosClient @Inject()(
 
   override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")
-      .addQueryString("key" -> tracingStoreKey)
+      .addQueryParam("key", tracingStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }

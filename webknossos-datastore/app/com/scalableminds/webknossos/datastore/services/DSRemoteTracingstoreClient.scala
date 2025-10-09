@@ -43,7 +43,7 @@ class DSRemoteTracingstoreClient @Inject()(
                                 zarrVersion: Int)(implicit tc: TokenContext): Fox[StaticSegmentationLayer] = {
     val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
     rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource").withTokenFromContext
-      .addQueryStringOptional("tracingName", tracingName)
+      .addQueryParam("tracingName", tracingName)
       .getWithJsonResponse[StaticSegmentationLayer]
   }
 
@@ -76,7 +76,7 @@ class DSRemoteTracingstoreClient @Inject()(
   def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String, tracingId: String, agglomerateId: Long)(
       implicit tc: TokenContext): Fox[EditableMappingSegmentListResult] =
     rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
-      .addQueryString("agglomerateId" -> agglomerateId.toString)
+      .addQueryParam("agglomerateId", agglomerateId)
       .withTokenFromContext
       .silent
       .getWithJsonResponse[EditableMappingSegmentListResult]

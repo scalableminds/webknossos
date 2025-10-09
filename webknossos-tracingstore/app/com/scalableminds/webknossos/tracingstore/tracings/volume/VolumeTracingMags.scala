@@ -51,7 +51,4 @@ case class MagRestrictions(
     min.getOrElse(0) <= mag.maxDim && max.getOrElse(Int.MaxValue) >= mag.maxDim
 
   def isForbidden(mag: Vec3Int): Boolean = !isAllowed(mag)
-
-  def minStr: Option[String] = min.map(_.toString)
-  def maxStr: Option[String] = max.map(_.toString)
 }

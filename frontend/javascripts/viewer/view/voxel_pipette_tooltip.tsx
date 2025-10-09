@@ -143,21 +143,27 @@ export default function VoxelValueTooltip() {
   // state.temporaryConfiguration.hoveredSegmentId
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
+  const tooltipHeight = tooltipRef.current?.offsetHeight ?? 0;
+
+  const OFFSET = 2;
+
+  // Position tooltip just below and to the left of the cursor
   const left = clamp(
-    viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
-    tooltipPosition[0] + ADDITIONAL_OFFSET,
-    viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
+    viewportLeft - tooltipWidth - OFFSET, // min
+    tooltipPosition[0] - tooltipWidth - OFFSET, // desired position (left of cursor, small offset)
+    viewportLeft + viewportWidth + tooltipWidth - OFFSET, // max (stay in viewport)
   );
+
   const top = clamp(
-    viewportTop + ADDITIONAL_OFFSET,
-    tooltipPosition[1] - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-    viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    viewportTop + OFFSET, // min
+    tooltipPosition[1] + OFFSET, // just below cursor
+    viewportTop + viewportHeight + tooltipHeight - OFFSET, // max
   );
 
   return (
     <div
       ref={tooltipRef}
-      className="node-context-menu measurement-tooltip"
+      className="node-context-menu voxel-picker-tooltip"
       style={{
         left,
         top,

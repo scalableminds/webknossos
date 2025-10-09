@@ -179,7 +179,7 @@
   pointer-events: all;
   border-radius: 6px 6px 6px 0px;
   padding: 2px 4px;
-  font-size: 14;
+  font-size: 14px;
   overflow: hidden;
 
   :after {
@@ -187,6 +187,28 @@
     position: absolute;
     top: 48px;
     left: -6px;
+    height: 12px;
+    width: 12px;
+    transform: rotate(45deg);
+    background-color: var(--ant-color-text);
+  }
+}
+
+.voxel-picker-tooltip {
+  position: absolute;
+  width: fit-content;
+  pointer-events: all;
+  border-radius: 6px 0px 6px 6px;
+  padding: 2px 4px;
+  font-size: 14px;
+  overflow: hidden;
+
+  /* Arrow pointing UP and RIGHT */
+  &:after {
+    content: "";
+    position: absolute;
+    top: -6px;         /* Position above tooltip */
+    right: -6px;       /* On the far right */
     height: 12px;
     width: 12px;
     transform: rotate(45deg);

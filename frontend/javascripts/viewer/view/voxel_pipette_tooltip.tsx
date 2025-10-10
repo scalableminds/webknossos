@@ -167,7 +167,8 @@ export default function VoxelValueTooltip() {
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const tooltipHeight = tooltipRef.current?.offsetHeight ?? 0;
 
-  const OFFSET = 2;
+  // If the tooltip is pinned, there should be only a very small offset
+  const OFFSET = lastMeasuredGlobalPosition == null ? 8 : 1;
 
   // Position tooltip just below and to the left of the cursor
   const left = clamp(

@@ -18,8 +18,8 @@ export function TooManyBucketsWarning(): React.ReactNode {
   }, []);
   useInterval(() => {
     UserLocalStorage.setItem("suppressBucketWarning", "false");
-    console.log("resetting suppressBucketWarning to false every 60s for dev purposes");
-  }, 60 * 1000); //TODO_C dev
+    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
+  }, 120 * 1000); //TODO_C dev
 
   const onClose = () => {
     notificationAPIRef.current?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
@@ -51,7 +51,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
     </Button>
   );
   const footer = (
-    <div className="many-buckets-warning">
+    <div>
       <Space>
         {linkToDocsButton}
         {closeButton}
@@ -62,7 +62,6 @@ export function TooManyBucketsWarning(): React.ReactNode {
   const showWarningToast = () => {
     const supressTooManyBucketsWarning = UserLocalStorage.getItem("suppressBucketWarning");
     if (notificationAPIRef.current == null) {
-      console.log("notificationAPI is null, cannot show toast");
       return null;
     }
     if (supressTooManyBucketsWarning !== "true") {
@@ -81,6 +80,8 @@ export function TooManyBucketsWarning(): React.ReactNode {
           className: "many-buckets-warning",
         },
       );
+    } else if (supressTooManyBucketsWarning === "true") {
+      console.log("suppressBucketWarning is true, not showing warning toast");
     }
   };
   useReduxActionListener("SHOW_TOO_MANY_BUCKETS_WARNING_TOAST", () => showWarningToast());

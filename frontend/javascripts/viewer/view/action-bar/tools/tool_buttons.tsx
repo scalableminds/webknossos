@@ -262,14 +262,10 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
 
 export function PickCellTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
-  if (!isVolumeModificationAllowed) {
-    return null;
-  }
   return (
     <ToolRadioButton
       name={AnnotationTool.PICK_CELL.readableName}
-      description="Click on a voxel to make its segment id the active segment id."
+      description="Inspect the data values of a voxel. Clicking on a voxel with a segment id makes that id the active segment id."
       disabledExplanation={disabledInfosForTools[AnnotationTool.PICK_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.PICK_CELL.id].isDisabled}
       value={AnnotationTool.PICK_CELL.id}

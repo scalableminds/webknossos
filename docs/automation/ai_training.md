@@ -27,11 +27,10 @@ To start a training, click on the `AI Analysis` button in the toolbar and select
 This will open a dialog where you can configure and start your training job.
 ### Select AI Training Task
 
-First, you need to select the type of model you want to train. Both models are optiimized for SEM, FIB-SEM, SBEM, and Multi-SEM microscopes:
+First, you need to select the type of model you want to train. Both models are optimized for SEM, FIB-SEM, SBEM, and Multi-SEM microscopes:
 
 *   **EM Neuron Model:** Train a new AI model for dense EM neuron segmentation.
 *   **EM Instances Model:** Train a new AI model for EM instance segmentation. This is optimized for nuclei, mitochondria, and other cell types.
-
 ### Training Data
 
 In this section, you need to specify the data that will be used for training.

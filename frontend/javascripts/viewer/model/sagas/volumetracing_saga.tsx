@@ -22,7 +22,10 @@ import {
   isTraceTool,
   isVolumeDrawingTool,
 } from "viewer/model/accessors/tool_accessor";
-import { getGlobalMousePosition } from "viewer/model/accessors/view_mode_accessor";
+import {
+  getGlobalMousePosition,
+  getGlobalMousePositionFloating,
+} from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -612,7 +615,7 @@ function* updateHoveredSegmentId(): Saga<void> {
     return;
   }
 
-  const globalMousePosition = yield* select(getGlobalMousePosition);
+  const globalMousePosition = yield* select(getGlobalMousePositionFloating);
   const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,

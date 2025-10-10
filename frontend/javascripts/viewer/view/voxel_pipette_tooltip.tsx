@@ -163,8 +163,6 @@ export default function VoxelValueTooltip() {
 
   const voxelValuesByLayer: Record<string, string> | null =
     layerNamesWithDataValue != null ? Object.fromEntries(layerNamesWithDataValue) : null;
-  // todop: integrate
-  // state.temporaryConfiguration.hoveredSegmentId
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const tooltipHeight = tooltipRef.current?.offsetHeight ?? 0;

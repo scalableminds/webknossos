@@ -132,17 +132,24 @@ export function handlePickCellFromGlobalPosition(
   globalPos: Vector3,
   additionalCoordinates: AdditionalCoordinate[],
 ) {
-  const segmentId = getSegmentIdForPosition(globalPos);
-
-  if (segmentId === 0) {
-    return;
-  }
-  Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
-
   const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
   if (visibleSegmentationLayer == null) {
     return;
   }
+  const posInLayerSpace = globalToLayerTransformedPosition(
+    globalPos,
+    visibleSegmentationLayer.name,
+    "segmentation",
+    Store.getState(),
+  );
+
+  const segmentId = getSegmentIdForPosition(posInLayerSpace);
+
+  if (segmentId === 0) {
+    return;
+  }
+  Store.dispatch(setActiveCellAction(segmentId, posInLayerSpace, additionalCoordinates));
+
   Store.dispatch(
     updateSegmentAction(
       segmentId,

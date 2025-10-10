@@ -25,6 +25,7 @@ import Store from "viewer/store";
 import Deferred from "libs/async/deferred";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
+import { getSegmentIdForPosition } from "./controller/combinations/volume_handlers";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
 
@@ -167,18 +168,18 @@ export class WebKnossosModel {
 
   getCurrentlyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3 | null | undefined,
+    positionInLayerSpace: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
 
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
-    if (position == null) return zoomStep;
+    if (positionInLayerSpace == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
     const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );
@@ -187,7 +188,7 @@ export class WebKnossosModel {
 
   async getUltimatelyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3,
+    positionInLayerSpace: Vector3,
   ): Promise<number> {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
@@ -196,7 +197,7 @@ export class WebKnossosModel {
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );

@@ -289,6 +289,20 @@ function _calculateGlobalPos(
   return positions;
 }
 
+function _getGlobalMousePositionFloating(state: WebknossosState) {
+  const { activeViewport } = state.viewModeData.plane;
+  const { mousePosition } = state.temporaryConfiguration;
+  if (mousePosition && activeViewport !== OrthoViews.TDView) {
+    const [x, y] = mousePosition;
+    return calculateGlobalPos(state, {
+      x,
+      y,
+    }).floating;
+  }
+
+  return undefined;
+}
+
 function _getGlobalMousePosition(state: WebknossosState) {
   const { activeViewport } = state.viewModeData.plane;
   const { mousePosition } = state.temporaryConfiguration;
@@ -354,6 +368,10 @@ export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelt
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
 export const calculateInViewportPos = reuseInstanceOnEquality(_calculateInViewportPos);
 export const getGlobalMousePosition = reuseInstanceOnEquality(_getGlobalMousePosition);
+export const getGlobalMousePositionFloating = reuseInstanceOnEquality(
+  _getGlobalMousePositionFloating,
+);
+
 export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

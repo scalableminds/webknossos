@@ -157,8 +157,6 @@ class PushQueue {
       Store.dispatch(pushSaveQueueTransaction(items));
       Store.dispatch(notifyAboutUpdateBucketAction(items.length));
       console.log("notify about ", items.length, " items");
-      // todo_c dispatch new action to count items including number. track the sum in sliding window of 120s
-      // todo_c research data structure for sliding window
       this.compressingBucketCount -= batch.length;
     } catch (error) {
       // See other usage of escalateErrorAction for a detailed explanation.

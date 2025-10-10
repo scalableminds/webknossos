@@ -1,5 +1,4 @@
 import { Button, Radio, Space } from "antd";
-import LinkButton from "components/link_button";
 import { useInterval } from "libs/react_helpers";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
@@ -33,28 +32,31 @@ export function TooManyBucketsWarning(): React.ReactNode {
   const linkToDocs =
     "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
   const neverShowAgainRadioButton = (
-    <Radio onClick={toggleNeverShowAgain}>Never show this again</Radio>
+    <Radio onClick={toggleNeverShowAgain} style={{ marginTop: "8px", marginBottom: "5px" }}>
+      Never show this again
+    </Radio>
   );
   const closeButton = (
     <Button
       onClick={() => {
         onClose();
       }}
-      type="primary"
     >
       Close
     </Button>
   );
   const linkToDocsButton = (
-    <LinkButton href={linkToDocs} target="_blank" rel="noopener noreferrer">
+    <Button href={linkToDocs} target="_blank" rel="noopener noreferrer" type="primary">
       See docs
-    </LinkButton>
+    </Button>
   );
   const footer = (
-    <Space>
-      {linkToDocsButton}
-      {closeButton}
-    </Space>
+    <div className="many-buckets-warning">
+      <Space>
+        {linkToDocsButton}
+        {closeButton}
+      </Space>
+    </div>
   );
 
   const showWarningToast = () => {
@@ -71,7 +73,13 @@ export function TooManyBucketsWarning(): React.ReactNode {
           <br />
           {neverShowAgainRadioButton}
         </>,
-        { customFooter: footer, key: TOO_MANY_BUCKETS_TOAST_KEY, sticky: true, onClose },
+        {
+          customFooter: footer,
+          key: TOO_MANY_BUCKETS_TOAST_KEY,
+          sticky: true,
+          onClose,
+          className: "many-buckets-warning",
+        },
       );
     }
   };

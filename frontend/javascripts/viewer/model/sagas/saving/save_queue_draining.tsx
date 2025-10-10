@@ -161,7 +161,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
 
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);
-        // todo_c check old save queue here
       } catch (error) {
         // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
         console.warn("Error when marking buckets as clean. No retry possible. Error:", error);

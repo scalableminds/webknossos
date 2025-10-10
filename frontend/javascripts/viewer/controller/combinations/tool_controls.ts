@@ -586,10 +586,35 @@ export class EraseToolController {
 export class PickCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        VolumeHandlers.handlePickCell(pos);
+      mouseMove: (
+        _delta: Point2,
+        position: Point2,
+        plane: OrthoView | null | undefined,
+        event: MouseEvent,
+      ) => {
+        MoveHandlers.moveWhenAltIsPressed(_delta, position, plane, event);
+        // lineMeasurementGeometry.updateLatestPointPosition(newPos);
+      },
+      leftClick: (position: Point2, plane: OrthoView, _event: MouseEvent) => {
+        const state = Store.getState();
+        const lastMeasuredGlobalPosition =
+          state.uiInformation.measurementToolInfo.lastMeasuredPosition;
+
+        if (lastMeasuredGlobalPosition == null) {
+          const globalPosition = calculateGlobalPos(state, position, plane).floating;
+          Store.dispatch(setLastMeasuredPositionAction(globalPosition));
+        } else {
+          Store.dispatch(hideMeasurementTooltipAction());
+        }
+        // todop
+        VolumeHandlers.handlePickCell(position);
+        Store.dispatch(setIsMeasuringAction(true));
       },
     };
+  }
+
+  static onToolDeselected() {
+    Store.dispatch(hideMeasurementTooltipAction());
   }
 
   static getActionDescriptors(
@@ -605,8 +630,6 @@ export class PickCellToolController {
       rightClick: "Context Menu",
     };
   }
-
-  static onToolDeselected() {}
 }
 export class FillCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {

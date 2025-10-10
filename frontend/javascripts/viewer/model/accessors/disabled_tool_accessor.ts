@@ -91,6 +91,7 @@ const getExplanationForDisabledVolume = (
 const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.PICK_CELL.id]: NOT_DISABLED_INFO,
 };
 
 function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
@@ -211,7 +212,6 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationTool.ERASE_TRACE.id]: disabledInfo,
     [AnnotationTool.FILL_CELL.id]: disabledInfo,
     [AnnotationTool.QUICK_SELECT.id]: disabledInfo,
-    [AnnotationTool.PICK_CELL.id]: disabledInfo,
     [AnnotationTool.PROOFREAD.id]: {
       isDisabled: isVolumeDisabled,
       explanation: genericDisabledExplanation,

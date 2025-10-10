@@ -2,7 +2,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "viewer/constants";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
@@ -22,7 +22,10 @@ import {
   isTraceTool,
   isVolumeDrawingTool,
 } from "viewer/model/accessors/tool_accessor";
-import { calculateMaybeGlobalPos } from "viewer/model/accessors/view_mode_accessor";
+import {
+  getGlobalMousePosition,
+  getGlobalMousePositionFloating,
+} from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -605,22 +608,6 @@ function* maintainSegmentsMap(): Saga<void> {
   );
 }
 
-function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
-  return yield* select((state) => {
-    const mousePosition = state.temporaryConfiguration.mousePosition;
-
-    if (mousePosition) {
-      const [x, y] = mousePosition;
-      return calculateMaybeGlobalPos(state, {
-        x,
-        y,
-      })?.rounded;
-    }
-
-    return undefined;
-  });
-}
-
 function* updateHoveredSegmentId(): Saga<void> {
   const activeViewport = yield* select((store) => store.viewModeData.plane.activeViewport);
 
@@ -628,7 +615,7 @@ function* updateHoveredSegmentId(): Saga<void> {
     return;
   }
 
-  const globalMousePosition = yield* call(getGlobalMousePosition);
+  const globalMousePosition = yield* select(getGlobalMousePositionFloating);
   const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,

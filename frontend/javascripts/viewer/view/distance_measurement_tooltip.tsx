@@ -14,7 +14,7 @@ import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   calculateInViewportPos,
   calculateMaybePlaneScreenPos,
@@ -122,11 +122,7 @@ export default function DistanceMeasurementTooltip() {
     activeGeometry.resetAndHide,
   ]);
 
-  if (
-    lastMeasuredGlobalPosition == null ||
-    tooltipPosition == null ||
-    !MeasurementTools.includes(activeTool)
-  ) {
+  if (lastMeasuredGlobalPosition == null || tooltipPosition == null) {
     return null;
   }
 

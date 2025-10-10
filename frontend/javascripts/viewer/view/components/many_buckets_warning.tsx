@@ -10,6 +10,7 @@ const TOO_MANY_BUCKETS_TOAST_KEY = "tooManyBucketsWarningModal";
 export function TooManyBucketsWarning(): React.ReactNode {
   const notificationAPIRef = useRef(Toast.notificationAPI);
   const neverShowAgainRef = useRef(false);
+  const dontShowAgainInThisSessionRef = useRef(false);
 
   useEffect(() => {
     if (Toast.notificationAPI != null) {
@@ -23,6 +24,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
 
   const onClose = () => {
     notificationAPIRef.current?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
+    dontShowAgainInThisSessionRef.current = true;
     UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.current.toString());
   };
   const toggleNeverShowAgain = () => (neverShowAgainRef.current = !neverShowAgainRef.current);
@@ -64,7 +66,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
     if (notificationAPIRef.current == null) {
       return null;
     }
-    if (supressTooManyBucketsWarning !== "true") {
+    if (supressTooManyBucketsWarning !== "true" && dontShowAgainInThisSessionRef.current !== true) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);
       Toast.warning(
         <>
@@ -80,8 +82,8 @@ export function TooManyBucketsWarning(): React.ReactNode {
           className: "many-buckets-warning",
         },
       );
-    } else if (supressTooManyBucketsWarning === "true") {
-      console.log("suppressBucketWarning is true, not showing warning toast");
+    } else {
+      console.log("suppressing warning toast");
     }
   };
   useReduxActionListener("SHOW_TOO_MANY_BUCKETS_WARNING_TOAST", () => showWarningToast());

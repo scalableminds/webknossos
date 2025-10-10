@@ -42,7 +42,7 @@ export function* setupSavingToServer(): Saga<void> {
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
-const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 60 * 1000; //todo_c after dev 120s
+const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 6 * 1000; //todo_c after dev 120s
 
 function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
@@ -53,7 +53,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
     () => {
       const sumOfBuckets = _.sum(currentBuckets);
       console.log(
-        "new time interval is starting, resetting. before reset: buckets in last interval: ",
+        "buckets in last interval: ",
         bucketsForCurrentInterval,
         "currentBucketsArray: ",
         currentBuckets,

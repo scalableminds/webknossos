@@ -1,50 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Misc APIs (E2E)  > activeUser() 1`] = `
-{
-  "created": "created",
-  "email": "user_a@scalableminds.com",
-  "experiences": {
-    "abc": 5,
-  },
-  "firstName": "user_A",
-  "id": "id",
-  "isActive": true,
-  "isAdmin": true,
-  "isAnonymous": false,
-  "isDatasetManager": true,
-  "isEditable": true,
-  "isEmailVerified": true,
-  "isGuest": false,
-  "isOrganizationOwner": true,
-  "isSuperUser": true,
-  "isUnlisted": false,
-  "lastActivity": "lastActivity",
-  "lastName": "last_A",
-  "lastTaskTypeId": null,
-  "novelUserExperienceInfos": {},
-  "organization": "Organization_X",
-  "selectedTheme": "auto",
-  "teams": [
-    {
-      "id": "id",
-      "isTeamManager": true,
-      "name": "team_X1",
-    },
-    {
-      "id": "id",
-      "isTeamManager": false,
-      "name": "team_X3",
-    },
-    {
-      "id": "id",
-      "isTeamManager": true,
-      "name": "team_X4",
-    },
-  ],
-}
-`;
-
 exports[`Misc APIs (E2E)  > datastores() 1`] = `
 [
   {
@@ -61,6 +16,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
 {
   "alignmentCostPerGVx": 0.5,
   "allowDeleteDatasets": true,
+  "bucketSaveWarningThreshold": 1000,
   "costPerCreditInDollar": 5.75,
   "costPerCreditInEuro": 5,
   "defaultToLegacyBindings": false,

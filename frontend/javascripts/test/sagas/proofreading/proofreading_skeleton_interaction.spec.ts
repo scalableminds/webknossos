@@ -8,7 +8,12 @@ import {
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
-import { type SkeletonTracing, startSaga, type WebknossosState } from "viewer/store";
+import {
+  type NumberLike,
+  type SkeletonTracing,
+  startSaga,
+  type WebknossosState,
+} from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
 import {
@@ -17,8 +22,11 @@ import {
 } from "./proofreading_test_utils";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { TreeTypeEnum } from "viewer/constants";
+import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
+import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
+import type { MinCutTargetEdge } from "admin/rest_api";
+import _ from "lodash";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,
@@ -132,6 +140,99 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
 
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 }
+
+function* performMinCutWithNodesProofreading(
+  context: WebknossosTestContext,
+): Generator<any, void, any> {
+  const { api } = context;
+  const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+  yield call(initializeMappingAndTool, context, tracingId);
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(initialMapping);
+
+  // Set up the merge-related segment partners. Normally, this would happen
+  // due to the user's interactions.
+  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(setActiveCellAction(1));
+
+  yield call(createEditableMapping);
+
+  // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+  const mapping1 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping1).toEqual(initialMapping);
+  // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+  // TODOM: Support integrating this action, if it originates from this user.
+  yield put(setOthersMayEditForAnnotationAction(true));
+  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+  vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+  yield call(loadAgglomerateSkeletonAtPosition, [3, 3, 3]);
+  // Wait until skeleton saga has loaded the skeleton.
+  yield take("ADD_TREES_AND_GROUPS");
+  yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+  const skeletonWithAgglomerateTrees: SkeletonTracing = yield select(
+    (state: WebknossosState) => state.annotation.skeleton,
+  );
+  const agglomerateTrees = Array.from(
+    skeletonWithAgglomerateTrees.trees
+      .values()
+      .filter((tree) => tree.type === TreeTypeEnum.AGGLOMERATE),
+  );
+  expect(agglomerateTrees.length).toBe(1);
+  const targetNode = agglomerateTrees[0].nodes.getOrThrow(5);
+  expect(targetNode.untransformedPosition).toStrictEqual([2, 2, 2]);
+  const sourceNode = agglomerateTrees[0].nodes.getOrThrow(6);
+  expect(sourceNode.untransformedPosition).toStrictEqual([3, 3, 3]);
+  const a = context.receivedDataPerSaveRequest;
+  console.log(a);
+  yield put(minCutAgglomerateAction(sourceNode.id, targetNode.id));
+
+  yield take("FINISH_MAPPING_INITIALIZATION");
+
+  yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+}
+
+const mockEdgesForAgglomerateMinCut = (
+  mocks: WebknossosTestContext["mocks"],
+  onlyThreeOneEdge: boolean = false,
+) =>
+  vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      segmentsInfo: {
+        partition1: NumberLike[];
+        partition2: NumberLike[];
+        mag: Vector3;
+        agglomerateId: NumberLike;
+        editableMappingId: string;
+      },
+    ): Promise<Array<MinCutTargetEdge>> => {
+      const { agglomerateId, partition1, partition2 } = segmentsInfo;
+      if (agglomerateId === 1 && _.isEqual(partition1, [3]) && _.isEqual(partition2, [2])) {
+        return [
+          {
+            position1: [3, 3, 3],
+            position2: [2, 2, 2],
+            segmentId1: 3,
+            segmentId2: 2,
+          } as MinCutTargetEdge,
+          onlyThreeOneEdge
+            ? undefined
+            : ({
+                position1: [3, 3, 3],
+                position2: [1, 1, 1],
+                segmentId1: 3,
+                segmentId2: 1,
+              } as MinCutTargetEdge),
+        ].filter((a) => a != null);
+      }
+      throw new Error("Unexpected min cut request");
+    },
+  );
 
 // TODOM: wait for agglomerate skeleton being properly loaded and then continue to do a proofreading action with it.
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
@@ -428,13 +529,167 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     await task.toPromise();
   });
+
+  it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+    // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
+    // Mock backend answer telling saga to split edges 3-2 and 3-1.
+    mockEdgesForAgglomerateMinCut(context.mocks);
+
+    backendMock.planVersionInjection(8, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 5,
+          segmentId2: 6,
+          agglomerateId1: 4,
+          agglomerateId2: 6,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield performMinCutWithNodesProofreading(context);
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
+      );
+
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1339],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should try to min cut agglomerate via node ids but interfering merge adds new edge. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
+    // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
+    // Mock backend answer telling saga to split edges 3-2 and 3-1.
+    mockEdgesForAgglomerateMinCut(context.mocks);
+
+    // Directly after saving that the agglomerate trees were loaded, inject a version which adds a new edge to agglomerate 1.
+    backendMock.planVersionInjection(8, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 3,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield performMinCutWithNodesProofreading(context);
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
+      );
+
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should try to min cut agglomerate via node ids but interfering merge adds new edge which is not cut. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // Mock backend answer telling saga to split edges 3-2.
+    const onlyThreeOneEdge = true;
+    mockEdgesForAgglomerateMinCut(context.mocks, onlyThreeOneEdge);
+
+    // Directly after saving that the agglomerate trees were loaded, inject a version which adds a new edge to agglomerate 1.
+    // Thus, the split operation should be incomplete resulting in no split at all.
+    backendMock.planVersionInjection(8, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 3,
+          agglomerateId1: 1,
+          agglomerateId2: 1,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield performMinCutWithNodesProofreading(context);
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
+      );
+
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
   // TODO: code interleaving test where version is injected after agglomerate trees are created and before the merge.
 });
 
-// TODOM: Implement more tests for proofreading tree interactions.
-
 // TODOM: Write test for backend manipulating same agglomerate skeleton
 
-// TODO open skeleton interactions to test: ,["DELETE_EDGE", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
-// TODOM: write tests for cutFromAllNeighbours
-// TODOM: write tests for partitionedMinCut
+// TODOM: write tests for cutFromAllNeighbours -> new test file
+// TODOM: write tests for partitionedMinCut -> new test file

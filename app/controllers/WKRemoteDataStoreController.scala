@@ -246,7 +246,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
           magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
@@ -261,7 +261,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound" ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
@@ -271,7 +271,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!dataset.isVirtual)(
             datasetDAO.updateDataSource(datasetId,
                                         name,

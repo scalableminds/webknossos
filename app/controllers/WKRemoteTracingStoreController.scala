@@ -17,6 +17,7 @@ import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
 import models.user.UserDAO
 import models.user.time.TimeSpanService
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.GeneratedMessage
@@ -155,7 +156,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound" ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }
@@ -165,7 +166,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound" ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }

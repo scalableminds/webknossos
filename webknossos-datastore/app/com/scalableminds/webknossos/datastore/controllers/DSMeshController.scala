@@ -95,5 +95,4 @@ class DSMeshController @Inject()(
         } yield Ok(data)
       }
     }
-
 }

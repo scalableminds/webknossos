@@ -45,7 +45,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def addQueryParam(key: String, valueOptional: Option[String]): RPCRequest =
     valueOptional.map(addQueryParam(key, _)).getOrElse(this)
 
-  // ClassTags added to work around type erasure (otherwiese, all Option[x] variants would be indistinguishable)
+  // ClassTags added to work around type erasure (otherwise, all Option[x] variants would be indistinguishable)
   // Compare https://stackoverflow.com/a/3309490
   def addQueryParam[A: ClassTag](key: String, value: Option[Int]): RPCRequest =
     addQueryParam(key, value.map(_.toString))

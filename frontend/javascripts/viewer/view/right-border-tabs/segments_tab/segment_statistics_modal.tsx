@@ -21,11 +21,7 @@ import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
 import type { Segment } from "viewer/store";
-import {
-  type SegmentHierarchyGroup,
-  type SegmentHierarchyNode,
-  getVolumeRequestUrl,
-} from "./segments_view_helper";
+import type { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_view_helper";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
@@ -113,12 +109,12 @@ export function SegmentStatisticsModal({
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
-  const requestUrl = getVolumeRequestUrl(
+  const storeInfoType = {
     dataset,
     annotation,
-    visibleSegmentationLayer.tracingId,
-    visibleSegmentationLayer,
-  );
+    tracingId: visibleSegmentationLayer.tracingId,
+    segmentationLayerName: visibleSegmentationLayer.name,
+  };
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
@@ -135,7 +131,6 @@ export function SegmentStatisticsModal({
   const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
-      if (requestUrl == null) return;
       const maybeVolumeTracing =
         tracingId != null ? getVolumeTracingById(annotation, tracingId) : null;
       const maybeGetMappingName = () => {
@@ -149,14 +144,14 @@ export function SegmentStatisticsModal({
       const segmentIds = segments.map((segment) => segment.id);
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
-          requestUrl,
+          storeInfoType,
           layersFinestMag,
           segmentIds,
           additionalCoordinates,
           maybeGetMappingName(),
         ),
         getSegmentBoundingBoxes(
-          requestUrl,
+          storeInfoType,
           layersFinestMag,
           segmentIds,
           additionalCoordinates,

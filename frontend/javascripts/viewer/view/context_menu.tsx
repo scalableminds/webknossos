@@ -157,10 +157,7 @@ import type {
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
-import {
-  getVolumeRequestUrl,
-  withMappingActivationConfirmation,
-} from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
@@ -1707,26 +1704,26 @@ function ContextMenuInner() {
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return isLoadingLabelTuple;
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
-      const requestUrl = getVolumeRequestUrl(
+      const layerSourceInfo = {
         dataset,
         annotation,
         tracingId,
-        visibleSegmentationLayer,
-      );
+        segmentationLayerName: visibleSegmentationLayer.name,
+      };
       const magInfo = getMagInfo(visibleSegmentationLayer.mags);
       const layersFinestMag = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
-          requestUrl,
+          layerSourceInfo,
           layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          requestUrl,
+          layerSourceInfo,
           layersFinestMag,
           [clickedSegmentOrMeshId],
           additionalCoordinates,

@@ -1899,7 +1899,7 @@ function ContextMenuInner() {
   if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
     infoRows.push(
       getInfoMenuItem(
-        "volumeInfo",
+        "surfaceInfo",
         <>
           <i className="segment-context-icon">m²</i>
           Surface Area: {segmentSurfaceAreaLabel}

@@ -66,7 +66,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
       val credentialName: String = get[String]("datastore.s3Upload.credentialName")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton)
+    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton, S3Upload)
   }
 
   object SlackNotifications {

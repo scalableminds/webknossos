@@ -256,7 +256,7 @@ class WKRemoteTracingStoreClient(
                                    startVersion: Long): Fox[Long] =
     (editedMappingEdgesZip, editedMappingBaseMappingName) match {
       case (Some(zipfile), Some(baseMappingName)) =>
-        rpc(s"${tracingStore.url}/tracings/mapping/$newTracingId/save")
+        rpc(s"${tracingStore.url}/tracings/mapping/$newTracingId/save").withLongTimeout
           .addQueryParam("token", RpcTokenHolder.webknossosToken)
           .addQueryParam("annotationId", annotationId)
           .addQueryParam("baseMappingName", baseMappingName)

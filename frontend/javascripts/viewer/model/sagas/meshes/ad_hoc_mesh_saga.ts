@@ -23,7 +23,6 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { untransformNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshInfoForSegment,
@@ -181,14 +180,10 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
   // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
-  const state = Store.getState();
-
-  const maybeTransFormPosition = untransformNodePosition(action.seedPosition, state);
-
   try {
     yield* call(
       loadAdHocMesh,
-      maybeTransFormPosition,
+      action.seedPosition,
       action.seedAdditionalCoordinates,
       action.segmentId,
       false,

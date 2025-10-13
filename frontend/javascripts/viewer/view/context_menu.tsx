@@ -69,6 +69,7 @@ import {
   getNodePosition,
   getTreeAndNode,
   getTreeAndNodeOrNull,
+  untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
@@ -1145,13 +1146,16 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     }
 
     const segmentId = getSegmentIdForPosition(globalPosition);
+    const maybeUntransformedPosition = untransformNodePosition(globalPosition, state);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
+    Store.dispatch(
+      loadAdHocMeshAction(segmentId, maybeUntransformedPosition, additionalCoordinates),
+    );
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>

@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
+import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
@@ -40,6 +41,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
                                   mappingService: MappingService,
                                   config: DataStoreConfig,
+                                  segmentIndexFileService: SegmentIndexFileService,
                                   adHocMeshServiceHolder: AdHocMeshServiceHolder)
     extends LazyLogging
     with FullMeshHelper
@@ -66,26 +68,85 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       before = Instant.now
-      verticesForChunks <- getAllAdHocChunks(dataSource,
-                                             segmentationLayer,
-                                             fullMeshRequest,
-                                             VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
-                                             adHocChunkSize)
+      verticesForChunks <- if (hasSegmentIndexFile)
+        getAllAdHocChunksWithSegmentIndex(dataSource, segmentationLayer, fullMeshRequest, mag)
+      else {
+        for {
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHocWithoutSegmentIndex"
+          chunks <- getAllAdHocChunksWithNeighborLogic(
+            dataSource,
+            segmentationLayer,
+            fullMeshRequest,
+            VoxelPosition(seedPosition.x, seedPosition.y, seedPosition.z, mag),
+            adHocChunkSize)
+        } yield chunks
+      }
+
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing", array.length)
     } yield array
 
-  private def getAllAdHocChunks(
+  private def getAllAdHocChunksWithSegmentIndex(
       dataSource: UsableDataSource,
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
-      topLeft: VoxelPosition,
-      chunkSize: Vec3Int,
-      visited: collection.mutable.Set[VoxelPosition] = collection.mutable.Set[VoxelPosition]())(
+      mag: Vec3Int,
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+    for {
+      segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
+      segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+        dataSource.id,
+        segmentationLayer,
+        fullMeshRequest.mappingName,
+        fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.segmentId,
+        mappingNameForMeshFile = None,
+        omitMissing = false
+      )
+      topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
+        segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
+      topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
+      targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
+      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(targetMagPositions) {
+        targetMagPosition =>
+          val adHocMeshRequest = AdHocMeshRequest(
+            Some(dataSource.id),
+            segmentationLayer,
+            Cuboid(
+              VoxelPosition(
+                targetMagPosition.x * mag.x * DataLayer.bucketLength,
+                targetMagPosition.y * mag.y * DataLayer.bucketLength,
+                targetMagPosition.z * mag.z * DataLayer.bucketLength,
+                mag
+              ),
+              DataLayer.bucketLength + 1,
+              DataLayer.bucketLength + 1,
+              DataLayer.bucketLength + 1
+            ),
+            fullMeshRequest.segmentId,
+            dataSource.scale.factor,
+            tc,
+            fullMeshRequest.mappingName,
+            fullMeshRequest.mappingType,
+            fullMeshRequest.additionalCoordinates,
+            findNeighbors = false,
+          )
+          adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+      }
+      allVertices = vertexChunksWithNeighbors.map(_._1)
+    } yield allVertices
+
+  private def getAllAdHocChunksWithNeighborLogic(dataSource: UsableDataSource,
+                                                 segmentationLayer: SegmentationLayer,
+                                                 fullMeshRequest: FullMeshRequest,
+                                                 topLeft: VoxelPosition,
+                                                 chunkSize: Vec3Int,
+                                                 visited: collection.mutable.Set[VoxelPosition] =
+                                                   collection.mutable.Set[VoxelPosition]())(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[Array[Float]]] = {
     val adHocMeshRequest = AdHocMeshRequest(
@@ -105,7 +166,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunks(dataSource, segmentationLayer, fullMeshRequest, position, chunkSize, visited)
+        getAllAdHocChunksWithNeighborLogic(dataSource, segmentationLayer, fullMeshRequest, position, chunkSize, visited)
       }
       allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
     } yield allVertices

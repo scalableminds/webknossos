@@ -308,6 +308,7 @@ export function SegmentStatisticsModal({
               dataSource={segmentStatisticsObjects}
               columns={columns}
               style={{ whiteSpace: "pre" }}
+              scroll={{ x: "max-content" }}
             />
           </>
         )}

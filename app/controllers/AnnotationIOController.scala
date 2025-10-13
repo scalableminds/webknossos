@@ -163,6 +163,11 @@ class AnnotationIOController @Inject()(
       }
   }
 
+  private def layersHaveDuplicateFallbackLayer(annotationLayers: Seq[UploadedVolumeLayer]) = {
+    val withFallbackLayer = annotationLayers.filter(_.tracing.fallbackLayer.isDefined)
+    withFallbackLayer.length > withFallbackLayer.distinctBy(_.tracing.fallbackLayer).length
+  }
+
   private def mergeAndSaveVolumeLayers(newAnnotationId: ObjectId,
                                        volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
@@ -171,8 +176,7 @@ class AnnotationIOController @Inject()(
                                        datasetId: ObjectId): Fox[(List[AnnotationLayer], Long)] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List(), 0L)
-    else if (volumeLayersGrouped.exists(layersOfAnnotation =>
-               layersOfAnnotation.length != layersOfAnnotation.distinctBy(_.tracing.fallbackLayer).length))
+    else if (volumeLayersGrouped.exists(layersHaveDuplicateFallbackLayer(_)))
       Fox.failure("Cannot save annotation with multiple volume layers that have the same fallback segmentation layer.")
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
@@ -216,7 +220,7 @@ class AnnotationIOController @Inject()(
               )
         }
       } yield (annotationLayers, layerUpdatesStartVersionMutable)
-    } else { // Multiple annotations with volume layers (but at most one each) was uploaded, they have no editable mappings. merge those volume layers into one
+    } else { // Multiple annotations with volume layers (but at most one each) were uploaded, they have no editable mappings. Merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
       val newTracingId = TracingId.generate
       for {

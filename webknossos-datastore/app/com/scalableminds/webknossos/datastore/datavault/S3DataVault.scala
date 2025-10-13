@@ -191,7 +191,7 @@ object S3DataVault {
     new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, ws, ec)
   }
 
-  private def hostBucketFromUri(uri: URI): Option[String] = {
+  def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
     if (isShortStyle(uri)) { // assume host is omitted from uri, shortcut form s3://bucket/key
       Some(host)

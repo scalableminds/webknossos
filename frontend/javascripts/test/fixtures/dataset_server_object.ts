@@ -10,13 +10,13 @@ const sampleColorLayer: APIColorLayer = {
     height: 10240,
     depth: 10240,
   },
-  resolutions: [
-    [1, 1, 1],
-    [2, 2, 2],
-    [32, 32, 32], // unsorted on purpose
-    [4, 4, 4],
-    [8, 8, 8],
-    [16, 16, 16],
+  mags: [
+    { mag: [1, 1, 1] },
+    { mag: [2, 2, 2] },
+    { mag: [32, 32, 32] }, // unsorted on purpose
+    { mag: [4, 4, 4] },
+    { mag: [8, 8, 8] },
+    { mag: [16, 16, 16] },
   ],
   elementClass: "uint8",
   additionalAxes: [],
@@ -33,13 +33,13 @@ const sampleSegmentationLayer: APISegmentationLayer = {
     height: 10240,
     depth: 10240,
   },
-  resolutions: [
-    [1, 1, 1],
-    [2, 2, 2],
-    [32, 32, 32], // unsorted on purpose
-    [4, 4, 4],
-    [8, 8, 8],
-    [16, 16, 16],
+  mags: [
+    { mag: [1, 1, 1] },
+    { mag: [2, 2, 2] },
+    { mag: [32, 32, 32] }, // unsorted on purpose
+    { mag: [4, 4, 4] },
+    { mag: [8, 8, 8] },
+    { mag: [16, 16, 16] },
   ],
   elementClass: "uint32",
   largestSegmentId: 1000000000,

@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
-import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
+import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
   DataSourceService,
@@ -37,7 +37,43 @@ object LegacyReserveManualUploadInformation {
     Json.format[LegacyReserveManualUploadInformation]
 }
 
-class LegacyController @Inject()(
+case class LegacyReserveUploadInformation(
+    uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
+    name: String, // dataset name
+    organization: String,
+    totalFileCount: Long,
+    filePaths: Option[List[String]],
+    totalFileSizeInBytes: Option[Long],
+    layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
+    initialTeams: List[ObjectId], // team ids
+    folderId: Option[ObjectId],
+    requireUniqueName: Option[Boolean]
+)
+object LegacyReserveUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyReserveUploadInformation] = Json.format[LegacyReserveUploadInformation]
+}
+
+case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
+                                       organizationName: Option[String],
+                                       // Filled by backend after identifying the dataset by name. Afterwards this updated value is stored in the redis database.
+                                       datasetDirectoryName: Option[String],
+                                       dataSetName: String,
+                                       layerName: String,
+                                       newLayerName: Option[String] = None) {
+
+  def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
+}
+
+object LegacyLinkedLayerIdentifier {
+  def apply(organizationId: String,
+            dataSetName: String,
+            layerName: String,
+            newLayerName: Option[String]): LegacyLinkedLayerIdentifier =
+    new LegacyLinkedLayerIdentifier(Some(organizationId), None, None, dataSetName, layerName, newLayerName)
+  implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
+}
+
+class DSLegacyApiController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
     binaryDataController: BinaryDataController,
@@ -53,6 +89,46 @@ class LegacyController @Inject()(
     with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def reserveUploadV11(): Action[LegacyReserveUploadInformation] =
+    Action.async(validateJson[LegacyReserveUploadInformation]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.administrateDataSources(request.body.organization)) {
+
+        for {
+          adaptedLayersToLink <- Fox.serialCombined(request.body.layersToLink.getOrElse(List.empty))(adaptLayerToLink)
+          adaptedRequestBody = ReserveUploadInformation(
+            uploadId = request.body.uploadId,
+            name = request.body.name,
+            organization = request.body.organization,
+            totalFileCount = request.body.totalFileCount,
+            filePaths = request.body.filePaths,
+            totalFileSizeInBytes = request.body.totalFileSizeInBytes,
+            layersToLink = Some(adaptedLayersToLink),
+            initialTeams = request.body.initialTeams,
+            folderId = request.body.folderId,
+            requireUniqueName = request.body.requireUniqueName,
+            isVirtual = None,
+            needsConversion = None
+          )
+          result <- Fox.fromFuture(dataSourceController.reserveUpload()(request.withBody(adaptedRequestBody)))
+        } yield result
+      }
+    }
+
+  private def adaptLayerToLink(legacyLayerToLink: LegacyLinkedLayerIdentifier): Fox[LinkedLayerIdentifier] = {
+    val asObjectIdOpt = ObjectId.fromStringSync(legacyLayerToLink.dataSetName)
+    for {
+      datasetId <- asObjectIdOpt match {
+        case Some(asObjectId) =>
+          // Client already used datasetId in the dataSetName field. The libs did this for a while.
+          Fox.successful(asObjectId)
+        case None =>
+          // dataSetName is not an objectId. Assume directoryName. Resolve with remoteWebknossosClient.
+          remoteWebknossosClient.getDatasetId(legacyLayerToLink.getOrganizationId, legacyLayerToLink.dataSetName)
+      }
+    } yield LinkedLayerIdentifier(datasetId, legacyLayerToLink.layerName, legacyLayerToLink.newLayerName)
+  }
 
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
@@ -72,7 +148,9 @@ class LegacyController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId,
-              Some(request.body.requireUniqueName)
+              Some(request.body.requireUniqueName),
+              Some(false),
+              needsConversion = None
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield

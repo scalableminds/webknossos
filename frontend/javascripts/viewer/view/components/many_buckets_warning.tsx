@@ -1,8 +1,8 @@
-import { Button, Radio, Space } from "antd";
+import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import { useInterval } from "libs/react_helpers";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "tooManyBucketsWarningModal";
@@ -22,21 +22,23 @@ export function TooManyBucketsWarning(): React.ReactNode {
     console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
   }, 120 * 1000); //TODO_C dev
 
-  const onClose = () => {
+  const onClose = useCallback(() => {
     notificationAPIRef.current?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
     dontShowAgainInThisSessionRef.current = true;
     UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.current.toString());
+  }, []);
+  const handleCheckboxChange = (event: CheckboxChangeEvent) => {
+    neverShowAgainRef.current = event.target.checked;
   };
-  const toggleNeverShowAgain = () => (neverShowAgainRef.current = !neverShowAgainRef.current);
 
   const warningMessage =
     "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
   const linkToDocs =
     "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
-  const neverShowAgainRadioButton = (
-    <Radio onClick={toggleNeverShowAgain} style={{ marginTop: "8px", marginBottom: "5px" }}>
+  const neverShowAgainCheckbox = (
+    <Checkbox onChange={handleCheckboxChange} style={{ marginTop: "8px", marginBottom: "5px" }}>
       Never show this again
-    </Radio>
+    </Checkbox>
   );
   const closeButton = (
     <Button
@@ -72,7 +74,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
         <>
           {warningMessage}
           <br />
-          {neverShowAgainRadioButton}
+          {neverShowAgainCheckbox}
         </>,
         {
           customFooter: footer,

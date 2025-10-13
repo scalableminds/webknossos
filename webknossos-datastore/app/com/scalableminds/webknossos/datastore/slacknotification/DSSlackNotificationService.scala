@@ -23,4 +23,9 @@ class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) ex
       msg = e.getMessage
     )
 
+  def noticeFailedFinishUpload(msg: String): Unit =
+    slackClient.warn(
+      title = "Failed finishUpload request",
+      msg = msg
+    )
 }

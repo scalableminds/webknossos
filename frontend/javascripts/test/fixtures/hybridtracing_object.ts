@@ -18,12 +18,12 @@ export const colorLayer: APIColorLayer = {
     height: 256,
     depth: 256,
   },
-  resolutions: [
-    [1, 1, 1],
-    [2, 2, 1],
-    [4, 4, 1],
-    [8, 8, 2],
-    [16, 16, 4],
+  mags: [
+    { mag: [1, 1, 1] },
+    { mag: [2, 2, 1] },
+    { mag: [4, 4, 1] },
+    { mag: [8, 8, 2] },
+    { mag: [16, 16, 4] },
   ],
   elementClass: "uint8",
   coordinateTransformations: null,

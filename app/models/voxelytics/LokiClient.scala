@@ -242,7 +242,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
                 "values" -> JsArray(values)
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
-          .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
+          .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
           .postJson[JsValue](Json.obj("streams" -> streams))
       } yield ()
     } else {

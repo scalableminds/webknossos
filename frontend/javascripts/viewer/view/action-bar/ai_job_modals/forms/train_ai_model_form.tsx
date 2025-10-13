@@ -112,7 +112,7 @@ type TrainingAnnotation = {
 
 const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);
-  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+  return colorLayer != null ? getMagInfo(colorLayer.mags).getMagList() : [];
 };
 
 const getTrainingAnnotations = (values: any) => {
@@ -156,8 +156,8 @@ export function TrainAiModelForm<GenericAnnotation extends APIAnnotation | Store
         groundTruthLayerName,
       ).getMagList();
 
-      return groundTruthLayerMags?.filter((groundTruthMag) =>
-        dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+      return groundTruthLayerMags.filter((groundTruthMag) =>
+        dataLayerMags.find((mag) => V3.equals(mag, groundTruthMag)),
       );
     },
     [getMagsForSegmentationLayer],

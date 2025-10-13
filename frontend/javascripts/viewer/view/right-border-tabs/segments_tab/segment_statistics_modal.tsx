@@ -158,7 +158,7 @@ export function SegmentStatisticsModal({
           maybeGetMappingName(),
         ),
         getSegmentSurfaceArea(
-          requestUrl,
+          storeInfoType,
           layersFinestMag,
           currentMeshFile?.name,
           segmentIds,

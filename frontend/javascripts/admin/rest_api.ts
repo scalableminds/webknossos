@@ -888,13 +888,14 @@ type SegmentStatisticsParametersMeshBased = {
 };
 
 export function getSegmentSurfaceArea(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   meshFileName: string | undefined | null,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
     const data: SegmentStatisticsParametersMeshBased = {
       mag,

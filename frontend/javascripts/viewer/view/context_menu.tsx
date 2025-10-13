@@ -1730,7 +1730,7 @@ function ContextMenuInner() {
           mappingName,
         );
         const [surfaceArea] = await getSegmentSurfaceArea(
-          requestUrl,
+          layerSourceInfo,
           layersFinestMag,
           currentMeshFile?.name,
           [clickedSegmentOrMeshId],

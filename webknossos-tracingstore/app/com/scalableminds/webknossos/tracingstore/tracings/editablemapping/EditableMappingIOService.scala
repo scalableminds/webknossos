@@ -139,13 +139,17 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         0L, // Note: updates start at startVersion, but info is V0 for consistency with the annotationProto v0
         toProtoBytes(editableMappingService.create(baseMappingName))
       )
-      (editedEdges, edgeIsAddition) <- unzipAndReadZarr(editedEdgesZip)
+      // The zarr file contains two arrays, editedEdges encodes the source and destination segment ids
+      // and edgeIsAddition contains a bool for each edge on whether it was
+      // added (edgeIsAddition==true; corresponds to a merge agglomerate action).
+      // or removed (edgeIsAddition==false; corresponds to a splict agglomerate action)
+      (editedEdgesArray, edgeIsAdditionArray) <- unzipAndReadZarr(editedEdgesZip)
       timestamp = Instant.now.epochMillis
-      updateActions: Seq[UpdateAction] = (0 until edgeIsAddition.getSize.toInt).map { edgeIndex =>
-        val edgeSrc = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 0)))
-        val edgeDst = editedEdges.getLong(editedEdges.getIndex.set(Array(edgeIndex, 1)))
-        val isAddition = edgeIsAddition.getBoolean(edgeIndex)
-        buildUpdateActionFromEdge(edgeSrc, edgeDst, isAddition, tracingId, timestamp)
+      updateActions: Seq[UpdateAction] = (0 until edgeIsAdditionArray.getSize.toInt).map { edgeIndex =>
+        val edgeSrc = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 0)))
+        val edgeDst = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 1)))
+        val edgeIsAddition = edgeIsAdditionArray.getBoolean(edgeIndex)
+        buildUpdateActionFromEdge(edgeSrc, edgeDst, edgeIsAddition, tracingId, timestamp)
       }
       updatesGrouped = updateActions.grouped(100).toSeq
       _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) {
@@ -193,10 +197,10 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
 
   private def buildUpdateActionFromEdge(edgeSrc: Long,
                                         edgeDst: Long,
-                                        isAddition: Boolean,
+                                        edgeIsAddition: Boolean,
                                         tracingId: String,
                                         timestamp: Long): EditableMappingUpdateAction =
-    if (isAddition) {
+    if (edgeIsAddition) {
       MergeAgglomerateUpdateAction(
         agglomerateId1 = 0,
         agglomerateId2 = 0,

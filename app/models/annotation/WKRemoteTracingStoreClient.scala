@@ -257,10 +257,10 @@ class WKRemoteTracingStoreClient(
     (editedMappingEdgesZip, editedMappingBaseMappingName) match {
       case (Some(zipfile), Some(baseMappingName)) =>
         rpc(s"${tracingStore.url}/tracings/mapping/$newTracingId/save")
-          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-          .addQueryString("annotationId" -> annotationId.toString)
-          .addQueryString("baseMappingName" -> baseMappingName)
-          .addQueryString("startVersion" -> startVersion.toString)
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .addQueryParam("annotationId", annotationId)
+          .addQueryParam("baseMappingName", baseMappingName)
+          .addQueryParam("startVersion", startVersion)
           .postFileWithJsonResponse[Long](zipfile)
       case (None, None) => Fox.successful(0L)
       case _            => Fox.failure("annotation.upload.editableMappingIncompleteInformation")

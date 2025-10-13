@@ -134,9 +134,11 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                 baseMappingName: String,
                                 editedEdgesZip: File)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
-      _ <- tracingDataStore.editableMappingsInfo.put(tracingId,
-                                                     0L,
-                                                     toProtoBytes(editableMappingService.create(baseMappingName)))
+      _ <- tracingDataStore.editableMappingsInfo.put(
+        tracingId,
+        0L, // Note: updates start at startVersion, but info is V0 for consistency with the annotationProto v0
+        toProtoBytes(editableMappingService.create(baseMappingName))
+      )
       (editedEdges, edgeIsAddition) <- unzipAndReadZarr(editedEdgesZip)
       timestamp = Instant.now.epochMillis
       updateActions: Seq[UpdateAction] = (0 until edgeIsAddition.getSize.toInt).map { edgeIndex =>

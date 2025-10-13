@@ -197,7 +197,7 @@ class EditableMappingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zipFile.notFound"
+          editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zip.file.notFound"
           before = Instant.now
           numberOfSavedVersions <- editableMappingIOService.initializeFromUploadedZip(tracingId,
                                                                                       annotationId,

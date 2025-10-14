@@ -32,7 +32,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
   };
 
   const warningMessage =
-    "You are annotating a large area which puts a high load on the server. Consider creating an annotation or annotation layer with restricted volume magnifications.";
+    "You are annotating a large area with fine magnifications. This can significantly slow down WEBKNOSSOS. Consider creating an annotation or annotation layer with restricted magnifications.";
   const linkToDocs =
     "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
   const neverShowAgainCheckbox = (

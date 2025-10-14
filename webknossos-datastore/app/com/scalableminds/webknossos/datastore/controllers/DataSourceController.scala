@@ -197,7 +197,7 @@ class DataSourceController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           datasetId <- uploadService
-            .getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
+            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
               _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",

@@ -61,13 +61,13 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/data").withTokenFromContext
-        .addQueryString("x" -> pos.x.toString)
-        .addQueryString("y" -> pos.y.toString)
-        .addQueryString("z" -> pos.z.toString)
-        .addQueryString("width" -> "1")
-        .addQueryString("height" -> "1")
-        .addQueryString("depth" -> "1")
-        .addQueryString("mag" -> mag.toMagLiteral())
+        .addQueryParam("x", pos.x)
+        .addQueryParam("y", pos.y)
+        .addQueryParam("z", pos.z)
+        .addQueryParam("width", 1)
+        .addQueryParam("height", 1)
+        .addQueryParam("depth", 1)
+        .addQueryParam("mag", mag.toMagLiteral())
         .silent
         .getWithBytesResponse
     } yield result
@@ -99,7 +99,7 @@ class TSRemoteDatastoreClient @Inject()(
         for {
           remoteLayerUri <- getRemoteLayerUri(k._1)
           result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
-            .addQueryStringOptional("token", k._3)
+            .addQueryParam("token", k._3)
             .silent
             .getWithJsonResponse[Long]
         } yield result

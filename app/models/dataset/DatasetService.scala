@@ -525,10 +525,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
-  def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       dataSource <- dataSourceFor(dataset)
       datastoreClient <- clientFor(dataset)
+      /* Find paths not used by other datasets (neither as realpath nor as path), delete those
+           (Caution, what if symlink chains go through this dataset? those won’t be detected as realpaths)
+         If not virtual: delete on disk
+           - delete datasource-properties.json
+           - delete empty folders
+         Delete in the DB if no annotations reference it
+       */
       _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
     } yield ()
 

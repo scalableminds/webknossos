@@ -1,3 +1,4 @@
+import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
@@ -12,6 +13,7 @@ import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
+import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
@@ -58,12 +60,11 @@ let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
   cameras: OrthoViewMap<OrthographicCamera>;
-  running: boolean;
+  isRunning: boolean = false;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.running = false;
     const { scene } = getSceneController();
     // Initialize main js components
     const cameras = {} as OrthoViewMap<OrthographicCamera>;
@@ -97,7 +98,7 @@ class PlaneView {
   }
 
   animate(): void {
-    if (!this.running) {
+    if (!this.isRunning) {
       return;
     }
 
@@ -135,6 +136,10 @@ class PlaneView {
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.cameras[plane]);
+
+          if (!window.measuredTimeToFirstRender) {
+            this.measureTimeToFirstRender();
+          }
         }
       }
 
@@ -283,7 +288,7 @@ class PlaneView {
   }
 
   stop(): void {
-    this.running = false;
+    this.isRunning = false;
 
     const sceneController = getSceneControllerOrNull();
     if (sceneController != null) {
@@ -302,7 +307,7 @@ class PlaneView {
 
   start(): void {
     const sceneController = getSceneController();
-    const { segmentMeshController } = sceneController;
+    const { segmentMeshController, renderer, scene } = sceneController;
 
     this.unsubscribeFunctions.push(
       app.vent.on("rerender", () => {
@@ -326,9 +331,16 @@ class PlaneView {
       }),
     );
 
-    this.running = true;
+    this.isRunning = true;
     this.resize();
-    this.animate();
+    performance.mark("shader_compile_start");
+    // The shader is the same for all three viewports, so it doesn't matter which camera is used.
+    renderer.compileAsync(scene, this.cameras["PLANE_XY"]).then(() => {
+      // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+      // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+      // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+      this.animate();
+    });
     window.addEventListener("resize", this.resizeThrottled);
     this.unsubscribeFunctions.push(
       listenToStoreProperty(
@@ -374,6 +386,23 @@ class PlaneView {
         true,
       ),
     );
+  }
+
+  measureTimeToFirstRender() {
+    const timeToFirstRenderInMs = Math.round(
+      performance.now() - performance.getEntriesByType("navigation")[0].startTime,
+    );
+    const timeToCompileShaderInMs = Math.round(
+      performance.measure("shader_compile_duration", "shader_compile_start").duration,
+    );
+    console.log(`Time to compile shaders was ${timeToCompileShaderInMs} ms.`);
+    console.log(`Time to first render was ${timeToFirstRenderInMs} ms.`);
+    sendAnalyticsEvent("time_to_first_render", {
+      ...getWebGlAnalyticsInformation(Store.getState()),
+      timeToFirstRenderInMs,
+      timeToCompileShaderInMs,
+    });
+    window.measuredTimeToFirstRender = true;
   }
 
   getCameraForPlane(plane: Viewport) {

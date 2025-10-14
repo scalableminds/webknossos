@@ -885,9 +885,6 @@ type SegmentStatisticsParametersMeshBased = {
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
-  // seedPosition is not needed as it is only necessary for mesh generation
-  // in case on segment index exists. But in such a case surface calculation
-  // isn't supported anyway.
 };
 
 export function getSegmentSurfaceArea(

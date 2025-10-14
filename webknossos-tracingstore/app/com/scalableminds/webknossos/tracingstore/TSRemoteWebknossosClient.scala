@@ -137,7 +137,7 @@ class TSRemoteWebknossosClient @Inject()(
     for {
       datasetId <- getDatasetIdForAnnotation(annotationId)
       result <- rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/datasources/$datasetId")
-        .addQueryString("key" -> tracingStoreKey)
+        .addQueryParam("key", tracingStoreKey)
         .withTokenFromContext
         .silent
         .getWithJsonResponse[DataSource]

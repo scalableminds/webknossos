@@ -22,8 +22,7 @@ case class SegmentStatisticsParametersMeshBased(mag: Vec3Int,
                                                 segmentIds: List[Long],
                                                 mappingName: Option[String],
                                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                                meshFileName: Option[String],
-                                                seedPosition: Option[Vec3Int])
+                                                meshFileName: Option[String])
 object SegmentStatisticsParametersMeshBased {
   implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
     Json.format[SegmentStatisticsParametersMeshBased]

@@ -633,7 +633,7 @@ class DataSourceController @Inject()(
               mappingType = request.body.mappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
               mag = Some(request.body.mag),
-              seedPosition = request.body.seedPosition,
+              seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
             )
             for {

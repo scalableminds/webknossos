@@ -106,6 +106,7 @@ trait StaticLayer extends DataLayer {
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
       newMags: Option[List[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
       magMapping: MagLocator => MagLocator = m => m,
+      attachmentMapping: DataLayerAttachments => DataLayerAttachments = a => a,
       name: String = this.name,
       coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
     this match {
@@ -115,7 +116,8 @@ trait StaticLayer extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: StaticSegmentationLayer =>
         l.copy(
@@ -123,7 +125,8 @@ trait StaticLayer extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
     }
 

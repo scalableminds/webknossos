@@ -284,7 +284,7 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const magInfo = getMagInfo(volumeTracingLayer.mags);
   const appropriateMagInfos = selectAppropriateMags(boundingBoxMag1, magInfo);
 
   if (appropriateMagInfos.length === 0) {

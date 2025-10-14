@@ -53,11 +53,11 @@ export const getBestFittingMagComparedToTrainingDS = (
 ) => {
   if (jobType === APIJobType.INFER_MITOCHONDRIA || jobType === APIJobType.INFER_INSTANCES) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
-    const magInfo = getMagInfo(colorLayer.resolutions);
+    const magInfo = getMagInfo(colorLayer.mags);
     return magInfo.getFinestMag();
   }
   const modelScale = MEAN_VX_SIZE[jobType];
-  let closestMagOfCurrentDS = colorLayer.resolutions[0];
+  let closestMagOfCurrentDS = colorLayer.mags[0].mag;
   let bestDifference = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -66,13 +66,13 @@ export const getBestFittingMagComparedToTrainingDS = (
 
   const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
 
-  for (const mag of colorLayer.resolutions) {
+  for (const magObj of colorLayer.mags) {
     const diff = datasetScaleInNm.map((dim, i) =>
-      Math.abs(Math.log(dim * mag[i]) - Math.log(modelScale[i])),
+      Math.abs(Math.log(dim * magObj.mag[i]) - Math.log(modelScale[i])),
     );
     if (bestDifference[0] > diff[0]) {
       bestDifference = diff;
-      closestMagOfCurrentDS = mag;
+      closestMagOfCurrentDS = magObj.mag;
     }
   }
   const maxDistance = Math.max(...bestDifference);
@@ -143,7 +143,7 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingMags: Vector3[][];
+  volumeTracingMags: { mag: Vector3 }[][];
 };
 
 export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
@@ -317,9 +317,9 @@ export const colorLayerMustNotBeUint24Rule = {
   },
 };
 
-export const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
+const getMagsForColorLayer = (colorLayers: APIDataLayer[], layerName: string) => {
   const colorLayer = colorLayers.find((layer) => layer.name === layerName);
-  return colorLayer != null ? getMagInfo(colorLayer.resolutions).getMagList() : null;
+  return colorLayer != null ? getMagInfo(colorLayer.mags).getMagList() : [];
 };
 
 export const getIntersectingMagList = (
@@ -335,9 +335,9 @@ export const getIntersectingMagList = (
     annotation,
     groundTruthLayerName,
   );
-  const groundTruthLayerMags = getMagInfo(segmentationLayer.resolutions).getMagList();
+  const groundTruthLayerMags = getMagInfo(segmentationLayer.mags).getMagList();
 
-  return groundTruthLayerMags?.filter((groundTruthMag) =>
-    dataLayerMags?.find((mag) => V3.equals(mag, groundTruthMag)),
+  return groundTruthLayerMags.filter((groundTruthMag) =>
+    dataLayerMags.find((mag) => V3.equals(mag, groundTruthMag)),
   );
 };

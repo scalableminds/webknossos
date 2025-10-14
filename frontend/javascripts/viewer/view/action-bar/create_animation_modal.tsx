@@ -63,16 +63,16 @@ function selectMagForTextureCreation(
   const longestSide = Math.max(...boundingBox.getSize());
   const dimensionLongestSide = boundingBox.getSize().indexOf(longestSide);
 
-  let bestMag = colorLayer.resolutions[0];
+  let bestMag = colorLayer.mags[0].mag;
   let bestDifference = Number.POSITIVE_INFINITY;
 
-  for (const mag of colorLayer.resolutions) {
-    const size = longestSide / mag[dimensionLongestSide];
+  for (const magObj of colorLayer.mags) {
+    const size = longestSide / magObj.mag[dimensionLongestSide];
     const diff = Math.abs(TARGET_TEXTURE_SIZE - size);
 
     if (bestDifference > diff) {
       bestDifference = diff;
-      bestMag = mag;
+      bestMag = magObj.mag;
     }
   }
 
@@ -255,10 +255,10 @@ function CreateAnimationModal(props: Props) {
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
       const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
 
-      const adhocMagIndex = getMagInfo(layer.resolutions).getClosestExistingIndex(
+      const adhocMagIndex = getMagInfo(layer.mags).getClosestExistingIndex(
         preferredQualityForMeshAdHocComputation,
       );
-      const adhocMag = getMagInfo(layer.resolutions).getMagByIndexOrThrow(adhocMagIndex);
+      const adhocMag = getMagInfo(layer.mags).getMagByIndexOrThrow(adhocMagIndex);
 
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)

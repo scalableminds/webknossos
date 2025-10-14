@@ -1,0 +1,42 @@
+-- https://github.com/scalableminds/webknossos/issues/8951
+
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 142, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+
+START TRANSACTION;
+
+-- Drop dependent views
+DROP VIEW webknossos.userinfos;
+DROP VIEW webknossos.organizations_;
+
+-- Rename Personal to Basic
+ALTER TYPE webknossos.PRICING_PLANS RENAME VALUE 'Personal' TO 'Basic';
+
+-- Revert includedUsers for Basic plan
+UPDATE webknossos.organizations
+SET includedUsers = 3
+WHERE pricingplan = 'Basic'::webknossos.PRICING_PLANS
+  AND includedUsers = 1
+  AND (
+    SELECT COUNT(*)
+    FROM webknossos.users_ u
+    JOIN webknossos.multiUsers_ m ON u._multiUser = m._id
+    WHERE u._organization = webknossos.organizations._id
+      AND m.isSuperUser = FALSE
+  ) < 3;
+
+-- Recreate views
+CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+CREATE VIEW webknossos.userInfos AS
+SELECT
+  u._id AS _user, m.email, u.firstName, u.lastName, o.name AS organization_name,
+  u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
+  u._organization, o._id AS organization_id, u.created AS user_created,
+  m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
+FROM webknossos.users_ u
+  JOIN webknossos.organizations_ o ON u._organization = o._id
+  JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
+
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 141;
+
+COMMIT TRANSACTION;

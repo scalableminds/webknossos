@@ -113,7 +113,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
       _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
@@ -137,7 +137,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
+        .addQueryParam("token", dataStoreToken)
+        .addQueryParam("organizationId", organizationId)
         .postEmpty()
         .futureBox
 

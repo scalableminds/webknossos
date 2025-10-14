@@ -103,12 +103,12 @@ GET           /datasets/:datasetId/layers/:layer/thumbnail                      
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: ObjectId, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
-GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
+GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
@@ -132,7 +132,7 @@ PUT           /datastores/:name/datasources/:datasetId                          
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
-POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetDirectoryName: String, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
+POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetId: ObjectId)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
@@ -152,6 +152,7 @@ GET           /tracingstores/:name/datasetId                                    
 GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetId                                      controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, datasetId: ObjectId)
 POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: ObjectId, previousVersion: Long)
+GET           /tracingstores/:name/datasources/:datasetId                                       controllers.WKRemoteTracingStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
 
 # User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()

@@ -28,10 +28,11 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
+import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
-function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
-  return new MagInfo(magnifications);
+function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
+  return new MagInfo(magnifications.map((magObj) => magObj.mag));
 }
 
 // Don't use memoizeOne here, since we want to cache the mags for all layers
@@ -42,7 +43,7 @@ function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    infos[layer.name] = getMagInfo(layer.resolutions);
+    infos[layer.name] = getMagInfo(layer.mags);
   }
 
   return infos;
@@ -67,7 +68,8 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
   const magUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
-    for (const mag of layer.resolutions) {
+    for (const magObj of layer.mags) {
+      const mag = magObj.mag;
       const key = maxValue(mag);
 
       if (magUnionDict[key] == null) {
@@ -92,7 +94,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
 export function getWidestMags(dataset: APIDataset): Vector3[] {
   const allLayerMags = dataset.dataSource.dataLayers.map((layer) =>
-    convertToDenseMag(layer.resolutions),
+    convertToDenseMags(layer.mags.map((magObj) => magObj.mag)),
   );
 
   return _.maxBy(allLayerMags, (mags) => mags.length) || [];
@@ -136,7 +138,7 @@ function _getMagInfoOfVisibleSegmentationLayer(state: WebknossosState): MagInfo 
     return new MagInfo([]);
   }
 
-  return getMagInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.mags);
 }
 
 export const getMagInfoOfVisibleSegmentationLayer = memoizeOne(
@@ -456,7 +458,7 @@ export function hasVisibleUint64Segmentation(state: WebknossosState) {
   return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
 }
 
-export function getVisibleSegmentationLayers(state: WebknossosState): Array<APISegmentationLayer> {
+function _getVisibleSegmentationLayers(state: WebknossosState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
   const segmentationLayers = getSegmentationLayers(state.dataset);
@@ -465,6 +467,8 @@ export function getVisibleSegmentationLayers(state: WebknossosState): Array<APIS
   );
   return visibleSegmentationLayers;
 }
+
+export const getVisibleSegmentationLayers = reuseInstanceOnEquality(_getVisibleSegmentationLayers);
 
 export function getSegmentationLayerWithMappingSupport(
   state: WebknossosState,
@@ -501,7 +505,7 @@ export function getFirstSegmentationLayer(
 
   return null;
 }
-export function getSegmentationLayers(
+export function _getSegmentationLayers(
   dataset: APIMaybeUnimportedDataset,
 ): Array<APISegmentationLayer> {
   if (!dataset.isActive) {
@@ -513,6 +517,9 @@ export function getSegmentationLayers(
   ) as APISegmentationLayer[];
   return segmentationLayers;
 }
+
+export const getSegmentationLayers = memoizeOne(_getSegmentationLayers);
+
 export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayers(dataset).length > 0;
 }
@@ -530,10 +537,12 @@ export function doesSupportVolumeWithFallback(
 
   return true;
 }
-export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
+function _getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));
 }
-export function getEnabledLayers(
+export const getColorLayers = memoizeOne(_getColorLayers);
+
+function _getEnabledLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,
   options: {
@@ -553,13 +562,13 @@ export function getEnabledLayers(
   });
 }
 
-export function getEnabledColorLayers(
-  dataset: APIDataset,
-  datasetConfiguration: DatasetConfiguration,
-) {
+export const getEnabledLayers = memoizeOne(_getEnabledLayers);
+
+function _getEnabledColorLayers(dataset: APIDataset, datasetConfiguration: DatasetConfiguration) {
   const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
   return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
+export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;

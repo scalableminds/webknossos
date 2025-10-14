@@ -66,10 +66,11 @@ function _ShareViewDatasetModalView(props: Props) {
             Zarr Link
           </Col>
           <Col span={18}>
-            <Space.Compact>
+            <Space.Compact block>
               <Input
+                name="zarrPublicSharingLink"
                 style={{
-                  width: "85%",
+                  width: "calc(78% + 32px)",
                 }}
                 value={zarrBaseUrl}
                 readOnly

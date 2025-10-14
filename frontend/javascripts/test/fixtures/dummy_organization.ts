@@ -5,7 +5,7 @@ const dummyOrga: APIOrganization = {
   id: "dummy_orga",
   additionalInformation: "more information",
   name: "Dummy Orga",
-  pricingPlan: PricingPlanEnum.Basic,
+  pricingPlan: PricingPlanEnum.Personal,
   enableAutoVerify: true,
   newUserMailingList: "dummy@example.com",
   paidUntil: 1681400966329137,

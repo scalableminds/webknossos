@@ -681,7 +681,7 @@ class VolumeTracingService @Inject()(
       adHocMeshRequest = AdHocMeshRequest(
         None,
         volumeLayer,
-        request.cuboid(volumeLayer),
+        request.cuboid,
         request.segmentId,
         request.voxelSizeFactorInUnit,
         tc,

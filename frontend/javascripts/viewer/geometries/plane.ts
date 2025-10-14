@@ -9,6 +9,7 @@ import {
   LineSegments,
   Matrix4,
   Mesh,
+  type Object3DEventMap,
   PlaneGeometry,
   Vector3 as ThreeVector3,
 } from "three";
@@ -19,7 +20,9 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "viewer/constants";
-import PlaneMaterialFactory from "viewer/geometries/materials/plane_material_factory";
+import PlaneMaterialFactory, {
+  type PlaneShaderMaterial,
+} from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 // A subdivision of 100 means that there will be 100 segments per axis
@@ -42,8 +45,7 @@ const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
+  plane!: Mesh<PlaneGeometry, PlaneShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
@@ -208,8 +210,8 @@ class Plane {
   };
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
-  setLinearInterpolationEnabled = (enabled: boolean) => {
-    this.plane.material.setUseBilinearFiltering(enabled);
+  setLinearInterpolationEnabled = (_enabled: boolean) => {
+    this.plane.material.updateUseInterpolation();
   };
 
   destroy() {

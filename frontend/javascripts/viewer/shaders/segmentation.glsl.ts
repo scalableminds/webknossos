@@ -11,6 +11,7 @@ import {
   jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
+import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
 import type { ShaderModule } from "./shader_module_system";
@@ -389,7 +390,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [convertCellIdToRGB, attemptMappingLookUp],
+  requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -472,7 +473,7 @@ export const getSegmentationAlphaIncrement: ShaderModule = {
       if (isProofreading) {
         if (isActiveCell) {
           return (isHoveredUnmappedSegment
-            ? 0.4     // Highlight the hovered super-voxel of the active segment
+            ? 0.4     // Highlight the hovered supervoxel of the active segment
             : (isHoveredSegment
               ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
               : 0.0

@@ -51,7 +51,7 @@ export function TooManyBucketsWarning(): React.ReactNode {
   );
   const linkToDocsButton = (
     <Button href={linkToDocs} target="_blank" rel="noopener noreferrer" type="primary">
-      See docs
+      Learn how
     </Button>
   );
   const footer = (

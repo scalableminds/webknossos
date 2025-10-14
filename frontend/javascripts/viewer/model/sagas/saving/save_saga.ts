@@ -2,7 +2,7 @@ import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "
 import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { ColoredLogger, isNumberMap, sleep } from "libs/utils";
+import { isNumberMap, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers, type Channel } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -12,8 +12,8 @@ import {
   type EnsureHasNewestVersionAction,
   ensureTracingsWereDiffedToSaveQueueAction,
   finishedApplyingMissingUpdatesAction,
-  finishedRebasingAction,
-  prepareRebasingAction,
+  finishedRebaseAction,
+  prepareRebaseAction,
   replaceSaveQueueAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
@@ -79,7 +79,10 @@ function* getPollInterval(): Saga<number> {
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
 
-function saveQueueEntriesToServerUpdateActionBatches(data: Array<SaveQueueEntry>, version: number) {
+export function saveQueueEntriesToServerUpdateActionBatches(
+  data: Array<SaveQueueEntry>,
+  version: number,
+) {
   return data.map((entry) => ({
     version,
     value: entry.actions.map(
@@ -215,7 +218,7 @@ function* prepareRebasing(): Saga<void> {
   );
   yield* put(action);
   yield everythingIsDiffedDeferred.promise();
-  yield* put(prepareRebasingAction());
+  yield* put(prepareRebaseAction());
 }
 
 function* fulfillAllEnsureHasNewestVersionActions(
@@ -255,7 +258,7 @@ function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
       true,
     )).success;
     if (successfullyAppliedSaveQueueUpdates) {
-      yield* put(finishedRebasingAction());
+      yield* put(finishedRebaseAction());
     }
     return { successful: true };
   } else {

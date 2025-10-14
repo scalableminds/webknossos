@@ -10,7 +10,7 @@ import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
-  type FinishedRebasingAction,
+  type FinishedRebaseAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -111,12 +111,9 @@ export function* setupSavingForTracingType(
     actionBuffer,
   );
   // TODOM: Check whether this saga actually pauses during rebasing.
-  yield* takeLatest(
-    "FINISHED_REBASING",
-    function* resetPrevTracing(_action: FinishedRebasingAction) {
-      prevTracing = yield* getTracing();
-    },
-  );
+  yield* takeLatest("FINISHED_REBASING", function* resetPrevTracing(_action: FinishedRebaseAction) {
+    prevTracing = yield* getTracing();
+  });
 
   // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(

@@ -25,6 +25,7 @@ import type {
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/volume/update_actions";
 import type { Tree, TreeGroup } from "../types/tree_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: BoundingBoxProto,
@@ -136,9 +137,11 @@ export function convertServerAnnotationToFrontendAnnotation(
     ...annotation.restrictions,
     ...annotation.settings,
   };
-  // TODOM: consider setting to false if othersMayEdit is true -> must be reenabled by the mutex saga.
-  //!annotation.othersMayEdit && annotation.restrictions.allowUpdate;
-  const isUpdatingCurrentlyAllowed = annotation.restrictions.allowUpdate;
+  // If othersMayEdit is true and liveCollab is disabled, updating is only allowed in case the user has the mutex.
+  // The mutex fetching is done by the respective saga.
+  const isUpdatingCurrentlyAllowed = annotation.othersMayEdit
+    ? WkDevFlags.liveCollab
+    : annotation.restrictions.allowUpdate;
   return {
     annotationId,
     restrictions,

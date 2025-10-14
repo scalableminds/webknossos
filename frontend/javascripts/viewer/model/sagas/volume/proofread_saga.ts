@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { ColoredLogger, SoftError, isNumberMap } from "libs/utils";
+import { SoftError, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -51,7 +51,10 @@ import {
   type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import {
+  pushSaveQueueTransaction,
+  snapshotMappingDataForNextRebaseAction,
+} from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -518,14 +521,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   );
 
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  sourceAgglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)),
-    ) ?? sourceAgglomerateId;
-  targetAgglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)),
-    ) ?? targetAgglomerateId;
+  sourceAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
+      sourceAgglomerateId,
+  );
+  targetAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
+      targetAgglomerateId,
+  );
 
   // TODOM: just as below: check whether this is really needed
   /*
@@ -564,6 +567,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         mapping: splitMapping,
       }),
     );
+    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
 
   const newMapping = yield* select(
@@ -739,10 +744,10 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   // The agglomerateId of the split agglomerate might have changed due to syncing with the server caused by Model.ensureSavedState.
   // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  agglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])),
-    ) ?? agglomerateId;
+  agglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])) ??
+      agglomerateId,
+  );
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
@@ -769,6 +774,8 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
       mapping: splitMapping,
     }),
   );
+  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   /* Reload meshes */
   const newMapping = yield* select(
@@ -1025,41 +1032,11 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
 
-  // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
-  // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated.
-
-  activeMapping = yield* select(
-    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
-  );
-
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  sourceAgglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)),
-    ) ?? sourceAgglomerateId;
-  targetAgglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)),
-    ) ?? targetAgglomerateId;
-
-  // TODOM: Check whether this can be removed.
-  /*if (action.type === "PROOFREAD_MERGE") {
-    ColoredLogger.logBlue("Calling updateMappingWithMerge again after saving was done.");
-    // During saving, newer versions might have been pulled from the server.
-    yield* call(
-      updateMappingWithMerge,
-      volumeTracingId,
-      activeMapping,
-      sourceAgglomerateId,
-      targetAgglomerateId,
-    );
-  }*/
-
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
-      const isOthersMayEditTurnedOn = yield* select((state) => state.annotation.othersMayEdit);
-      const additionalErrorExplanation = isOthersMayEditTurnedOn
+      const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
+      const additionalErrorExplanation = isOthersMayEditEnabled
         ? " Maybe another user already splitted the agglomerate in the meantime."
         : "";
       Toast.error(
@@ -1067,6 +1044,26 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       );
       return;
     }
+
+    // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
+    // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated.
+
+    activeMapping = yield* select(
+      (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+    );
+
+    // TODO: Fix why external ids are no longer loaded.
+    const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+    sourceAgglomerateId = Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+        adaptToType(sourceInfo.unmappedId),
+      ) ?? sourceAgglomerateId,
+    );
+    targetAgglomerateId = Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+        adaptToType(targetInfo.unmappedId),
+      ) ?? targetAgglomerateId,
+    );
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
@@ -1082,6 +1079,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         mapping: splitMapping,
       }),
     );
+    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
+
     console.log("finished updating the mapping after a min-cut");
   }
 
@@ -1225,10 +1225,10 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   );
 
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  targetAgglomerateId =
-    Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)),
-    ) ?? targetAgglomerateId;
+  targetAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)) ??
+      targetAgglomerateId,
+  );
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -1244,6 +1244,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       mapping: mappingAfterSplit,
     }),
   );
+  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
     call(getDataValue, targetPosition, mappingAfterSplit),
@@ -1629,7 +1631,6 @@ export function* updateMappingWithMerge(
   targetAgglomerateId: number,
   isUnsyncedWithServer: boolean,
 ) {
-  // todop: the agglomerate ids might be outdated?
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
     activeMapping,
@@ -1658,48 +1659,13 @@ export function* updateMappingWithMerge(
     return;
   }
   yield* put(
-    setMappingAction(
-      volumeTracingId,
-      activeMapping.mappingName,
-      activeMapping.mappingType,
-      {
-        mapping: mergedMapping,
-      },
-      isUnsyncedWithServer,
-    ),
-  );
-}
-
-export function* removeAgglomerateFromActiveMapping(
-  volumeTracingId: string,
-  activeMapping: ActiveMappingInfo,
-  agglomerateId: number,
-) {
-  /*
-   * This function removes all super-voxels segments from the active mapping
-   * that map to the specified agglomerateId.
-   */
-
-  const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
-
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  // If the mapping contains BigInts, we need a BigInt for the filtering
-  const comparableSourceAgglomerateId = adaptToType(agglomerateId);
-
-  const newMapping = new Map();
-
-  for (const entry of mappingEntries) {
-    const [key, value] = entry;
-    if (value !== comparableSourceAgglomerateId) {
-      newMapping.set(key, value);
-    }
-  }
-
-  yield* put(
     setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: newMapping,
+      mapping: mergedMapping,
     }),
   );
+  if (!isUnsyncedWithServer) {
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
+  }
 }
 
 function* gatherInfoForOperation(

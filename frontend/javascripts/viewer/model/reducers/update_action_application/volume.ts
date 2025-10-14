@@ -90,9 +90,13 @@ function applySingleAction(
       );
     }
     case "updateSegmentGroupsExpandedState":
-    case "updateUserBoundingBoxVisibilityInVolumeTracing": {
+    case "updateUserBoundingBoxVisibilityInVolumeTracing":
+    case "updateSegmentVisibility":
+    case "updateActiveSegmentId":
+    case "updateSegmentGroupVisibility": {
       // These update actions are user specific and don't need to be incorporated here
       // because they are from another user.
+      // TODO: Needs to be changed and applied anyways once live-is-live supports segments.
       return state;
     }
     default: {

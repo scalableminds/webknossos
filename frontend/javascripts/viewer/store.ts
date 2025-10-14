@@ -426,6 +426,9 @@ export type AnnotationMutexInformation = {
   readonly blockedByUser: APIUserCompact | null | undefined;
 };
 
+// rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+// It always has the newest version of this information which is synced with the backend.
+// Unsaved changes should never be part of the RebaseRelevantAnnotationState.
 export type RebaseRelevantAnnotationState = {
   readonly annotationVersion: number;
   readonly annotationDescription: string;

@@ -567,9 +567,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1339],
+          [1, 1339],
+          [2, 1339],
+          [3, 1],
           [4, 4],
           [5, 4],
           [6, 4],

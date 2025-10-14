@@ -71,6 +71,10 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   deleteUserBoundingBoxInVolumeTracing: true,
   updateSegmentGroupsExpandedState: true,
   updateUserBoundingBoxVisibilityInVolumeTracing: true,
+  // TODOM: Write tests for these update actions below
+  updateActiveSegmentId: true,
+  updateSegmentVisibility: true,
+  updateSegmentGroupVisibility: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 

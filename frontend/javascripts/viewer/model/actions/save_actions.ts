@@ -33,10 +33,10 @@ export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVers
 export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
-export type PrepareRebasingAction = ReturnType<typeof prepareRebasingAction>;
-export type FinishedRebasingAction = ReturnType<typeof finishedRebasingAction>;
+export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
+export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
 export type UpdateMappingRebaseInformationAction = ReturnType<
-  typeof updateMappingRebaseInformationAction
+  typeof snapshotMappingDataForNextRebaseAction
 >;
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
@@ -60,7 +60,8 @@ export type SaveAction =
   | DoneSavingAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
-  | PrepareRebasingAction
+  | PrepareRebaseAction
+  | FinishedRebaseAction // Not necessary here but added for completion. Only save_queue_filling.ts listens to this action for now.
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
   | ReplaceSaveQueueAction;
@@ -205,19 +206,24 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
     blockedByUser,
   }) as const;
 
-export const prepareRebasingAction = () =>
+export const prepareRebaseAction = () =>
   ({
     type: "PREPARE_REBASING",
   }) as const;
 
-export const finishedRebasingAction = () =>
+export const finishedRebaseAction = () =>
   ({
     type: "FINISHED_REBASING",
   }) as const;
 
-export const updateMappingRebaseInformationAction = (volumeLayerIdToUpdate: string) =>
+export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: string) =>
+  // This action updates the mapping rebase information for the given volume layer.
+  // Should be triggered whenever the mapping is changed in sync with the backend.
+  // E.g. when new parts of the partial mapping are loaded from the backend.
+  // Never when the mapping is changed by the user via actions as these are not in sync
+  // with the backend and only data in sync with the backend in allowed to be part of the rebase state.
   ({
-    type: "UPDATE_MAPPING_REBASE_INFORMATION",
+    type: "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION",
     volumeLayerIdToUpdate,
   }) as const;
 export const finishedApplyingMissingUpdatesAction = () =>

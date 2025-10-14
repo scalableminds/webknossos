@@ -27,14 +27,6 @@ export function createSaveQueueFromUpdateActions(
   }));
 }
 
-export function withoutUpdateActiveItemTracing(
-  items: UpdateActionWithoutIsolationRequirement[],
-): UpdateActionWithoutIsolationRequirement[] {
-  return items.filter(
-    (item) => item.name !== "updateActiveNode" && item.name !== "updateActiveSegmentId",
-  );
-}
-
 export function withoutUpdateTree(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {

@@ -49,7 +49,7 @@ import {
   type EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
-import { updateMappingRebaseInformationAction } from "viewer/model/actions/save_actions";
+import { snapshotMappingDataForNextRebaseAction } from "viewer/model/actions/save_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
@@ -242,7 +242,7 @@ function* reloadData(
   if (isAgglomerate(mapping) && !needsLocalHdf5Mapping) {
     if (mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
       yield* put(finishMappingInitializationAction(layerName));
-      yield* put(updateMappingRebaseInformationAction(layerName));
+      yield* put(snapshotMappingDataForNextRebaseAction(layerName));
       message.destroy(MAPPING_MESSAGE_KEY);
     } else if (mapping.mappingStatus === MappingStatusEnum.ENABLED) {
       // If the mapping is already enabled (happens when an annotation was loaded initially
@@ -577,7 +577,7 @@ export function* updateLocalHdf5Mapping(
   });
 
   yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
-  yield* put(updateMappingRebaseInformationAction(layerName));
+  yield* put(snapshotMappingDataForNextRebaseAction(layerName));
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 
@@ -798,7 +798,7 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
     });
     console.error(errorMessage);
     yield* put(setMappingAction(layerName, null, mappingType, {}));
-    yield* put(updateMappingRebaseInformationAction(layerName));
+    yield* put(snapshotMappingDataForNextRebaseAction(layerName));
 
     return false;
   }

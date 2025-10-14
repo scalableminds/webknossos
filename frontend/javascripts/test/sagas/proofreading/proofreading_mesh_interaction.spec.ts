@@ -283,6 +283,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
+    // TODOM: Test is failing because interfering things are problematic
     const task = startSaga(function* task(): Generator<any, void, any> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
@@ -322,7 +323,7 @@ describe("Proofreading (with mesh actions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should load unknown unmapped segment ids of mesh split operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const { mocks } = context;

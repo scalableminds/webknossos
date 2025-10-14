@@ -151,8 +151,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "REPLACE_SAVE_QUEUE": {
+      // Only used during rebasing to update save queue entries in case their data was outdated and needed syncing with the newest backend version.
       if (state.save.queue.length !== action.newSaveQueue.length) {
-        return state;
+        // This should never occur but is a save guard to not miss an update. Better crash instead of sending incomplete updates.
+        throw new Error("Tried to replace save queue with incomplete entries!");
       }
       return update(state, {
         save: {
@@ -209,10 +211,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_MAPPING": {
-      if (action.isUnsyncedWithServer) {
-        return state;
-      }
-      const mappingInfoOfLayer =
+      /*const mappingInfoOfLayer =
         state.temporaryConfiguration.activeMappingByLayer[action.layerName];
 
       return update(state, {
@@ -225,7 +224,8 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             },
           },
         },
-      });
+      });*/
+      return state;
     }
 
     case "PREPARE_REBASING": {
@@ -250,7 +250,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "UPDATE_MAPPING_REBASE_INFORMATION": {
+    case "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION": {
       const mappingInfoOfLayer =
         state.temporaryConfiguration.activeMappingByLayer[action.volumeLayerIdToUpdate];
       return update(state, {
@@ -265,24 +265,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         },
       });
     }
-
-    // TODOM: shouldn't be necessary anymore as explicit action UPDATE_MAPPING_REBASE_INFORMATION was introduced
-    // to make updating the rebasing info less hidden / unexpected and thus more obvious
-    /*case "FINISH_MAPPING_INITIALIZATION": {
-      const mappingInfoOfLayer =
-        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
-      return update(state, {
-        save: {
-          rebaseRelevantServerAnnotationState: {
-            activeMappingByLayer: {
-              [action.layerName]: {
-                $set: mappingInfoOfLayer,
-              },
-            },
-          },
-        },
-      });
-    }*/
 
     case "DONE_SAVING":
     case "FINISHED_APPLYING_MISSING_UPDATES": {

@@ -10,10 +10,7 @@ import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import defaultState from "viewer/default_state";
 import update from "immutability-helper";
-import {
-  createSaveQueueFromUpdateActions,
-  withoutUpdateActiveItemTracing,
-} from "../helpers/saveHelpers";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -30,12 +27,10 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 const actionTracingId = "skeletonTracingId";
 
 function testDiffing(prevAnnotation: StoreAnnotation, nextAnnotation: StoreAnnotation) {
-  return withoutUpdateActiveItemTracing(
-    Array.from(
-      diffSkeletonTracing(
-        enforceSkeletonTracing(prevAnnotation),
-        enforceSkeletonTracing(nextAnnotation),
-      ),
+  return Array.from(
+    diffSkeletonTracing(
+      enforceSkeletonTracing(prevAnnotation),
+      enforceSkeletonTracing(nextAnnotation),
     ),
   );
 }

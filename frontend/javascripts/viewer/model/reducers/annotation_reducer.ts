@@ -101,7 +101,9 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      // Initialize state needed for rebasing newest server updates.
+      // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+      // It always is in sync with the latest known version on the server. After initializing it is the current version.
+      // activeMappingByLayer are initialized automatically when they are being loaded by the saga.
       const stateWithAnnotationRebaseInformation = update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {

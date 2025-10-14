@@ -366,7 +366,7 @@ export type APIActiveUser = {
 };
 export type APIRestrictions = {
   readonly allowAccess: boolean;
-  // To decided whether updating an annotation is allowed, the annotation.isUpdatingCurrentlyAllowed should be used.
+  // To decide whether updating an annotation is allowed, the annotation.isUpdatingCurrentlyAllowed should be used.
   // This value will never be changed and stay according to what the server returned.
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
@@ -953,9 +953,8 @@ export type SkeletonUserState = {
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
-  // This is done to simplify the selection for the type.#
   datasetName: string; // still part of the proto file, might be outdated. Do not rely on correct values.
-  typ: "Skeleton";
+  typ: "Skeleton"; // This is done to simplify the selection for the type.
   activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;

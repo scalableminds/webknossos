@@ -677,7 +677,7 @@ function SkeletonTracingReducer(
   }
 
   /**
-   * ATTENTION: The following actions are only executed if allowUpdate is true!
+   * ATTENTION: The following actions are only executed if isUpdatingCurrentlyAllowed is true!
    */
   const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
   if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {

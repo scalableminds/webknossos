@@ -3,7 +3,6 @@ import _ from "lodash";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
-import { withoutUpdateActiveItemTracing } from "test/helpers/saveHelpers";
 import { transformStateAsReadOnly } from "test/helpers/utils";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -22,6 +21,7 @@ import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import type {
+  ApplicableSkeletonServerUpdateAction,
   ApplicableSkeletonUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
@@ -56,6 +56,18 @@ const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
 
+const addMissingTimestampProp = (
+  actions: UpdateActionWithoutIsolationRequirement[],
+): ApplicableSkeletonServerUpdateAction[] => {
+  return actions.map(
+    (a) =>
+      ({
+        ...a,
+        value: { ...a.value, actionTimestamp: 0 },
+      }) as ApplicableSkeletonServerUpdateAction,
+  );
+};
+
 const applyActions = chainReduce(combinedReducer);
 
 // This helper dict exists so that we can ensure via typescript that
@@ -79,6 +91,10 @@ const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = 
   updateUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   deleteUserBoundingBoxInSkeletonTracing: true,
+  // TODOM: Write tests for these update actions!!!
+  updateActiveNode: true,
+  updateTreeVisibility: true,
+  updateTreeGroupVisibility: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 
@@ -194,11 +210,10 @@ describe("Update Action Application for SkeletonTracing", () => {
           const maybeCompact = withCompaction
             ? compactUpdateActions
             : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-          const updateActions = maybeCompact(
-            updateActionsBeforeCompaction,
-            skeletonTracing2,
-            skeletonTracing3,
-          ) as ApplicableSkeletonUpdateAction[];
+
+          const updateActions = addMissingTimestampProp(
+            maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
+          );
 
           for (const action of updateActions) {
             seenActionTypes.add(action.name);
@@ -235,11 +250,11 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteNodeAction(2)]);
 
-    const updateActions = withoutUpdateActiveItemTracing(
+    const updateActions = addMissingTimestampProp(
       Array.from(
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
-    ) as ApplicableSkeletonUpdateAction[];
+    );
 
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
@@ -268,11 +283,11 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteTreeAction(2)]);
 
-    const updateActions = withoutUpdateActiveItemTracing(
+    const updateActions = addMissingTimestampProp(
       Array.from(
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
-    ) as ApplicableSkeletonUpdateAction[];
+    );
 
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [

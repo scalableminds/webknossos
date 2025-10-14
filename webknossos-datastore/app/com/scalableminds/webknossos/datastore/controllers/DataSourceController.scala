@@ -410,8 +410,8 @@ class DataSourceController @Inject()(
             } yield ()
           } else
             for {
-              _ <- Fox.runIf(dataSourceService.datasetInControlledS3(dataSource))(
-                dataSourceService.deleteFromControlledS3(dataSource, datasetId))
+              _ <- Fox.runIf(dataSourceService.datasetIsInManagedS3(dataSource))(
+                dataSourceService.deleteFromManagedS3(dataSource, datasetId))
             } yield ()
           _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
         } yield Ok

@@ -14,27 +14,16 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metada
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
-import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
-import com.scalableminds.webknossos.datastore.storage.{
-  CredentialConfigReader,
-  DataStoreRedisStore,
-  RemoteSourceDescriptorService,
-  S3AccessKeyCredential
-}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
+import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
-import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.transfer.s3.S3TransferManager
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
@@ -105,6 +94,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
+                              managedS3Service: ManagedS3Service,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
@@ -426,7 +416,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         _ <- deleteFilesNotReferencedInDataSource(unpackedDir, usableDataSourceFromDir)
         newBasePath <- if (dataStoreConfig.Datastore.S3Upload.enabled) {
           for {
-            s3UploadBucket <- s3UploadBucketOpt.toFox
+            s3UploadBucket <- managedS3Service.s3UploadBucketOpt.toFox
             _ = logger.info(s"finishUpload for $datasetId: Copying data to s3 bucket $s3UploadBucket...")
             beforeS3Upload = Instant.now
             s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/"
@@ -520,56 +510,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
 
-  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
-    dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-      new CredentialConfigReader(credentialConfig).getCredential
-    }.collectFirst {
-      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
-          if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
-        (accessKeyId, secretAccessKey)
-    }
-
-  private lazy val s3UploadBucketOpt: Option[String] =
-    S3DataVault.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
-
-  private lazy val s3UploadEndpoint: URI = {
-    val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
-    new URI(
-      "https",
-      null,
-      credentialUri.getHost,
-      -1,
-      null,
-      null,
-      null
-    )
-  }
-
-  private lazy val getS3TransferManager: Box[S3TransferManager] = for {
-    accessKeyId <- Box(s3UploadCredentialsOpt.map(_._1))
-    secretAccessKey <- Box(s3UploadCredentialsOpt.map(_._2))
-    client <- tryo(
-      S3AsyncClient
-        .builder()
-        .credentialsProvider(StaticCredentialsProvider.create(
-          AwsBasicCredentials.builder.accessKeyId(accessKeyId).secretAccessKey(secretAccessKey).build()
-        ))
-        .crossRegionAccessEnabled(true)
-        .forcePathStyle(true)
-        .endpointOverride(s3UploadEndpoint)
-        .region(Region.US_EAST_1)
-        // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-        .build())
-  } yield S3TransferManager.builder().s3Client(client).build()
-
   private def uploadDirectoryToS3(
       dataDir: Path,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
     for {
-      transferManager <- getS3TransferManager.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
+      transferManager <- managedS3Service.transferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )

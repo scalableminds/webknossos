@@ -198,6 +198,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
+  def deleteJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("DELETE")
+    performRequest
+  }
+
   def delete(): Fox[WSResponse] = {
     request = request.withMethod("DELETE")
     performRequest

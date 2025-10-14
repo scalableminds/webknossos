@@ -896,6 +896,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] = ??? // TODO
+
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
       mag <- parseMag(row.mag)
@@ -1265,6 +1267,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
             ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
+
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] = ??? // TODO
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

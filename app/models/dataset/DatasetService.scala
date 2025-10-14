@@ -42,6 +42,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                datasetMagsDAO: DatasetMagsDAO,
+                               datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                multiUserDAO: MultiUserDAO,
@@ -525,19 +526,45 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
+  def deleteUnusableDataset(dataset: Dataset): Fox[Unit] = ??? // TODO
+
   def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataSource <- dataSourceFor(dataset)
-      datastoreClient <- clientFor(dataset)
-      /* Find paths not used by other datasets (neither as realpath nor as path), delete those
+    if (!dataset.isUsable) {
+      deleteUnusableDataset(dataset)
+    } else {
+      for {
+
+        /* Find paths not used by other datasets (neither as realpath nor as path), delete those
            (Caution, what if symlink chains go through this dataset? those won’t be detected as realpaths)
-         If not virtual: delete on disk
-           - delete datasource-properties.json
-           - delete empty folders
-         Delete in the DB if no annotations reference it
-       */
-      _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
-    } yield ()
+         If virtual:
+           - find paths not used by other datasets (neither as realpath nor as path), delete those
+         If not virtual:
+           - for path in paths:
+              - find datasets with realpaths pointing to those paths
+           - if no such datasets,
+             - delete on disk, no rewriting symlinks
+           - else:
+             - abort
+         Delete in the DB if no annotations reference it, otherwise mark as deleted and clear datasource
+         */
+        datastoreClient <- clientFor(dataset)
+        _ <- if (dataset.isVirtual) {
+          for {
+            magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
+            attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(
+              dataset._id)
+            pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+            _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
+          } yield ()
+        } else {
+          for {
+            _ <- Fox.failure("checks!")
+            _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
+          } yield ()
+        }
+        _ <- Fox.failure("mark as deleted in the db!")
+      } yield ()
+    }
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
     TextUtils.normalizeStrong(datasetName) match {

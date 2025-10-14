@@ -1736,7 +1736,6 @@ function ContextMenuInner() {
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
-          globalPosition,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;

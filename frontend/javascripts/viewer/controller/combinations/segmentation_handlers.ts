@@ -5,10 +5,7 @@ import {
   getSegmentIdForPositionAsync,
 } from "viewer/controller/combinations/volume_handlers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import {
-  getTreeNameForAgglomerateSkeleton,
-  untransformNodePosition,
-} from "viewer/model/accessors/skeletontracing_accessor";
+import { getTreeNameForAgglomerateSkeleton } from "viewer/model/accessors/skeletontracing_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   hasAgglomerateMapping,
@@ -81,13 +78,10 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
 export function handleClickSegment(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
-  const maybeUntransformedPosition = untransformNodePosition(globalPosition.rounded, state);
   const segmentId = getSegmentIdForPosition(globalPosition.rounded);
   const { additionalCoordinates } = state.flycam;
 
   if (segmentId > 0) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, maybeUntransformedPosition, additionalCoordinates),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, globalPosition.rounded, additionalCoordinates));
   }
 }

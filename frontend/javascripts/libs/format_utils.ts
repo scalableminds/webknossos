@@ -293,7 +293,7 @@ export const nmFactorToUnit3D = new Map([
   [1e99, "Ym³"],
 ]);
 
-// Accepts an volume that is interpreted in the given unit and returns a string
+// Accepts a volume that is interpreted in the given unit and returns a string
 // that uses a readable unit to represent the volume.
 // E.g. formatNumberToVolume(0.003, Unit.m) == "3000.0 cm³"
 export function formatNumberToVolume(

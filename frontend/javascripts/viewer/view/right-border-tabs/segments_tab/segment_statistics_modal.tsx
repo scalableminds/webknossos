@@ -7,15 +7,12 @@ import { pluralize } from "libs/utils";
 import _ from "lodash";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
-import { getMagInfo, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "viewer/model/accessors/flycam_accessor";
-import {
-  getCurrentMappingName,
-  getVolumeTracingById,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_accessor";
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
@@ -30,7 +27,7 @@ const CONSOLE_ERROR_MESSAGE =
 
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
   const capitalizedUnit = _.capitalize(dataSourceUnit);
-  return `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
+  return `segmentId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
 };
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
@@ -103,7 +100,7 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const { dataset, annotation, temporaryConfiguration } = useWkSelector((state) => state);
+  const { dataset, annotation } = useWkSelector((state) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.mags);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
@@ -131,16 +128,6 @@ export function SegmentStatisticsModal({
   const segmentStatisticsObjects = useFetch(
     async () => {
       await api.tracing.save();
-      const maybeVolumeTracing =
-        tracingId != null ? getVolumeTracingById(annotation, tracingId) : null;
-      const maybeGetMappingName = () => {
-        if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing.mappingName;
-        const mappingInfo = getMappingInfo(
-          temporaryConfiguration.activeMappingByLayer,
-          visibleSegmentationLayer?.name,
-        );
-        return mappingInfo.mappingName;
-      };
       const segmentIds = segments.map((segment) => segment.id);
       const segmentStatisticsObjects = await Promise.all([
         getSegmentVolumes(
@@ -148,14 +135,14 @@ export function SegmentStatisticsModal({
           layersFinestMag,
           segmentIds,
           additionalCoordinates,
-          maybeGetMappingName(),
+          mappingName,
         ),
         getSegmentBoundingBoxes(
           storeInfoType,
           layersFinestMag,
           segmentIds,
           additionalCoordinates,
-          maybeGetMappingName(),
+          mappingName,
         ),
         getSegmentSurfaceArea(
           storeInfoType,

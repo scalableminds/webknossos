@@ -885,7 +885,9 @@ type SegmentStatisticsParametersMeshBased = {
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
-  seedPosition?: Vector3 | null;
+  // seedPosition is not needed as it is only necessary for mesh generation
+  // in case on segment index exists. But in such a case surface calculation
+  // isn't supported anyway.
 };
 
 export function getSegmentSurfaceArea(
@@ -895,7 +897,6 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
-  seedPosition?: Vector3 | null | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -905,7 +906,6 @@ export function getSegmentSurfaceArea(
       mappingName,
       additionalCoordinates,
       meshFileName,
-      seedPosition,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,

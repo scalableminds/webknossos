@@ -1,5 +1,10 @@
-import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
+import {
+  BarChartOutlined,
+  CopyOutlined,
+  PushpinOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
   Dropdown,
@@ -16,9 +21,13 @@ import type {
   MenuItemType,
   SubMenuType,
 } from "antd/es/menu/interface";
-import { AsyncIconButton } from "components/async_clickables";
 import FastTooltip from "components/fast_tooltip";
-import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import {
+  formatLengthAsVx,
+  formatNumberToArea,
+  formatNumberToLength,
+  formatNumberToVolume,
+} from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -26,6 +35,7 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
+import type { MenuInfo } from "rc-menu/lib/interface";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -75,6 +85,7 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getCurrentMappingName,
   getSegmentsForLayer,
   hasAgglomerateMapping,
   hasConnectomeFile,
@@ -187,7 +198,12 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
+const hideContextMenu = (info?: MenuInfo | undefined) => {
+  if (info?.key === "load-stats") {
+    return;
+  }
+  Store.dispatch(hideContextMenuAction());
+};
 
 export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
   onClick: hideContextMenu,
@@ -1406,7 +1422,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition > 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
+          segmentIdAtPosition !== 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -1425,9 +1441,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          segmentIdAtPosition > 0 ? onlyShowThisSegmentItem : null,
-          segmentIdAtPosition > 0 ? toggleSegmentVisibilityItem : null,
-          segmentIdAtPosition > 0 ? showAllSegmentsItem : null,
+          segmentIdAtPosition !== 0 ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition !== 0 ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition !== 0 ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
@@ -1660,9 +1676,13 @@ function ContextMenuInner() {
     viewport: maybeViewport,
   } = contextInfo;
 
-  const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
-    new Date(),
-  );
+  const [segmentStatsTriggerDate, setSegmentStatsTriggerDate] = useState<Date | null>(null);
+
+  const handleRefreshSegmentStatistics = async () => {
+    await api.tracing.save();
+    setSegmentStatsTriggerDate(new Date());
+  };
+
   const inputRef = useContext(ContextMenuContext);
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
@@ -1682,22 +1702,19 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useWkSelector((state) => {
-    if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
-    const mappingInfo = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer?.name,
-    );
-    return mappingInfo.mappingName;
-  });
+  const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
   const isLoadingMessage = "loading";
-  const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
-  const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
-    async () => {
+  const isLoadingLabelTuple = [isLoadingMessage, isLoadingMessage, isLoadingMessage] as const;
+  const [segmentVolumeLabel, boundingBoxInfoLabel, segmentSurfaceAreaLabel] = useFetch(
+    async (): Promise<readonly [string, string, string]> => {
+      if (segmentStatsTriggerDate == null) {
+        // Should never be rendered because segmentStatsTriggerDate is null.
+        return isLoadingLabelTuple;
+      }
       const { annotation, flycam } = Store.getState();
       // The value that is returned if the context menu is closed is shown if it's still loading
-      if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingVolumeAndBB;
-      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
+      if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingLabelTuple;
+      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return isLoadingLabelTuple;
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
       const layerSourceInfo = {
@@ -1725,6 +1742,14 @@ function ContextMenuInner() {
           additionalCoordinates,
           mappingName,
         );
+        const [surfaceArea] = await getSegmentSurfaceArea(
+          layerSourceInfo,
+          layersFinestMag,
+          currentMeshFile?.name,
+          [clickedSegmentOrMeshId],
+          additionalCoordinates,
+          mappingName,
+        );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
@@ -1732,21 +1757,17 @@ function ContextMenuInner() {
         return [
           formatNumberToVolume(volumeInUnit3, LongUnitToShortUnitMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
+          formatNumberToArea(surfaceArea, LongUnitToShortUnitMap[voxelSize.unit]),
         ];
       } catch (_error) {
-        const notFetchedMessage = "could not be fetched";
-        return [notFetchedMessage, notFetchedMessage];
+        const notFetchedMessage = "Could not be fetched.";
+        return [notFetchedMessage, notFetchedMessage, notFetchedMessage];
       }
     },
-    isLoadingVolumeAndBB,
+    isLoadingLabelTuple,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [
-      contextMenuPosition,
-      isSegmentIndexAvailable,
-      clickedSegmentOrMeshId,
-      lastTimeSegmentInfoShouldBeFetched,
-    ],
+    [contextMenuPosition, isSegmentIndexAvailable, clickedSegmentOrMeshId, segmentStatsTriggerDate],
   );
 
   let nodeContextMenuTree: Tree | null = null;
@@ -1793,6 +1814,19 @@ function ContextMenuInner() {
       : "";
   const infoRows: ItemType[] = [];
 
+  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
+  if (areSegmentStatisticsAvailable) {
+    infoRows.push({
+      key: "load-stats",
+      icon: <BarChartOutlined />,
+      label: `${segmentStatsTriggerDate != null ? "Reload" : "Load"} segment statistics`,
+      onClick: (event) => {
+        event.domEvent.preventDefault();
+        handleRefreshSegmentStatistics();
+      },
+    });
+  }
+
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
     infoRows.push(
       getInfoMenuItem(
@@ -1807,7 +1841,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position:{" "}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
           {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
         </>,
@@ -1820,60 +1854,9 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "positionInfo",
         <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)" }} /> Position: {positionAsString}
+          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
+          {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
-        </>,
-      ),
-    );
-  }
-
-  const handleRefreshSegmentVolume = async () => {
-    await api.tracing.save();
-    setLastTimeSegmentInfoShouldBeFetched(new Date());
-  };
-
-  const refreshButton = (
-    <FastTooltip title="Update this statistic">
-      <AsyncIconButton
-        onClick={handleRefreshSegmentVolume}
-        type="primary"
-        icon={<ReloadOutlined />}
-        style={{ marginLeft: 4 }}
-      />
-    </FastTooltip>
-  );
-
-  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
-
-  if (areSegmentStatisticsAvailable) {
-    infoRows.push(
-      getInfoMenuItem(
-        "volumeInfo",
-        <>
-          <i className="fas fa-expand-alt segment-context-icon" />
-          Volume: {segmentVolumeLabel}
-          {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
-          {refreshButton}
-        </>,
-      ),
-    );
-  }
-
-  if (areSegmentStatisticsAvailable) {
-    infoRows.push(
-      getInfoMenuItem(
-        "boundingBoxPositionInfo",
-        <>
-          <i className="fas fa-dice-d6 segment-context-icon" />
-          <>Bounding Box: </>
-          <div style={{ marginLeft: 22, marginTop: -5 }}>
-            {boundingBoxInfoLabel}
-            {copyIconWithTooltip(
-              boundingBoxInfoLabel as string,
-              "Copy BBox top left point and extent",
-            )}
-            {refreshButton}
-          </div>
         </>,
       ),
     );
@@ -1924,6 +1907,47 @@ function ContextMenuInner() {
         ),
       );
     }
+  }
+
+  if (areSegmentStatisticsAvailable && segmentStatsTriggerDate != null) {
+    infoRows.push(
+      getInfoMenuItem(
+        "surfaceInfo",
+        <>
+          <i className="segment-context-icon">m²</i>
+          Surface Area: {segmentSurfaceAreaLabel}
+          {copyIconWithTooltip(segmentSurfaceAreaLabel as string, "Copy surface area")}
+        </>,
+      ),
+    );
+
+    infoRows.push(
+      getInfoMenuItem(
+        "volumeInfo",
+        <>
+          <i className="segment-context-icon">m³</i>
+          Volume: {segmentVolumeLabel}
+          {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
+        </>,
+      ),
+    );
+
+    infoRows.push(
+      getInfoMenuItem(
+        "boundingBoxPositionInfo",
+        <>
+          <i className="fas fa-dice-d6 segment-context-icon" />
+          <>Bounding Box: </>
+          <div style={{ marginLeft: 22, marginTop: -5 }}>
+            {boundingBoxInfoLabel}
+            {copyIconWithTooltip(
+              boundingBoxInfoLabel as string,
+              "Copy BBox top left point and extent",
+            )}
+          </div>
+        </>,
+      ),
+    );
   }
 
   if (infoRows.length > 0) {

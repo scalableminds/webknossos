@@ -17,6 +17,7 @@ import getSceneController, {
 import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import { uiReadyAction } from "viewer/model/actions/actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import {
@@ -113,6 +114,7 @@ class ArbitraryView {
         // Counter-intuitively this is not the moment where the webgl program is fully compiled.
         // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
         // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+        Store.dispatch(uiReadyAction());
         this.animate();
       });
 

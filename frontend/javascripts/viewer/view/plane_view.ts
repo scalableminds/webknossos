@@ -21,6 +21,7 @@ import type { MeshSceneNode, SceneGroupForMeshes } from "viewer/controller/segme
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
@@ -335,10 +336,11 @@ class PlaneView {
     this.resize();
     performance.mark("shader_compile_start");
     // The shader is the same for all three viewports, so it doesn't matter which camera is used.
-    renderer.compileAsync(scene, this.cameras["PLANE_XY"]).then(() => {
+    renderer.compileAsync(scene, this.cameras[OrthoViews.PLANE_XY]).then(() => {
       // Counter-intuitively this is not the moment where the webgl program is fully compiled.
       // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
       // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+      Store.dispatch(uiReadyAction());
       this.animate();
     });
     window.addEventListener("resize", this.resizeThrottled);

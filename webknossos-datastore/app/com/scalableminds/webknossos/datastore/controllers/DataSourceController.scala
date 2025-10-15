@@ -405,7 +405,7 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+          dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
           _ <- dataSourceService.deleteOnDisk(
             dataSourceId.organizationId,

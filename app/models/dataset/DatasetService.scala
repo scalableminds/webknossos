@@ -5,16 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSource,
-  DataSourceId,
-  DataSourceStatus,
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
-  UnusableDataSource,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, StaticColorLayer, StaticLayer, StaticSegmentationLayer, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
@@ -25,6 +16,8 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
+import models.annotation.AnnotationDAO
+import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
@@ -53,6 +46,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               annotationDAO: AnnotationDAO,
+                               usedStorageService: UsedStorageService,
                                conf: WkConf,
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -562,9 +557,24 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
           } yield ()
         }
-        _ <- Fox.failure("mark as deleted in the db!")
+        _ <- deleteDatasetFromDB(dataset._id)
       } yield ()
     }
+
+  def deleteDatasetFromDB(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      existingDatasetBox <- datasetDAO.findOne(datasetId)(GlobalAccessContext).shiftBox
+      _ <- existingDatasetBox match {
+        case Full(dataset) =>
+          for {
+            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+            _ = datasetDAO
+              .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+          } yield ()
+        case _ => Fox.successful(())
+      }
+    } yield ()
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =
     TextUtils.normalizeStrong(datasetName) match {

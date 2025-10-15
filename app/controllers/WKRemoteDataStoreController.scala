@@ -211,17 +211,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
-          _ <- existingDatasetBox match {
-            case Full(dataset) =>
-              for {
-                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-                _ = datasetDAO
-                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-              } yield ()
-            case _ => Fox.successful(())
-          }
+          _ <- datasetService.deleteDatasetFromDB(request.body)(GlobalAccessContext)
         } yield Ok
       }
   }

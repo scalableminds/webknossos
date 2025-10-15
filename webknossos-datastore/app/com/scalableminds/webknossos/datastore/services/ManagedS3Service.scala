@@ -1,20 +1,32 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.S3DataVault
+import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
 import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, S3AccessKeyCredential}
+import com.typesafe.scalalogging.LazyLogging
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.model.{
+  Delete,
+  DeleteObjectsRequest,
+  DeleteObjectsResponse,
+  ListObjectsV2Request,
+  ObjectIdentifier
+}
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
 import java.net.URI
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters._
+import scala.jdk.FutureConverters._
 
-class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) {
+class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxImplicits with LazyLogging {
 
   private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
     dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
@@ -41,7 +53,7 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) {
     )
   }
 
-  lazy val s3ClientBox: Box[S3AsyncClient] = for {
+  private lazy val s3ClientBox: Box[S3AsyncClient] = for {
     accessKeyId <- Box(s3UploadCredentialsOpt.map(_._1))
     secretAccessKey <- Box(s3UploadCredentialsOpt.map(_._2))
     client <- tryo(
@@ -62,5 +74,87 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) {
   lazy val transferManagerBox: Box[S3TransferManager] = for {
     client <- s3ClientBox
   } yield S3TransferManager.builder().s3Client(client).build()
+
+  def deletePaths(paths: Seq[UPath])(implicit ec: ExecutionContext): Fox[Unit] = {
+    val pathsByBucket: Map[Option[String], Seq[UPath]] = paths.groupBy(bucketForS3UPath)
+    for {
+      _ <- Fox.serialCombined(pathsByBucket.keys) { bucket: Option[String] =>
+        deleteS3PathsOnBucket(bucket, pathsByBucket(bucket))
+      }
+    } yield ()
+  }
+
+  private def deleteS3PathsOnBucket(bucketOpt: Option[String], paths: Seq[UPath])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      bucket <- bucketOpt.toFox ?~> "Could not determine S3 bucket from UPath"
+      s3Client <- s3ClientBox.toFox ?~> "No managed s3 client configured"
+      prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
+      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
+      uniqueKeys = keys.distinct
+      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket")
+      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
+    } yield ()
+
+  private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String])(
+      implicit ec: ExecutionContext): Fox[DeleteObjectsResponse] =
+    if (keys.isEmpty) Fox.empty
+    else {
+      Fox.fromFuture(
+        s3Client
+          .deleteObjects(
+            DeleteObjectsRequest
+              .builder()
+              .bucket(bucket)
+              .delete(
+                Delete
+                  .builder()
+                  .objects(
+                    keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
+                  )
+                  .build()
+              )
+              .build()
+          )
+          .asScala)
+    }
+
+  private def listKeysAtPrefix(s3Client: S3AsyncClient, bucket: String, prefix: String)(
+      implicit ec: ExecutionContext): Fox[Seq[String]] = {
+    def listRecursive(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
+      val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
+      val request = continuationToken match {
+        case Some(token) => builder.continuationToken(token).build()
+        case None        => builder.build()
+      }
+      for {
+        response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
+        keys = response.contents().asScala.map(_.key())
+        allKeys = acc ++ keys
+        result <- if (response.isTruncated) {
+          listRecursive(Option(response.nextContinuationToken()), allKeys)
+        } else {
+          Fox.successful(allKeys)
+        }
+      } yield result
+    }
+
+    listRecursive(None, Seq())
+  }
+
+  private lazy val globalCredentials = {
+    val res = dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }
+    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
+    res
+  }
+
+  private def bucketForS3UPath(path: UPath): Option[String] =
+    S3DataVault.hostBucketFromUri(path.toRemoteUriUnsafe)
+
+  def pathIsInManagedS3(path: UPath): Boolean =
+    // TODO guard against string prefix false positives
+    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c => path.toString.startsWith(c.name))
 
 }

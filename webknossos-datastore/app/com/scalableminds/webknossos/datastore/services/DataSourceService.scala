@@ -5,41 +5,22 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{
-  DatasetDeleter,
-  IntervalScheduler,
-  MagLinkInfo,
-  PathSchemes,
-  UPath
-}
+import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
-import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
-import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.services.s3.model.{
-  Delete,
-  DeleteObjectsRequest,
-  DeleteObjectsResponse,
-  ListObjectsV2Request,
-  ObjectIdentifier
-}
 
 import java.io.File
-import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
-import scala.jdk.FutureConverters._
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -320,133 +301,17 @@ class DataSourceService @Inject()(
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
-  // TODO move to ManagedS3Service
-  private lazy val globalCredentials = {
-    val res = config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-      new CredentialConfigReader(credentialConfig).getCredential
-    }
-    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
-    res
-  }
-
   def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
     val localPaths = paths.filter(_.isLocal)
-    val managedS3Paths = paths.filter(pathIsInManagedS3)
+    val managedS3Paths = paths.filter(managedS3Service.pathIsInManagedS3)
     for {
       _ <- Fox.serialCombined(localPaths) {
         _.toLocalPath.flatMap {
           deleteDirectoryRecursively
         }.toFox
       }
-      s3PathsByBucket: Map[Option[String], Seq[UPath]] = managedS3Paths.groupBy(bucketForS3UPath)
-      _ <- Fox.serialCombined(s3PathsByBucket.keys) { bucket: Option[String] =>
-        deleteS3PathsOnBucket(bucket, s3PathsByBucket(bucket))
-      }
+      _ <- managedS3Service.deletePaths(managedS3Paths)
     } yield ()
   }
 
-  private def deleteS3PathsOnBucket(bucketOpt: Option[String], paths: Seq[UPath]): Fox[Unit] =
-    for {
-      bucket <- bucketOpt.toFox
-      s3Client <- managedS3Service.s3ClientBox.toFox
-      prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
-      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
-      uniqueKeys = keys.distinct
-      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket")
-      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
-    } yield ()
-
-  private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
-    if (keys.isEmpty) Fox.empty
-    else {
-      Fox.fromFuture(
-        s3Client
-          .deleteObjects(
-            DeleteObjectsRequest
-              .builder()
-              .bucket(bucket)
-              .delete(
-                Delete
-                  .builder()
-                  .objects(
-                    keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
-                  )
-                  .build()
-              )
-              .build()
-          )
-          .asScala)
-    }
-
-  private def listKeysAtPrefix(s3Client: S3AsyncClient, bucket: String, prefix: String): Fox[Seq[String]] = {
-    def listRecursive(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
-      val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
-      val request = continuationToken match {
-        case Some(token) => builder.continuationToken(token).build()
-        case None        => builder.build()
-      }
-      for {
-        response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
-        keys = response.contents().asScala.map(_.key())
-        allKeys = acc ++ keys
-        result <- if (response.isTruncated) {
-          listRecursive(Option(response.nextContinuationToken()), allKeys)
-        } else {
-          Fox.successful(allKeys)
-        }
-      } yield result
-    }
-
-    listRecursive(None, Seq())
-  }
-
-  // TODO move to managedS3Service
-  private def bucketForS3UPath(path: UPath): Option[String] =
-    S3DataVault.hostBucketFromUri(path.toRemoteUriUnsafe)
-
-  private def pathIsInManagedS3(path: UPath) =
-    // TODO guard against string prefix false positives
-    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c => path.toString.startsWith(c.name))
-
-  def datasetIsInManagedS3(dataSource: UsableDataSource): Boolean = {
-    def commonPrefix(strings: Seq[String]): String = {
-      if (strings.isEmpty) return ""
-
-      strings.reduce { (a, b) =>
-        a.zip(b).takeWhile { case (c1, c2) => c1 == c2 }.map(_._1).mkString
-      }
-    }
-
-    val allPaths = dataSource.allExplicitPaths
-    val sharedPath = commonPrefix(allPaths.map(_.toString))
-    val matchingCredentials = globalCredentials.filter(c => sharedPath.startsWith(c.name))
-    matchingCredentials.nonEmpty && sharedPath.startsWith("s3")
-  }
-
-  def deleteFromManagedS3(dataSource: UsableDataSource, datasetId: ObjectId): Fox[Unit] =
-    for {
-      _ <- Fox.successful(())
-      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(datasetId)
-      s3Client <- managedS3Service.s3ClientBox.toFox
-      magsLinkedByOtherDatasets: Set[MagLinkInfo] = layersAndLinkedMags
-        .flatMap(layerInfo => layerInfo.magLinkInfos.filter(_.linkedMags.nonEmpty))
-        .toSet
-      linkedMagPaths = magsLinkedByOtherDatasets.flatMap(_.linkedMags).flatMap(_.path)
-      paths = dataSource.allExplicitPaths.filterNot(path => linkedMagPaths.contains(path.toString))
-      _ <- Fox.runIf(paths.nonEmpty)({
-        for {
-          // Assume everything is in the same bucket
-          firstPath <- paths.headOption.toFox
-          bucket <- S3DataVault
-            .hostBucketFromUri(new URI(firstPath.toString))
-            .toFox ?~> s"Could not determine S3 bucket from path $firstPath"
-          prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(new URI(path.toString)).toFox))
-          keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
-          uniqueKeys = keys.distinct
-          _ = logger.info(
-            s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket for dataset ${dataSource.id}")
-          _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
-        } yield ()
-      })
-    } yield ()
 }

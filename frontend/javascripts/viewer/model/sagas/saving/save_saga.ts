@@ -1,5 +1,4 @@
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
-import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { isNumberMap, sleep } from "libs/utils";
@@ -9,8 +8,8 @@ import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "t
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import {
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   type EnsureHasNewestVersionAction,
-  ensureTracingsWereDiffedToSaveQueueAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
   prepareRebaseAction,
@@ -24,7 +23,7 @@ import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/posi
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type {
   Mapping,
   NumberLike,
@@ -212,12 +211,12 @@ function* applyNewestMissingUpdateActions(
 }
 
 function* prepareRebasing(): Saga<void> {
-  const everythingIsDiffedDeferred = new Deferred();
-  const action = ensureTracingsWereDiffedToSaveQueueAction(() =>
-    everythingIsDiffedDeferred.resolve(null),
-  );
-  yield* put(action);
-  yield everythingIsDiffedDeferred.promise();
+  const saveQueueEntries = yield* select((state) => state.save.queue);
+  const annotation = yield* select((state) => state.annotation);
+  console.error("Awaiting Diff in prepareRebasing");
+  yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
+  const saveQueueEntriesAfter = yield* select((state) => state.save.queue);
+  console.log(saveQueueEntries, saveQueueEntriesAfter);
   yield* put(prepareRebaseAction());
 }
 
@@ -259,11 +258,10 @@ function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
     )).success;
     if (successfullyAppliedSaveQueueUpdates) {
       yield* put(finishedRebaseAction());
+      return { successful: true };
     }
-    return { successful: true };
-  } else {
-    return { successful: false };
   }
+  return { successful: false };
 }
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
@@ -322,13 +320,11 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     ["ENSURE_HAS_NEWEST_VERSION"],
     // If multiple actions are sent to this buffer (without consumption inbetween),
     // we want to flush them all at once. This is achieved by using an expanding buffer
-    // and flushing all events and calling their callbacks it every time a ensureHasNewestVersion
+    // and flushing all events and calling their callbacks every time an ensureHasNewestVersion
     // action is resolved.
     buffers.expanding<EnsureHasNewestVersionAction>(1),
   );
-
   while (true) {
-    // Have a reference to the annotation to what was last synced to the server.
     // Use this annotation for rebasing the incoming update actions.
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
@@ -341,11 +337,16 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       continue;
     }
     const { successful, shouldTerminate } = yield* call(
+      // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
       enforceExecutionAsBusyBlocking<RebasingSuccessInfo>,
       performRebasingIfNecessary,
       REBASING_BUSY_BLOCK_REASON,
+      // Whitelisting the reason used during proofreading interactions as the proofreading saga includes saving the update actions already
+      // and ensures wk is busy until the proofreading actions are saved.
       [PROOFREADING_BUSY_REASON],
     );
+    const annotation = yield* select((state) => state.annotation);
+    console.log(annotation);
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
       break;
@@ -717,7 +718,7 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
             const upToDateMapping = activeMappingByLayer[actionTracingId]?.mapping;
             if (!upToDateMapping) {
               console.error(
-                "Found proofreading action without matching mapping in save queue. This should never occur.",
+                "Found proofreading action without matching mapping in save queue. This should never happen.",
                 action,
               );
               success = false;
@@ -725,7 +726,7 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
             }
             if (segmentId1 == null || segmentId2 == null) {
               console.error(
-                "Found proofreading action without given segmentIds in save queue. This should never occur.",
+                "Found proofreading action without given segmentIds in save queue. This should never happen.",
                 action,
               );
               success = false;

@@ -91,6 +91,7 @@ function* performMergeTreesProofreading(
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 }
 
+// Loads agglomerate tree for agglomerate 1 and splits segments 2 and 3.
 function* performSplitTreesProofreading(context: WebknossosTestContext): Generator<any, void, any> {
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
@@ -246,28 +247,48 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
+  it("performMergeTreesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const task = startSaga(function* task() {
+      const shouldSaveAfterLoadingTrees = false;
+      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadTreesAndMergeUpdateActions = context.receivedDataPerSaveRequest[2];
+      yield expect(loadTreesAndMergeUpdateActions).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/performMergeTreesProofreading_updateActions.json",
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
   it("should merge two agglomerate skeletons optimistically, perform the merge proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 5,
+        segmentId2: 6,
+        agglomerateId1: 4,
+        agglomerateId2: 6,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(7, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield performMergeTreesProofreading(context, false);
+      const shouldSaveAfterLoadingTrees = false;
+      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      console.error("requests length", context.receivedDataPerSaveRequest.length);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(2)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(7);
+      // Includes loading of agglomerate trees and tree merging operation & agglomerate merge update
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_simple.json",
@@ -295,26 +316,30 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should merge two agglomerate skeletons optimistically, perform the merge proofreading action and incorporate interfering other merge action from backend correctly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(9, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 5,
+        segmentId2: 6,
+        agglomerateId1: 4,
+        agglomerateId2: 6,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(9, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield performMergeTreesProofreading(context, true);
-      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const shouldSaveAfterLoadingTrees = true;
+      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees);
+      // This includes the create agglomerate tree actions.
+      console.error("requests length", context.receivedDataPerSaveRequest.length);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(9);
+      // Should include agglomerate tree updates & mergeAgglomerate action.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered.json",
@@ -344,24 +369,28 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   it("should merge two agglomerate skeletons if interfering merge makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
-    backendMock.planVersionInjection(9, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 3,
+        segmentId2: 4,
+        agglomerateId1: 1,
+        agglomerateId2: 4,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(9, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield performMergeTreesProofreading(context, true);
+      const shouldSaveAfterLoadingTrees = true;
+      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees);
+      console.error("requests length", context.receivedDataPerSaveRequest.length);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(9);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
@@ -389,26 +418,42 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
+  it("performSplitTreesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const task = startSaga(function* task() {
+      yield performSplitTreesProofreading(context);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
+      yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/loadAgglomerateTreeUpdateActions.json",
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
   it("should split agglomerate skeleton optimistically, perform the split proofreading action and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(8, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
+    const injectedSplit = {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 1,
+        segmentId2: 2,
+        agglomerateId: 1,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedSplit]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
+      expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
@@ -437,27 +482,28 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should split two agglomerate skeletons optimistically, perform the split proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(8, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 6,
-          agglomerateId1: 1339,
-          agglomerateId2: 6,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 3,
+        segmentId2: 6,
+        agglomerateId1: 1339,
+        agglomerateId2: 6,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.slice(4);
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_merge.json",
       );
@@ -485,25 +531,26 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should split two agglomerate skeletons if interfering merge makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-
-    backendMock.planVersionInjection(8, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 2,
-          segmentId2: 3,
-          agglomerateId: 1,
-        },
+    const injectedSplit = {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 2,
+        segmentId2: 3,
+        agglomerateId: 1,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedSplit]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context);
-      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
+      expect(injectedMergeRequest.version).toEqual(8);
+      // This includes the split action of the split agglomerate tree.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_no-op.json",
@@ -513,7 +560,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
+      // Agglomerate 1 was splitted twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
@@ -530,32 +577,52 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   });
 
+  it("performMinCutWithNodesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+    // Mock backend answer telling saga to split edges 3-2 and 3-1.
+    mockEdgesForAgglomerateMinCut(context.mocks);
+
+    const task = startSaga(function* task() {
+      yield performMinCutWithNodesProofreading(context);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
+      yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/performMinCutWithNodesProofreading.json",
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks);
 
-    backendMock.planVersionInjection(8, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 5,
+        segmentId2: 6,
+        agglomerateId1: 4,
+        agglomerateId2: 6,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context);
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
-      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(8);
+      const splitTreeAndAgglomerateAndDeleteSegmentActions =
+        context.receivedDataPerSaveRequest.slice(4);
+      yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
 
@@ -564,7 +631,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
+      // Agglomerate 4 and 6 were merged and then agglomerate 1 was splitted between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1339],
@@ -588,26 +655,29 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     mockEdgesForAgglomerateMinCut(context.mocks);
 
     // Directly after saving that the agglomerate trees were loaded, inject a version which adds a new edge to agglomerate 1.
-    backendMock.planVersionInjection(8, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 3,
+        segmentId2: 4,
+        agglomerateId1: 1,
+        agglomerateId2: 4,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context);
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
-      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(8);
+      const splitTreeAndAgglomerateAndDeleteSegmentActions =
+        context.receivedDataPerSaveRequest.slice(4);
+      yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );
 
@@ -641,26 +711,29 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     // Directly after saving that the agglomerate trees were loaded, inject a version which adds a new edge to agglomerate 1.
     // Thus, the split operation should be incomplete resulting in no split at all.
-    backendMock.planVersionInjection(8, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 3,
-          agglomerateId1: 1,
-          agglomerateId2: 1,
-        },
+    const injectedMerge = {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 1,
+        segmentId2: 3,
+        agglomerateId1: 1,
+        agglomerateId2: 1,
       },
-    ]);
+    };
+    backendMock.planVersionInjection(8, [injectedMerge]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context);
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
-      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
+      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.version).toEqual(8);
+      const splitTreeAndAgglomerateAndDeleteSegmentActions =
+        context.receivedDataPerSaveRequest.slice(4);
+      yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );
 

@@ -51,6 +51,10 @@ export function* takeEveryUnlessBusy<P extends ActionPattern>(
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 
+// A little helper function executing a passed saga while setting wks busy state to busy with the passed reason.
+// Additionally, the saga can be executed while wk is already in a busy state, in case the current reason for being busy is in the white list.
+// If the current reason is not whitelisted the saga waits until wk is not busy anymore before proceeding with executing the passed saga
+// while making wk busy with the passed reason again.
 export function* enforceExecutionAsBusyBlocking<T>(
   saga: () => Saga<T>,
   reason: string,

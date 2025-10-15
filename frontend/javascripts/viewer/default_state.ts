@@ -199,6 +199,7 @@ const defaultState: WebknossosState = {
       annotationVersion: 1,
       skeleton: undefined,
       activeMappingByLayer: {},
+      isRebasing: false,
     },
   },
   flycam: {

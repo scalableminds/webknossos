@@ -434,6 +434,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
+  readonly isRebasing: boolean;
 };
 export type SaveState = {
   readonly isBusy: boolean;

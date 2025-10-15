@@ -8,8 +8,10 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
+import { areSetsEqual } from "libs/utils";
+import _ from "lodash";
 
 export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
@@ -61,7 +63,7 @@ export type SaveAction =
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
   | PrepareRebaseAction
-  | FinishedRebaseAction // Not necessary here but added for completion. Only save_queue_filling.ts listens to this action for now.
+  | FinishedRebaseAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
   | ReplaceSaveQueueAction;
@@ -153,11 +155,37 @@ export const dispatchRedoAsync = async (dispatch: Dispatch<any>): Promise<void> 
 };
 
 // See Model.ensureSavedState for an explanation of this action.
-export const ensureTracingsWereDiffedToSaveQueueAction = (callback: (tracingId: string) => void) =>
-  ({
+export const ensureTracingsWereDiffedToSaveQueueAction = (
+  callback: (tracingId: string) => void,
+) => {
+  return {
     type: "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
     callback,
-  }) as const;
+  } as const;
+};
+
+export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
+  dispatch: Dispatch<any>,
+  annotation: StoreAnnotation,
+): Promise<void> => {
+  // All skeleton and volume tracings should respond to the dispatched action.
+  const tracingIds = new Set(
+    _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
+  );
+  const reportedTracingIds = new Set();
+  const deferred = new Deferred();
+  function callback(tracingId: string) {
+    reportedTracingIds.add(tracingId);
+    if (areSetsEqual(tracingIds, reportedTracingIds)) {
+      deferred.resolve(null);
+    }
+  }
+
+  if (tracingIds.size > 0) {
+    dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
+    await deferred.promise();
+  }
+};
 
 export const ensureHasAnnotationMutexAction = (callback: () => void) =>
   ({

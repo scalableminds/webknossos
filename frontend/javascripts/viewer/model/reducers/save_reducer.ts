@@ -211,25 +211,12 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_MAPPING": {
-      /*const mappingInfoOfLayer =
-        state.temporaryConfiguration.activeMappingByLayer[action.layerName];
-
-      return update(state, {
-        save: {
-          rebaseRelevantServerAnnotationState: {
-            activeMappingByLayer: {
-              [action.layerName]: {
-                $set: mappingInfoOfLayer,
-              },
-            },
-          },
-        },
-      });*/
       return state;
     }
 
     case "PREPARE_REBASING": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      console.error("Setting isRebasing = true");
       return update(state, {
         annotation: {
           version: {
@@ -245,6 +232,22 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         temporaryConfiguration: {
           activeMappingByLayer: {
             $set: rebaseInfo.activeMappingByLayer,
+          },
+        },
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasing: { $set: true },
+          },
+        },
+      });
+    }
+
+    case "FINISHED_REBASING": {
+      console.error("Setting isRebasing = false");
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasing: { $set: false },
           },
         },
       });

@@ -50,9 +50,14 @@ const BACKOFF_TIME_MULTIPLIER = 1.5;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 
+enum MutexFetchingStrategy {
+  AdHoc = "AdHoc",
+  Continuously = "Continuously",
+}
+
 type MutexLogicState = {
   isInitialRequest: boolean;
-  onlyRequiredOnSave: boolean;
+  fetchingStrategy: MutexFetchingStrategy;
   runningMutexAcquiringSaga: FixedTask<void> | null;
 };
 
@@ -72,11 +77,11 @@ function* resolveEnsureHasAnnotationMutexActions(action: EnsureHasAnnotationMute
       action.callback();
       return;
     }
-    yield* take(["SET_USER_HOLDING_MUTEX", "SET_IS_MUTEX_ACQUIRED"]);
+    yield* take("SET_IS_MUTEX_ACQUIRED");
   }
 }
 
-const TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT = [
+const TOOLS_WITH_AD_HOC_MUTEX_SUPPORT = [
   AnnotationTool.MOVE.id,
   AnnotationTool.PROOFREAD.id,
   AnnotationTool.LINE_MEASUREMENT.id,
@@ -84,22 +89,22 @@ const TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT = [
 ] as AnnotationToolId[];
 
 function* determineInitialMutexLogicState(): Saga<MutexLogicState> {
-  let onlyRequiredOnSave = false;
+  let fetchingStrategy = MutexFetchingStrategy.Continuously;
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   if (
     WkDevFlags.liveCollab &&
     activeVolumeTracing?.hasEditableMapping &&
     activeVolumeTracing?.mappingIsLocked &&
-    TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT.includes(activeTool.id)
+    TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(activeTool.id)
   ) {
     // The active annotation is currently in proofreading state. Thus, having the mutex only on save demand works in regards to the current milestone.
-    onlyRequiredOnSave = true;
+    fetchingStrategy = MutexFetchingStrategy.AdHoc;
   }
 
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
-    onlyRequiredOnSave,
+    fetchingStrategy,
     runningMutexAcquiringSaga: null,
   };
   return mutexLogicState;
@@ -142,18 +147,20 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
     yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
   }
   mutexLogicState.runningMutexAcquiringSaga = yield* fork(
-    tryAcquireMutexOnceNeeded,
+    startSagaWithAppropriateMutexFetchingStrategy,
     mutexLogicState,
   );
 }
 
-function* tryAcquireMutexOnceNeeded(mutexLogicState: MutexLogicState): Saga<void> {
+function* startSagaWithAppropriateMutexFetchingStrategy(
+  mutexLogicState: MutexLogicState,
+): Saga<void> {
   console.log(
     "Acquiring mutex mutexLogicState.onlyRequiredOnSave",
-    mutexLogicState.onlyRequiredOnSave,
+    mutexLogicState.fetchingStrategy,
   );
-  if (mutexLogicState.onlyRequiredOnSave) {
-    yield* call(tryAcquireMutexOnSaveNeeded, mutexLogicState);
+  if (mutexLogicState.fetchingStrategy) {
+    yield* call(acquireMutexUponEnsureHasAnnotationMutexAction, mutexLogicState);
   } else {
     yield* call(tryAcquireMutexContinuously, mutexLogicState);
   }
@@ -188,6 +195,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       );
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
       yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setIsMutexAcquiredAction(canEdit));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {
         // Only dispatch the action if it changes the store to avoid
@@ -235,11 +243,12 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   while (!hasMutex) {
     console.log("tryAcquireMutexForSaving loop");
     try {
-      const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
+      const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
       if (canEdit) {
-        yield* put(setIsMutexAcquiredAction(canEdit));
         hasMutex = true;
       }
+      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setIsMutexAcquiredAction(canEdit));
     } catch (error) {
       if (process.env.IS_TESTING) {
         // In unit tests, that explicitly control this generator function,
@@ -266,13 +275,15 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   }
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   while (hasMutex) {
-    const { canEdit } = yield* call(acquireAnnotationMutex, annotationId);
+    const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
     if (!canEdit) {
       // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
       // Maybe its ok to crash / enforce a reload in that case.
       // One scenario in which this might happen is when the user disconnects from the internet while having the mutex and later reconnects.
       console.error("Failed to continuously acquire mutex.");
     }
+    yield* put(setUserHoldingMutexAction(blockedByUser));
+    yield* put(setIsMutexAcquiredAction(canEdit));
     yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   }
 }
@@ -306,21 +317,21 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
     if (propertyName !== "isDisabled") {
       return;
     }
-    const previousOnlyRequiredOnSaveState = mutexLogicState.onlyRequiredOnSave;
+    const previousOnlyRequiredOnSaveState = mutexLogicState.fetchingStrategy;
     if (value === false) {
       // New volume annotation layer was activated. Check if this is a proofreading only annotation to determine whether the mutex should be fetched only on save.
       const isMappingEditable = yield* select((state) => hasEditableMapping(state, layerName));
       const isLockedMapping = yield* select((state) => isMappingLocked(state, layerName));
       if (WkDevFlags.liveCollab && isMappingEditable && isLockedMapping) {
         // We are in a proofreading annotation -> Turn on on save mutex acquiring.
-        mutexLogicState.onlyRequiredOnSave = true;
+        mutexLogicState.fetchingStrategy = MutexFetchingStrategy.AdHoc;
       } else {
-        mutexLogicState.onlyRequiredOnSave = false;
+        mutexLogicState.fetchingStrategy = MutexFetchingStrategy.Continuously;
       }
     } else {
-      mutexLogicState.onlyRequiredOnSave = false;
+      mutexLogicState.fetchingStrategy = MutexFetchingStrategy.Continuously;
     }
-    if (previousOnlyRequiredOnSaveState !== mutexLogicState.onlyRequiredOnSave) {
+    if (previousOnlyRequiredOnSaveState !== mutexLogicState.fetchingStrategy) {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     }
   }
@@ -337,20 +348,26 @@ function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void>
       const newActiveTool = yield* select((state) => state.uiInformation.activeTool);
       newToolId = newActiveTool.id;
     }
-    const newOnlyRequiredOnSave = TOOLS_WITH_ON_DEMAND_MUTEX_SUPPORT.includes(newToolId);
-    if (newOnlyRequiredOnSave !== mutexLogicState.onlyRequiredOnSave) {
-      mutexLogicState.onlyRequiredOnSave = newOnlyRequiredOnSave;
+
+    // TODO: also check for livecollab flag and editable mapping locked and so on.
+    const isToolWithAdHocSupportActive = TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(newToolId);
+    const isCurrentlyAdHocFetching =
+      mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc;
+    if (isToolWithAdHocSupportActive !== isCurrentlyAdHocFetching) {
+      mutexLogicState.fetchingStrategy = isToolWithAdHocSupportActive
+        ? MutexFetchingStrategy.AdHoc
+        : MutexFetchingStrategy.Continuously;
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     }
   }
   yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
 }
 
-function* tryAcquireMutexOnSaveNeeded(mutexLogicState: MutexLogicState): Saga<never> {
+function* acquireMutexUponEnsureHasAnnotationMutexAction(
+  mutexLogicState: MutexLogicState,
+): Saga<never> {
   while (true) {
-    // console.log("taking ENSURE_HAS_ANNOTATION_MUTEX");
     yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
-    // console.log("took ENSURE_HAS_ANNOTATION_MUTEX");
     // TODOM: ensure tryAcquireMutexForSaving works correctly even when mutex not received initially.
     // Write tests for this!
     const { doneSaving } = yield* race({
@@ -371,7 +388,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
-      if (mutexLogicState.onlyRequiredOnSave) {
+      if (mutexLogicState.fetchingStrategy) {
         return;
       }
       if (isMutexAcquired) {
@@ -414,6 +431,6 @@ function* releaseMutex() {
     releaseAnnotationMutex,
     annotationId,
   );
-  yield* put(setIsMutexAcquiredAction(false));
   yield* put(setUserHoldingMutexAction(null));
+  yield* put(setIsMutexAcquiredAction(false));
 }

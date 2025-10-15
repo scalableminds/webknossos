@@ -5,7 +5,7 @@
  */
 
 import { buffers } from "redux-saga";
-import { actionChannel, call, put, race, take, takeLatest } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -41,7 +41,6 @@ import type {
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
-import { REBASING_BUSY_BLOCK_REASON } from "./save_saga";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
@@ -117,9 +116,21 @@ export function* setupSavingForTracingType(
 
   // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
-    "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+    ["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE"],
+    buffers.expanding<EnsureTracingsWereDiffedToSaveQueueAction>(1),
   );
   let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
+  function* resolveEnsureDiffedActions() {
+    const pendingActions: EnsureTracingsWereDiffedToSaveQueueAction[] =
+      yield* flush(ensureDiffedChannel);
+
+    // include the first action we already took from the race
+    const actionsToProcess = ensureAction ? [ensureAction, ...pendingActions] : pendingActions;
+
+    for (const action of actionsToProcess) {
+      (action as EnsureTracingsWereDiffedToSaveQueueAction).callback(tracingId);
+    }
+  }
 
   while (true) {
     // Prioritize consumption of tracingActionChannel since we don't want to
@@ -143,13 +154,19 @@ export function* setupSavingForTracingType(
       (state) =>
         state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    // Also ignore change in case busy blocked by currently ongoing annotation rebasing.
-    const isCurrentlyRebasing = yield* select(
-      (state) =>
-        state.uiInformation.busyBlockingInfo.isBusy &&
-        state.uiInformation.busyBlockingInfo.reason === REBASING_BUSY_BLOCK_REASON,
+    // if (!allowUpdate) continue; TODOM: remove line
+    // Ignore changes while rebasing as during this time actions are replayed to the rebased state to
+    // reapply the changes made by the user.
+    const isRebasing = yield* select(
+      (state) => state.save.rebaseRelevantServerAnnotationState.isRebasing,
     );
-    if (!allowUpdate || isCurrentlyRebasing) continue;
+    if (!allowUpdate || isRebasing) {
+      if (ensureAction) {
+        console.error("ignoring ensure action due to currently rebasing");
+        yield* call(resolveEnsureDiffedActions);
+      }
+      continue;
+    }
     const tracing = yield* getTracing();
 
     const items = compactUpdateActions(
@@ -163,9 +180,7 @@ export function* setupSavingForTracingType(
     }
 
     prevTracing = tracing;
-    if (ensureAction != null) {
-      ensureAction.callback(tracingId);
-    }
+    yield* call(resolveEnsureDiffedActions);
   }
 }
 

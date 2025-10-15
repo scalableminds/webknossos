@@ -10,8 +10,8 @@ import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } fro
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
-import type { AnnotationInfoForAITrainingJob } from "../utils";
 import type { VolumeTracing } from "viewer/store";
+import type { AnnotationInfoForAITrainingJob } from "../utils";
 
 /**
  * Parses a list of task IDs, annotation IDs, or annotation URLs and sorts them into annotation IDs for training and unfinished tasks.
@@ -127,7 +127,9 @@ async function getBoundingBoxes(
 async function fetchAnnotationInfo(
   annotationId: string,
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>> {
-  const annotation = await getUnversionedAnnotationInformation(annotationId);
+  const annotation = await getUnversionedAnnotationInformation(annotationId, {
+    showErrorToast: false,
+  });
   const dataset = await getDataset(annotation.datasetId);
 
   const volumeServerTracings = await getVolumeServerTracings(annotation);
@@ -156,16 +158,24 @@ async function fetchAnnotationInfo(
 export async function fetchAnnotationInfos(
   taskOrAnnotationIdsOrUrls: string[],
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>[]> {
-  const { annotationIdsForTraining, unfinishedTasks } =
-    await resolveAnnotationIds(taskOrAnnotationIdsOrUrls);
+  try {
+    const { annotationIdsForTraining, unfinishedTasks } =
+      await resolveAnnotationIds(taskOrAnnotationIdsOrUrls);
 
-  const newAnnotationsWithDatasets = await Promise.all(
-    annotationIdsForTraining.map(fetchAnnotationInfo),
-  );
-  if (unfinishedTasks.length > 0) {
-    Toast.warning(
-      `The following tasks have no finished annotations: ${unfinishedTasks.join(", ")}`,
+    const newAnnotationsWithDatasets = await Promise.all(
+      annotationIdsForTraining.map(fetchAnnotationInfo),
     );
+    if (unfinishedTasks.length > 0) {
+      Toast.warning(
+        `The following tasks have no finished annotations: ${unfinishedTasks.join(", ")}`,
+      );
+    }
+    return newAnnotationsWithDatasets;
+  } catch (error) {
+    console.error("Failed to fetch annotation information:", error);
+    Toast.error(
+      "An error occurred while fetching annotation information. See console for details.",
+    );
+    return [];
   }
-  return newAnnotationsWithDatasets;
 }

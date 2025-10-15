@@ -21,7 +21,7 @@ const trainingTasks: AiTrainingTask[] = [
   {
     name: "EM Neuron Model",
     comment:
-      "Train a new AI model for EM neuron segmentation based on the annotations in this dataset. Optimized dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
+      "Train a new AI model for EM neuron segmentation based on the annotations in this dataset. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "train-neuron-model",
     jobType: APIJobType.TRAIN_NEURON_MODEL,
     image: "/assets/images/neuron_inferral_example.jpg",

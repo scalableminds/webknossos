@@ -3,7 +3,7 @@
 WEBKNOSSOS allows you to train your own AI models for image segmentation. This feature is currently in early access.
 
 <!-- Keep info in sync with docs/automation/ai_segmentation.md -->
-!!!info
+!!! info 
     AI Model Training is only available on [webknossos.org](https://webknossos.org) at the moment. 
     If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 
 

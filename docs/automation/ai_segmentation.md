@@ -48,6 +48,6 @@ We plan to add more AI analysis features in the future. If you want to work with
 We would love to integrate analysis solutions for more modalities and use cases.
 
 <!-- Keep info in sync with docs/automation/ai_training.md -->
-!!!info
+!!! info 
     Automated analysis is only available on [webknossos.org](https://webknossos.org) at the moment. 
     If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 

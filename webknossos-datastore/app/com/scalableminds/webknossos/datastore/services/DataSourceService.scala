@@ -9,7 +9,13 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, MagLinkInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{
+  DatasetDeleter,
+  IntervalScheduler,
+  MagLinkInfo,
+  PathSchemes,
+  UPath
+}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, RemoteSourceDescriptorService}
 import com.typesafe.scalalogging.LazyLogging
@@ -323,6 +329,85 @@ class DataSourceService @Inject()(
     res
   }
 
+  def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
+    val localPaths = paths.filter(_.isLocal)
+    val managedS3Paths = paths.filter(pathIsInManagedS3)
+    for {
+      _ <- Fox.serialCombined(localPaths) {
+        _.toLocalPath.flatMap {
+          deleteDirectoryRecursively
+        }.toFox
+      }
+      s3PathsByBucket: Map[Option[String], Seq[UPath]] = managedS3Paths.groupBy(bucketForS3UPath)
+      _ <- Fox.serialCombined(s3PathsByBucket.keys) { bucket: Option[String] =>
+        deleteS3PathsOnBucket(bucket, s3PathsByBucket(bucket))
+      }
+    } yield ()
+  }
+
+  private def deleteS3PathsOnBucket(bucketOpt: Option[String], paths: Seq[UPath]): Fox[Unit] =
+    for {
+      bucket <- bucketOpt.toFox
+      s3Client <- managedS3Service.s3ClientBox.toFox
+      prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
+      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
+      uniqueKeys = keys.distinct
+      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket")
+      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
+    } yield ()
+
+  private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
+    if (keys.isEmpty) Fox.empty
+    else {
+      Fox.fromFuture(
+        s3Client
+          .deleteObjects(
+            DeleteObjectsRequest
+              .builder()
+              .bucket(bucket)
+              .delete(
+                Delete
+                  .builder()
+                  .objects(
+                    keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
+                  )
+                  .build()
+              )
+              .build()
+          )
+          .asScala)
+    }
+
+  private def listKeysAtPrefix(s3Client: S3AsyncClient, bucket: String, prefix: String): Fox[Seq[String]] = {
+    def listRecursive(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
+      val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
+      val request = continuationToken match {
+        case Some(token) => builder.continuationToken(token).build()
+        case None        => builder.build()
+      }
+      for {
+        response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
+        keys = response.contents().asScala.map(_.key())
+        allKeys = acc ++ keys
+        result <- if (response.isTruncated) {
+          listRecursive(Option(response.nextContinuationToken()), allKeys)
+        } else {
+          Fox.successful(allKeys)
+        }
+      } yield result
+    }
+
+    listRecursive(None, Seq())
+  }
+
+  // TODO move to managedS3Service
+  private def bucketForS3UPath(path: UPath): Option[String] =
+    S3DataVault.hostBucketFromUri(path.toRemoteUriUnsafe)
+
+  private def pathIsInManagedS3(path: UPath) =
+    // TODO guard against string prefix false positives
+    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c => path.toString.startsWith(c.name))
+
   def datasetIsInManagedS3(dataSource: UsableDataSource): Boolean = {
     def commonPrefix(strings: Seq[String]): String = {
       if (strings.isEmpty) return ""
@@ -338,50 +423,7 @@ class DataSourceService @Inject()(
     matchingCredentials.nonEmpty && sharedPath.startsWith("s3")
   }
 
-  def deleteFromManagedS3(dataSource: UsableDataSource, datasetId: ObjectId): Fox[Unit] = {
-    def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String]): Fox[DeleteObjectsResponse] =
-      if (keys.isEmpty) Fox.empty
-      else {
-        Fox.fromFuture(
-          s3Client
-            .deleteObjects(
-              DeleteObjectsRequest
-                .builder()
-                .bucket(bucket)
-                .delete(
-                  Delete
-                    .builder()
-                    .objects(
-                      keys.map(k => ObjectIdentifier.builder().key(k).build()).asJava
-                    )
-                    .build()
-                )
-                .build()
-            )
-            .asScala)
-      }
-
-    def listKeysAtPrefix(s3Client: S3AsyncClient, bucket: String, prefix: String): Fox[Seq[String]] = {
-      def listRec(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
-        val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
-        val request = continuationToken match {
-          case Some(token) => builder.continuationToken(token).build()
-          case None        => builder.build()
-        }
-        for {
-          response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
-          keys = response.contents().asScala.map(_.key())
-          allKeys = acc ++ keys
-          result <- if (response.isTruncated) {
-            listRec(Option(response.nextContinuationToken()), allKeys)
-          } else {
-            Fox.successful(allKeys)
-          }
-        } yield result
-      }
-      listRec(None, Seq())
-    }
-
+  def deleteFromManagedS3(dataSource: UsableDataSource, datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(datasetId)
@@ -407,5 +449,4 @@ class DataSourceService @Inject()(
         } yield ()
       })
     } yield ()
-  }
 }

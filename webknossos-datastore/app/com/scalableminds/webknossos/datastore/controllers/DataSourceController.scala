@@ -407,20 +407,21 @@ class DataSourceController @Inject()(
         for {
           dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- if (dataSourceService.existsOnDisk(dataSourceId)) {
-            for {
-              _ <- dataSourceService.deleteOnDisk(
-                dataSourceId.organizationId,
-                dataSourceId.directoryName,
-                Some(datasetId),
-                reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-            } yield ()
-          } else
-            for {
-              _ <- Fox.runIf(dataSourceService.datasetIsInManagedS3(dataSource))(
-                dataSourceService.deleteFromManagedS3(dataSource, datasetId))
-            } yield ()
-          _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
+          _ <- dataSourceService.deleteOnDisk(
+            dataSourceId.organizationId,
+            dataSourceId.directoryName,
+            Some(datasetId),
+            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+
+        } yield Ok
+      }
+    }
+
+  def deletePaths(): Action[Seq[UPath]] =
+    Action.async(validateJson[Seq[UPath]]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.deletePathsFromDiskOrManagedS3(request.body)
         } yield Ok
       }
     }

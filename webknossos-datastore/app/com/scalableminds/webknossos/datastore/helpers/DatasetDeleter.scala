@@ -78,6 +78,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
 
   // Handle references to layers and mags that are deleted
 
+  // TODO remove?
   private def moveSymlinks(organizationId: String, datasetName: String, datasetId: ObjectId)(
       implicit ec: ExecutionContext) =
     for {

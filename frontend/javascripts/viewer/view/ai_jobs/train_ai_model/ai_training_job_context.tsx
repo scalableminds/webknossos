@@ -29,7 +29,7 @@ export interface AiTrainingAnnotationSelection {
 }
 
 interface AiTrainingJobContextType {
-  handleStartAnalysis: () => void;
+  handleStartAnalysis: () => Promise<void>;
   selectedTask: AiTrainingTask | null;
   selectedJobType: APIJobType | null;
   setSelectedJobType: (jobType: APIJobType) => void;

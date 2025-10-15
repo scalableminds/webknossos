@@ -79,9 +79,7 @@ export const AiTrainingModelSelector: React.FC = () => {
             onClick={() => handleTaskSelection(item)}
           >
             <List.Item.Meta
-              avatar={
-                <Avatar shape="square" size={64} src={<img src={item.image} alt={item.name} />} />
-              }
+              avatar={<Avatar shape="square" size={64} src={item.image} alt={item.name} />}
               title={
                 <Space>
                   <Text strong>{item.name}</Text>

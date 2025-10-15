@@ -530,7 +530,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
-  def deleteUnusableDataset(dataset: Dataset): Fox[Unit] = ??? // TODO
+  private def deleteUnusableDataset(dataset: Dataset): Fox[Unit] = ??? // TODO
 
   def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     if (!dataset.isUsable) {

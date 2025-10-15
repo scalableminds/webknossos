@@ -5,7 +5,16 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, StaticColorLayer, StaticLayer, StaticSegmentationLayer, UnusableDataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer,
+  UnusableDataSource,
+  UsableDataSource
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
@@ -561,7 +570,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       } yield ()
     }
 
-  def deleteDatasetFromDB(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =
     for {
       existingDatasetBox <- datasetDAO.findOne(datasetId)(GlobalAccessContext).shiftBox
       _ <- existingDatasetBox match {

@@ -39,18 +39,18 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     logger.debug(
       s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryString("mag" -> mag.toMagLiteral())
-      .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
-      .addQueryString("y" -> mag1BoundingBox.topLeft.y.toString)
-      .addQueryString("z" -> mag1BoundingBox.topLeft.z.toString)
-      .addQueryString("width" -> targetMagBoundingBox.width.toString)
-      .addQueryString("height" -> targetMagBoundingBox.height.toString)
-      .addQueryStringOptional("mappingName", mappingName)
-      .addQueryStringOptional("intensityMin", intensityRangeOpt.map(_._1.toString))
-      .addQueryStringOptional("intensityMax", intensityRangeOpt.map(_._2.toString))
-      .addQueryStringOptional("color", colorSettingsOpt.map(_.color.toHtml))
-      .addQueryStringOptional("invertColor", colorSettingsOpt.map(_.isInverted.toString))
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .addQueryParam("mag", mag.toMagLiteral())
+      .addQueryParam("x", mag1BoundingBox.topLeft.x)
+      .addQueryParam("y", mag1BoundingBox.topLeft.y)
+      .addQueryParam("z", mag1BoundingBox.topLeft.z)
+      .addQueryParam("width", targetMagBoundingBox.width)
+      .addQueryParam("height", targetMagBoundingBox.height)
+      .addQueryParam("mappingName", mappingName)
+      .addQueryParam("intensityMin", intensityRangeOpt.map(_._1))
+      .addQueryParam("intensityMax", intensityRangeOpt.map(_._2))
+      .addQueryParam("color", colorSettingsOpt.map(_.color.toHtml))
+      .addQueryParam("invertColor", colorSettingsOpt.map(_.isInverted))
       .getWithBytesResponse
   }
 
@@ -62,21 +62,21 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$layerName/readData")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
   def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/findData")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
   def fetchStorageReports(organizationId: String, paths: List[String]): Fox[PathStorageUsageResponse] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .silent
       .postJsonWithJsonResponse[PathStorageUsageRequest, PathStorageUsageResponse](PathStorageUsageRequest(paths))
 
@@ -86,7 +86,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       cacheKey,
       k =>
         rpc(s"${dataStore.url}/data/datasets/${k._1}/layers/${k._2}/hasSegmentIndex")
-          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
           .silent
           .getWithJsonResponse[Boolean]
     )
@@ -96,33 +96,33 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                            organizationId: String,
                            userToken: String): Fox[ExploreRemoteDatasetResponse] =
     rpc(s"${dataStore.url}/data/datasets/exploreRemote")
-      .addQueryString("token" -> userToken)
+      .addQueryParam("token", userToken)
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
         ExploreRemoteDatasetRequest(layerParameters, organizationId))
 
   def validatePaths(paths: Seq[UPath]): Fox[List[PathValidationResult]] =
     rpc(s"${dataStore.url}/data/datasets/validatePaths")
-      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithJsonResponse[Seq[UPath], List[PathValidationResult]](paths)
 
   def invalidateDatasetInDSCache(datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
-        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .delete()
     } yield ()
 
   def updateDataSourceOnDisk(datasetId: ObjectId, dataSource: UsableDataSource): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId")
-        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .putJson(dataSource)
     } yield ()
 
   def deleteOnDisk(datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
-        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .delete()
     } yield ()
 

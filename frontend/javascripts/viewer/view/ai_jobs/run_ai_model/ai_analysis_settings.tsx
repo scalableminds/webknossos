@@ -54,21 +54,21 @@ export const AiAnalysisSettings: React.FC = () => {
   const activeUser = useWkSelector((state) => state.activeUser);
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues, allValues) => {
-    if (Object.prototype.hasOwnProperty.call(changedValues, "newDatasetName")) {
+    if ("newDatasetName" in changedValues) {
       setNewDatasetName(changedValues.newDatasetName);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "selectedLayer")) {
+    if ("selectedLayer" in changedValues) {
       setSelectedLayer(
         colorLayers.find((l) => l.name === changedValues.selectedLayer.name) as APIDataLayer,
       );
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "selectedBoundingBox")) {
+    if ("selectedBoundingBox" in changedValues) {
       setSelectedBoundingBox(changedValues.selectedBoundingBox);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "seedGeneratorDistanceThreshold")) {
+    if ("seedGeneratorDistanceThreshold" in changedValues) {
       setSeedGeneratorDistanceThreshold(changedValues.seedGeneratorDistanceThreshold);
     }
-    if (Object.prototype.hasOwnProperty.call(allValues, "splitMergerEvaluationSettings")) {
+    if ("splitMergerEvaluationSettings" in allValues) {
       setSplitMergerEvaluationSettings(
         allValues.splitMergerEvaluationSettings as SplitMergerEvaluationSettings,
       );
@@ -184,8 +184,8 @@ export const AiAnalysisSettings: React.FC = () => {
                   <Form.Item
                     name="seedGeneratorDistanceThreshold"
                     label="Seed generator distance threshold (nm)"
-                    tooltip="Controls the distance between two objects centers used as a starting point/seed for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/cross-section distance of the object), depending on object size—higher for large objects like nuclei (~1000nm), lower for small ones like synaptic vesicles (~10nm). If set too low, objects may merge; if too high, they may split or be missed."
-                    rules={[{ required: true, message: "Please enter positive number" }]}
+                    tooltip="Controls the distance between two objects centers used as a starting point (seed) for a growing segmentation. It should be set to a positive value in nm, typically 10-30% of the model`s `max_distance` parameter (=diameter/thickness of the object). For larger objects, such as nuclei (~1000nm), use higher values. For small ones, such as synaptic vesicles (~10nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
+                    rules={[{ required: true, message: "Please enter a positive number" }]}
                   >
                     <InputNumber
                       min={0.1}

@@ -306,7 +306,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             {
               key: "open_ai_training_button",
               onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-              label: "Train AI model",
+              label: "Train new AI model",
             },
           ]
         : []),

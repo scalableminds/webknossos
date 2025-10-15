@@ -20,7 +20,7 @@ const alignmentTasks: AlignmentTask[] = [
   {
     name: "Align Sections",
     comment:
-      "Align all sections of this dataset along the Z axis using features in neighboring sections. Optimized for datasets with a single tile per sections (no stitching needed).",
+      "Align all sections of this dataset along the Z axis using features in neighboring sections. Only supported for datasets with a single tile per sections (no stitching needed).",
     id: "align-sections",
     jobType: APIJobType.ALIGN_SECTIONS,
     image: "/assets/images/align_example.png",
@@ -75,7 +75,7 @@ export const AiAlignmentModelSelector: React.FC = () => {
               padding: "16px",
               opacity: item.disabled ? 0.5 : 1,
               cursor: item.disabled ? "not-allowed" : "pointer",
-              transition: "backgroun-color 0.2s ease-in-out",
+              transition: "background-color 0.2s ease-in-out",
             }}
             onClick={() => handleTaskSelection(item)}
           >

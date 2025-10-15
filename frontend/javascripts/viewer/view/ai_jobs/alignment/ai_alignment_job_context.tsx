@@ -56,7 +56,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
 
   const handleStartAnalysis = useCallback(async () => {
     try {
-      startAlignSectionsJob(
+      await startAlignSectionsJob(
         dataset.id,
         colorLayer.name,
         newDatasetName,

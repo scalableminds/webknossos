@@ -11,10 +11,10 @@ export const AiAlignmentSettings: React.FC = () => {
     useAlignmentJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
-    if (Object.prototype.hasOwnProperty.call(changedValues, "newDatasetName")) {
+    if ("newDatasetName" in changedValues) {
       setNewDatasetName(changedValues.newDatasetName);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "useAnnotation")) {
+    if ("useAnnotation" in changedValues) {
       setShouldUseManualMatches(changedValues.useAnnotation);
     }
   };

@@ -45,7 +45,7 @@ You can also add more training data from other annotations by clicking the `+` b
 
 *   **Model Name:** Give your new model a descriptive name.
 *   **Comments:** Add any comments or notes about the training for future reference.
-*   **Max Distance (nm):** (Only for EM Instances Model) The maximum cross-section length or distance ("diameter") for each identified object in nanometers e.g. Nuclei: 1000nm, Vesicles: 80nm.
+*   **Max Distance (nm):** (Only for EM Instances Model) The maximum cross-section length ("diameter") for each identified object in nanometers e.g. Nuclei: 1000nm, Vesicles: 80nm.
 
 ### Credit Information
 

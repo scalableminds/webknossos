@@ -13,7 +13,11 @@ type PretrainedModel = {
   name: string;
   comment: string;
   id: string;
-  jobType: APIJobType;
+  jobType:
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_NUCLEI
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_INSTANCES;
   image: string;
   disabled?: boolean;
 };
@@ -76,7 +80,11 @@ export const AiModelSelector: React.FC = () => {
   );
 
   const onSelectModel = (model: AiModel | PretrainedModel) => {
-    let jobType: APIJobType;
+    let jobType:
+      | APIJobType.INFER_NEURONS
+      | APIJobType.INFER_NUCLEI
+      | APIJobType.INFER_MITOCHONDRIA
+      | APIJobType.INFER_INSTANCES;
     if ("category" in model) {
       jobType = mapCategoryToJobType(model.category as APIAiModelCategory);
     } else {
@@ -85,7 +93,6 @@ export const AiModelSelector: React.FC = () => {
     }
 
     setSelectedModel(model);
-    // @ts-ignore jobType covers move possible job type then expected for selectedJob
     setSelectedJobType(jobType);
   };
 
@@ -109,9 +116,9 @@ export const AiModelSelector: React.FC = () => {
     [searchTerm, customModels],
   );
 
-  const switchToTraininButton = (
+  const switchToTrainingButton = (
     <>
-      You don't have any custom models yet. Training custom model on your data is coming soon.
+      You don't have any custom models yet. Training custom models on your data is coming soon.
       {/* <Button onClick={() => dispatch(setAIJobDrawerStateAction("open_ai_training"))} type="link">
         Train an AI Model on your data
       </Button> */}
@@ -148,9 +155,9 @@ export const AiModelSelector: React.FC = () => {
                 selectedModel?.id === item.id
                   ? "1px solid var(--color-wk-blue)"
                   : "1px solid #d9d9d9",
-              borderRadius: "8px",
-              marginBottom: "16px",
-              padding: "16px",
+              borderRadius: 8,
+              marginBottom: 16,
+              padding: 16,
               opacity: item.disabled ? 0.5 : 1,
               cursor: item.disabled ? "not-allowed" : "pointer",
             }}
@@ -188,16 +195,16 @@ export const AiModelSelector: React.FC = () => {
           dataSource={filteredCustomModels}
           locale={{
             emptyText:
-              searchTerm.length > 0 ? "No models match your search." : switchToTraininButton,
+              searchTerm.length > 0 ? "No models match your search." : switchToTrainingButton,
           }}
           renderItem={(item) => (
             <List.Item
               className="hoverable-list-item"
               style={{
                 border: selectedModel?.id === item.id ? "1px solid #1890ff" : "1px solid #d9d9d9",
-                borderRadius: "8px",
-                marginBottom: "16px",
-                padding: "16px",
+                borderRadius: 8,
+                marginBottom: 16,
+                padding: 16,
                 cursor: "pointer",
               }}
               onClick={() => onSelectModel(item)}

@@ -18,13 +18,13 @@ export const AiTrainingSettings: React.FC = () => {
   } = useAiTrainingJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
-    if (Object.prototype.hasOwnProperty.call(changedValues, "modelName")) {
+    if ("modelName" in changedValues) {
       setModelName(changedValues.modelName);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "comments")) {
+    if ("comments" in changedValues) {
       setComments(changedValues.comments);
     }
-    if (Object.prototype.hasOwnProperty.call(changedValues, "maxDistanceNm")) {
+    if ("maxDistanceNm" in changedValues) {
       setMaxDistanceNm(changedValues.maxDistanceNm);
     }
   };
@@ -60,7 +60,7 @@ export const AiTrainingSettings: React.FC = () => {
                 name="maxDistanceNm"
                 label="Max Distance (nm)"
                 rules={[{ required: true, message: "Please enter a positive number" }]}
-                tooltip='The maximum cross-section length or distance ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
+                tooltip='The maximum cross-section length ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
               >
                 <InputNumber min={0.1} suffix="nm" />
               </Form.Item>

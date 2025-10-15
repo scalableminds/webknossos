@@ -20,9 +20,9 @@ export async function fetchAnnotationInfos(
 
   for (const taskOrAnnotationIdOrUrl of taskOrAnnotationIdsOrUrls) {
     if (taskOrAnnotationIdOrUrl.includes("/")) {
-      const lastSegment = taskOrAnnotationIdOrUrl.split("/").at(-1);
-      if (lastSegment) {
-        annotationIdsForTraining.push(lastSegment);
+      const annotationId = taskOrAnnotationIdOrUrl.split("/").at(-1);
+      if (annotationId) {
+        annotationIdsForTraining.push(annotationId);
       }
     } else {
       let isTask = true;
@@ -62,7 +62,7 @@ export async function fetchAnnotationInfos(
         serverVolumeToClientVolumeTracing(tracing, null, null),
       );
       // A copy of the user bounding boxes of an annotation is saved in every tracing. In case no volume tracing exists, the skeleton tracing is checked.
-      let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;
+      let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes ?? [];
       if (!userBoundingBoxes) {
         const skeletonLayer = annotation.annotationLayers.find(
           (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
@@ -78,9 +78,9 @@ export async function fetchAnnotationInfos(
         }
       }
       if (annotation.task?.boundingBox) {
-        const existingIds = (userBoundingBoxes || []).map(({ id }) => id);
+        const existingIds = userBoundingBoxes.map(({ id }) => id);
         const largestId = existingIds.length > 0 ? Math.max(...existingIds) : -1;
-        (userBoundingBoxes || []).push({
+        userBoundingBoxes.push({
           name: "Task Bounding Box",
           boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
           color: [0, 0, 0],

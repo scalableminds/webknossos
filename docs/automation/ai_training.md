@@ -39,7 +39,7 @@ In this section, you need to specify the data that will be used for training.
 *   **Ground Truth Layer:** Select the segmentation layer that you created.
 *   **Magnification:** Choose the magnification that should be used for training.
 
-You can also add more training data from other annotations by clicking the `+` button and referencing annotation by IDs or WEBKNOSSOS URLs.
+You can also add more training data from other annotations by clicking the `+` button and referencing annotations by ID or WEBKNOSSOS URLs.
 
 ### Training Settings
 

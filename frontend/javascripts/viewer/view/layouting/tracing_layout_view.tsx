@@ -129,9 +129,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // For super users, we don't enforce a page reload.
       // They'll act as a guinea pig for this performance
       // improvement for now.
-      // Since the page is not reloaded, the performance navigation
-      // timings are no longer accurate and should not be used.
-      window.measuredTimeToFirstRender = true;
+      window.measuredTimeToFirstRender = false;
       return;
     }
 

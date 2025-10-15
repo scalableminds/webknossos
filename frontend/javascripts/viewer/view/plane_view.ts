@@ -391,8 +391,13 @@ class PlaneView {
   }
 
   measureTimeToFirstRender() {
+    // We cannot use performance.getEntriesByType("navigation")[0].startTime, because the page might be loaded
+    // much earlier. It is not reloaded when opening a dataset or annotation from the dashboard and also might
+    // not be reloaded when navigating from the tracing view back to the dashboard.
+    // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
+    // is that the time for the intitial resource loading is not included, then.
     const timeToFirstRenderInMs = Math.round(
-      performance.now() - performance.getEntriesByType("navigation")[0].startTime,
+      performance.measure("tracing_view_load_duration", "tracing_view_load_start").duration,
     );
     const timeToCompileShaderInMs = Math.round(
       performance.measure("shader_compile_duration", "shader_compile_start").duration,

@@ -7,8 +7,10 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.Annotation
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -101,6 +103,8 @@ class WorkerService @Inject()(conf: WkConf) {
 class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
+                                      reportedAsDeadTemporaryStore: TemporaryStore[ObjectId, Unit],
+                                      conf: WkConf,
                                       val lifecycle: ApplicationLifecycle,
                                       val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
@@ -117,32 +121,33 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
 
-  private val reportedAsDead: scala.collection.mutable.Set[ObjectId] = scala.collection.mutable.Set()
-
   private def reportIfLivenessChanged(worker: Worker): Unit = {
     val heartBeatIsRecent = workerService.lastHeartBeatIsRecent(worker)
-    if (!heartBeatIsRecent && !reportedAsDead.contains(worker._id)) {
+    if (!heartBeatIsRecent && !reportedAsDeadTemporaryStore.contains(worker._id)) {
       reportAsDead(worker)
-      reportedAsDead.add(worker._id)
+      reportedAsDeadTemporaryStore.insert(worker._id, (), to = Some(conf.Jobs.workerLivenessReReportInterval))
     }
-    if (heartBeatIsRecent && reportedAsDead.contains(worker._id)) {
+    if (heartBeatIsRecent && reportedAsDeadTemporaryStore.contains(worker._id)) {
       reportAsResurrected(worker)
-      reportedAsDead.remove(worker._id)
+      reportedAsDeadTemporaryStore.remove(worker._id)
     }
   }
 
   private def reportAsDead(worker: Worker): Unit = {
     val msg =
-      s"Worker ${worker.name} (${worker._id}) is not reporting. Last heartbeat was at ${worker.lastHeartBeat}"
+      s"Worker ${worker.name} (${worker._id}) is not reporting. ${formatHeartbeat(worker)}"
     slackNotificationService.warn("Worker missing", msg)
     logger.warn(msg)
   }
 
   private def reportAsResurrected(worker: Worker): Unit = {
     val msg =
-      s"Worker ${worker.name} (${worker._id}) is reporting again. Last heartbeat was at ${worker.lastHeartBeat}"
+      s"Worker ${worker.name} (${worker._id}) is reporting again. ${formatHeartbeat(worker)}"
     slackNotificationService.success("Worker return", msg)
     logger.info(msg)
   }
+
+  private def formatHeartbeat(worker: Worker): String =
+    f"Last heartbeat was at ${worker.lastHeartBeat} (${formatDuration(Instant.since(worker.lastHeartBeat))} ago)"
 
 }

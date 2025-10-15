@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{
   ArrayArtifactHashing,
-  ChunkCacheService,
+  DSChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
 import ucar.ma2.{Array => MultiArray}
@@ -50,7 +50,7 @@ object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZ
 }
 
 class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
-                                            chunkCacheService: ChunkCacheService)
+                                            chunkCacheService: DSChunkCacheService)
     extends FoxImplicits
     with SegmentIndexFileUtils {
 

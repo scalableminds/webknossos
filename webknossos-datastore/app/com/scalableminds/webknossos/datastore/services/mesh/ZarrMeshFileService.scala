@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.services.{
   ChunkCacheService,
   VoxelyticsZarrArtifactUtils
 }
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
 import ucar.ma2.{Array => MultiArray}
@@ -59,8 +59,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
   }
 }
 
-class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
-                                    remoteSourceDescriptorService: RemoteSourceDescriptorService)
+class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService, dataVaultService: DataVaultService)
     extends FoxImplicits
     with MeshFileUtils
     with NeuroglancerMeshHelper {
@@ -71,7 +70,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
   private def readMeshFileAttributesImpl(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
                                                                    tc: TokenContext): Fox[MeshFileAttributes] =
     for {
-      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
+      groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / MeshFileAttributes.FILENAME_ZARR_JSON)
         .readBytes() ?~> "Could not read mesh file zarr group file"
       meshFileAttributes <- JsonHelper
@@ -150,7 +149,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: ChunkCacheService,
   private def openZarrArrayImpl(meshFileKey: MeshFileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
                                                                                  tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(meshFileKey.attachment)
+      groupVaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
                                    DataSourceId("dummy", "unused"),
                                    "layer",

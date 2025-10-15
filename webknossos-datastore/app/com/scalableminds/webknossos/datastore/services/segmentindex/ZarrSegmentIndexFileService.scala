@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   VoxelyticsZarrArtifactUtils
 }
 import ucar.ma2.{Array => MultiArray}
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{JsResult, JsValue, Reads}
 
 import javax.inject.Inject
@@ -49,8 +49,7 @@ object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZ
   }
 }
 
-class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
-                                            chunkCacheService: ChunkCacheService)
+class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, chunkCacheService: ChunkCacheService)
     extends FoxImplicits
     with SegmentIndexFileUtils {
 
@@ -66,7 +65,7 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     for {
-      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(segmentIndexFileKey.attachment)
+      groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON)
         .readBytes() ?~> "Could not read segment index file zarr group file"
       segmentIndexFileAttributes <- JsonHelper
@@ -127,7 +126,7 @@ class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: Remot
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(segmentIndexFileKey.attachment)
+      groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
       zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
                                    DataSourceId("dummy", "unused"),
                                    "layer",

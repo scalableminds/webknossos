@@ -14,14 +14,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   CoordinateTransformation,
   DataLayer,
-  DataSourceId,
   DataLayerAttachments,
+  DataSourceId,
   ElementClass,
   SegmentationLayer
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.typesafe.scalalogging.LazyLogging
 
@@ -84,7 +84,7 @@ case class EditableMappingLayer(name: String, // set to tracing id
 
   override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
 
-  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)

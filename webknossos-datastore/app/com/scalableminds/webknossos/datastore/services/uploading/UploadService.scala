@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataStoreRedisStore,
-  RemoteSourceDescriptorService,
+  DataVaultService,
   S3AccessKeyCredential
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -102,7 +102,7 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                              dataVaultService: DataVaultService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
@@ -478,10 +478,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkPathsInUploadedDatasourcePropertiesJson(unpackToDir: Path, organizationId: String): Fox[Unit] = {
     val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId)
     for {
-      _ <- Fox.runOptional(dataSource.toUsable)(
-        usableDataSource =>
-          Fox.fromBool(
-            usableDataSource.allExplicitPaths.forall(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)))
+      _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
+        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)))
     } yield ()
   }
 

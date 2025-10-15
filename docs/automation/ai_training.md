@@ -55,4 +55,4 @@ This section provides an overview of your available credits in your organization
 
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 
-Once the training is finished, you can find and overview of all your trained model from the `Admin` >`AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.
+Once the training is finished, you can find an overview of all your trained models on the `Admin` > `AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.

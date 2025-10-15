@@ -17,6 +17,7 @@ import type { FormProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
+import { ColorWKBlue } from "theme";
 import type { APIDataLayer } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
@@ -106,7 +107,7 @@ export const AiAnalysisSettings: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <SettingOutlined style={{ color: "#1890ff" }} />
+          <SettingOutlined style={{ color: ColorWKBlue }} />
           Analysis Settings
         </Space>
       }

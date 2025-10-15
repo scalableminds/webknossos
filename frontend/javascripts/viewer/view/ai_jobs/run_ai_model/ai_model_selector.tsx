@@ -4,6 +4,7 @@ import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
+import { ColorWKBlue } from "theme";
 import { APIJobType, type AiModel } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
@@ -130,7 +131,7 @@ export const AiModelSelector: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <ExperimentOutlined style={{ color: "#1890ff" }} />
+          <ExperimentOutlined style={{ color: ColorWKBlue }} />
           Select AI Model
         </Space>
       }
@@ -169,7 +170,8 @@ export const AiModelSelector: React.FC = () => {
                 <Avatar
                   shape="square"
                   size={64}
-                  src={<img src={(item as PretrainedModel).image} alt={item.name} />}
+                  src={(item as PretrainedModel).image}
+                  alt={item.name}
                 />
               }
               title={
@@ -201,7 +203,8 @@ export const AiModelSelector: React.FC = () => {
             <List.Item
               className="hoverable-list-item"
               style={{
-                border: selectedModel?.id === item.id ? "1px solid #1890ff" : "1px solid #d9d9d9",
+                border:
+                  selectedModel?.id === item.id ? `1px solid ${ColorWKBlue}` : "1px solid #d9d9d9",
                 borderRadius: 8,
                 marginBottom: 16,
                 padding: 16,

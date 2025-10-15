@@ -44,6 +44,7 @@ interface AiTrainingJobContextType {
 
   selectedAnnotations: AiTrainingAnnotationSelection[];
   setSelectedAnnotations: React.Dispatch<React.SetStateAction<AiTrainingAnnotationSelection[]>>;
+
   handleSelectionChange: (
     annotationId: string,
     newValues: Partial<
@@ -138,9 +139,9 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = selectedAnnotations.map(
       (selection) => ({
         annotationId: selection.annotation.id,
-        colorLayerName: selection.imageDataLayer!,
-        segmentationLayerName: selection.groundTruthLayer!,
-        mag: selection.magnification!,
+        colorLayerName: selection.imageDataLayer,
+        segmentationLayerName: selection.groundTruthLayer,
+        mag: selection.magnification,
       }),
     );
 

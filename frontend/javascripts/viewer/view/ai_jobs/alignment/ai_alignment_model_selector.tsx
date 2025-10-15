@@ -2,6 +2,7 @@ import { ExperimentOutlined } from "@ant-design/icons";
 import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
+import { ColorWKBlue } from "theme";
 import { APIJobType } from "types/api_types";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
@@ -54,7 +55,7 @@ export const AiAlignmentModelSelector: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <ExperimentOutlined style={{ color: "#1890ff" }} />
+          <ExperimentOutlined style={{ color: ColorWKBlue }} />
           Select AI Alignment Task
         </Space>
       }

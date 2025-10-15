@@ -2,6 +2,7 @@ import { ExperimentOutlined } from "@ant-design/icons";
 import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
+import { ColorWKBlue } from "theme";
 import { APIJobType } from "types/api_types";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
@@ -53,7 +54,7 @@ export const AiTrainingModelSelector: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <ExperimentOutlined style={{ color: "#1890ff" }} />
+          <ExperimentOutlined style={{ color: ColorWKBlue }} />
           Select AI Training Task
         </Space>
       }

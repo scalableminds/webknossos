@@ -4,6 +4,7 @@ import type { FormProps } from "antd";
 import type React from "react";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 
+import { ColorWKBlue } from "theme";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
 export const AiAlignmentSettings: React.FC = () => {
@@ -29,7 +30,7 @@ export const AiAlignmentSettings: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <SettingOutlined style={{ color: "#1890ff" }} />
+          <SettingOutlined style={{ color: ColorWKBlue }} />
           Alignment Settings
         </Space>
       }

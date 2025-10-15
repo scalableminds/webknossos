@@ -5,6 +5,7 @@ import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import groupBy from "lodash/groupBy";
 import { useMemo, useState } from "react";
+import { ColorWKBlue } from "theme";
 import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
@@ -13,6 +14,8 @@ import {
   useAiTrainingJobContext,
 } from "./ai_training_job_context";
 import { AnnotationsCsvInput } from "./annotations_csv_input";
+
+const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
 
 const AiTrainingDataSelector = ({
   selectedAnnotation,
@@ -96,7 +99,6 @@ const AiTrainingDataSelector = ({
       errors.push("Total volume of bounding boxes cannot be zero.");
     }
 
-    const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
     const tooSmallBoxes: string[] = [];
     const notMagAlignedBoundingBoxes: string[] = [];
 
@@ -291,7 +293,7 @@ export const AiTrainingDataSection = () => {
     const groupedBoxes = groupBy(nonMultipleBoxes, "annotationId");
     warningNode = (
       <div style={{ whiteSpace: "pre-wrap" }}>
-        {`For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions (${minDimensions.x}x${minDimensions.y}x${minDimensions.z} vx). The following boxes do not fit well:`}
+        {`For optimal training, all bounding boxes should have dimensions that are integer multiples of the smallest box dimensions (${minDimensions.x}x${minDimensions.y}x${minDimensions.z} vx). The following boxes don't meet this requirement:`}
         {Object.entries(groupedBoxes).map(([annotationId, boxes]) => (
           <div key={annotationId} style={{ marginTop: "8px" }}>
             In annotation{" "}
@@ -315,7 +317,7 @@ export const AiTrainingDataSection = () => {
       type="inner"
       title={
         <Space align="center">
-          <FolderOutlined style={{ color: "#1890ff" }} />
+          <FolderOutlined style={{ color: ColorWKBlue }} />
           Training Data
         </Space>
       }

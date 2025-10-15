@@ -4,6 +4,7 @@ import type { FormProps } from "antd";
 import type React from "react";
 import { APIJobType } from "types/api_types";
 
+import { ColorWKBlue } from "theme";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 export const AiTrainingSettings: React.FC = () => {
@@ -40,7 +41,7 @@ export const AiTrainingSettings: React.FC = () => {
       type="inner"
       title={
         <Space align="center">
-          <SettingOutlined style={{ color: "#1890ff" }} />
+          <SettingOutlined style={{ color: ColorWKBlue }} />
           Training Settings
         </Space>
       }

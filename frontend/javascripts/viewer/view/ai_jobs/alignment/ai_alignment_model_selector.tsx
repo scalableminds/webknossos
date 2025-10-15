@@ -38,16 +38,15 @@ const alignmentTasks: AlignmentTask[] = [
 ];
 
 export const AiAlignmentModelSelector: React.FC = () => {
-  const { setSelectedJobType, selectedTask, setSelectedTask } = useAlignmentJobContext();
+  const { selectedTask, setSelectedTask } = useAlignmentJobContext();
 
   const handleTaskSelection = useCallback(
     (item: AlignmentTask) => {
       if (!item.disabled && item.jobType) {
         setSelectedTask(item);
-        setSelectedJobType(item.jobType);
       }
     },
-    [setSelectedJobType, setSelectedTask],
+    [setSelectedTask],
   );
 
   return (

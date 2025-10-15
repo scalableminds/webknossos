@@ -38,17 +38,12 @@ export const RunAiModelCreditInformation: React.FC = () => {
 };
 
 export const AlignmentCreditInformation: React.FC = () => {
-  const {
-    selectedTask,
-    selectedJobType,
-    selectedBoundingBox,
-    handleStartAnalysis,
-    areParametersValid,
-  } = useAlignmentJobContext();
+  const { selectedTask, selectedBoundingBox, handleStartAnalysis, areParametersValid } =
+    useAlignmentJobContext();
   return (
     <CreditInformation
       selectedModel={selectedTask}
-      selectedJobType={selectedJobType}
+      selectedJobType={selectedTask?.jobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Alignment"

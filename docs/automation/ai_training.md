@@ -11,7 +11,7 @@ WEBKNOSSOS allows you to train your own AI models for image segmentation. This f
 
 ## Preparing Your Annotations
 
-Before you can start a training, you need to prepare your groundtruth annotation(s). The training process requires at least one volume annotation with at least one bounding box.
+Before you can start training, prepare your ground truth annotation(s). The training process requires at least one volume annotation with at least one bounding box.
 
 Here is a step-by-step guide to prepare your data:
 
@@ -39,7 +39,7 @@ In this section, you need to specify the data that will be used for training.
 *   **Ground Truth Layer:** Select the segmentation layer that you created.
 *   **Magnification:** Choose the magnification that should be used for training.
 
-You can also add more training data from other annotations by clicking the `+` button and referencing annotation by IDs or WEBKNOSSOS URLs.
+You can also add more training data from other annotations by clicking the `+` button and referencing annotations by ID or WEBKNOSSOS URLs.
 
 ### Training Settings
 
@@ -55,4 +55,4 @@ This section provides an overview of your available credits in your organization
 
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 
-Once the training is finished, you can find and overview of all your trained model from the `Admin` >`AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.
+Once the training is finished, you can find an overview of all your trained models on the `Admin` > `AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.

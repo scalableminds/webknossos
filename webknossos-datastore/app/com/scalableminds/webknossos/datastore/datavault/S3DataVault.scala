@@ -192,6 +192,7 @@ object S3DataVault {
     new S3DataVault(credential, remoteSourceDescriptor.toUriUnsafe, ws, ec)
   }
 
+  // TODO: Move non private methods to trait?
   def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
     if (isShortStyle(uri)) { // assume host is omitted from uri, shortcut form s3://bucket/key
@@ -218,7 +219,7 @@ object S3DataVault {
   private def isShortStyle(uri: URI): Boolean =
     !uri.getHost.contains(".")
 
-  private def objectKeyFromUri(uri: URI): Box[String] =
+  def objectKeyFromUri(uri: URI): Box[String] =
     if (isVirtualHostedStyle(uri)) {
       Full(uri.getPath)
     } else if (isPathStyle(uri)) {

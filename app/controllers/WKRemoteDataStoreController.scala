@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
@@ -20,7 +20,6 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
 import models.job.JobDAO
@@ -50,7 +49,6 @@ class WKRemoteDataStoreController @Inject()(
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
-    annotationDAO: AnnotationDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -211,17 +209,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
-          _ <- existingDatasetBox match {
-            case Full(dataset) =>
-              for {
-                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-                _ = datasetDAO
-                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-              } yield ()
-            case _ => Fox.successful(())
-          }
+          _ <- datasetService.deleteDatasetFromDB(request.body)
         } yield Ok
       }
   }

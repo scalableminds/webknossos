@@ -816,8 +816,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.mags.map { mag =>
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
-            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, realPath, axisOrder, channelIndex, credentialId)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
       }
     }
@@ -895,6 +895,21 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             WHERE realPath = $realPath""".as[DataSourceMagRow])
       magInfos = rowsToMagInfos(rows)
     } yield magInfos
+
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStr <- run(q"""
+           SELECT m1.path FROM webknossos.dataset_mags m1
+           WHERE m1._dataset = $datasetId
+           AND NOT EXISTS (
+              SELECT m2.path
+              FROM webknossos.dataset_mags m2
+              WHERE m2._dataset != $datasetId
+              AND m2.path = m1.path
+           )
+              """.as[String])
+      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+    } yield paths
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
@@ -1265,6 +1280,21 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
             ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
+
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStr <- run(q"""
+           SELECT a1.path FROM webknossos.dataset_layer_attachments a1
+           WHERE a1._dataset = $datasetId
+           AND NOT EXISTS (
+              SELECT a2.path
+              FROM webknossos.dataset_layer_attachments a2
+              WHERE a2._dataset != $datasetId
+              AND a2.path = a1.path
+           )
+              """.as[String])
+      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+    } yield paths
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -25,6 +25,8 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
+import models.annotation.AnnotationDAO
+import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
@@ -42,6 +44,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                datasetMagsDAO: DatasetMagsDAO,
+                               datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                multiUserDAO: MultiUserDAO,
@@ -52,6 +55,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               annotationDAO: AnnotationDAO,
+                               usedStorageService: UsedStorageService,
                                conf: WkConf,
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -525,18 +530,61 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
-  def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def deleteUnusableDataset(dataset: Dataset): Fox[Unit] = ??? // TODO
+
+  def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (!dataset.isUsable) {
+      deleteUnusableDataset(dataset)
+    } else {
+      for {
+
+        /* Find paths not used by other datasets (neither as realpath nor as path), delete those
+           (Caution, what if symlink chains go through this dataset? those won’t be detected as realpaths)
+         If virtual:
+           - find paths not used by other datasets (neither as realpath nor as path), delete those
+         If not virtual:
+           - for path in paths:
+              - find datasets with realpaths pointing to those paths
+           - if no such datasets,
+             - delete on disk, no rewriting symlinks
+           - else:
+             - abort
+         Delete in the DB if no annotations reference it, otherwise mark as deleted and clear datasource
+         */
+        datastoreClient <- clientFor(dataset)
+        _ <- if (dataset.isVirtual) {
+          for {
+            magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
+            attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(
+              dataset._id)
+            pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+            // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
+            _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
+          } yield ()
+        } else {
+          for {
+            _ <- Fox.failure(
+              "check that no other dataset’s realpaths are in here (check only datasets from the same datastore)! TODO how to find datastore binaryData dir? paths may be absolute.")
+            _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
+          } yield ()
+        }
+        _ <- deleteDatasetFromDB(dataset._id)
+      } yield ()
+    }
+
+  def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- if (dataset.isVirtual) {
-        // At this point, we should also free space in S3 once implemented.
-        // Right now, we can just mark the dataset as deleted in the database.
-        datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
-      } else {
-        for {
-          datastoreClient <- clientFor(dataset)
-          _ <- datastoreClient.deleteOnDisk(dataset._id)
-        } yield ()
-      } ?~> "dataset.delete.failed"
+      existingDatasetBox <- datasetDAO.findOne(datasetId)(GlobalAccessContext).shiftBox
+      _ <- existingDatasetBox match {
+        case Full(dataset) =>
+          for {
+            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+            _ = datasetDAO
+              .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+          } yield ()
+        case _ => Fox.successful(())
+      }
     } yield ()
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =

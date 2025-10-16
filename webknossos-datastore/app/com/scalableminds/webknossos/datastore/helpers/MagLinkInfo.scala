@@ -26,3 +26,5 @@ case class LayerMagLinkInfo(layerName: String, magLinkInfos: Seq[MagLinkInfo])
 object LayerMagLinkInfo {
   implicit val jsonFormat: Format[LayerMagLinkInfo] = Json.format[LayerMagLinkInfo]
 }
+
+// TODO remove?

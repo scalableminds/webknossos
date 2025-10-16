@@ -9,6 +9,7 @@ import { ViewModeValues } from "viewer/constants";
 const TRACING_ID = "skeletonTracingId-e90133de-b2db-4912-8261-8b6f84f7edab";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
+  datasetName: "ROI2017_wkw",
   trees: [
     {
       nodes: [

@@ -71,7 +71,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -232,7 +232,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -393,7 +393,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -554,7 +554,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -715,7 +715,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -903,7 +903,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -1064,7 +1064,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -1225,7 +1225,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -1386,7 +1386,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
       "edgesAreVisible": true,
       "isVisible": true,
       "metadata": [],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],
@@ -1565,7 +1565,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
           ],
         },
       ],
-      "name": "explorative_2017-10-09_SCM_Boy_023",
+      "name": "explorative_2017-10-09_sample_user_023",
       "nodes": [
         {
           "additionalCoordinates": [],

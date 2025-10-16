@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, isBigInt, isNumberMap } from "libs/utils";
+import { SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -51,7 +51,10 @@ import {
   type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import {
+  pushSaveQueueTransaction,
+  snapshotMappingDataForNextRebaseAction,
+} from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -73,6 +76,7 @@ import {
   initializeEditableMappingAction,
   removeSegmentAction,
   setHasEditableMappingAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -104,6 +108,8 @@ function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   };
 }
 
+export const PROOFREADING_BUSY_REASON = "Proofreading in progress";
+
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkReady);
@@ -111,7 +117,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     runSagaAndCatchSoftError(handleSkeletonProofreadingAction),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
   yield* takeEvery(
@@ -121,17 +127,17 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEveryUnlessBusy(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE"],
     runSagaAndCatchSoftError(handleProofreadMergeOrMinCut),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEveryUnlessBusy(
     ["MIN_CUT_PARTITIONS", "ENTER"],
     runSagaAndCatchSoftError(performPartitionedMinCut),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
-    "Proofreading in progress",
+    PROOFREADING_BUSY_REASON,
   );
 
   yield* takeEvery(
@@ -300,6 +306,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
 
+  yield put(updateProofreadingMarkerPositionAction(position, layerName));
+
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
   if (!proofreadUsingMeshes()) return;
@@ -308,7 +316,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
-function* createEditableMapping(): Saga<string> {
+export function* createEditableMapping(): Saga<string> {
   /*
    * Returns the name of the editable mapping. This is not identical to the
    * name of the HDF5 mapping for which the editable mapping is about to be created.
@@ -357,7 +365,7 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
-  // Handles split, merge and min-cut actions on agglomerates.
+  // This saga handles split, merge and min-cut actions on agglomerates.
   // Note that the skeletontracing reducer already mutated the skeletons according to the
   // received action.
   if (
@@ -372,7 +380,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const { sourceNodeId, targetNodeId } = action;
@@ -417,7 +425,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const { agglomerateFileMag, getDataValue, activeMapping, volumeTracing } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  let { activeMapping } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   // Use untransformedPosition because agglomerate trees should not have
@@ -437,8 +446,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
-  const sourceAgglomerateId = sourceInfo.agglomerateId;
-  const targetAgglomerateId = targetInfo.agglomerateId;
+  let sourceAgglomerateId = sourceInfo.agglomerateId;
+  let targetAgglomerateId = targetInfo.agglomerateId;
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -451,11 +460,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     }
     items.push(
       mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
-        agglomerateFileMag,
+        sourceAgglomerateId,
+        targetAgglomerateId,
         volumeTracingId,
       ),
     );
@@ -465,6 +473,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       activeMapping,
       sourceAgglomerateId,
       targetAgglomerateId,
+      true,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -473,10 +482,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     }
     items.push(
       splitAgglomerate(
-        sourceAgglomerateId,
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
-        agglomerateFileMag,
+        sourceAgglomerateId,
         volumeTracingId,
       ),
     );
@@ -504,6 +512,20 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   yield* put(pushSaveQueueTransaction(items));
   yield* call([Model, Model.ensureSavedState]);
 
+  activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+  );
+
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  sourceAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
+      sourceAgglomerateId,
+  );
+  targetAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
+      targetAgglomerateId,
+  );
+
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
       Toast.error(
@@ -526,6 +548,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         mapping: splitMapping,
       }),
     );
+    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
 
   const newMapping = yield* select(
@@ -636,13 +660,7 @@ function* performMinCut(
       edge.segmentId2,
     );
     items.push(
-      splitAgglomerate(
-        sourceAgglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
+      splitAgglomerate(edge.segmentId1, edge.segmentId2, sourceAgglomerateId, volumeTracingId),
     );
   }
 
@@ -662,7 +680,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   const partitions = yield* select(
     (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
   );
-  const agglomerateId = partitions.agglomerateId;
+  let agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
     console.error(messages["proofreading.multi_cut.empty_partition"]);
     Toast.error(messages["proofreading.multi_cut.empty_partition"]);
@@ -674,7 +692,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     return;
   }
   const volumeTracingId = preparation.volumeTracing.tracingId;
-  const { agglomerateFileMag, activeMapping } = preparation;
+  const { agglomerateFileMag } = preparation;
   const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
 
   const items: UpdateActionWithoutIsolationRequirement[] = [];
@@ -700,6 +718,18 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   yield* call([Model, Model.ensureSavedState]);
   yield* put(resetMultiCutToolPartitionsAction());
 
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId],
+  );
+
+  // The agglomerateId of the split agglomerate might have changed due to syncing with the server caused by Model.ensureSavedState.
+  // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  agglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])) ??
+      agglomerateId,
+  );
+
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
   // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
@@ -711,10 +741,12 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
+  const currentVersion = Store.getState().annotation.version;
   const splitMapping = yield* splitAgglomerateInMapping(
     activeMapping,
     agglomerateId,
     volumeTracingId,
+    currentVersion,
     additionalUnmappedSegmentsToReRequest,
   );
 
@@ -723,6 +755,8 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
       mapping: splitMapping,
     }),
   );
+  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   /* Reload meshes */
   const newMapping = yield* select(
@@ -861,15 +895,7 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(
-      splitAgglomerate(
-        agglomerateId,
-        edge.segmentId1,
-        edge.segmentId2,
-        agglomerateFileMag,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, agglomerateId, volumeTracingId));
   }
 
   return { didCancel: false, neighborInfo };
@@ -896,14 +922,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, volumeTracing, activeMapping } = preparation;
+  let { agglomerateFileMag, volumeTracing, activeMapping } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
   const idInfos = yield* call(gatherInfoForOperation, action, preparation);
 
@@ -912,15 +938,15 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
   const [sourceInfo, targetInfo] = idInfos;
-  const sourceAgglomerateId = sourceInfo.agglomerateId;
-  const targetAgglomerateId = targetInfo.agglomerateId;
+  let sourceAgglomerateId = sourceInfo.agglomerateId;
+  let targetAgglomerateId = targetInfo.agglomerateId;
   const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
   const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateActionWithoutIsolationRequirement[] = [];
+  const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
     if (sourceAgglomerateId === targetAgglomerateId) {
@@ -928,13 +954,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    items.push(
+    updateActions.push(
       mergeAgglomerate(
-        sourceAgglomerateId,
-        targetAgglomerateId,
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
-        agglomerateFileMag,
+        sourceAgglomerateId,
+        targetAgglomerateId,
         volumeTracingId,
       ),
     );
@@ -954,6 +979,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       activeMapping,
       sourceAgglomerateId,
       targetAgglomerateId,
+      true,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -971,7 +997,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       agglomerateFileMag,
       volumeTracingId,
       null,
-      items,
+      updateActions,
     );
     if (hasErrored) {
       console.error(messages["proofreading.multi_cut.split_failed"]);
@@ -980,21 +1006,45 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     }
   }
 
-  if (items.length === 0) {
+  if (updateActions.length === 0) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items));
+  yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
+      const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
+      const additionalErrorExplanation = isOthersMayEditEnabled
+        ? " Maybe another user already splitted the agglomerate in the meantime."
+        : "";
       Toast.error(
-        "The selected positions are not part of the same agglomerate and cannot be split.",
+        `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,
       );
       return;
     }
+
+    // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
+    // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated.
+
+    activeMapping = yield* select(
+      (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+    );
+
+    // TODO: Fix why external ids are no longer loaded.
+    const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+    sourceAgglomerateId = Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+        adaptToType(sourceInfo.unmappedId),
+      ) ?? sourceAgglomerateId,
+    );
+    targetAgglomerateId = Number(
+      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+        adaptToType(targetInfo.unmappedId),
+      ) ?? targetAgglomerateId,
+    );
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
@@ -1010,6 +1060,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         mapping: splitMapping,
       }),
     );
+    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
+
     console.log("finished updating the mapping after a min-cut");
   }
 
@@ -1043,7 +1096,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       .filter((name) => name != null)
       .join(",");
     if (mergedName !== sourceAgglomerate.name) {
-      yield* put(updateSegmentAction(sourceAgglomerateId, { name: mergedName }, volumeTracingId));
+      yield* put(
+        updateSegmentAction(newSourceAgglomerateId, { name: mergedName }, volumeTracingId),
+      );
       Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
     }
   } else if (
@@ -1087,14 +1142,14 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing, activeMapping } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   let idInfos;
@@ -1118,7 +1173,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   if (!idInfos) {
     return;
   }
-  const targetAgglomerateId = idInfos[0].agglomerateId;
+  let targetAgglomerateId = idInfos[0].agglomerateId;
   const targetSegmentId = idInfos[0].unmappedId;
 
   const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
@@ -1126,7 +1181,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
-  const items: UpdateActionWithoutIsolationRequirement[] = [];
+  const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   const { didCancel, neighborInfo } = yield* call(
     performCutFromNeighbors,
@@ -1136,14 +1191,25 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     agglomerateFileMag,
     volumeTracingId,
     action.tree,
-    items,
+    updateActions,
   );
-  if (didCancel || items.length === 0) {
+  if (didCancel || updateActions.length === 0) {
     return;
   }
 
-  yield* put(pushSaveQueueTransaction(items));
+  yield* put(pushSaveQueueTransaction(updateActions));
   yield* call([Model, Model.ensureSavedState]);
+
+  // Get active mapping after saving and thus syncing with the backend as this might have changed the mapping.
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
+  );
+
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  targetAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)) ??
+      targetAgglomerateId,
+  );
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
@@ -1159,6 +1225,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       mapping: mappingAfterSplit,
     }),
   );
+  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
     call(getDataValue, targetPosition, mappingAfterSplit),
@@ -1460,10 +1528,7 @@ function getSegmentIdsThatMapToAgglomerate(
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
-  const adaptToType =
-    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
-      ? (el: number) => BigInt(el)
-      : (el: number) => el;
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
 
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
@@ -1472,10 +1537,11 @@ function getSegmentIdsThatMapToAgglomerate(
     .map(([segmentId, _agglomerateId]) => segmentId);
 }
 
-function* splitAgglomerateInMapping(
+export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   volumeTracingId: string,
+  version?: number | undefined,
   additionalSegmentsToRequest: number[] = [],
 ) {
   const segmentIdsFromLocalMapping = getSegmentIdsThatMapToAgglomerate(
@@ -1487,12 +1553,16 @@ function* splitAgglomerateInMapping(
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
+  if (splitSegmentIds.length === 0) {
+    return activeMapping.mapping ?? undefined;
+  }
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
     tracingStoreUrl,
     volumeTracingId,
     splitSegmentIds,
     annotationId,
+    version,
   );
 
   // Create a new mapping which is equal to the old one with the difference that
@@ -1519,15 +1589,12 @@ function* splitAgglomerateInMapping(
   return splitMapping as Mapping;
 }
 
-function mergeAgglomeratesInMapping(
+function* mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
-): Mapping {
-  const adaptToType =
-    activeMapping.mapping && isNumberMap(activeMapping.mapping)
-      ? (el: number) => el
-      : (el: number) => BigInt(el);
+): Saga<Mapping> {
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
 
   const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
   const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);
@@ -1543,6 +1610,7 @@ export function* updateMappingWithMerge(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
+  isUnsyncedWithServer: boolean,
 ) {
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
@@ -1550,46 +1618,35 @@ export function* updateMappingWithMerge(
     sourceAgglomerateId,
     targetAgglomerateId,
   );
+  if (mergedMapping === activeMapping.mapping) {
+    /* TODOM: in case setMappingAction is called with the same mapping
+     * as already active, the reducer will set the state to ACTIVATING
+     * but the listenToStoreProperty handler in mappings.ts will never be
+     * triggered, because the callback is only called if the identity of the
+     * watched property changes.
+     * three possible solutions:
+     *   a) avoid dispatching setMappingAction when the mapping did not change
+     *      (this is the current solution here).
+     *   b) Don't set the state to activating in the reducer if the mapping identity,
+     *      did not change.
+     *      (I feel like this makes the logic that controls the lifecycle of the mapping status
+     *      more complicated?)
+     *   c) Refactor the mappings.ts code so that it reacts to all setMapping actions.
+     *      (for example, this could happen in a saga. this would also solve the problem
+     *      that the mapping_saga currently dispatches finishMappingInitializationAction
+     *      when IS_TESTING is true).
+     *      <-- my favorite
+     */
+    return;
+  }
   yield* put(
     setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
       mapping: mergedMapping,
     }),
   );
-}
-
-export function* removeAgglomerateFromActiveMapping(
-  volumeTracingId: string,
-  activeMapping: ActiveMappingInfo,
-  agglomerateId: number,
-) {
-  /*
-   * This function removes all super-voxels segments from the active mapping
-   * that map to the specified agglomerateId.
-   */
-
-  const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
-
-  const adaptToType =
-    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
-      ? (el: number) => BigInt(el)
-      : (el: number) => el;
-  // If the mapping contains BigInts, we need a BigInt for the filtering
-  const comparableSourceAgglomerateId = adaptToType(agglomerateId);
-
-  const newMapping = new Map();
-
-  for (const entry of mappingEntries) {
-    const [key, value] = entry;
-    if (value !== comparableSourceAgglomerateId) {
-      newMapping.set(key, value);
-    }
+  if (!isUnsyncedWithServer) {
+    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
-
-  yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: newMapping,
-    }),
-  );
 }
 
 function* gatherInfoForOperation(

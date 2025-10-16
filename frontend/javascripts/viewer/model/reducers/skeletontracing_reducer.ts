@@ -142,6 +142,13 @@ function SkeletonTracingReducer(
           $set: null,
         },
       },
+      save: {
+        rebaseRelevantServerAnnotationState: {
+          skeleton: {
+            $set: skeletonTracing,
+          },
+        },
+      },
     });
   }
 
@@ -670,11 +677,10 @@ function SkeletonTracingReducer(
   }
 
   /**
-   * ATTENTION: The following actions are only executed if allowUpdate is true!
+   * ATTENTION: The following actions are only executed if isUpdatingCurrentlyAllowed is true!
    */
-  const { restrictions } = state.annotation;
-  const { allowUpdate } = restrictions;
-  if (!(allowUpdate || ignoreAllowUpdate)) {
+  const { restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
+  if (!(isUpdatingCurrentlyAllowed || ignoreAllowUpdate)) {
     return state;
   }
 

@@ -11,6 +11,7 @@ const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
   id: TRACING_ID,
+  datasetName: "ROI2017_wkw",
   trees: [
     {
       treeId: 2,
@@ -56,7 +57,7 @@ export const tracing: ServerSkeletonTracing = {
           content: "Test",
         },
       ],
-      name: "explorative_2017-08-09_SCM_Boy_002",
+      name: "explorative_2017-08-09_sample_user_002",
       isVisible: true,
       metadata: [],
     },
@@ -125,7 +126,7 @@ export const tracing: ServerSkeletonTracing = {
       ],
       comments: [],
       isVisible: true,
-      name: "explorative_2017-08-09_SCM_Boy_001",
+      name: "explorative_2017-08-09_sample_user_001",
       metadata: [],
     },
   ],

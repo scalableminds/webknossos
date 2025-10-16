@@ -132,12 +132,12 @@ class AnnotationIOController @Inject()(
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
           newAnnotationId = ObjectId.generate
-          mergedVolumeLayers <- mergeAndSaveVolumeLayers(newAnnotationId,
-                                                         volumeLayersGrouped,
-                                                         tracingStoreClient,
-                                                         parsedFiles.otherFiles,
-                                                         usableDataSource,
-                                                         dataset._id)
+          (mergedVolumeLayers, earliestAccessibleVersion) <- mergeAndSaveVolumeLayers(newAnnotationId,
+                                                                                      volumeLayersGrouped,
+                                                                                      tracingStoreClient,
+                                                                                      parsedFiles.otherFiles,
+                                                                                      usableDataSource,
+                                                                                      dataset._id)
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
           annotation <- annotationService.createFrom(request.identity,
                                                      dataset,
@@ -145,12 +145,12 @@ class AnnotationIOController @Inject()(
                                                      AnnotationType.Explorational,
                                                      name,
                                                      description,
-                                                     ObjectId.generate)
+                                                     newAnnotationId)
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,
             annotationLayers = annotation.annotationLayers.map(_.toProto),
-            earliestAccessibleVersion = 0L
+            earliestAccessibleVersion = earliestAccessibleVersion
           )
           _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
           _ <- annotationDAO.insertOne(annotation)
@@ -163,37 +163,64 @@ class AnnotationIOController @Inject()(
       }
   }
 
+  private def layersHaveDuplicateFallbackLayer(annotationLayers: Seq[UploadedVolumeLayer]) = {
+    val withFallbackLayer = annotationLayers.filter(_.tracing.fallbackLayer.isDefined)
+    withFallbackLayer.length > withFallbackLayer.distinctBy(_.tracing.fallbackLayer).length
+  }
+
   private def mergeAndSaveVolumeLayers(newAnnotationId: ObjectId,
                                        volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
                                        dataSource: UsableDataSource,
-                                       datasetId: ObjectId): Fox[List[AnnotationLayer]] =
+                                       datasetId: ObjectId): Fox[(List[AnnotationLayer], Long)] =
     if (volumeLayersGrouped.isEmpty)
-      Fox.successful(List())
+      Fox.successful(List(), 0L)
+    else if (volumeLayersGrouped.exists(layersHaveDuplicateFallbackLayer(_)))
+      Fox.failure("Cannot save annotation with multiple volume layers that have the same fallback segmentation layer.")
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
-    else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
-      Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
-        val uploadedVolumeLayer = volumeLayerWithIndex._1
-        val idx = volumeLayerWithIndex._2
-        val newTracingId = TracingId.generate
-        for {
-          _ <- client.saveVolumeTracing(newAnnotationId,
-                                        newTracingId,
-                                        uploadedVolumeLayer.tracing,
-                                        uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                        dataSource = dataSource,
-                                        datasetId = datasetId)
-        } yield
-          AnnotationLayer(
-            newTracingId,
-            AnnotationLayerType.Volume,
-            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
-            AnnotationLayerStatistics.unknown
-          )
-      }
-    } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
+    else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(
+               _.exists(_.editedMappingEdgesLocation.isDefined))) {
+      Fox.failure("Cannot merge multiple annotations with editable mapping (proofreading) edges.")
+    } else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
+      var layerUpdatesStartVersionMutable = 1L
+      for {
+        annotationLayers <- Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) {
+          volumeLayerWithIndex =>
+            val uploadedVolumeLayer = volumeLayerWithIndex._1
+            val idx = volumeLayerWithIndex._2
+            val newTracingId = TracingId.generate
+            for {
+              numberOfSavedVersions <- client.saveEditableMappingIfPresent(
+                newAnnotationId,
+                newTracingId,
+                uploadedVolumeLayer.getEditableMappingEdgesZipFrom(otherFiles),
+                uploadedVolumeLayer.editedMappingBaseMappingName,
+                startVersion = layerUpdatesStartVersionMutable
+              )
+              // The next layer’s update actions then need to start after this one
+              _ = layerUpdatesStartVersionMutable = layerUpdatesStartVersionMutable + numberOfSavedVersions
+              mappingName = if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
+              else uploadedVolumeLayer.tracing.mappingName
+              _ <- client.saveVolumeTracing(
+                newAnnotationId,
+                newTracingId,
+                uploadedVolumeLayer.tracing.copy(mappingName = mappingName),
+                uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                dataSource = dataSource,
+                datasetId = datasetId
+              )
+            } yield
+              AnnotationLayer(
+                newTracingId,
+                AnnotationLayerType.Volume,
+                uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
+                AnnotationLayerStatistics.unknown
+              )
+        }
+      } yield (annotationLayers, layerUpdatesStartVersionMutable)
+    } else { // Multiple annotations with volume layers (but at most one each) were uploaded, they have no editable mappings. Merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
       val newTracingId = TracingId.generate
       for {
@@ -206,13 +233,14 @@ class AnnotationIOController @Inject()(
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
         )
       } yield
-        List(
-          AnnotationLayer(
-            newTracingId,
-            AnnotationLayerType.Volume,
-            AnnotationLayer.defaultVolumeLayerName,
-            AnnotationLayerStatistics.unknown
-          ))
+        (List(
+           AnnotationLayer(
+             newTracingId,
+             AnnotationLayerType.Volume,
+             AnnotationLayer.defaultVolumeLayerName,
+             AnnotationLayerStatistics.unknown
+           )),
+         0L)
     }
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],

@@ -810,13 +810,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
   }
 
-  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] = {
-    logger.info(s"Cleaning up uploaded dataset. Reason: $reason")
-    removeFromRedis(uploadId)
-    this.synchronized {
-      PathUtils.deleteDirectoryRecursively(uploadDir)
-    }
-  }
+  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] =
+    for {
+      _ <- Fox.successful(logger.info(s"Cleaning up uploaded dataset. Reason: $reason"))
+      _ <- removeFromRedis(uploadId)
+      _ <- this.synchronized {
+        PathUtils.deleteDirectoryRecursively(uploadDir).toFox
+      }
+    } yield ()
 
   private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
     for {

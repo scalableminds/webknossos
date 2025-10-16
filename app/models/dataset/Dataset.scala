@@ -908,7 +908,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
               AND m2.path = m1.path
            )
               """.as[String])
-      paths <- Fox.serialCombined(pathsStr)(UPath.fromString(_).toFox) // TODO box variant?
+      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
@@ -1281,7 +1281,20 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
 
-  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] = ??? // TODO
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStr <- run(q"""
+           SELECT a1.path FROM webknossos.dataset_layer_attachments a1
+           WHERE a1._dataset = $datasetId
+           AND NOT EXISTS (
+              SELECT a2.path
+              FROM webknossos.dataset_layer_attachments a2
+              WHERE a2._dataset != $datasetId
+              AND a2.path = a1.path
+           )
+              """.as[String])
+      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+    } yield paths
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

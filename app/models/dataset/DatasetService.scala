@@ -558,11 +558,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(
               dataset._id)
             pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+            // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
             _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
           } yield ()
         } else {
           for {
-            _ <- Fox.failure("checks!")
+            _ <- Fox.failure(
+              "check that no other dataset’s realpaths are in here (check only datasets from the same datastore)! TODO how to find datastore binaryData dir? paths may be absolute.")
             _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
           } yield ()
         }

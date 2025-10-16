@@ -896,7 +896,20 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magInfos = rowsToMagInfos(rows)
     } yield magInfos
 
-  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] = ??? // TODO
+  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStr <- run(q"""
+           SELECT m1.path FROM webknossos.dataset_mags m1
+           WHERE m1._dataset = $datasetId
+           AND NOT EXISTS (
+              SELECT m2.path
+              FROM webknossos.dataset_mags m2
+              WHERE m2._dataset != $datasetId
+              AND m2.path = m1.path
+           )
+              """.as[String])
+      paths <- Fox.serialCombined(pathsStr)(UPath.fromString(_).toFox) // TODO box variant?
+    } yield paths
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {

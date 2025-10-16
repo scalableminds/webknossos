@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, isNumberMap } from "libs/utils";
+import { SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -146,10 +146,6 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
-}
-
-function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
-  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
 }
 
 function* clearMinCutPartitionsOnMultiCutDeselect(
@@ -529,21 +525,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
       targetAgglomerateId,
   );
-
-  // TODOM: just as below: check whether this is really needed
-  /*
-  if (action.type === "MERGE_TREES") {
-    console.log("Calling updateMappingWithMerge again after saving was done.");
-    // During saving, newer versions might have been pulled from the server.
-    yield* call(
-      updateMappingWithMerge,
-      volumeTracingId,
-      activeMapping,
-      sourceAgglomerateId,
-      targetAgglomerateId,
-    );
-  }
-    */
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {

@@ -933,7 +933,8 @@ export function splitAgglomerate(
     actionTracingId: string;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
-    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // agglomerateId is needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
     agglomerateId?: number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
@@ -970,7 +971,8 @@ export function mergeAgglomerate(
     actionTracingId: string;
     segmentId1: number | undefined;
     segmentId2: number | undefined;
-    // Needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // agglomerateId1 and agglomerateId2 are needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
     agglomerateId1?: number;
     agglomerateId2?: number;
     // For backwards compatibility reasons,

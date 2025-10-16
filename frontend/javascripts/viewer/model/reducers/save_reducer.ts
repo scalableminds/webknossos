@@ -210,10 +210,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_MAPPING": {
-      return state;
-    }
-
     case "PREPARE_REBASING": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
       console.error("Setting isRebasing = true");

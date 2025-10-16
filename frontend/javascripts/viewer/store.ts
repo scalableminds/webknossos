@@ -625,14 +625,13 @@ export const combinedReducer = reduceReducers(
   VolumeTracingReducer,
   ProofreadingReducer,
   TaskReducer,
+  SaveReducer,
   FlycamReducer,
   FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,
   UiReducer,
-  // SaveReducer needs to be behind Settings and Volumetracing reducer to react to changes SET MAPPING changes.
-  SaveReducer,
   ConnectomeReducer,
   OrganizationReducer,
 ) as Reducer;

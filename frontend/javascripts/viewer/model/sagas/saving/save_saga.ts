@@ -1,7 +1,7 @@
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { isNumberMap, sleep } from "libs/utils";
+import { getAdaptToTypeFunction, sleep } from "libs/utils";
 import _ from "lodash";
 import { buffers, type Channel } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -404,8 +404,7 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxVisibilityInVolumeTracing":
         case "updateSegmentGroupsExpandedState": {
           if (areUnsavedChangesOfUser) {
-            // TODOM: Missing actions still need support in applyVolumeUpdateActionsFromServerAction
-            // TODOM: --------------------- User specific actions must be reapplied if local actions!!!!!! ------------------------------------------
+            // Maybe write tests for these? Maybe part of M4
             yield* put(applyVolumeUpdateActionsFromServerAction([action]));
           }
           break;
@@ -603,53 +602,61 @@ export function* tryToIncorporateActions(
   return { success: true };
 }
 
+type IdsToReloadPerMapping = Record<string, number[]>;
+
+// Gathers mapped agglomerate ids for unknown but relevant segments to apply the passed save queue entries correctly.
+// This is needed in case proofreading was done via mesh interactions whose mapping info is present in the meshes
+// but not in the activeMappingByLayer.mapping. Due to incorporating backend updates the agglomerate ids of the
+// meshes might be outdated, thus we reload this info and store it in the local mapping to perform the correct merge.
+// Returns a list of segment ids to reload for each needed volume / editable tracing id.
 function* getAllUnknownSegmentIdsInPendingUpdates(
   saveQueue: SaveQueueEntry[],
-): Saga<Record<string, number[]>> {
+): Saga<IdsToReloadPerMapping> {
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  const idsToRequest = {} as Record<string, number[]>;
+  const idsToRequestByLayerId = {} as IdsToReloadPerMapping;
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
       switch (action.name) {
         case "mergeAgglomerate":
         case "splitAgglomerate": {
           const { segmentId1, segmentId2, actionTracingId } = action.value;
-          const upToDateMapping = activeMappingByLayer[actionTracingId]?.mapping;
-          if (!upToDateMapping || segmentId1 == null || segmentId2 == null) {
+          const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+          if (!mappingSyncedWithBackend || segmentId1 == null || segmentId2 == null) {
             continue;
           }
-          const adaptToType =
-            upToDateMapping && isNumberMap(upToDateMapping)
-              ? (el: number) => el
-              : (el: number) => BigInt(el);
-          const upToDateAgglomerateId1 = (upToDateMapping as NumberLikeMap).get(
+
+          const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+          const updatedAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
             adaptToType(segmentId1),
           );
-          const upToDateAgglomerateId2 = (upToDateMapping as NumberLikeMap).get(
+          const updatedAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
             adaptToType(segmentId2),
           );
-          if (!upToDateAgglomerateId1) {
-            if (!(actionTracingId in idsToRequest)) {
-              idsToRequest[actionTracingId] = [];
+          if (!updatedAgglomerateId1) {
+            if (!(actionTracingId in idsToRequestByLayerId)) {
+              idsToRequestByLayerId[actionTracingId] = [];
             }
-            idsToRequest[actionTracingId].push(segmentId1);
+            idsToRequestByLayerId[actionTracingId].push(segmentId1);
           }
-          if (!upToDateAgglomerateId2) {
-            if (!(actionTracingId in idsToRequest)) {
-              idsToRequest[actionTracingId] = [];
+          if (!updatedAgglomerateId2) {
+            if (!(actionTracingId in idsToRequestByLayerId)) {
+              idsToRequestByLayerId[actionTracingId] = [];
             }
-            idsToRequest[actionTracingId].push(segmentId2);
+            idsToRequestByLayerId[actionTracingId].push(segmentId2);
           }
         }
       }
     }
   }
-  return idsToRequest;
+  return idsToRequestByLayerId;
 }
 
-function* addMissingSegmentsToLoadedMappings(idsToRequest: Record<string, number[]>): Saga<void> {
+// For each passed mapping reload the segment ids' mapping information and store it in the local mapping.
+// Needed after getAllUnknownSegmentIdsInPendingUpdates to load updated mapping info for segment ids of
+// mesh interaction proofreading actions to ensure reapplying these actions is done with up-to-date mapping info.
+function* addMissingSegmentsToLoadedMappings(idsToRequest: IdsToReloadPerMapping): Saga<void> {
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const version = yield* select((state) => state.annotation.version);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
@@ -661,7 +668,7 @@ function* addMissingSegmentsToLoadedMappings(idsToRequest: Record<string, number
       continue;
     }
     const activeMapping = activeMappingByLayer[volumeTracingId];
-    // Ask the server to map the (split) segment ids. This creates a partial mapping
+    // Ask the server to map the segment ids needing reloading. This creates a partial mapping
     // that only contains these ids.
     const mappingWithMissingIds = yield* call(
       getAgglomeratesForSegmentsFromTracingstore,
@@ -684,6 +691,11 @@ function* addMissingSegmentsToLoadedMappings(idsToRequest: Record<string, number
   }
 }
 
+// Gathers info mapped info for segment ids from proofreading actions where the mapping is unknown.
+// This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
+// up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
+// is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
+// to apply them correctly during rebasing. Last the save queue is replaced with the updated save queue entries.
 function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
       success: false;
@@ -710,8 +722,8 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
           case "mergeAgglomerate":
           case "splitAgglomerate": {
             const { segmentId1, segmentId2, actionTracingId } = action.value;
-            const upToDateMapping = activeMappingByLayer[actionTracingId]?.mapping;
-            if (!upToDateMapping) {
+            const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+            if (!mappingSyncedWithBackend) {
               console.error(
                 "Found proofreading action without matching mapping in save queue. This should never happen.",
                 action,
@@ -728,14 +740,11 @@ function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               return null;
             }
 
-            const adaptToType =
-              upToDateMapping && isNumberMap(upToDateMapping)
-                ? (el: number) => el
-                : (el: number) => BigInt(el);
-            let upToDateAgglomerateId1 = (upToDateMapping as NumberLikeMap).get(
+            const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+            let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
               adaptToType(segmentId1),
             );
-            let upToDateAgglomerateId2 = (upToDateMapping as NumberLikeMap).get(
+            let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
               adaptToType(segmentId2),
             );
             if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {

@@ -154,7 +154,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -1059,7 +1059,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const loadPrecomputedMesh = async () => {
     if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
-    const untransformedPosition = layerToGlobalTransformedPosition(
+    const untransformedPosition = globalToLayerTransformedPosition(
       globalPosition,
       visibleSegmentationLayer.name,
       "segmentation",
@@ -1067,7 +1067,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
+    const segmentId = await getSegmentIdForPositionAsync(untransformedPosition);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
@@ -1077,7 +1077,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
-        untransformedPosition,
+        globalPosition,
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
@@ -1166,21 +1166,21 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
-
-    const segmentId = getSegmentIdForPosition(globalPosition);
-    const untransformedPosition = layerToGlobalTransformedPosition(
+    const untransformedPosition = globalToLayerTransformedPosition(
       globalPosition,
       visibleSegmentationLayer.name,
       "segmentation",
-      Store.getState(),
+      state,
     );
+
+    const segmentId = getSegmentIdForPosition(untransformedPosition);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, untransformedPosition, additionalCoordinates));
+    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>

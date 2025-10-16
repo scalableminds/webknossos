@@ -58,7 +58,6 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -808,13 +807,7 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
-    const untransformedPosition = globalToLayerTransformedPosition(
-      segment.somePosition,
-      visibleSegmentationLayer.name,
-      "segmentation",
-      Store.getState(),
-    );
-    this.props.setPosition(untransformedPosition);
+    this.props.setPosition(segment.somePosition);
     const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);

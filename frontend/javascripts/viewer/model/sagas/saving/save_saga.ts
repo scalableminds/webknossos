@@ -104,10 +104,9 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   );
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-  if (
-    (WkDevFlags.liveCollab && !othersMayEdit && allowSave) ||
-    (!WkDevFlags.liveCollab && allowSave)
-  ) {
+  const userCanSaveAndNoneCollabAnnotation = allowSave && !othersMayEdit;
+  const userCanSaveAndNoLiveCollab = allowSave && !WkDevFlags.liveCollab;
+  if (userCanSaveAndNoneCollabAnnotation || userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
     // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
     // between the page load and this check here.
@@ -210,13 +209,9 @@ function* applyNewestMissingUpdateActions(
   return { successful: false };
 }
 
-function* prepareRebasing(): Saga<void> {
-  const saveQueueEntries = yield* select((state) => state.save.queue);
+function* pushPendingSavesAndResetToServerVersion(): Saga<void> {
   const annotation = yield* select((state) => state.annotation);
-  console.error("Awaiting Diff in prepareRebasing");
   yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
-  const saveQueueEntriesAfter = yield* select((state) => state.save.queue);
-  console.log(saveQueueEntries, saveQueueEntriesAfter);
   yield* put(prepareRebaseAction());
 }
 
@@ -268,10 +263,10 @@ type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  // Should not change during performRebasing saga as this should only be executed while busy blocking is active.
+  // saveQueueEntries should not change during performRebasing saga as this should only be executed while busy blocking is active.
   const saveQueueEntries = yield* select((state) => state.save.queue);
 
-  // Side note: In a scenario where a user has an annotation open who they are not allowed to edit but another user is actively editing
+  // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing
   // This code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
   // be ensured because not allowed to edit means the save queue would be empty. Thus no needsRebasing = true.
   const needsRebasing =
@@ -280,7 +275,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     missingUpdateActions.length > 0 &&
     saveQueueEntries.length > 0;
   if (needsRebasing) {
-    yield* call(prepareRebasing);
+    yield* call(pushPendingSavesAndResetToServerVersion);
   }
 
   try {

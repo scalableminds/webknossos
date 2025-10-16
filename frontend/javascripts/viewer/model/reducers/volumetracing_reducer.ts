@@ -146,7 +146,7 @@ function updateSegments(
   });
 }
 
-function setSegmentGroups(
+export function setSegmentGroups(
   state: WebknossosState,
   layerName: string,
   newSegmentGroups: SegmentGroup[],

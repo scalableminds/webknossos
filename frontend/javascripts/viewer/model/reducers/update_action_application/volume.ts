@@ -1,18 +1,26 @@
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import {
   removeSegmentAction,
+  setActiveCellAction,
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Segment, WebknossosState } from "viewer/store";
-import type { VolumeTracingReducerAction } from "../volumetracing_reducer";
+import {
+  setSegmentGroups,
+  toggleSegmentGroupReducer,
+  type VolumeTracingReducerAction,
+} from "../volumetracing_reducer";
 import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
+import { updateUserBoundingBox } from "../annotation_reducer";
+import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
@@ -89,14 +97,57 @@ function applySingleAction(
         ua,
       );
     }
-    case "updateSegmentGroupsExpandedState":
-    case "updateUserBoundingBoxVisibilityInVolumeTracing":
-    case "updateSegmentVisibility":
-    case "updateActiveSegmentId":
+    case "updateSegmentGroupsExpandedState": {
+      const { areExpanded, groupIds, actionTracingId } = ua.value;
+      const { segmentGroups } = getVolumeTracingById(state.annotation, actionTracingId);
+      const currentlyExpandedSegmentGroupIds = new Set(
+        Object.values(segmentGroups)
+          .filter((g) => g.isExpanded)
+          .map((g) => g.groupId),
+      );
+      const actionGroupIds = new Set(groupIds);
+      const newExpandedGroupIds = areExpanded
+        ? currentlyExpandedSegmentGroupIds.union(actionGroupIds)
+        : currentlyExpandedSegmentGroupIds.difference(actionGroupIds);
+      const newGroups = mapGroups(segmentGroups, (group) => {
+        const shouldBeExpanded = newExpandedGroupIds.has(group.groupId);
+        if (shouldBeExpanded !== group.isExpanded) {
+          return {
+            ...group,
+            isExpanded: shouldBeExpanded,
+          };
+        } else {
+          return group;
+        }
+      });
+      return setSegmentGroups(state, actionTracingId, newGroups);
+    }
+    case "updateUserBoundingBoxVisibilityInVolumeTracing": {
+      return updateUserBoundingBox(
+        state,
+        changeUserBoundingBoxAction(ua.value.boundingBoxId, {
+          isVisible: ua.value.isVisible,
+        }),
+      );
+    }
+    case "updateSegmentVisibility": {
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(
+          ua.value.id,
+          { isVisible: ua.value.isVisible },
+          ua.value.actionTracingId,
+        ),
+      );
+    }
+    case "updateActiveSegmentId": {
+      return VolumeTracingReducer(state, setActiveCellAction(ua.value.activeSegmentId));
+    }
     case "updateSegmentGroupVisibility": {
-      // These update actions are user specific and don't need to be incorporated here
-      // because they are from another user.
-      // TODO: Needs to be changed and applied anyways once live-is-live supports segments.
+      const { groupId, actionTracingId, isVisible } = ua.value;
+      if (groupId != null) {
+        return toggleSegmentGroupReducer(state, actionTracingId, groupId, isVisible);
+      }
       return state;
     }
     default: {

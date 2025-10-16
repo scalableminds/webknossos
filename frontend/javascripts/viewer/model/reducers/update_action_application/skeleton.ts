@@ -12,10 +12,7 @@ import {
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import type {
-  ApplicableSkeletonServerUpdateAction,
-  WithoutServerSpecificFields,
-} from "viewer/model/sagas/volume/update_actions";
+import type { ApplicableSkeletonServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { Reducer, WebknossosState } from "viewer/store";
 import {
@@ -30,6 +27,7 @@ import {
 } from "./bounding_box";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import { withoutActionTimestamp, withoutServerSpecificFields } from "./shared_update_helper";
 
 export function applySkeletonUpdateActionsFromServer(
   SkeletonTracingReducer: Reducer,
@@ -42,28 +40,6 @@ export function applySkeletonUpdateActionsFromServer(
   }
 
   return newState;
-}
-
-function withoutServerSpecificFields<T extends { value: Record<string, any> }>(
-  ua: T,
-): WithoutServerSpecificFields<T> {
-  const {
-    actionTracingId: _actionTracingId,
-    actionTimestamp: _actionTimestamp,
-    ...rest
-  } = ua.value;
-  return {
-    ...ua,
-    value: rest as Omit<T["value"], "actionTimestamp" | "actionTracingId">,
-  } as WithoutServerSpecificFields<T>;
-}
-
-function withoutActionTimestamp<T extends { value: Record<string, any> }>(ua: T) {
-  const { actionTimestamp: _actionTimestamp, ...rest } = ua.value;
-  return {
-    ...ua,
-    value: rest as Omit<T["value"], "actionTimestamp">,
-  };
 }
 
 function applySingleAction(
@@ -383,8 +359,8 @@ function applySingleAction(
       );
     }
     case "updateUserBoundingBoxVisibilityInSkeletonTracing": {
-      // Visibility updates are user-specific and don't need to be
-      // incorporated for the current user.
+      // Visibility updates are user-specific and should only be incorporated
+      // if reapplied during rebasing the users actions from the save queue.
       return updateUserBoundingBox(
         state,
         changeUserBoundingBoxAction(ua.value.boundingBoxId, {

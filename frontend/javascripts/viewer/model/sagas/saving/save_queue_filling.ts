@@ -109,7 +109,8 @@ export function* setupSavingForTracingType(
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
   );
-  // TODOM: Check whether this saga actually pauses during rebasing.
+  // During rebasing the local users updates are replayed and thus the identity of skeleton nodes and edges diffable map entries change.
+  // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
   yield* takeLatest("FINISHED_REBASING", function* resetPrevTracing(_action: FinishedRebaseAction) {
     prevTracing = yield* getTracing();
   });

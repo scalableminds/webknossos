@@ -360,7 +360,6 @@ export class WebKnossosModel {
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
       const { annotation } = Store.getState();
-      console.error("Awaiting Diff in ensureSavedState");
       await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;
     }

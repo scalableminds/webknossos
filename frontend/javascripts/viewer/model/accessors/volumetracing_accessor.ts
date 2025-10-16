@@ -943,3 +943,14 @@ export function getReadableNameOfVolumeLayer(
     ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
     : null;
 }
+
+export function getCurrentMappingName(state: WebknossosState) {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const volumeTracing = getActiveSegmentationTracing(state);
+  if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    visibleSegmentationLayer?.name,
+  );
+  return mappingInfo.mappingName;
+}

@@ -81,6 +81,10 @@ import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/const
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
+  type LayerSourceInfo,
+  getDataOrTracingStoreUrl,
+} from "viewer/model/bucket_data_handling/wkstore_helper";
+import {
   parseProtoAnnotation,
   parseProtoListOfLong,
   parseProtoTracing,
@@ -861,13 +865,18 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
+export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+  args.join("::"),
+);
+
 export function getSegmentVolumes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -876,13 +885,49 @@ export function getSegmentVolumes(
   );
 }
 
+type SegmentStatisticsParametersMeshBased = {
+  mag: Vector3;
+  segmentIds: number[];
+  mappingName?: string | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  meshFileName?: string | null;
+};
+
+export function getSegmentSurfaceArea(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  meshFileName: string | undefined | null,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
+  return doWithToken((token) => {
+    const data: SegmentStatisticsParametersMeshBased = {
+      mag,
+      segmentIds,
+      mappingName,
+      additionalCoordinates,
+      meshFileName,
+    };
+    return Request.sendJSONReceiveJSON(
+      `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
+      {
+        data,
+        method: "POST",
+      },
+    );
+  });
+}
+
 export function getSegmentBoundingBoxes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -1883,12 +1928,13 @@ type MeshRequest = {
 };
 
 export function computeAdHocMesh(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
     additionalCoordinates,
@@ -1930,23 +1976,25 @@ export function computeAdHocMesh(
 }
 
 export function getBucketPositionsForAdHocMesh(
-  tracingStoreUrl: string,
-  tracingId: string,
+  layerSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);
     const positions = await Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
       {
         data: {
           cubeSize,
           mag,
           additionalCoordinates,
+          mappingName,
         },
         method: "POST",
       },

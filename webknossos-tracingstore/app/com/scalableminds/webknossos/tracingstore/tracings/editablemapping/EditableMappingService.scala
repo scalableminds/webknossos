@@ -402,7 +402,7 @@ class EditableMappingService @Inject()(
     val adHocMeshRequest = AdHocMeshRequest(
       dataSourceId = None,
       dataLayer = editableMappingLayer,
-      cuboid = request.cuboid(editableMappingLayer),
+      cuboid = request.cuboid,
       segmentId = request.segmentId,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
       tokenContext = tc,

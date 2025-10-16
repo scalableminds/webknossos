@@ -161,19 +161,20 @@ class DataSourceController @Inject()(
                 for {
                   datasetId <- uploadService
                     .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                  result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                    for {
-                      isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                      _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                      chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                      _ <- uploadService.handleUploadChunk(uploadFileId,
-                        chunkSize,
-                        currentChunkSize,
-                        totalChunkCount,
-                        chunkNumber,
-                        new File(chunkFile.ref.path.toString))
-                    } yield Ok
-                  }
+                  result <- accessTokenService
+                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                      for {
+                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                             chunkSize,
+                                                             currentChunkSize,
+                                                             totalChunkCount,
+                                                             chunkNumber,
+                                                             new File(chunkFile.ref.path.toString))
+                      } yield Ok
+                    }
                 } yield result
             }
           )

@@ -169,7 +169,7 @@ export function ShortLinksRouteWrapper() {
 export function TracingViewRouteWrapper() {
   const { type, id } = useParams();
   const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
-
+  performance.mark("tracing_view_load_start");
   return (
     <TracingLayoutView
       initialMaybeCompoundType={initialMaybeCompoundType}
@@ -269,7 +269,7 @@ export function TracingViewModeRouteWrapper() {
 
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
-
+  performance.mark("tracing_view_load_start");
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
     // The schema is something like <authority>/datasets/:datasetName/view

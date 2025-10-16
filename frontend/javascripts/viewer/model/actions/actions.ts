@@ -35,6 +35,7 @@ export type Action =
   | ProofreadAction
   | OrganizationAction
   | ReturnType<typeof wkReadyAction>
+  | ReturnType<typeof uiReadyAction>
   | ReturnType<typeof sceneControllerReadyAction>
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
@@ -44,6 +45,11 @@ export type Action =
 export const wkReadyAction = () =>
   ({
     type: "WK_READY",
+  }) as const;
+
+export const uiReadyAction = () =>
+  ({
+    type: "UI_READY",
   }) as const;
 
 export const resetStoreAction = () =>

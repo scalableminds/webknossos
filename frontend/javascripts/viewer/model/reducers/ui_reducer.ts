@@ -150,6 +150,9 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "WK_READY": {
       return updateKey(state, "uiInformation", { isWkReady: true });
     }
+    case "UI_READY": {
+      return updateKey(state, "uiInformation", { isUiReady: true });
+    }
 
     case "SET_QUICK_SELECT_STATE": {
       return updateKey(state, "uiInformation", {

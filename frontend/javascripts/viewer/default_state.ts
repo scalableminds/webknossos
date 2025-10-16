@@ -262,6 +262,7 @@ const defaultState: WebknossosState = {
       isBusy: false,
     },
     isWkReady: false,
+    isUiReady: false,
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
     measurementToolInfo: {

@@ -130,6 +130,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
   READ_ONLY_TOOLS: [
     AnnotationTool.MOVE,
+    AnnotationTool.PICK_CELL,
     AnnotationTool.LINE_MEASUREMENT,
     AnnotationTool.AREA_MEASUREMENT,
   ] as AnnotationTool[],
@@ -142,7 +143,11 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
 };
 
-export const VolumeTools = _.without(Toolkits.VOLUME_TOOLS, AnnotationTool.MOVE);
+export const VolumeTools = _.without(
+  Toolkits.VOLUME_TOOLS,
+  AnnotationTool.MOVE,
+  AnnotationTool.PICK_CELL,
+);
 
 // MeasurementTools is not part of Toolkits as it should not
 // be shown in the UI. Also, it's important that the MOVE tool is not in

@@ -923,7 +923,7 @@ class DataCube {
   }
 
   getNextCurrentlyUsableZoomStepForPosition(
-    position: Vector3,
+    position: Vector3, // layer space
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
@@ -965,7 +965,7 @@ class DataCube {
   }
 
   getDataValue(
-    voxel: Vector3,
+    _voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
@@ -973,6 +973,8 @@ class DataCube {
     if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
+
+    const voxel = _voxel.map((el) => Math.floor(el)) as Vector3;
 
     const bucket = this.getBucket(
       this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),

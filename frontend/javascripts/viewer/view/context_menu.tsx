@@ -154,7 +154,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -1059,7 +1059,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const loadPrecomputedMesh = async () => {
     if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
-    const untransformedPosition = globalToLayerTransformedPosition(
+    const untransformedPosition = layerToGlobalTransformedPosition(
       globalPosition,
       visibleSegmentationLayer.name,
       "segmentation",
@@ -1168,7 +1168,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     }
 
     const segmentId = getSegmentIdForPosition(globalPosition);
-    const untransformedPosition = globalToLayerTransformedPosition(
+    const untransformedPosition = layerToGlobalTransformedPosition(
       globalPosition,
       visibleSegmentationLayer.name,
       "segmentation",

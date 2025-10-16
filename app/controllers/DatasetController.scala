@@ -239,7 +239,7 @@ class DatasetController @Inject()(userService: UserService,
                                            user,
                                            needsConversion = false,
                                            datasetSizeBytes = 0,
-                                           "via explore+add")
+                                           addVariantLabel = "via explore+add")
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 

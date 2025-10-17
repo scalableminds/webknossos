@@ -504,3 +504,24 @@ export function globalToLayerTransformedPosition(
   }
   return globalPos;
 }
+
+export function layerToGlobalTransformedPosition(
+  layerPos: Vector3,
+  layerName: string,
+  layerCategory: APIDataLayer["category"] | "skeleton",
+  state: WebknossosState,
+): Vector3 {
+  const layerDescriptor =
+    layerCategory !== "skeleton"
+      ? getLayerByName(state.dataset, layerName, true)
+      : ({ name: "skeleton", category: "skeleton" } as APISkeletonLayer);
+  const layerTransforms = getTransformsForLayerOrNull(
+    state.dataset,
+    layerDescriptor,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  if (layerTransforms) {
+    return transformPointUnscaled(layerTransforms)(layerPos);
+  }
+  return layerPos;
+}

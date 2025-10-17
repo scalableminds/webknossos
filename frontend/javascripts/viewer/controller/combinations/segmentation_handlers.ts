@@ -4,7 +4,11 @@ import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
 } from "viewer/controller/combinations/volume_handlers";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getTreeNameForAgglomerateSkeleton } from "viewer/model/accessors/skeletontracing_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -79,9 +83,22 @@ export function handleClickSegment(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
   const segmentId = getSegmentIdForPosition(globalPosition.rounded);
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const positionInSegmentationLayerSpace =
+    visibleSegmentationLayer != null
+      ? (globalToLayerTransformedPosition(
+          globalPosition.rounded,
+          visibleSegmentationLayer.name,
+          "segmentation",
+          state,
+        ).map(Math.floor) as Vector3)
+      : null;
+
   const { additionalCoordinates } = state.flycam;
 
-  if (segmentId > 0) {
-    Store.dispatch(clickSegmentAction(segmentId, globalPosition.rounded, additionalCoordinates));
+  if (segmentId > 0 && positionInSegmentationLayerSpace != null) {
+    Store.dispatch(
+      clickSegmentAction(segmentId, positionInSegmentationLayerSpace, additionalCoordinates),
+    );
   }
 }

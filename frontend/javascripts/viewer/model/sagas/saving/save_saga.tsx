@@ -7,9 +7,9 @@ import _ from "lodash";
 import { call, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { showTooManyBucketsWarningToastAction } from "viewer/model/actions/annotation_actions";
+import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
 import {
-  type NotifyAboutUpdateBucketAction,
+  type NotifyAboutUpdatedBucketsAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -43,11 +43,15 @@ const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 10 * 1000;
+const CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW = 120 * 1000;
 
 function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
   let bucketsForCurrentInterval = 0;
   let currentBuckets: Array<number> = [];
+  const bucketCountArrayLength = Math.floor(
+    CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL,
+  );
   yield* call(
     setInterval,
     () => {
@@ -61,17 +65,17 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
         sumOfBuckets,
       );
       if (sumOfBuckets > bucketSaveWarningThreshold) {
-        Store.dispatch(showTooManyBucketsWarningToastAction());
+        Store.dispatch(showManyBucketUpdatesWarningAction());
       }
       currentBuckets.push(bucketsForCurrentInterval);
-      if (currentBuckets.length > 12) {
+      if (currentBuckets.length > bucketCountArrayLength) {
         currentBuckets.shift();
       }
       bucketsForCurrentInterval = 0;
     },
     CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL,
   );
-  yield* takeEvery("NOTIFY_ABOUT_UPDATE_BUCKET_ACTION", (action: NotifyAboutUpdateBucketAction) => {
+  yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
     bucketsForCurrentInterval += action.count;
   });
 }

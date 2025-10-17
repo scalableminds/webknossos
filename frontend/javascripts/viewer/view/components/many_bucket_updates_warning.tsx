@@ -5,9 +5,10 @@ import UserLocalStorage from "libs/user_local_storage";
 import { useCallback, useEffect, useRef } from "react";
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 
-const TOO_MANY_BUCKETS_TOAST_KEY = "tooManyBucketsWarningModal";
+const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
+const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressBucketWarning";
 
-export function TooManyBucketsWarning(): React.ReactNode {
+export function ManyBucketUpdatesWarning(): React.ReactNode {
   const notificationAPIRef = useRef(Toast.notificationAPI);
   const neverShowAgainRef = useRef(false);
   const dontShowAgainInThisSessionRef = useRef(false);
@@ -24,7 +25,6 @@ export function TooManyBucketsWarning(): React.ReactNode {
 
   const onClose = useCallback(() => {
     notificationAPIRef.current?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-    dontShowAgainInThisSessionRef.current = true;
     UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.current.toString());
   }, []);
   const handleCheckboxChange = (event: CheckboxChangeEvent) => {
@@ -64,11 +64,16 @@ export function TooManyBucketsWarning(): React.ReactNode {
   );
 
   const showWarningToast = () => {
-    const supressTooManyBucketsWarning = UserLocalStorage.getItem("suppressBucketWarning");
+    const supressManyBucketUpdatesWarning = UserLocalStorage.getItem(
+      WARNING_SUPPRESSION_USER_STORAGE_KEY,
+    );
     if (notificationAPIRef.current == null) {
       return null;
     }
-    if (supressTooManyBucketsWarning !== "true" && dontShowAgainInThisSessionRef.current !== true) {
+    if (
+      supressManyBucketUpdatesWarning !== "true" &&
+      dontShowAgainInThisSessionRef.current !== true
+    ) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);
       Toast.warning(
         <>
@@ -81,13 +86,14 @@ export function TooManyBucketsWarning(): React.ReactNode {
           key: TOO_MANY_BUCKETS_TOAST_KEY,
           sticky: true,
           onClose,
-          className: "many-buckets-warning",
+          className: "many-bucket-updates-warning",
         },
       );
+      dontShowAgainInThisSessionRef.current = true;
     } else {
-      console.log("suppressing warning toast");
+      console.log("suppressing warning toast"); //TODO_C dev
     }
   };
-  useReduxActionListener("SHOW_TOO_MANY_BUCKETS_WARNING_TOAST", () => showWarningToast());
+  useReduxActionListener("SHOW_MANY_BUCKET_UPDATES_WARNING", () => showWarningToast());
   return null;
 }

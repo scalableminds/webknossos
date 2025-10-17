@@ -17,7 +17,9 @@ export type ToastConfig = {
   sticky?: boolean;
   timeout?: number;
   key?: string;
+  customFooter?: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 };
 
 export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
@@ -148,8 +150,9 @@ const Toast = {
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
-      className: "",
+      className: config.className || "",
       onClose,
+      btn: config.customFooter,
     };
 
     if (type === "error") {

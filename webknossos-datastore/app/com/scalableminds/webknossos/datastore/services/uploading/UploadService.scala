@@ -343,11 +343,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map(actualFileSize =>
-          if (actualFileSize > maxFileSize.toLong) {
-            cleanUpDatasetExceedingSize(uploadDir, uploadId)
-            Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
-          } else Fox.successful(()))
+        {
+          val actualFileSize = tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue)
+          if (actualFileSize.getOrElse(0L) > maxFileSize.toLong) {
+            cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
+              Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes"))
+          } else Fox.successful(())
+        }
       }
     } yield ()
 

@@ -1076,7 +1076,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    const segmentId = await getSegmentIdForPositionAsync(positionInLayerSpace);
+    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
@@ -1086,7 +1086,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
-        globalPosition,
+        positionInLayerSpace,
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
@@ -1176,14 +1176,14 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    const segmentId = getSegmentIdForPosition(positionInLayerSpace);
+    const segmentId = getSegmentIdForPosition(globalPosition);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
+    Store.dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>

@@ -7,11 +7,7 @@ import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
 import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import {
-  getEnabledColorLayers,
-  getVisibleSegmentationLayer,
-} from "viewer/model/accessors/dataset_accessor";
-import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getFlycamRotationWithAppendedRotation,
@@ -142,21 +138,11 @@ export function handleOpenContextMenu(
 ) {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
   // only works for the data viewports, but this function is also called for the 3d viewport.
-  const maybeTransformedPosition = calculateMaybeGlobalPos(state, position);
-  const globalPosition =
-    maybeTransformedPosition != null && visibleSegmentationLayer != null
-      ? layerToGlobalTransformedPosition(
-          maybeTransformedPosition.rounded,
-          visibleSegmentationLayer.name,
-          "segmentation",
-          state,
-        )
-      : null;
+  const globalPosition = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
 
@@ -172,7 +158,7 @@ export function handleOpenContextMenu(
           event.pageY,
           nodeId,
           clickedBoundingBoxId,
-          globalPosition,
+          globalPosition?.rounded,
           activeViewport,
           meshId,
           meshIntersectionPosition,

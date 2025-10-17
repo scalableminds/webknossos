@@ -291,7 +291,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                 s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
                   .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
               if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
-                logger.warn("SENDING SLACK MESSAGE")
                 slackNotificationService.noticeTooLargeUploadChunkRequest(
                   s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
                     .getOrElse(0L)}, which is more than reserved $maxFileSize.")

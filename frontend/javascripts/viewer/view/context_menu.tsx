@@ -1038,7 +1038,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     isRotated,
     maybeUnmappedSegmentId,
   } = props;
-  const { globalPosition } = contextInfo; // May be transformed
+  const { globalPosition } = contextInfo;
 
   const state = Store.getState();
   const disabledVolumeInfo = getDisabledInfoForTools(state);
@@ -1056,18 +1056,27 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+  const positionInLayerSpace =
+    globalPosition != null && visibleSegmentationLayer != null
+      ? globalToLayerTransformedPosition(
+          globalPosition,
+          visibleSegmentationLayer.name,
+          "segmentation",
+          Store.getState(),
+        )
+      : null;
 
   const loadPrecomputedMesh = async () => {
-    if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
-    const untransformedPosition = globalToLayerTransformedPosition(
-      globalPosition,
-      visibleSegmentationLayer.name,
-      "segmentation",
-      state,
-    );
+    if (
+      !currentMeshFile ||
+      !visibleSegmentationLayer ||
+      globalPosition == null ||
+      positionInLayerSpace == null
+    )
+      return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
-    const segmentId = await getSegmentIdForPositionAsync(untransformedPosition);
+    const segmentId = await getSegmentIdForPositionAsync(positionInLayerSpace);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
@@ -1163,17 +1172,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   };
 
   const computeMeshAdHoc = () => {
-    if (!visibleSegmentationLayer || globalPosition == null) {
+    if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) {
       return;
     }
-    const untransformedPosition = globalToLayerTransformedPosition(
-      globalPosition,
-      visibleSegmentationLayer.name,
-      "segmentation",
-      state,
-    );
 
-    const segmentId = getSegmentIdForPosition(untransformedPosition);
+    const segmentId = getSegmentIdForPosition(positionInLayerSpace);
 
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");

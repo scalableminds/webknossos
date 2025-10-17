@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataStoreRedisStore,
@@ -42,6 +43,7 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters._
+import scala.util.Try
 
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -105,6 +107,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
+                              slackNotificationService: DSSlackNotificationService,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
@@ -144,6 +147,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
+  private def redisKeyForReportedToolLargeUpload(uploadId: String): String =
+    s"upload___${uploadId}___tooLargeUpload"
 
   cleanUpOrphanUploads()
 
@@ -203,6 +208,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       )
       filePaths = Json.stringify(Json.toJson(reserveUploadInfo.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
+      _ <- runningUploadMetadataStore.insert(redisKeyForReportedToolLargeUpload(reserveUploadInfo.uploadId), "false")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
@@ -273,16 +279,24 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+      alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
+        redisKeyForReportedToolLargeUpload(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
           .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
           .flatMap(newTotalFileSizeInBytesOpt => {
             if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+              runningUploadMetadataStore.insert(redisKeyForReportedToolLargeUpload(uploadId), "true")
               logger.warn(
                 s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
-                  .getOrElse(0L)}, which is more than reserved $maxFileSize. Aborting the upload.")
-              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-                Fox.failure("dataset.upload.moreBytesThanReserved"))
+                  .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
+              if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
+                logger.warn("SENDING SLACK MESSAGE")
+                slackNotificationService.noticeTooLargeUploadChunkRequest(
+                  s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                    .getOrElse(0L)}, which is more than reserved $maxFileSize.")
+              }
+              Fox.successful()
             } else {
               Fox.successful(())
             }
@@ -341,11 +355,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir: Path, uploadId: String): Fox[Unit] =
     for {
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         {
           val actualFileSize = tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue)
-          if (actualFileSize.getOrElse(0L) > maxFileSize.toLong) {
+          if (actualFileSize.getOrElse(0L) > maxFileSize) {
             cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
               Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes"))
           } else Fox.successful(())
@@ -363,11 +377,25 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
-      _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
+      // Temporarily disabled till reserved size for upload is fixed.
+      // _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
+      reservedTotalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+      actualUploadedFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(
+        redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
+      // Logging successful uploads which exceeded size to notice how large the difference is. Should be removed later.
+      _ = reservedTotalFileSizeInBytesOpt.foreach(reservedBytes =>
+        actualUploadedFileSizeInBytesOpt.foreach(actualBytes => {
+          if (actualBytes > reservedBytes) {
+            logger.warn(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+            slackNotificationService.noticeTooLargeUploadChunkRequest(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+          }
+        }))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.")
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,

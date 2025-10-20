@@ -54,6 +54,9 @@ function isPositionStillInPlane(
   baseVoxelFactors: Vector3,
   zoomStep: number,
 ) {
+  if (planeId === "TDView") {
+    return false;
+  }
   const posInViewport = calculateInViewportPos(
     positionXYZ,
     flycamPosition,

@@ -494,6 +494,8 @@ describe("Proofreading (with mesh actions)", () => {
     // Execute the actual merge and wait for the finished mapping.
     yield put(minCutPartitionsAction());
     yield take("FINISH_MAPPING_INITIALIZATION");
+    const version = yield select((state) => state.annotation.version);
+    console.log(version);
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   }
@@ -521,7 +523,6 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    // TODOM: Test is failing because interfering things are problematic
     const task = startSaga(function* task(): Generator<any, void, any> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
@@ -561,8 +562,116 @@ describe("Proofreading (with mesh actions)", () => {
           [5, 4],
           [6, 6],
           [7, 6],
-          [1337, 1339],
-          [1338, 1339], // TODO: check why this is loaded
+          [1337, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should result in not partitioned min cut if min-cutted edges are outdated due to interfering merge operations.", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Initial mapping should be
+    // [[1, 1],
+    //  [2, 1],
+    //  [3, 1],
+    //  [4, 4],
+    //  [5, 4],
+    //  [6, 6],
+    //  [7, 6],
+    //  [1337, 1],
+    //  [1338, 1]]
+    // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [
+      [1, 1338],
+      [3, 1337],
+    ]);
+
+    // Mapping after interference should be
+    // [[1, 1],
+    //  [2, 1],
+    //  [3, 1],
+    //  [4, 1],
+    //  [5, 1],
+    //  [6, 6],
+    //  [7, 6],
+    //  [1337, 1],
+    //  [1338, 1]]
+    // Contains two circles now but only one is split by the min-cut request.
+    backendMock.planVersionInjection(7, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    backendMock.planVersionInjection(8, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 5,
+          segmentId2: 1337,
+          agglomerateId1: 1,
+          agglomerateId2: 1,
+        },
+      },
+    ]);
+
+    mockEdgesForPartitionedAgglomerateMinCut(mocks);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task(): Generator<any, void, any> {
+      yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 1,
+            segmentId2: 1338,
+          },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 3,
+            segmentId2: 1337,
+          },
+        },
+      ]);
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
+          [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
       );
     });

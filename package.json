@@ -32,6 +32,7 @@
     "@types/shelljs": "^0.8.5",
     "@types/three": "^0.169.0",
     "@types/url-join": "^4.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "3.1.1",
     "abort-controller": "^3.0.0",
     "browserslist-to-esbuild": "^1.2.0",
@@ -61,6 +62,9 @@
     "ts-loader": "^9.4.1",
     "typescript": "^5.8.0",
     "typescript-coverage-report": "^0.8.0",
+    "vite": "npm:rolldown-vite@7.1.14",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.1.1",
     "webpack": "^5.97.1",
@@ -68,10 +72,12 @@
     "webpack-dev-server": "^5.2.1"
   },
   "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "start": "node tools/proxy/proxy.js",
     "start-tls": "node tools/proxy/proxy.js --tls",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
-    "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
     "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
@@ -200,6 +206,9 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0",
     "worker-loader": "^3.0.8"
+  },
+  "resolutions": {
+    "vite": "npm:rolldown-vite@7.1.14"
   },
   "packageManager": "yarn@4.9.2"
 }

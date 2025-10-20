@@ -1,6 +1,5 @@
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-// @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";

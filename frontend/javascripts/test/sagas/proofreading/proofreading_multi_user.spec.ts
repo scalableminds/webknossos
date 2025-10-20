@@ -218,7 +218,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should split two agglomerates after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("should cut agglomerate from all neighbors after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 

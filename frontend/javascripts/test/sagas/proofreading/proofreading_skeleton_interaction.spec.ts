@@ -762,9 +762,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   // TODO: code interleaving test where version is injected after agglomerate trees are created and before the merge.
 });
 
-// TODOM: Write test for backend manipulating same agglomerate skeleton
+// TODOM: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others
 
-// TODOM: write tests for cutFromAllNeighbours -> new test file
 // TODOM: write tests for partitionedMinCut -> new test file
 // TODOM: Write a test that pulling update fro the backend does not yield diff tracing changes that would be pushed to the backend in a live collab scenario!
 // TODOM: Write test without injected version and test via spy or so that no rebasing was tried and thus only the update actions were sent to the server!

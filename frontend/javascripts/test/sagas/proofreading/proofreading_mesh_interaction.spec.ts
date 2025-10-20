@@ -3,7 +3,9 @@ import { setupWebknossosForTesting, type WebknossosTestContext } from "test/help
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
+  minCutPartitionsAction,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   setActiveCellAction,
@@ -29,6 +31,7 @@ import type { Vector3 } from "viewer/constants";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import _ from "lodash";
 import { delay } from "typed-redux-saga";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 
 describe("Proofreading (with mesh actions)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -182,7 +185,7 @@ describe("Proofreading (with mesh actions)", () => {
     await task.toPromise();
   }, 8000);
 
-  const mockEdgesForAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
+  const mockEdgesForNormalAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
     vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
       async (
         _tracingStoreUrl: string,
@@ -278,7 +281,7 @@ describe("Proofreading (with mesh actions)", () => {
       [1338, 1],
     ]);
 
-    mockEdgesForAgglomerateMinCut(mocks);
+    mockEdgesForNormalAgglomerateMinCut(mocks);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -355,7 +358,7 @@ describe("Proofreading (with mesh actions)", () => {
       },
     ]);
 
-    mockEdgesForAgglomerateMinCut(mocks);
+    mockEdgesForNormalAgglomerateMinCut(mocks);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -402,4 +405,168 @@ describe("Proofreading (with mesh actions)", () => {
 
     await task.toPromise();
   }, 8000);
+
+  const mockEdgesForPartitionedAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
+    vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
+      async (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        segmentsInfo: {
+          partition1: NumberLike[];
+          partition2: NumberLike[];
+          mag: Vector3;
+          agglomerateId: NumberLike;
+          editableMappingId: string;
+        },
+      ): Promise<Array<MinCutTargetEdge>> => {
+        const { agglomerateId, partition1, partition2 } = segmentsInfo;
+        if (
+          agglomerateId === 1 &&
+          _.isEqual(partition1, [1, 2]) &&
+          _.isEqual(partition2, [1337, 1338])
+        ) {
+          return [
+            {
+              position1: [1, 1, 1],
+              position2: [1338, 1338, 1338],
+              segmentId1: 1,
+              segmentId2: 1338,
+            },
+            {
+              position1: [3, 3, 3],
+              position2: [1337, 1337, 1337],
+              segmentId1: 3,
+              segmentId2: 1337,
+            },
+          ];
+        }
+        throw new Error("Unexpected min cut request");
+      },
+    );
+
+  function* simulatePartitionedSplitAgglomeratesViaMeshes(
+    context: WebknossosTestContext,
+  ): Generator<any, void, any> {
+    const { api } = context;
+    const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+    const expectedInitialMapping = new Map([
+      [1, 1],
+      [2, 1],
+      [3, 1],
+      [4, 4],
+      [5, 4],
+      [6, 6],
+      [7, 6],
+    ]);
+
+    yield call(initializeMappingAndTool, context, tracingId);
+    const mapping0 = yield select(
+      (state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+    );
+    expect(mapping0).toEqual(expectedInitialMapping);
+
+    // Set up the merge-related segment partners. Normally, this would happen
+    // due to the user's interactions.
+    yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+    yield put(setActiveCellAction(6, undefined, null, 1337));
+
+    yield call(createEditableMapping);
+
+    // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+    const mapping1 = yield select(
+      (state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+    );
+    expect(mapping1).toEqual(expectedInitialMapping);
+    // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
+    // TODOM: Support integrating this action, if it originates from this user.
+    yield put(setOthersMayEditForAnnotationAction(true));
+
+    //Activate Multi-split tool
+    yield put(updateUserSettingAction("isMultiSplitActive", true));
+    // Select partition 1
+    yield put(toggleSegmentInPartitionAction(1, 1, 1));
+    yield put(toggleSegmentInPartitionAction(2, 1, 1));
+    // Select partition 2
+    yield put(toggleSegmentInPartitionAction(1337, 2, 1));
+    yield put(toggleSegmentInPartitionAction(1338, 2, 1));
+    // Execute the actual merge and wait for the finished mapping.
+    yield put(minCutPartitionsAction());
+    yield take("FINISH_MAPPING_INITIALIZATION");
+    // Checking optimistic merge is not necessary as no "foreign" update was injected.
+    yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+  }
+
+  it("should perform partitioned min-cut correctly", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    // Initial mapping should be
+    // [[1, 1],
+    //  [2, 1],
+    //  [3, 1],
+    //  [4, 4],
+    //  [5, 4],
+    //  [6, 6],
+    //  [7, 6],
+    //  [1337, 1],
+    //  [1338, 1]]
+    // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [
+      [1, 1338],
+      [3, 1337],
+    ]);
+
+    mockEdgesForPartitionedAgglomerateMinCut(mocks);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    // TODOM: Test is failing because interfering things are problematic
+    const task = startSaga(function* task(): Generator<any, void, any> {
+      yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 1,
+            segmentId2: 1338,
+          },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 3,
+            segmentId2: 1337,
+          },
+        },
+      ]);
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 4],
+          [5, 4],
+          [6, 6],
+          [7, 6],
+          [1337, 1339],
+          [1338, 1339], // TODO: check why this is loaded
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  });
 });

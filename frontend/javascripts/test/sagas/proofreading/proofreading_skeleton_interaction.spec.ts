@@ -27,6 +27,7 @@ import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeleto
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import _ from "lodash";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,
@@ -235,13 +236,15 @@ const mockEdgesForAgglomerateMinCut = (
     },
   );
 
-// TODOM: wait for agglomerate skeleton being properly loaded and then continue to do a proofreading action with it.
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
+  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(context, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
@@ -764,6 +767,5 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
 // TODOM: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others
 
-// TODOM: write tests for partitionedMinCut -> new test file
 // TODOM: Write a test that pulling update fro the backend does not yield diff tracing changes that would be pushed to the backend in a live collab scenario!
 // TODOM: Write test without injected version and test via spy or so that no rebasing was tried and thus only the update actions were sent to the server!

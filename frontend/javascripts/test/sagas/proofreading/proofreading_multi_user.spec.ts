@@ -24,13 +24,17 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 describe("Proofreading (Multi User)", () => {
+  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(context, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

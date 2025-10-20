@@ -18,14 +18,18 @@ import {
 } from "./proofreading_test_utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 describe("Proofreading (Poll only)", () => {
+  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(context, "hybrid");
     //Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     expect(hasRootSagaCrashed()).toBe(false);
   });
@@ -430,3 +434,5 @@ describe("Proofreading (Poll only)", () => {
     await task.toPromise();
   }, 8000);
 });
+
+// TODOM: Test where OthersMayEdit = true is not needed

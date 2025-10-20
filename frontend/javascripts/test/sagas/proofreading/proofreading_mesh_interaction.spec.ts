@@ -32,13 +32,17 @@ import type { MinCutTargetEdge } from "admin/rest_api";
 import _ from "lodash";
 import { delay } from "typed-redux-saga";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 describe("Proofreading (with mesh actions)", () => {
+  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(context, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
+    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

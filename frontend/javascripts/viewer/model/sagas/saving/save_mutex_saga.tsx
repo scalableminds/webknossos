@@ -44,6 +44,7 @@ import { ensureWkReady } from "../ready_sagas";
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
 const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
+const DELAY_AFTER_FAILED_MUTEX_FETCH = 1000 * 10;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 1000;
 const BACKOFF_TIME_MULTIPLIER = 1.5;
@@ -275,16 +276,28 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   }
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   while (hasMutex) {
-    const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
-    if (!canEdit) {
-      // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
-      // Maybe its ok to crash / enforce a reload in that case.
-      // One scenario in which this might happen is when the user disconnects from the internet while having the mutex and later reconnects.
-      console.error("Failed to continuously acquire mutex.");
+    try {
+      const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
+      if (!canEdit) {
+        // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
+        // Maybe its ok to crash / enforce a reload in that case.
+        // One scenario in which this might happen is when the user disconnects from the internet while having the mutex and later reconnects.
+        throw new Error(
+          `No longer owner of the annotation mutex. Instead user ${blockedByUser ? `${blockedByUser.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id})` : "unknown user"} has the mutex.`,
+        );
+      }
+      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setIsMutexAcquiredAction(canEdit));
+      yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+    } catch (error) {
+      console.error("Failed to continuously acquire mutex.", error);
+      yield* put(setUserHoldingMutexAction(undefined));
+      yield* put(setIsMutexAcquiredAction(false));
+      Toast.error(
+        "Unable to get write-lock needed to update the annotation. Please check your connection to WEBKNOSSOS. See the console for more information. Retrying soon.",
+      );
+      yield* call(delay, DELAY_AFTER_FAILED_MUTEX_FETCH);
     }
-    yield* put(setUserHoldingMutexAction(blockedByUser));
-    yield* put(setIsMutexAcquiredAction(canEdit));
-    yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   }
 }
 

@@ -425,7 +425,8 @@ export async function setupWebknossosForTesting(
     });
   testContext.receivedDataPerSaveRequest = (
     sendSaveRequestWithToken as any
-  ).receivedDataPerSaveRequest = [];
+  ).receivedDataPerSaveRequest;
+  testContext.receivedDataPerSaveRequest.length = 0; // Clear array in-place.
 
   const webknossos = new WebknossosApi(Model);
   let modelDataForTest: ModelDataForTests = modelData[mode];

@@ -278,7 +278,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 export const useRunAiModelJobContext = () => {
   const context = useContext(RunAiModelJobContext);
   if (context === undefined) {
-    throw new Error("useAiJobsContext must be used within a AiJobsContextProvider");
+    throw new Error("useAiJobsContext must be used within a RunAiModelJobContextProvider");
   }
   return context;
 };

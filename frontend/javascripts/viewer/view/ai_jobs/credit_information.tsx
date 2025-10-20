@@ -40,12 +40,12 @@ export const RunAiModelCreditInformation: React.FC = () => {
 export const AlignmentCreditInformation: React.FC = () => {
   const { selectedTask, selectedBoundingBox, handleStartAnalysis, areParametersValid } =
     useAlignmentJobContext();
-  const selectJobTpye = selectedTask?.jobType ?? null;
+  const selectJobType = selectedTask?.jobType ?? null;
 
   return (
     <CreditInformation
       selectedModel={selectedTask}
-      selectedJobType={selectJobTpye}
+      selectedJobType={selectJobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Alignment"
@@ -63,8 +63,8 @@ export const TrainingCreditInformation: React.FC = () => {
     areParametersValid,
   } = useAiTrainingJobContext();
 
-  // sum all training volumes into a single bounding box
-  // This is a shitty way to do it, but it works for now.
+  // Create a synthetic cubic bounding box from the total training volume
+  // for cost calculation purposes.
   const totalVolume = selectedAnnotations.reduce(
     (total, { userBoundingBoxes }) =>
       total +
@@ -76,7 +76,8 @@ export const TrainingCreditInformation: React.FC = () => {
   );
   // bounding box sizing needs to be integer values
   const side = Math.round(Math.cbrt(totalVolume));
-  const trainingBoundingBox: UserBoundingBoxWithoutId = {
+  const trainingBoundingBox: UserBoundingBox = {
+    id: -1, // Synthetic ID for training volume calculation
     boundingBox: {
       min: [0, 0, 0],
       max: [side, side, side],
@@ -90,7 +91,7 @@ export const TrainingCreditInformation: React.FC = () => {
     <CreditInformation
       selectedModel={selectedTask}
       selectedJobType={selectedJobType}
-      selectedBoundingBox={trainingBoundingBox as UserBoundingBox}
+      selectedBoundingBox={trainingBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start Training"
       areParametersValid={areParametersValid}

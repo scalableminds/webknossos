@@ -12,7 +12,7 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import every from "lodash/every";
 import messages from "messages";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, APIJobType, type AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -118,11 +118,13 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     }
   }, [colorLayers]);
 
-  const areParametersValid = useMemo(
-    () =>
-      every([selectedModel, selectedJobType, selectedBoundingBox, newDatasetName, selectedLayer]),
-    [selectedModel, selectedJobType, selectedBoundingBox, newDatasetName, selectedLayer],
-  );
+  const areParametersValid = every([
+    selectedModel,
+    selectedJobType,
+    selectedBoundingBox,
+    newDatasetName,
+    selectedLayer,
+  ]);
 
   const handleStartAnalysis = useCallback(async () => {
     if (!areParametersValid) {

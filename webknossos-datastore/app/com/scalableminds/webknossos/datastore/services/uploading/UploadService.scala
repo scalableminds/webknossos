@@ -352,20 +352,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
     s"upload $uploadId of dataset $datasetId ($dataSourceId)"
 
-  private def assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir: Path, uploadId: String): Fox[Unit] =
-    for {
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        {
-          val actualFileSize = tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue)
-          if (actualFileSize.getOrElse(0L) > maxFileSize) {
-            cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-              Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes"))
-          } else Fox.successful(())
-        }
-      }
-    } yield ()
-
   def finishUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = {
     val uploadId = uploadInformation.uploadId
 

@@ -834,13 +834,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       }
     } yield ()
 
-  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
-    for {
-      datasetId <- getDatasetIdByUploadId(uploadId)
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Exceeded reserved fileSize")
-      _ <- remoteWebknossosClient.deleteDataset(datasetId)
-    } yield ()
-
   private def removeFromRedis(uploadId: String): Fox[Unit] =
     for {
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))

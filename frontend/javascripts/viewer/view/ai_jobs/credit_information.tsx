@@ -41,7 +41,7 @@ export const AlignmentCreditInformation: React.FC = () => {
   const { selectedTask, selectedBoundingBox, handleStartAnalysis, areParametersValid } =
     useAlignmentJobContext();
   const selectJobTpye = selectedTask?.jobType ?? null;
-  
+
   return (
     <CreditInformation
       selectedModel={selectedTask}

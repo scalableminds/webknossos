@@ -146,19 +146,19 @@ describe("Update Action Application for VolumeTracing", () => {
             : _.range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-          const state2WithActiveTree = applyActions(
+          const state2WithActiveCell = applyActions(
             initialState,
             userActions.slice(0, beforeVersionIndex),
           );
 
-          const state2WithoutActiveState = applyActions(state2WithActiveTree, [
+          const state2WithoutActiveState = applyActions(state2WithActiveCell, [
             VolumeTracingActions.setActiveCellAction(0),
             setActiveUserBoundingBoxId(null),
           ]);
 
           const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
           const state3 = applyActions(
-            state2WithActiveTree,
+            state2WithActiveCell,
             actionsToApply.concat([
               VolumeTracingActions.setActiveCellAction(0),
               setActiveUserBoundingBoxId(null),

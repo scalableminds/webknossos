@@ -147,7 +147,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
-  private def redisKeyForReportedToolLargeUpload(uploadId: String): String =
+  private def redisKeyForReportedTooLargeUpload(uploadId: String): String =
     s"upload___${uploadId}___tooLargeUpload"
 
   cleanUpOrphanUploads()
@@ -208,7 +208,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       )
       filePaths = Json.stringify(Json.toJson(reserveUploadInfo.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
-      _ <- runningUploadMetadataStore.insert(redisKeyForReportedToolLargeUpload(reserveUploadInfo.uploadId), "false")
+      _ <- runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(reserveUploadInfo.uploadId), "false")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
@@ -280,13 +280,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
-        redisKeyForReportedToolLargeUpload(uploadId))
+        redisKeyForReportedTooLargeUpload(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
           .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
           .flatMap(newTotalFileSizeInBytesOpt => {
             if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              runningUploadMetadataStore.insert(redisKeyForReportedToolLargeUpload(uploadId), "true")
+              runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(uploadId), "true")
               logger.warn(
                 s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
                   .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
@@ -295,7 +295,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                   s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
                     .getOrElse(0L)}, which is more than reserved $maxFileSize.")
               }
-              Fox.successful()
+              Fox.successful(())
             } else {
               Fox.successful(())
             }
@@ -874,6 +874,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForReportedTooLargeUpload(uploadId))
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

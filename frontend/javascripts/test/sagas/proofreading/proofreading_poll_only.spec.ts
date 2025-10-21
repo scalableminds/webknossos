@@ -2,7 +2,10 @@ import { ColoredLogger } from "libs/utils";
 import { call, select, put } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
+import {
+  disableSavingAction,
+  dispatchEnsureHasNewestVersionAsync,
+} from "viewer/model/actions/save_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
@@ -17,8 +20,12 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import {
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
+  setOthersMayEditForAnnotationAction,
+} from "viewer/model/actions/annotation_actions";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { actionChannel, flush } from "typed-redux-saga";
 
 describe("Proofreading (Poll only)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -56,25 +63,19 @@ describe("Proofreading (Poll only)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest = [];
+      context.receivedDataPerSaveRequest.length = 0;
 
-      ColoredLogger.logGreen("storing merge on server");
-      ColoredLogger.logGreen("1");
-      backendMock.injectVersion(
-        [
-          {
-            name: "mergeAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1,
-              segmentId2: 4,
-              agglomerateId1: 1,
-              agglomerateId2: 4,
-            },
-          },
-        ],
-        4,
-      );
+      const foreignMergeAction = {
+        name: "mergeAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      };
+      backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
       const mapping1 = yield select(
@@ -86,7 +87,12 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      expect(context.receivedDataPerSaveRequest).toEqual([]);
+      // Checking that only the injected update action were received.
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch.actions).toEqual([foreignMergeAction]);
 
       const activeTool = yield select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
@@ -134,22 +140,17 @@ describe("Proofreading (Poll only)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest = [];
-
-      backendMock.injectVersion(
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1338,
-              segmentId2: 1337,
-              agglomerateId: 4,
-            },
-          },
-        ],
-        4,
-      );
+      context.receivedDataPerSaveRequest.length = 0;
+      const foreignSplitAction = {
+        name: "splitAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1338,
+          segmentId2: 1337,
+          agglomerateId: 4,
+        },
+      };
+      backendMock.injectVersion([foreignSplitAction], 4);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
@@ -171,24 +172,24 @@ describe("Proofreading (Poll only)", () => {
       );
 
       yield call(() => api.tracing.save());
+      // Checking that only the injected update action were received.
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch.actions).toEqual([foreignSplitAction]);
 
-      expect(context.receivedDataPerSaveRequest).toEqual([]);
-
-      backendMock.injectVersion(
-        [
-          {
-            name: "mergeAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1337,
-              segmentId2: 1338,
-              agglomerateId1: 1339,
-              agglomerateId2: 4,
-            },
-          },
-        ],
-        5,
-      );
+      const foreignMergeAction = {
+        name: "mergeAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1337,
+          segmentId2: 1338,
+          agglomerateId1: 1339,
+          agglomerateId2: 4,
+        },
+      };
+      backendMock.injectVersion([foreignMergeAction], 5);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
@@ -211,7 +212,18 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      expect(context.receivedDataPerSaveRequest).toEqual([]);
+      // Checking that only the injected update action were received.
+      // split action:
+      expect(context.receivedDataPerSaveRequest.length).toBe(2);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch2 = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch2.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch2.actions).toEqual([foreignSplitAction]);
+      // merge action:
+      expect(context.receivedDataPerSaveRequest[1].length).toBe(1);
+      const onlyExistingUpdateBatch3 = context.receivedDataPerSaveRequest[1][0];
+      expect(onlyExistingUpdateBatch3.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch3.actions).toEqual([foreignMergeAction]);
     });
 
     await task.toPromise();
@@ -239,22 +251,18 @@ describe("Proofreading (Poll only)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest = [];
+      context.receivedDataPerSaveRequest.length = 0;
 
-      backendMock.injectVersion(
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1,
-              segmentId2: 2,
-              agglomerateId: 1,
-            },
-          },
-        ],
-        4,
-      );
+      const foreignSplitAction = {
+        name: "splitAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+          agglomerateId: 1,
+        },
+      };
+      backendMock.injectVersion([foreignSplitAction], 4);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
@@ -267,7 +275,12 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      expect(context.receivedDataPerSaveRequest).toEqual([]);
+      // Checking that only the injected update action were received.
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch2 = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch2.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch2.actions).toEqual([foreignSplitAction]);
     });
 
     await task.toPromise();
@@ -295,36 +308,28 @@ describe("Proofreading (Poll only)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest = [];
+      context.receivedDataPerSaveRequest.length = 0;
 
-      backendMock.injectVersion(
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1,
-              segmentId2: 2,
-              agglomerateId: 1,
-            },
-          },
-        ],
-        4,
-      );
-      backendMock.injectVersion(
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 1338,
-              segmentId2: 1337,
-              agglomerateId: 6,
-            },
-          },
-        ],
-        5,
-      );
+      const foreignSplitAction1 = {
+        name: "splitAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+          agglomerateId: 1,
+        },
+      };
+      const foreignSplitAction2 = {
+        name: "splitAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1338,
+          segmentId2: 1337,
+          agglomerateId: 6,
+        },
+      };
+      backendMock.injectVersion([foreignSplitAction1], 4);
+      backendMock.injectVersion([foreignSplitAction2], 5);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
@@ -347,7 +352,18 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      expect(context.receivedDataPerSaveRequest).toEqual([]);
+      // Checking that only the injected update action were received.
+      // split 1
+      expect(context.receivedDataPerSaveRequest.length).toBe(2);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch2 = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch2.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch2.actions).toEqual([foreignSplitAction1]);
+      //split 2
+      expect(context.receivedDataPerSaveRequest[1].length).toBe(1);
+      const onlyExistingUpdateBatch3 = context.receivedDataPerSaveRequest[1][0];
+      expect(onlyExistingUpdateBatch3.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch3.actions).toEqual([foreignSplitAction2]);
     });
 
     await task.toPromise();
@@ -375,7 +391,7 @@ describe("Proofreading (Poll only)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest = [];
+      context.receivedDataPerSaveRequest.length = 0;
 
       backendMock.injectVersion(
         [
@@ -429,6 +445,128 @@ describe("Proofreading (Poll only)", () => {
       yield call(() => api.tracing.save());
 
       expect(context.receivedDataPerSaveRequest).toEqual([]);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
+      // other user (via backendMock.injectVersion) are both editing the annotation in this test
+      // (although the user of this test only sends empty updates). Else the polling logic would not work.
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      yield call(() => api.tracing.save());
+      context.receivedDataPerSaveRequest.length = 0;
+
+      backendMock.injectVersion(
+        [
+          {
+            name: "mergeAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 1,
+              segmentId2: 4,
+              agglomerateId1: 1,
+              agglomerateId2: 4,
+            },
+          },
+        ],
+        4,
+      );
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(expectedMappingAfterMerge);
+
+      yield call(() => api.tracing.save());
+
+      expect(context.receivedDataPerSaveRequest).toEqual([]);
+
+      // Asserting no rebasing relevant actions were triggered.
+      const rebasingActions = yield flush(rebaseActionChannel);
+      expect(rebasingActions.length).toBe(0);
+
+      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      expect(activeTool).toBe(AnnotationTool.PROOFREAD);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should poll updates even when othersMayEdit it turned off and updating is not allowed by current user", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+
+      yield call(() => api.tracing.save());
+      // Disable annotation saving: Simulating that this user does not edit the annotation but should be able to pull updates.
+      yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+      yield put(disableSavingAction());
+      context.receivedDataPerSaveRequest.length = 0;
+
+      const foreignMergeAction = {
+        name: "mergeAgglomerate" as const,
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      };
+
+      backendMock.injectVersion([foreignMergeAction], 4);
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mapping1).toEqual(expectedMappingAfterMerge);
+
+      yield call(() => api.tracing.save());
+
+      // Checking that only the injected update action were received.
+      expect(context.receivedDataPerSaveRequest.length).toBe(1);
+      expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
+      const onlyExistingUpdateBatch = context.receivedDataPerSaveRequest[0][0];
+      expect(onlyExistingUpdateBatch.actions.length).toBe(1);
+      expect(onlyExistingUpdateBatch.actions).toEqual([foreignMergeAction]);
+
+      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
     await task.toPromise();

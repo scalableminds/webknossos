@@ -766,6 +766,3 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 });
 
 // TODOM: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others
-
-// TODOM: Write a test that pulling update fro the backend does not yield diff tracing changes that would be pushed to the backend in a live collab scenario!
-// TODOM: Write test without injected version and test via spy or so that no rebasing was tried and thus only the update actions were sent to the server!

@@ -1,4 +1,4 @@
-import { call, put, select, take } from "redux-saga/effects";
+import { actionChannel, call, flush, put, select, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -682,5 +682,72 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  // TODOM: Implement tests for proofreading tree interactions.
+  it("should merge two agglomerates optimistically and not trigger rebasing due to no incoming backend actions", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+
+      yield call(initializeMappingAndTool, context, tracingId);
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      yield call(createEditableMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          1, // unmappedId=1 maps to 1
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield call(() => api.tracing.save());
+
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 1,
+            segmentId2: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
+          },
+        },
+      ]);
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 6],
+          [7, 6],
+          // [1337, 1337], not loaded
+          // [1338, 1337], not loaded
+        ]),
+      );
+
+      // Asserting no rebasing relevant actions were triggered.
+      const rebasingActions = yield flush(rebaseActionChannel);
+      expect(rebasingActions.length).toBe(0);
+    });
+
+    await task.toPromise();
+  }, 8000);
 });

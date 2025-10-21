@@ -380,7 +380,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             logger.warn(
               s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
             slackNotificationService.noticeTooLargeUploadChunkRequest(
-              s"Finished upload for $datasetId that exceeeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
           }
         }))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.")

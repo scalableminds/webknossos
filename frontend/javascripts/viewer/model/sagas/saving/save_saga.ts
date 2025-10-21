@@ -3,13 +3,14 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, sleep } from "libs/utils";
 import _ from "lodash";
-import { buffers, type Channel } from "redux-saga";
+import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Action } from "viewer/model/actions/actions";
 import {
-  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   type EnsureHasNewestVersionAction,
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
   prepareRebaseAction,
@@ -45,7 +46,6 @@ import type {
 } from "../volume/update_actions";
 import { pushSaveQueueAsync } from "./save_queue_draining";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
-import type { Action } from "viewer/model/actions/actions";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.

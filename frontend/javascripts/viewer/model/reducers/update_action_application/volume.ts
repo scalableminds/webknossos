@@ -1,4 +1,6 @@
+import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   removeSegmentAction,
   setActiveCellAction,
@@ -7,10 +9,11 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Segment, WebknossosState } from "viewer/store";
+import { updateUserBoundingBox } from "../annotation_reducer";
 import {
+  type VolumeTracingReducerAction,
   setSegmentGroups,
   toggleSegmentGroupReducer,
-  type VolumeTracingReducerAction,
 } from "../volumetracing_reducer";
 import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
 import {
@@ -18,9 +21,6 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
-import { updateUserBoundingBox } from "../annotation_reducer";
-import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],

@@ -5,6 +5,7 @@ import {
   getTree,
   getTreeGroupsMap,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   setActiveNodeAction,
   setTreeEdgeVisibilityAction,
@@ -15,6 +16,7 @@ import EdgeCollection from "viewer/model/edge_collection";
 import type { ApplicableSkeletonServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { Reducer, WebknossosState } from "viewer/store";
+import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   getMaximumNodeId,
   setExpandedTreeGroups,
@@ -25,8 +27,6 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
-import { updateUserBoundingBox } from "../annotation_reducer";
-import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { withoutActionTimestamp, withoutServerSpecificFields } from "./shared_update_helper";
 
 export function applySkeletonUpdateActionsFromServer(

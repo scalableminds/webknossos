@@ -15,8 +15,8 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  dispatchEnsureHasNewestVersionAsync,
   dispatchEnsureHasAnnotationMutexAsync,
+  dispatchEnsureHasNewestVersionAsync,
   doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,

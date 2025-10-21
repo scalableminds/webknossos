@@ -9,6 +9,7 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
@@ -25,7 +26,6 @@ import type {
 import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import type { UpdateUserBoundingBoxInSkeletonTracingAction } from "../sagas/volume/update_actions";
 import type { Tree, TreeGroup } from "../types/tree_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: BoundingBoxProto,

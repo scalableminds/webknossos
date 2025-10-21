@@ -101,11 +101,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import {
-  disableSavingAction,
-  discardSaveQueueAction,
-  snapshotMappingDataForNextRebaseAction,
-} from "viewer/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,

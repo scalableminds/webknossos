@@ -11,8 +11,8 @@ import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/s
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
-import BoundingBox from "../bucket_data_handling/bounding_box";
 import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateAnnotation = (
   state: WebknossosState,

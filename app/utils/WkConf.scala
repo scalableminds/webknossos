@@ -128,6 +128,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
       val scope: String = get[String]("singleSignOn.openIdConnect.scope")
       val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
+      val logoutRedirectUrl = getOptional[String]("singleSignOn.openIdConnect.logoutRedirectUrl")
     }
   }
 

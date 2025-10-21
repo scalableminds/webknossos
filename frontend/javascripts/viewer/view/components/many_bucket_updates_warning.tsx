@@ -64,14 +64,14 @@ export function ManyBucketUpdatesWarning(): React.ReactNode {
   );
 
   const showWarningToast = () => {
-    const supressManyBucketUpdatesWarning = UserLocalStorage.getItem(
+    const suppressManyBucketUpdatesWarning = UserLocalStorage.getItem(
       WARNING_SUPPRESSION_USER_STORAGE_KEY,
     );
     if (notificationAPIRef.current == null) {
       return null;
     }
     if (
-      supressManyBucketUpdatesWarning !== "true" &&
+      suppressManyBucketUpdatesWarning !== "true" &&
       dontShowAgainInThisSessionRef.current !== true
     ) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);

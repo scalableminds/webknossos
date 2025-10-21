@@ -20,6 +20,7 @@ import { powerOrga } from "test/fixtures/dummy_organization";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -125,7 +126,9 @@ describe("Annotation Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>("An annotation with isUpdatingCurrentlyAllowed = true and othersMayEdit = true should not try to acquire the annotation mutex.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with isUpdatingCurrentlyAllowed = true and othersMayEdit = true should try to acquire the annotation mutex in liveCollab scenario.", async (context: WebknossosTestContext) => {
+    const initialLiveCollab = WkDevFlags.liveCollab;
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(
       context,
       "hybrid",
@@ -145,9 +148,33 @@ describe("Annotation Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
     const isUpdatingAllowed = Store.getState().annotation.isUpdatingCurrentlyAllowed;
     expect(isUpdatingAllowed).toBe(true);
+    WkDevFlags.liveCollab = initialLiveCollab;
   });
-  // TODOM: Test fail from here on when executed in a row and not solely. Fix this. Likely some  test isolation problem or so.
-  // The acquireAnnotationMutex spy reports that it was called although it shouldn't.
+
+  it<WebknossosTestContext>("An annotation with isUpdatingCurrentlyAllowed = true and othersMayEdit = true should try to acquire the annotation mutex not in liveCollab.", async (context: WebknossosTestContext) => {
+    const initialLiveCollab = WkDevFlags.liveCollab;
+    WkDevFlags.liveCollab = false;
+    await setupWebknossosForTesting(
+      context,
+      "hybrid",
+      ({ tracings, annotationProto, dataset, annotation }) => {
+        const annotationWithUpdatingAllowedTrue = update(annotation, {
+          restrictions: { allowUpdate: { $set: true }, allowSave: { $set: true } },
+          othersMayEdit: { $set: true },
+        });
+        return {
+          tracings,
+          annotationProto,
+          dataset,
+          annotation: annotationWithUpdatingAllowedTrue,
+        };
+      },
+    );
+    expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+    const isUpdatingAllowed = Store.getState().annotation.isUpdatingCurrentlyAllowed;
+    expect(isUpdatingAllowed).toBe(true);
+    WkDevFlags.liveCollab = initialLiveCollab;
+  });
 
   it<WebknossosTestContext>("An annotation where othersMayEdit is turned on should try to acquire the annotation mutex.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -273,7 +300,9 @@ describe("Annotation Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = true should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[1].id}.`, async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[1].id}.`, async (context: WebknossosTestContext) => {
+    const initialLiveCollab = WkDevFlags.liveCollab;
+    WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(
       context,
       "hybrid",
@@ -297,5 +326,6 @@ describe("Annotation Saga", () => {
     Store.dispatch(setToolAction(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport[1]));
     await sleep(500);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+    WkDevFlags.liveCollab = initialLiveCollab;
   });
 });

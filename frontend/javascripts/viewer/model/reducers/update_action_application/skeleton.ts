@@ -6,7 +6,7 @@ import {
   getTreeGroupsMap,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
-  setActiveTreeAction,
+  setActiveNodeAction,
   setTreeEdgeVisibilityAction,
   setTreeGroupsAction,
   setTreeVisibilityAction,
@@ -378,7 +378,7 @@ function applySingleAction(
     // User specific actions
     case "updateActiveNode": {
       if (ua.value.activeNode != null) {
-        return SkeletonTracingReducer(state, setActiveTreeAction(ua.value.activeNode));
+        return SkeletonTracingReducer(state, setActiveNodeAction(ua.value.activeNode));
       } else {
         return state;
       }

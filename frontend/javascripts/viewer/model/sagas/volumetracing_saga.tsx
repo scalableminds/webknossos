@@ -433,6 +433,9 @@ function* uncachedDiffSegmentLists(
       segment.metadata,
       tracingId,
     );
+    if (!segment.isVisible) {
+      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
+    }
   }
 
   for (const segmentId of bothSegmentIds) {

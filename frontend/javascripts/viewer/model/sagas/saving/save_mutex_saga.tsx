@@ -160,7 +160,7 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
     "Acquiring mutex mutexLogicState.onlyRequiredOnSave",
     mutexLogicState.fetchingStrategy,
   );
-  if (mutexLogicState.fetchingStrategy) {
+  if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(acquireMutexUponEnsureHasAnnotationMutexAction, mutexLogicState);
   } else {
     yield* call(tryAcquireMutexContinuously, mutexLogicState);
@@ -401,7 +401,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
-      if (mutexLogicState.fetchingStrategy) {
+      if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
         return;
       }
       if (isMutexAcquired) {

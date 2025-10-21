@@ -297,10 +297,12 @@ describe("API Skeleton", () => {
       {
         name: "group 3",
         groupId: 3,
+        isExpanded: false,
       },
       {
         name: "group 7",
         groupId: 7,
+        isExpanded: false,
       },
     ]);
 

@@ -91,7 +91,6 @@ const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = 
   updateUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   deleteUserBoundingBoxInSkeletonTracing: true,
-  // TODOM: Write tests for these update actions!!!
   updateActiveNode: true,
   updateTreeVisibility: true,
   updateTreeGroupVisibility: true,
@@ -134,6 +133,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     SkeletonTracingActions.setActiveNodeAction(1),
     createNode(), // nodeId=11, tree components {11,1,2,9,10} {4,5,6,7,8}
     SkeletonTracingActions.deleteEdgeAction(1, 2), // tree components {11,1} {2,9,10} {4,5,6,7,8}
+    SkeletonTracingActions.setTreeVisibilityAction(1, false),
     SkeletonTracingActions.createTreeAction(),
     createNode(), // nodeId=12
     createNode(), // nodeId=13
@@ -152,6 +152,7 @@ describe("Update Action Application for SkeletonTracing", () => {
       makeBasicGroupObject(3, "group 3"),
       makeBasicGroupObject(7, "group 7"),
     ]),
+    SkeletonTracingActions.toggleTreeGroupAction(3),
     SkeletonTracingActions.setTreeGroupAction(7, 2),
     SkeletonTracingActions.setTreeEdgeVisibilityAction(2, false),
   ];
@@ -255,15 +256,27 @@ describe("Update Action Application for SkeletonTracing", () => {
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
     );
-
+    const updateActionsWithoutUpdatingActiveNode = updateActions.slice(0, 2);
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
-        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(
+          updateActionsWithoutUpdatingActiveNode,
+        ),
       ]),
     );
 
-    const { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
-    expect(activeNodeId).toBeNull();
+    let { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+    expect(activeNodeId).toBe(null);
+
+    const updateActiveNodeAction = updateActions[2];
+    const newState4 = transformStateAsReadOnly(newState, (state) =>
+      applyActions(state, [
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction([updateActiveNodeAction]),
+      ]),
+    );
+
+    activeNodeId = enforceSkeletonTracing(newState4.annotation).activeNodeId;
+    expect(activeNodeId).toBe(1);
   });
 
   it("should clear the active node and active tree if the active tree was deleted", () => {
@@ -278,9 +291,10 @@ describe("Update Action Application for SkeletonTracing", () => {
       createNode, // nodeId=1
       createNode, // nodeId=2
       SkeletonTracingActions.setActiveTreeAction(2),
-    ]);
+    ]); // active tree: 2, active bode: null
     expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);
 
+    // newState2 has active tree: 2, active node: null
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteTreeAction(2)]);
 
     const updateActions = addMissingTimestampProp(
@@ -297,8 +311,8 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);
 
-    expect(activeNodeId).toBeNull();
-    expect(activeTreeId).toBeNull();
+    expect(activeNodeId).toBe(1);
+    expect(activeTreeId).toBe(1);
   });
 
   afterAll(() => {

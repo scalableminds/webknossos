@@ -97,6 +97,7 @@ import {
   refreshMeshesAction,
   removeMeshAction,
   updateCurrentMeshFileAction,
+  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
@@ -2756,12 +2757,12 @@ class DataApi {
 
   /**
    * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
-   * the currently visible segmentation layer will be used.
+   * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
    *
    * @example
    * api.data.setSegmentColor(3, [0, 1, 1]);
    */
-  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string) {
+  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
@@ -2778,6 +2779,10 @@ class DataApi {
         true,
       ),
     );
+
+    if (meshOpacity != null) {
+      Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
+    }
   }
 }
 /**

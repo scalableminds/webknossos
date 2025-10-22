@@ -2760,7 +2760,7 @@ class DataApi {
    * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
    *
    * @example
-   * api.data.setSegmentColor(3, [0, 1, 1]);
+   * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
   setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(

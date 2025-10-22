@@ -388,6 +388,7 @@ export function* tryToIncorporateActions(
 
         //   User specific skeleton actions -- only applied if coming from current user.
         case "updateActiveNode":
+        case "updateActiveTree":
         case "updateTreeVisibility":
         case "updateTreeGroupVisibility":
         case "updateUserBoundingBoxVisibilityInSkeletonTracing":

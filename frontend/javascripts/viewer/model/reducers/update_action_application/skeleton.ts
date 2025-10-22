@@ -2,12 +2,12 @@ import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import {
   enforceSkeletonTracing,
+  findTreeByNodeId,
   getTree,
   getTreeGroupsMap,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
-  setActiveNodeAction,
   setTreeEdgeVisibilityAction,
   setTreeGroupsAction,
   setTreeVisibilityAction,
@@ -20,6 +20,7 @@ import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   getMaximumNodeId,
   setExpandedTreeGroups,
+  toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "../skeletontracing_reducer_helpers";
 import {
@@ -377,11 +378,57 @@ function applySingleAction(
     }
     // User specific actions
     case "updateActiveNode": {
-      if (ua.value.activeNode != null) {
-        return SkeletonTracingReducer(state, setActiveNodeAction(ua.value.activeNode));
-      } else {
-        return state;
+      if (ua.value.activeNode == null) {
+        return update(state, {
+          annotation: {
+            skeleton: {
+              activeNodeId: {
+                $set: null,
+              },
+            },
+          },
+        });
       }
+      const tree = findTreeByNodeId(
+        enforceSkeletonTracing(state.annotation).trees,
+        ua.value.activeNode,
+      );
+      if (tree) {
+        return update(state, {
+          annotation: {
+            skeleton: {
+              activeNodeId: {
+                $set: ua.value.activeNode,
+              },
+              activeTreeId: {
+                $set: tree.treeId,
+              },
+            },
+          },
+        });
+      }
+      return state;
+    }
+    case "updateActiveTree": {
+      const skeletonTracing = enforceSkeletonTracing(state.annotation);
+      if (ua.value.activeTree) {
+        const tree = getTree(skeletonTracing, ua.value.activeTree);
+        if (!tree) {
+          return state;
+        }
+      }
+      return update(state, {
+        annotation: {
+          skeleton: {
+            activeTreeId: {
+              $set: ua.value.activeTree,
+            },
+            activeNodeId: {
+              $set: ua.value.activeNode,
+            },
+          },
+        },
+      });
     }
     case "updateTreeVisibility": {
       return SkeletonTracingReducer(
@@ -398,7 +445,11 @@ function applySingleAction(
           ua.value.isVisible,
         );
       } else {
-        return state;
+        return toggleAllTreesReducer(
+          state,
+          enforceSkeletonTracing(state.annotation),
+          ua.value.isVisible,
+        );
       }
     }
     default: {

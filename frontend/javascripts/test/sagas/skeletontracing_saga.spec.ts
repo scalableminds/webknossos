@@ -695,13 +695,21 @@ describe("SkeletonTracingSaga", () => {
       },
     });
     expect(simplifiedSecondBatch[5]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeNode: 6,
+        activeTree: 3,
+      },
+    });
+    expect(simplifiedSecondBatch[6]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: 6,
       },
     });
-    expect(simplifiedSecondBatch.length).toBe(6);
+    expect(simplifiedSecondBatch.length).toBe(7);
   });
 
   it("compactUpdateActions should detect a tree merge (3/3)", () => {
@@ -774,13 +782,21 @@ describe("SkeletonTracingSaga", () => {
       },
     });
     expect(simplifiedFirstBatch[3]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeNode: 1,
+        activeTree: 1,
+      },
+    });
+    expect(simplifiedFirstBatch[4]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: 1,
       },
     });
-    expect(simplifiedFirstBatch.length).toBe(4);
+    expect(simplifiedFirstBatch.length).toBe(5);
 
     // the creation of another tree, two nodes and one edge (b)
     const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
@@ -789,13 +805,21 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedSecondBatch[2].name).toBe("createNode");
     expect(simplifiedSecondBatch[3].name).toBe("createEdge");
     expect(simplifiedSecondBatch[4]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeNode: 6,
+        activeTree: 2,
+      },
+    });
+    expect(simplifiedSecondBatch[5]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: 6,
       },
     });
-    expect(simplifiedSecondBatch.length).toBe(5);
+    expect(simplifiedSecondBatch.length).toBe(6);
 
     // a second merge (c)
     const simplifiedThirdBatch = simplifiedUpdateActions[2].actions;
@@ -826,13 +850,21 @@ describe("SkeletonTracingSaga", () => {
     });
 
     expect(simplifiedThirdBatch[3]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeNode: 1,
+        activeTree: 1,
+      },
+    });
+    expect(simplifiedThirdBatch[4]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: 1,
       },
     });
-    expect(simplifiedThirdBatch.length).toBe(4);
+    expect(simplifiedThirdBatch.length).toBe(5);
   });
 
   it("compactUpdateActions should detect a tree split (1/3)", () => {
@@ -1085,13 +1117,21 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedSecondBatch[3].name).toBe("deleteEdge");
     expect(simplifiedSecondBatch[4].name).toBe("deleteEdge");
     expect(simplifiedSecondBatch[5]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeNode: 3,
+        activeTree: 2,
+      },
+    });
+    expect(simplifiedSecondBatch[6]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: 3,
       },
     });
-    expect(simplifiedSecondBatch.length).toBe(6);
+    expect(simplifiedSecondBatch.length).toBe(7);
     expect(simplifiedUpdateActions2.length).toBe(1);
   });
 
@@ -1159,13 +1199,21 @@ describe("SkeletonTracingSaga", () => {
       },
     });
     expect(simplifiedFirstBatch[1]).toMatchObject({
+      name: "updateActiveTree",
+      value: {
+        actionTracingId: "skeletonTracingId",
+        activeTree: 1,
+        activeNode: null,
+      },
+    });
+    expect(simplifiedFirstBatch[2]).toMatchObject({
       name: "updateActiveNode",
       value: {
         actionTracingId: "skeletonTracingId",
         activeNode: null,
       },
     });
-    expect(simplifiedFirstBatch.length).toBe(2);
+    expect(simplifiedFirstBatch.length).toBe(3);
   });
 
   it("compactUpdateActions should not detect a deleted tree if there is no deleted tree", () => {

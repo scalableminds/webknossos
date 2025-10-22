@@ -33,6 +33,7 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
+export type UpdateActiveTreeUpdateAction = ReturnType<typeof updateActiveTree>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
@@ -122,6 +123,7 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
+  | UpdateActiveTreeUpdateAction
   // User specific actions
   | UpdateActiveNodeUpdateAction
   | UpdateTreeVisibilityUpdateAction
@@ -175,6 +177,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | UpdateActiveNodeUpdateAction
+  | UpdateActiveTreeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | AddUserBoundingBoxInSkeletonTracingAction
@@ -467,6 +470,22 @@ export function updateActiveNode(tracing: {
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
+    },
+  } as const;
+}
+
+export function updateActiveTree(tracing: {
+  tracingId: string;
+  activeTreeId: number | null | undefined;
+  activeNodeId: number | null | undefined;
+}) {
+  return {
+    name: "updateActiveTree",
+    value: {
+      actionTracingId: tracing.tracingId,
+      activeTree: tracing.activeTreeId,
+      activeNode: tracing.activeNodeId,
+      isFrontendOnly: true,
     },
   } as const;
 }

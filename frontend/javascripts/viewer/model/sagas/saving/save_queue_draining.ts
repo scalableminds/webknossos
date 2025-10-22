@@ -127,7 +127,8 @@ export function* sendSaveRequestToServer(): Saga<number> {
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  const withoutFEOnlyActions = filterOutFrontendOnlySupportedActions(fullSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(withoutFEOnlyActions);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const version = yield* select((state) => state.annotation.version);
   const annotationId = yield* select((state) => state.annotation.annotationId);
@@ -299,6 +300,16 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   }
 
   return slicedBatches;
+}
+
+function filterOutFrontendOnlySupportedActions(
+  updateActionsBatches: Array<SaveQueueEntry>,
+): Array<SaveQueueEntry> {
+  const batchesWithoutFrontendOnlyActions = updateActionsBatches.map((batch) => ({
+    ...batch,
+    actions: batch.actions.filter((a) => !("isFrontendOnly" in a.value && a.value.isFrontendOnly)),
+  }));
+  return batchesWithoutFrontendOnlyActions;
 }
 
 export function addVersionNumbers(

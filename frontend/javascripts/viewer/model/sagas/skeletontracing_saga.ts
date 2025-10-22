@@ -72,6 +72,7 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  updateActiveTree,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -669,6 +670,10 @@ export function* diffSkeletonTracing(
     );
   }
 
+  if (prevSkeletonTracing.activeTreeId !== skeletonTracing.activeTreeId) {
+    yield updateActiveTree(skeletonTracing);
+  }
+  // Active node id should always have precedence over the tree id, thus set it last.
   if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
     yield updateActiveNode(skeletonTracing);
   }

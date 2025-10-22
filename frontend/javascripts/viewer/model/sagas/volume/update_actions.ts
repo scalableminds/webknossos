@@ -474,6 +474,17 @@ export function updateActiveNode(tracing: {
   } as const;
 }
 
+// Should never be sent to the backend as the backend does neither understand this action
+// nor does it have the property activeTreeId for a skeletonTracing.
+// Only used to correctly keep track of the active tree property during rebasing.
+// Reason: There is a mismatch between the frontend store actions and the update actions.
+// The store action createTree also sets the activeNodeId and activeTreeId, but the update action createTree does not.
+// If we would change that via also applying activeNodeId and activeTreeId for createTree update actions
+// this breaks the deleteEdge store action: This store action maps to the following update actions:
+//  createTree, moveTreeComponents, deleteEdge. Where the createTree update action should not
+// set activeNodeId and activeTreeId when applied. Therefore, this action tracks whether the activeTreeId should change.
+// Tracking of activeNodeId is already handled by updateActiveNode (see above). This action is understood by the backend.
+// So no problem there.
 export function updateActiveTree(tracing: {
   tracingId: string;
   activeTreeId: number | null | undefined;

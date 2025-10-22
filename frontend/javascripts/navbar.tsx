@@ -774,10 +774,10 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    await logoutUser();
+    const redirectUrl = await logoutUser();
     Store.dispatch(logoutUserAction());
     // Hard navigation
-    location.href = "/";
+    location.href = redirectUrl;
   };
 
   const version = useFetch(getVersion, null, []);

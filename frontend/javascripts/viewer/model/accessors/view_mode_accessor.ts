@@ -131,8 +131,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
-        Math.floor(globalFloatingPosition.x),
-        Math.floor(globalFloatingPosition.y),
+        Math.round(globalFloatingPosition.x),
+        Math.round(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
       ];
       break;
@@ -141,17 +141,17 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ: {
       roundedPosition = [
         Math.floor(globalFloatingPosition.x),
-        Math.floor(globalFloatingPosition.y),
-        Math.floor(globalFloatingPosition.z),
+        Math.round(globalFloatingPosition.y),
+        Math.round(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
       roundedPosition = [
-        Math.floor(globalFloatingPosition.x),
+        Math.round(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
-        Math.floor(globalFloatingPosition.z),
+        Math.round(globalFloatingPosition.z),
       ];
       break;
     }

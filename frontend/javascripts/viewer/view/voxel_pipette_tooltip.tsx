@@ -157,10 +157,6 @@ export default function VoxelValueTooltip() {
             true,
           );
 
-          if (dataValue === 1232077) {
-            console.log("positionInLayer", positionInLayer);
-          }
-
           return [
             getReadableNameForLayerName(dataset, annotation, layer.name),
             [layer.category, dataValue],

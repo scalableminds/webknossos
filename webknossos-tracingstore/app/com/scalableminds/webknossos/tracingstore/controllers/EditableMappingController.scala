@@ -148,21 +148,21 @@ class EditableMappingController @Inject()(
             agglomerateGraph <- if (tracing.getHasEditableMapping) {
               for {
                 editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
-                agglomerateGraphInner <- editableMappingService.getAgglomerateGraphForIdWithFallback(
+                agglomerateGraphWithFallback <- editableMappingService.getAgglomerateGraphForIdWithFallback(
                   editableMappingInfo,
                   tracingId,
                   tracing.version,
                   agglomerateId,
                   remoteFallbackLayer)
-              } yield agglomerateGraphInner
+              } yield agglomerateGraphWithFallback
             } else {
               // If there is no editable mapping, we can still try to fetch an agglomerateGraph from the static agglomerate file.
               for {
                 mappingName <- tracing.mappingName.toFox ?~> "Cannot get agglomerate graph: No mapping selected in the volume layer."
-                agglomerateGraphInner <- remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
-                                                                                   mappingName,
-                                                                                   agglomerateId)
-              } yield agglomerateGraphInner
+                agglomerateGraphFromDatastore <- remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
+                                                                                           mappingName,
+                                                                                           agglomerateId)
+              } yield agglomerateGraphFromDatastore
             }
           } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
         }

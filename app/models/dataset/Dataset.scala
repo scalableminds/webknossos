@@ -905,11 +905,17 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
               SELECT m2.path
               FROM webknossos.dataset_mags m2
               WHERE m2._dataset != $datasetId
-              AND m2.path = m1.path
+              AND (
+                m2.path = m1.path
+                OR
+                m2.realpath = m1.realpath
+              )
            )
               """.as[String])
       paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
+
+  def findDatasetsWithMagsInDir(absolutePath: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] = ??? // TODO
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
@@ -1295,6 +1301,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
               """.as[String])
       paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
+
+  def findDatasetsWithMagsInDir(absolutePath: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] = ??? // TODO
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

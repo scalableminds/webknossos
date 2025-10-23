@@ -563,14 +563,25 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           } yield ()
         } else {
           for {
-            _ <- Fox.failure(
-              "check that no other dataset’s realpaths are in here (check only datasets from the same datastore)! TODO how to find datastore binaryData dir? paths may be absolute.")
+            datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
+            datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
+            datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
+            datastore <- dataStoreFor(dataset)
+            datasetsPointingInHere <- findDatasetsUsingDataFromDir(datasetDir, datastore)
+            _ <- Fox.fromBool(datasetsPointingInHere.isEmpty) ?~> s"Cannot delete dataset because ${datasetsPointingInHere.length} other datasets reference its data: ${datasetsPointingInHere
+              .mkString(",")}"
             _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
           } yield ()
         }
         _ <- deleteDatasetFromDB(dataset._id)
       } yield ()
     }
+
+  private def findDatasetsUsingDataFromDir(directory: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] =
+    for {
+      datasetsWithMagsInDir <- datasetMagsDAO.findDatasetsWithMagsInDir(directory, dataStore)
+      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithMagsInDir(directory, dataStore)
+    } yield (datasetsWithMagsInDir ++ datasetsWithAttachmentsInDir).distinct
 
   def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =
     for {

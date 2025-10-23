@@ -104,6 +104,7 @@ POST          /datasets/:datasetId/layers/:dataLayerName/segmentStatistics/surfa
 GET           /datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.testChunk(resumableChunkNumber: Int, resumableIdentifier: String)
 POST          /datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.uploadChunk()
 GET           /datasets/getUnfinishedUploads                                                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getUnfinishedUploads(organizationName: String)
+GET           /datasets/baseDirAbsolute                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.baseDirAbsolute
 POST          /datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reserveUpload()
 POST          /datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.finishUpload()
 POST          /datasets/cancelUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.cancelUpload()
@@ -113,7 +114,6 @@ DELETE        /datasets/:datasetId/deleteOnDisk                                 
 DELETE        /datasets/deletePaths                                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deletePaths()
 POST          /datasets/exploreRemote                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
 POST          /datasets/validatePaths                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.validatePaths()
-
 DELETE        /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
 # Actions

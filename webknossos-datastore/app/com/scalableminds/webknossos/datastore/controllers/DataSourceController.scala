@@ -87,6 +87,12 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
+  def baseDirAbsolute: Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+      Fox.successful(Ok(Json.toJson(dataSourceService.dataBaseDir.toAbsolutePath.toString)))
+    }
+  }
+
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId

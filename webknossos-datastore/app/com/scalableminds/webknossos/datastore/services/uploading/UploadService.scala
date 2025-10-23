@@ -14,6 +14,8 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metada
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
@@ -481,8 +483,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         _ <- Fox.successful(())
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
-          case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED |
-              UploadedDataSourceType.N5_MULTISCALES | UploadedDataSourceType.N5_ARRAY =>
+          case UploadedDataSourceType.ZARR | UploadedDataSourceType.ZARR3 |
+              UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED | UploadedDataSourceType.N5_MULTISCALES |
+              UploadedDataSourceType.N5_ARRAY =>
             exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.EXPLORED =>
             checkPathsInUploadedDatasourcePropertiesJson(unpackToDir, dataSourceId.organizationId)
@@ -509,6 +512,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
       _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndMagDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR3)(addLayerAndMagDirIfMissing(path, FILENAME_ZARR_JSON).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
@@ -680,6 +684,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       UploadedDataSourceType.ZARR
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).getOrElse(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
+    } else if (looksLikeZarr3Array(dataSourceDir, maxDepth = 2).getOrElse(false)) {
+      UploadedDataSourceType.ZARR3
+    } else if (looksLikeZarr3Array(dataSourceDir, maxDepth = 3).getOrElse(false)) {
+      UploadedDataSourceType.ZARR3_MULTILAYER
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).getOrElse(false)) {
       UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).getOrElse(false)) {
@@ -704,6 +712,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     containsMatchingFile(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
+
+  private def looksLikeZarr3Array(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    containsMatchingFile(List(FILENAME_ZARR_JSON), dataSourceDir, maxDepth)
 
   private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     containsMatchingFile(List(FILENAME_INFO), dataSourceDir, maxDepth)
@@ -777,16 +788,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield ()
     } else Full(())
 
-  private def looksLikeMagDir(headerWkwPaths: Seq[Path]): Boolean =
-    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
-      pathDepth(oneHeaderWkwPath) == 0
+  private def looksLikeMagDir(headerFilePaths: Seq[Path]): Boolean =
+    headerFilePaths.headOption.exists { oneHeaderFilePath =>
+      pathDepth(oneHeaderFilePath) == 0
     }
 
   private def pathDepth(path: Path) = path.toString.count(_ == '/')
 
-  private def looksLikeLayerDir(headerWkwPaths: Seq[Path]): Boolean =
-    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
-      pathDepth(oneHeaderWkwPath) == 1
+  private def looksLikeLayerDir(headerFilePaths: Seq[Path]): Boolean =
+    headerFilePaths.headOption.exists { oneHeaderFilePath =>
+      pathDepth(oneHeaderFilePath) == 1
     }
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId): Fox[Unit] =
@@ -897,6 +908,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER, N5_MULTISCALES,
-  N5_MULTILAYER, N5_ARRAY = Value
+  val ZARR, ZARR3, ZARR3_MULTILAYER, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER,
+  N5_MULTISCALES, N5_MULTILAYER, N5_ARRAY = Value
 }

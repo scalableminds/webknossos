@@ -400,14 +400,14 @@ export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMa
 
 /*
   Note that the return value indicates which mag can be rendered theoretically for the given layer
-   (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
+   (ignoring which mags actually exist). This means the returned mag index might not exist for the given layer.
  */
 export function getActiveMagIndexForLayer(state: WebknossosState, layerName: string): number {
   return getActiveMagIndicesForLayers(state)[layerName];
 }
 
 /*
-  Returns the mag that is supposed to be rendered for the given layer. The return mag
+  Returns the mag that is supposed to be rendered for the given layer. The returned mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
@@ -425,7 +425,7 @@ export function getCurrentMag(
 }
 
 /*
-  Returns the mag index that is supposed to be rendered for the given layer. The return mag
+  Returns the mag index that is supposed to be rendered for the given layer. The returned mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */

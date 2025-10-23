@@ -202,13 +202,13 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                         timestamp: Long): EditableMappingUpdateAction =
     if (edgeIsAddition) {
       MergeAgglomerateUpdateAction(
-        agglomerateId1 = 0,
-        agglomerateId2 = 0,
+        agglomerateId1 = Some(0),
+        agglomerateId2 = Some(0),
         segmentPosition1 = None,
         segmentPosition2 = None,
         segmentId1 = Some(edgeSrc),
         segmentId2 = Some(edgeDst),
-        mag = Vec3Int.ones, // unused, as we do not look up segment ids by positions
+        mag = Some(Vec3Int.ones), // unused, as we do not look up segment ids by positions
         actionTracingId = tracingId,
         actionTimestamp = Some(timestamp),
         actionAuthorId = None,
@@ -216,12 +216,12 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
       )
     } else {
       SplitAgglomerateUpdateAction(
-        agglomerateId = 0,
+        agglomerateId = Some(0),
         segmentPosition1 = None,
         segmentPosition2 = None,
         segmentId1 = Some(edgeSrc),
         segmentId2 = Some(edgeDst),
-        mag = Vec3Int.ones, // unused, as we do not look up segment ids by positions
+        mag = Some(Vec3Int.ones), // unused, as we do not look up segment ids by positions
         actionTracingId = tracingId,
         actionTimestamp = Some(timestamp),
         actionAuthorId = None,

@@ -52,6 +52,7 @@ import {
   getLayerByName,
   getMagInfo,
   getMappingInfo,
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -1866,23 +1867,38 @@ class DataApi {
     position: Vector3, // in layer space
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    respectMapping: boolean = false,
   ): Promise<number> {
     let zoomStep;
+    const state = Store.getState();
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const layer = getLayerByName(state.dataset, layerName);
       const magInfo = getMagInfo(layer.mags);
       zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoordinates;
+    additionalCoordinates = additionalCoordinates || state.flycam.additionalCoordinates;
     const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
+
+    let mapping = null;
+    if (respectMapping) {
+      const activeMappingInfo = getMappingInfoOrNull(
+        state.temporaryConfiguration.activeMappingByLayer,
+        layerName,
+      );
+      mapping =
+        activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+          ? activeMappingInfo.mapping
+          : null;
+    }
+
     // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(position, additionalCoordinates, null, zoomStep);
+    const dataValue = cube.getDataValue(position, additionalCoordinates, mapping, zoomStep);
     return dataValue;
   }
 

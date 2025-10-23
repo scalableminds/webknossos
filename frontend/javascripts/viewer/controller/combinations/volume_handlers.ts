@@ -92,6 +92,49 @@ export const getUnmappedSegmentIdForPosition = memoizeOne(
   _getSegmentIdForPosition(false),
   ([a], [b]) => V3.isEqual(a, b),
 );
+
+const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
+  // This function will return the currently loaded segment ID for a given position.
+  // If the corresponding bucket is not loaded at the moment, the return value will be 0.
+  // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
+  const layer = Model.getVisibleSegmentationLayer();
+  const { additionalCoordinates } = Store.getState().flycam;
+
+  if (!layer) {
+    return { mapped: 0, unmapped: 0 };
+  }
+  const posInLayerSpace = globalToLayerTransformedPosition(
+    globalPos,
+    layer.name,
+    "segmentation",
+    Store.getState(),
+  );
+
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    posInLayerSpace,
+  );
+
+  return {
+    mapped: segmentationCube.getMappedDataValue(
+      posInLayerSpace,
+      additionalCoordinates,
+      renderedZoomStepForCameraPosition,
+    ),
+    unmapped: segmentationCube.getDataValue(
+      posInLayerSpace,
+      additionalCoordinates,
+      null,
+      renderedZoomStepForCameraPosition,
+    ),
+  };
+};
+export const getSegmentIdInfoForPosition = memoizeOne(_getSegmentIdInfoForPosition, ([a], [b]) =>
+  V3.isEqual(a, b),
+);
+
 export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // This function will return the segment ID for a given position, awaiting the loading
   // of the corresponding bucket.

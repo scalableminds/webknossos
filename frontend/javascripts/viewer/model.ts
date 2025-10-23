@@ -23,9 +23,7 @@ import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 
 import Deferred from "libs/async/deferred";
-import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
-import { getSegmentIdForPosition } from "./controller/combinations/volume_handlers";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
 
@@ -202,58 +200,6 @@ export class WebKnossosModel {
       zoomStep,
     );
     return renderedZoomStep;
-  }
-
-  getHoveredCellId(globalMousePosition: Vector3 | null | undefined):
-    | {
-        id: number;
-        isMapped: boolean;
-        unmappedId: number;
-      }
-    | null
-    | undefined {
-    // Returns
-    // - id (which might be mapped)
-    // - isMapped (specifies whether id is mapped)
-    // - unmappedId (equal to id if isMapped is false)
-    const segmentationLayer = this.getVisibleSegmentationLayer();
-
-    if (!segmentationLayer || !globalMousePosition) {
-      return null;
-    }
-
-    const segmentationLayerName = segmentationLayer.name;
-    const { cube } = segmentationLayer;
-    const renderedZoomStepForMousePosition = this.getCurrentlyRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-
-    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const state = Store.getState();
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const posInLayerSpace = globalToLayerTransformedPosition(
-        pos,
-        segmentationLayer.name,
-        "segmentation",
-        state,
-      );
-      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
-      return {
-        // Note that this id can be an unmapped id even when
-        // a mapping is active, if it is a HDF5 mapping that is partially loaded
-        // and no entry exists yet for the input id.
-        id: cube.mapId(id),
-        unmappedId: id,
-      };
-    };
-
-    const { id, unmappedId } = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-    return {
-      id,
-      isMapped: cube.isMappingEnabled(),
-      unmappedId,
-    };
   }
 
   getCubeByLayerName(name: string): DataCube {

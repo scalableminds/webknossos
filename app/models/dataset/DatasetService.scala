@@ -530,15 +530,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
-  private def deleteUnusableDataset(dataset: Dataset): Fox[Unit] = ??? // TODO
-
   def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
-    if (!dataset.isUsable) {
-      deleteUnusableDataset(dataset)
-    } else {
-      for {
+    for {
 
-        /* Find paths not used by other datasets (neither as realpath nor as path), delete those
+      /* Find paths not used by other datasets (neither as realpath nor as path), delete those
            (Caution, what if symlink chains go through this dataset? those won’t be detected as realpaths)
          If virtual:
            - find paths not used by other datasets (neither as realpath nor as path), delete those
@@ -550,32 +545,30 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
            - else:
              - abort
          Delete in the DB if no annotations reference it, otherwise mark as deleted and clear datasource
-         */
-        datastoreClient <- clientFor(dataset)
-        _ <- if (dataset.isVirtual) {
-          for {
-            magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
-            attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(
-              dataset._id)
-            pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
-            // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
-            _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
-          } yield ()
-        } else {
-          for {
-            datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
-            datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
-            datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
-            datastore <- dataStoreFor(dataset)
-            datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
-            _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
-              .mkString(",")}"
-            _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
-          } yield ()
-        }
-        _ <- deleteDatasetFromDB(dataset._id)
-      } yield ()
-    }
+       */
+      datastoreClient <- clientFor(dataset)
+      _ <- if (dataset.isVirtual) {
+        for {
+          magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
+          attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
+          pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+          // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
+          _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
+        } yield ()
+      } else {
+        for {
+          datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
+          datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
+          datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
+          datastore <- dataStoreFor(dataset)
+          datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
+          _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
+            .mkString(",")}"
+          _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
+        } yield ()
+      }
+      _ <- deleteDatasetFromDB(dataset._id)
+    } yield ()
 
   private def findDatasetsUsingDataFromDir(directory: UPath,
                                            dataStore: DataStore,

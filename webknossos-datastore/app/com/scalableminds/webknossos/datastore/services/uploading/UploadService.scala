@@ -557,17 +557,17 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       case Full(_) =>
         Fox.successful(())
       case Empty =>
-        deleteOnDisk(dataSourceId.organizationId,
+        deleteOnDisk(datasetId,
+                     dataSourceId.organizationId,
                      dataSourceId.directoryName,
-                     None,
                      needsConversion,
                      Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         logger.warn(s"Error while $label: $msg, $e")
-        deleteOnDisk(dataSourceId.organizationId,
+        deleteOnDisk(datasetId,
+                     dataSourceId.organizationId,
                      dataSourceId.directoryName,
-                     None,
                      needsConversion,
                      Some("the upload failed"))
         remoteWebknossosClient.deleteDataset(datasetId)

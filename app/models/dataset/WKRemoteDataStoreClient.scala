@@ -128,7 +128,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   // TODO cache?
   def getBaseDirAbsolute: Fox[String] =
-    rpc(s"${dataStore.url}/data/baseDirAbsolute")
+    rpc(s"${dataStore.url}/data/datasets/baseDirAbsolute")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[String]
 

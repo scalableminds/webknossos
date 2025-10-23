@@ -926,7 +926,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         JOIN webknossos.datasets d ON m._dataset = d._id
         WHERE starts_with(m.realpath, $absolutePathWithTrailingSlash)
         AND d._id != $ignoredDataset
-        AND d.dataStore = ${dataStore.name.trim}
+        AND d._datastore = ${dataStore.name.trim}
        """.as[ObjectId])
   }
 
@@ -1326,7 +1326,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
         JOIN webknossos.datasets d ON a._dataset = d._id
         WHERE starts_with(a.path, $absolutePathWithTrailingSlash)
         AND d._id != $ignoredDataset
-        AND d.dataStore = ${dataStore.name.trim}
+        AND d._datastore = ${dataStore.name.trim}
        """.as[ObjectId])
   }
 }

@@ -414,9 +414,9 @@ class DataSourceController @Inject()(
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
           _ <- dataSourceService.deleteOnDisk(
+            datasetId,
             dataSourceId.organizationId,
             dataSourceId.directoryName,
-            Some(datasetId),
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
         } yield Ok
       }

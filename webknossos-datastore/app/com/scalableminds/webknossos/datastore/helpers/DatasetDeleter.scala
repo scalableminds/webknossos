@@ -11,12 +11,11 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
   def dataBaseDir: Path
 
-  def deleteOnDisk(
-      organizationId: String,
-      datasetName: String,
-      datasetId: Option[ObjectId], // Is only set for datasets that are already registered in WK. In this case, we query WK using this id for symlink paths and move them.
-      isInConversion: Boolean = false,
-      reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
+  def deleteOnDisk(datasetId: ObjectId,
+                   organizationId: String,
+                   datasetName: String,
+                   isInConversion: Boolean = false,
+                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
 
     val dataSourcePath =
       if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetName)
@@ -27,9 +26,8 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
       val targetPath = trashPath.resolve(datasetName)
       PathUtils.ensureDirectory(trashPath)
 
-      logger.info(s"Deleting dataset ${datasetId
-        .map(_.toString + " ")
-        .getOrElse("")}by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}")
+      logger.info(
+        s"Deleting dataset $datasetId by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}")
       deleteWithRetry(dataSourcePath, targetPath)
     } else {
       Fox.successful(logger.info(

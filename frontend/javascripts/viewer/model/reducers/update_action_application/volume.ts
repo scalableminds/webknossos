@@ -11,11 +11,11 @@ import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/upd
 import type { Segment, WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
-  type VolumeTracingReducerAction,
+  setLargestSegmentIdReducer,
   setSegmentGroups,
   toggleSegmentGroupReducer,
-} from "../volumetracing_reducer";
-import { setLargestSegmentIdReducer } from "../volumetracing_reducer_helpers";
+  type VolumeTracingReducerAction,
+} from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,

@@ -8,7 +8,7 @@ class UPathTestSuite extends PlaySpec {
   "UPath" should {
     "Be constructable from well-formed string" in {
       assert(UPath.fromString("relative/elsewhere").exists(_.toString == "./relative/elsewhere"))
-      assert(UPath.fromString("./relative/elsewehere").exists(_.toString == "./relative/elsewehere"))
+      assert(UPath.fromString("./relative/elsewhere").exists(_.toString == "./relative/elsewhere"))
       assert(UPath.fromString("/absolute/somewhere").exists(_.toString == "/absolute/somewhere"))
       assert(UPath.fromString("/absolute/some$where").exists(_.toString == "/absolute/some$where"))
       assert(UPath.fromString("/absolute/with²Unicode").exists(_.toString == "/absolute/with²Unicode"))

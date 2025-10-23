@@ -5,7 +5,7 @@ ThisBuild / scalaVersion := "2.13.16"
 ThisBuild / scapegoatVersion := "3.1.9"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-release:11",
+  "-release:21",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
@@ -21,7 +21,6 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"
 )
-ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 // Keep asset timestamps when assembling jar
 ThisBuild / packageOptions += Package.FixedTimestamp(Package.keepTimestamps)

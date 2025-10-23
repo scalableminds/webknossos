@@ -488,8 +488,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.EXPLORED =>
             checkPathsInUploadedDatasourcePropertiesJson(unpackToDir, dataSourceId.organizationId)
-          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER |
-              UploadedDataSourceType.N5_MULTILAYER =>
+          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.ZARR3_MULTILAYER |
+              UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
             tryExploringMultipleLayers(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.WKW => addLayerAndMagDirIfMissing(unpackToDir).toFox
         }
@@ -521,7 +521,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                          typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
       layerDirs <- typ match {
-        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path).toFox
+        case UploadedDataSourceType.ZARR_MULTILAYER  => getZarrLayerDirectories(path).toFox
+        case UploadedDataSourceType.ZARR3_MULTILAYER => getZarr3LayerDirectories(path).toFox
         case UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
           PathUtils.listDirectories(path, silent = false).toFox
       }
@@ -765,6 +766,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
       layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
+    } yield layerDirs
+
+  private def getZarr3LayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
+    for {
+      potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
+      layerDirs = potentialLayers.filter(p => looksLikeZarr3Array(p, maxDepth = 2).isDefined)
     } yield layerDirs
 
   private def addLayerAndMagDirIfMissing(dataSourceDir: Path, headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =

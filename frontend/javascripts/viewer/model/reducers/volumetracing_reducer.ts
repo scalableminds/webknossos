@@ -28,6 +28,7 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
+  type VolumeTracingReducerAction,
   addToLayerReducer,
   createCellReducer,
   getSegmentUpdateInfo,
@@ -42,7 +43,6 @@ import {
   updateDirectionReducer,
   updateSegments,
   updateVolumeTracing,
-  type VolumeTracingReducerAction,
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import {

@@ -24,15 +24,15 @@ import type {
 } from "viewer/store";
 import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
-import type { TreeGroup } from "../types/tree_types";
-import { forEachGroups } from "./skeletontracing_reducer_helpers";
-import type { VolumeTracingAction } from "../actions/volumetracing_actions";
 import type {
-  SetMappingAction,
   FinishMappingInitializationAction,
+  SetMappingAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "../actions/settings_actions";
+import type { VolumeTracingAction } from "../actions/volumetracing_actions";
+import type { TreeGroup } from "../types/tree_types";
+import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction

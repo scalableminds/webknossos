@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -17,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreImplicits
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -29,7 +31,8 @@ class EditableMappingController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller
+    with KeyValueStoreImplicits {
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
@@ -184,6 +187,25 @@ class EditableMappingController @Inject()(
             tracingId)
 
         } yield Ok.sendPath(editedMappingEdgesZippedTempFilePath)
+      }
+    }
+
+  def saveFromZip(tracingId: String,
+                  annotationId: ObjectId,
+                  startVersion: Long,
+                  baseMappingName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zip.file.notFound"
+          before = Instant.now
+          numberOfSavedVersions <- editableMappingIOService.initializeFromUploadedZip(tracingId,
+                                                                                      annotationId,
+                                                                                      startVersion,
+                                                                                      baseMappingName,
+                                                                                      editedEdgesZip)
+          _ = Instant.logSince(before, s"Initializing editable mapping $tracingId from zip")
+        } yield Ok(Json.toJson(numberOfSavedVersions))
       }
     }
 

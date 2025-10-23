@@ -18,12 +18,18 @@ import com.scalableminds.webknossos.datastore.helpers.{
   PathSchemes,
   SegmentIndexData,
   SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased,
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
-import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  DSFullMeshService,
+  FullMeshRequest,
+  MeshFileService,
+  MeshMappingHelper
+}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -36,6 +42,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateServic
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
+import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -67,6 +74,7 @@ class DataSourceController @Inject()(
     slackNotificationService: DSSlackNotificationService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
+    fullMeshService: DSFullMeshService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
@@ -134,40 +142,43 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      val uploadForm = Form(
-        tuple(
-          "resumableChunkNumber" -> number,
-          "resumableChunkSize" -> number,
-          "resumableCurrentChunkSize" -> number,
-          "resumableTotalChunks" -> longNumber,
-          "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, -1, ""))
+      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+        val uploadForm = Form(
+          tuple(
+            "resumableChunkNumber" -> number,
+            "resumableChunkSize" -> number,
+            "resumableCurrentChunkSize" -> number,
+            "resumableTotalChunks" -> longNumber,
+            "resumableIdentifier" -> nonEmptyText
+          )).fill((-1, -1, -1, -1, ""))
 
-      uploadForm
-        .bindFromRequest(request.body.dataParts)
-        .fold(
-          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-          success = {
-            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-              for {
-                datasetId <- uploadService
-                  .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                  for {
-                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                    _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                         chunkSize,
-                                                         currentChunkSize,
-                                                         totalChunkCount,
-                                                         chunkNumber,
-                                                         new File(chunkFile.ref.path.toString))
-                  } yield Ok
-                }
-              } yield result
-          }
-        )
+        uploadForm
+          .bindFromRequest(request.body.dataParts)
+          .fold(
+            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+            success = {
+              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                for {
+                  datasetId <- uploadService
+                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  result <- accessTokenService
+                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                      for {
+                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                             chunkSize,
+                                                             currentChunkSize,
+                                                             totalChunkCount,
+                                                             chunkNumber,
+                                                             new File(chunkFile.ref.path.toString))
+                      } yield Ok
+                    }
+                } yield result
+            }
+          )
+      }
     }
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
@@ -185,14 +196,15 @@ class DataSourceController @Inject()(
     }
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log(Some(slackNotificationService.noticeFailedFinishUpload)) {
+    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           datasetId <- uploadService
-            .getDatasetIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
+            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              datasetId <- uploadService.finishUpload(request.body) ?~> "dataset.upload.finishFailed"
+              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
+                                                                                    datasetId)
             } yield Ok(Json.obj("newDatasetId" -> datasetId))
           }
         } yield response
@@ -603,6 +615,36 @@ class DataSourceController @Inject()(
                                                           request.body.mag)
           }
         } yield Ok(Json.toJson(boxes))
+      }
+    }
+
+  def getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          meshFileKeyOpt <- Fox.runOptional(request.body.meshFileName)(
+            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _))
+          mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
+          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            val fullMeshRequest = FullMeshRequest(
+              meshFileName =
+                if (mappingNameForMeshFile.contains(request.body.meshFileName)) request.body.meshFileName else None,
+              lod = None,
+              segmentId = segmentId,
+              mappingName = request.body.mappingName,
+              mappingType = request.body.mappingName.map(_ => "HDF5"),
+              editableMappingTracingId = None,
+              mag = Some(request.body.mag),
+              seedPosition = None,
+              additionalCoordinates = request.body.additionalCoordinates,
+            )
+            for {
+              data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
+            } yield surfaceArea
+          }
+        } yield Ok(Json.toJson(surfaceAreas))
       }
     }
 

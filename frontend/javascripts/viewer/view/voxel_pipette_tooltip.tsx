@@ -21,7 +21,7 @@ import {
 import {
   calculateInViewportPos,
   calculateMaybePlaneScreenPos,
-  getGlobalMousePosition,
+  getGlobalMousePositionFloating,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
@@ -78,7 +78,7 @@ export default function VoxelValueTooltip() {
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
-  const globalMousePosition = useWkSelector((state) => getGlobalMousePosition(state));
+  const globalMousePosition = useWkSelector((state) => getGlobalMousePositionFloating(state));
   const datasetScale = useWkSelector((state) =>
     getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
   );
@@ -167,29 +167,26 @@ export default function VoxelValueTooltip() {
   const voxelValuesByLayer: Record<string, string> | null =
     layerNamesWithDataValue != null ? Object.fromEntries(layerNamesWithDataValue) : null;
 
+  // If the tooltip is pinned, there should be no offset
+  const OFFSET = lastMeasuredGlobalPosition == null ? 8 : 0;
+
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
-  const tooltipHeight = tooltipRef.current?.offsetHeight ?? 0;
-
-  // If the tooltip is pinned, there should be only a very small offset
-  const OFFSET = lastMeasuredGlobalPosition == null ? 8 : 1;
-
   // Position tooltip just below and to the left of the cursor
   const left = clamp(
-    viewportLeft - tooltipWidth - OFFSET, // min
+    viewportLeft - tooltipWidth + OFFSET, // min
     tooltipPosition[0] - tooltipWidth - OFFSET, // desired position (left of cursor, small offset)
-    viewportLeft + viewportWidth + tooltipWidth - OFFSET, // max (stay in viewport)
+    viewportLeft + viewportWidth - tooltipWidth - OFFSET, // max (stay in viewport)
   );
-
   const top = clamp(
-    viewportTop + OFFSET, // min
+    viewportTop, // min
     tooltipPosition[1] + OFFSET, // just below cursor
-    viewportTop + viewportHeight + tooltipHeight - OFFSET, // max
+    viewportTop + viewportHeight - OFFSET, // max
   );
 
   return (
     <div
       ref={tooltipRef}
-      className="node-context-menu voxel-picker-tooltip"
+      className="node-context-menu cursor-tooltip"
       style={{
         left,
         top,

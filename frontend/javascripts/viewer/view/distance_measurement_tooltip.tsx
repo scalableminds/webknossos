@@ -24,9 +24,6 @@ import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 
-const TOOLTIP_HEIGHT = 48;
-const ADDITIONAL_OFFSET = 12;
-
 function DistanceEntry({ distance }: { distance: string }) {
   return (
     <div>
@@ -146,22 +143,25 @@ export default function DistanceMeasurementTooltip() {
     );
   }
 
+  // If the tooltip is pinned, there should be no offset
+  const OFFSET = isMeasuring ? 8 : 0;
+
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const left = clamp(
-    viewportLeft + ADDITIONAL_OFFSET - tooltipWidth,
-    tooltipPosition[0] + ADDITIONAL_OFFSET,
-    viewportLeft + viewportWidth - ADDITIONAL_OFFSET,
+    viewportLeft - tooltipWidth + OFFSET, // min
+    tooltipPosition[0] - tooltipWidth - OFFSET, // desired position (left of cursor, small offset)
+    viewportLeft + viewportWidth - tooltipWidth - OFFSET, // max (stay in viewport)
   );
   const top = clamp(
-    viewportTop + ADDITIONAL_OFFSET,
-    tooltipPosition[1] - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
-    viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
+    viewportTop, // min
+    tooltipPosition[1] + OFFSET, // just below cursor
+    viewportTop + viewportHeight - OFFSET, // max
   );
 
   return (
     <div
       ref={tooltipRef}
-      className="node-context-menu measurement-tooltip"
+      className="node-context-menu cursor-tooltip"
       style={{
         left,
         top,

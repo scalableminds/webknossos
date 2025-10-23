@@ -339,14 +339,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
         {status === "loaded" && <WkContextMenu />}
 
-        {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (
-          <DistanceMeasurementTooltip />
-        )}
-
-        {status === "loaded" && this.props.activeTool === AnnotationTool.PICK_CELL && (
-          <VoxelValueTooltip />
-        )}
-
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
           isUpdateAllowed={isUpdateTracingAllowed}
@@ -403,6 +395,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   height: "100%",
                 }}
               >
+                {status === "loaded" && this.props.activeTool === AnnotationTool.PICK_CELL && (
+                  <VoxelValueTooltip />
+                )}
+                {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (
+                  <DistanceMeasurementTooltip />
+                )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
                   <React.Fragment>

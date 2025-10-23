@@ -202,7 +202,6 @@ function _calculateMaybePlaneScreenPos(
   const flycamPosition = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const navbarHeight = state.uiInformation.navbarHeight;
 
   const positionInViewportPerspective = calculateInViewportPos(
     globalPosition,
@@ -233,10 +232,7 @@ function _calculateMaybePlaneScreenPos(
       return null;
   }
 
-  point = [
-    Math.round(point[0] + width / 2 + left),
-    Math.round(point[1] + height / 2 + top + navbarHeight),
-  ];
+  point = [Math.round(point[0] + width / 2 + left), Math.round(point[1] + height / 2 + top)];
   return point;
 }
 

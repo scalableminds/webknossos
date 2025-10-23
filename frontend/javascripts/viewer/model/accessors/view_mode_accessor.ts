@@ -128,6 +128,12 @@ function _calculateMaybeGlobalPos(
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
 
+  // Regarding round and floor in the following code:
+  // The objective is to obtain integer positional values here that correspond "the most" to clicked input
+  // position. In general, this means that we round the position (for example, if the user clicks at x=4.999,
+  // x=5 should be used for the node position).
+  // However, for the third dimension, we use floor, because this is what is rendered. Even at z=1.999, the user
+  // will see z=1 in the XY viewport.
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [

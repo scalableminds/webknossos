@@ -1396,7 +1396,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition > 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
+          segmentIdAtPosition > 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {

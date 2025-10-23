@@ -18,7 +18,7 @@ const _AnnotationToolHelper = {
   TRACE: "TRACE",
   ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
-  PICK_CELL: "PICK_CELL",
+  VOXEL_PIPETTE: "VOXEL_PIPETTE",
   QUICK_SELECT: "QUICK_SELECT",
   BOUNDING_BOX: "BOUNDING_BOX",
   PROOFREAD: "PROOFREAD",
@@ -61,9 +61,9 @@ class FillCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.FILL_CELL;
   static readableName = "Fill Tool";
 }
-class PickCellTool extends AbstractAnnotationTool {
-  static id = _AnnotationToolHelper.PICK_CELL;
-  static readableName = "Segment Picker Tool";
+class VoxelPipetteTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.VOXEL_PIPETTE;
+  static readableName = "Voxel Pipette Tool";
 }
 class QuickSelectTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.QUICK_SELECT;
@@ -96,7 +96,7 @@ export const AnnotationTool = {
   TRACE: TraceTool,
   ERASE_TRACE: EraseTraceTool,
   FILL_CELL: FillCellTool,
-  PICK_CELL: PickCellTool,
+  VOXEL_PIPETTE: VoxelPipetteTool,
   QUICK_SELECT: QuickSelectTool,
   BOUNDING_BOX: BoundingBoxTool,
   PROOFREAD: ProofreadTool,
@@ -125,12 +125,12 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
     AnnotationTool.TRACE,
     AnnotationTool.ERASE_TRACE,
     AnnotationTool.FILL_CELL,
-    AnnotationTool.PICK_CELL,
+    AnnotationTool.VOXEL_PIPETTE,
     AnnotationTool.QUICK_SELECT,
   ] as AnnotationTool[],
   READ_ONLY_TOOLS: [
     AnnotationTool.MOVE,
-    AnnotationTool.PICK_CELL,
+    AnnotationTool.VOXEL_PIPETTE,
     AnnotationTool.LINE_MEASUREMENT,
     AnnotationTool.AREA_MEASUREMENT,
   ] as AnnotationTool[],
@@ -138,7 +138,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
     AnnotationTool.MOVE,
     AnnotationTool.SKELETON,
     AnnotationTool.FILL_CELL,
-    AnnotationTool.PICK_CELL,
+    AnnotationTool.VOXEL_PIPETTE,
     AnnotationTool.BOUNDING_BOX,
   ] as AnnotationTool[],
 };
@@ -146,7 +146,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
 export const VolumeTools = _.without(
   Toolkits.VOLUME_TOOLS,
   AnnotationTool.MOVE,
-  AnnotationTool.PICK_CELL,
+  AnnotationTool.VOXEL_PIPETTE,
 );
 
 // MeasurementTools is not part of Toolkits as it should not
@@ -202,7 +202,7 @@ export function adaptActiveToolToShortcuts(
       if (isControlOrMetaPressed) {
         return AnnotationTool.FILL_CELL;
       } else {
-        return AnnotationTool.PICK_CELL;
+        return AnnotationTool.VOXEL_PIPETTE;
       }
     }
   } else {
@@ -219,7 +219,7 @@ export function adaptActiveToolToShortcuts(
     if (isShiftPressed && !isAltPressed) {
       if (!isControlOrMetaPressed) {
         // Only shift is pressed. Switch to the picker
-        return AnnotationTool.PICK_CELL;
+        return AnnotationTool.VOXEL_PIPETTE;
       } else {
         // Control and shift switch to the eraser
         if (activeTool === AnnotationTool.BRUSH) {

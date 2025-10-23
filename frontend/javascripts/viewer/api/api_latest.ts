@@ -1517,7 +1517,7 @@ class TracingApi {
 
   /**
    * Returns the active tool which is either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    */
   getAnnotationTool(): AnnotationToolId {
     return Store.getState().uiInformation.activeTool.id;
@@ -1525,7 +1525,7 @@ class TracingApi {
 
   /**
    * Sets the active tool which should be either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    * _Volume tracing only!_
    */
   setAnnotationTool(toolId: AnnotationToolId) {

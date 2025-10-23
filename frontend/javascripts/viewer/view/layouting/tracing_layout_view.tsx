@@ -395,7 +395,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   height: "100%",
                 }}
               >
-                {status === "loaded" && this.props.activeTool === AnnotationTool.PICK_CELL && (
+                {status === "loaded" && this.props.activeTool === AnnotationTool.VOXEL_PIPETTE && (
                   <VoxelValueTooltip />
                 )}
                 {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (

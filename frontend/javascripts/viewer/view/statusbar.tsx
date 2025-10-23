@@ -201,6 +201,7 @@ function ShortcutsInfo() {
         isControlOrMetaPressed,
         isAltPressed,
         isTDViewportActive,
+        AnnotationTool.SKELETON,
       );
     }
 
@@ -342,6 +343,7 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
     isTDViewportActive,
+    activeTool,
   );
 
   return (

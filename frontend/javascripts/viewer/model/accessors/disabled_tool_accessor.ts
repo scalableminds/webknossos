@@ -91,7 +91,7 @@ const getExplanationForDisabledVolume = (
 const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.PICK_CELL.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
 };
 
 function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
@@ -304,7 +304,7 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationTool.PICK_CELL.id]: NOT_DISABLED_INFO,
+    [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
     [AnnotationTool.QUICK_SELECT.id]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,

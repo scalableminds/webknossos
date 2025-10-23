@@ -28,7 +28,7 @@ export const ToolIdToComponent: Record<
   [AnnotationTool.TRACE.id]: TraceTool,
   [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
-  [AnnotationTool.PICK_CELL.id]: PickCellTool,
+  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteTool,
   [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
   [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
   [AnnotationTool.PROOFREAD.id]: ProofreadTool,
@@ -260,20 +260,20 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function PickCellTool(_props: ToolButtonProps) {
+export function VoxelPipetteTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   return (
     <ToolRadioButton
-      name={AnnotationTool.PICK_CELL.readableName}
-      description="Inspect the data values of a voxel. Clicking on a voxel with a segment id makes that id the active segment id."
-      disabledExplanation={disabledInfosForTools[AnnotationTool.PICK_CELL.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.PICK_CELL.id].isDisabled}
-      value={AnnotationTool.PICK_CELL.id}
+      name={AnnotationTool.VOXEL_PIPETTE.readableName}
+      description="Inspect a voxel by showing the data values per layer in a tooltip. Clicking on a voxel will pin the tooltip to make the values selectable with the mouse cursor."
+      disabledExplanation={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled}
+      value={AnnotationTool.VOXEL_PIPETTE.id}
     >
       <i
         className="fas fa-eye-dropper"
         style={{
-          opacity: disabledInfosForTools[AnnotationTool.PICK_CELL.id].isDisabled ? 0.5 : 1,
+          opacity: disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled ? 0.5 : 1,
         }}
       />
     </ToolRadioButton>

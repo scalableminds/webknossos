@@ -152,6 +152,7 @@ describe("Annotation Tool Disabled Info", () => {
       AnnotationTool.MOVE,
       AnnotationTool.LINE_MEASUREMENT,
       AnnotationTool.AREA_MEASUREMENT,
+      AnnotationTool.VOXEL_PIPETTE,
     ] as AnnotationTool[];
     const disabledInfo = getDisabledInfoForTools(rotatedState);
     for (const tool of Object.values(AnnotationTool)) {

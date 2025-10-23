@@ -597,7 +597,6 @@ export class VoxelPipetteToolController {
         event: MouseEvent,
       ) => {
         MoveHandlers.moveWhenAltIsPressed(_delta, position, plane, event);
-        // lineMeasurementGeometry.updateLatestPointPosition(newPos);
       },
       leftClick: (position: Point2, plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {

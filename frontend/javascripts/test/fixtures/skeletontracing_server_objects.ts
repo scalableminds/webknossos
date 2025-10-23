@@ -11,7 +11,6 @@ const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
   id: TRACING_ID,
-  datasetName: "ROI2017_wkw",
   trees: [
     {
       treeId: 2,

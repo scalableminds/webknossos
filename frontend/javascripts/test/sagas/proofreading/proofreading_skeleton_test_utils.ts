@@ -111,7 +111,12 @@ export function createSkeletonTracingFromAdjacency(
     metadata: [],
   };
 
-  const tracing: ServerSkeletonTracing = {
+  type ServerSkeletonTracingProtoCompatible = ServerSkeletonTracing & {
+    datasetName: string; // Still part of the proto but unused. Needed to make
+    // custom proto parsing & mocking work in proofreading skeleton tests.
+  };
+
+  const tracing: ServerSkeletonTracingProtoCompatible = {
     datasetName: "is-ignored-anyway",
     id: tracingId,
     userBoundingBoxes: [],

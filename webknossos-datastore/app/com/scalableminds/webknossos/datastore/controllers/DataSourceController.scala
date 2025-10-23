@@ -148,40 +148,43 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      val uploadForm = Form(
-        tuple(
-          "resumableChunkNumber" -> number,
-          "resumableChunkSize" -> number,
-          "resumableCurrentChunkSize" -> number,
-          "resumableTotalChunks" -> longNumber,
-          "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, -1, ""))
+      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+        val uploadForm = Form(
+          tuple(
+            "resumableChunkNumber" -> number,
+            "resumableChunkSize" -> number,
+            "resumableCurrentChunkSize" -> number,
+            "resumableTotalChunks" -> longNumber,
+            "resumableIdentifier" -> nonEmptyText
+          )).fill((-1, -1, -1, -1, ""))
 
-      uploadForm
-        .bindFromRequest(request.body.dataParts)
-        .fold(
-          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-          success = {
-            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-              for {
-                datasetId <- uploadService
-                  .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                  for {
-                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                    _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                         chunkSize,
-                                                         currentChunkSize,
-                                                         totalChunkCount,
-                                                         chunkNumber,
-                                                         new File(chunkFile.ref.path.toString))
-                  } yield Ok
-                }
-              } yield result
-          }
-        )
+        uploadForm
+          .bindFromRequest(request.body.dataParts)
+          .fold(
+            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+            success = {
+              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                for {
+                  datasetId <- uploadService
+                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  result <- accessTokenService
+                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                      for {
+                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                             chunkSize,
+                                                             currentChunkSize,
+                                                             totalChunkCount,
+                                                             chunkNumber,
+                                                             new File(chunkFile.ref.path.toString))
+                      } yield Ok
+                    }
+                } yield result
+            }
+          )
+      }
     }
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
@@ -199,7 +202,7 @@ class DataSourceController @Inject()(
     }
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log(Some(slackNotificationService.noticeFailedFinishUpload)) {
+    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           datasetId <- uploadService

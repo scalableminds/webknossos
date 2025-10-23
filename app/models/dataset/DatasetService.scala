@@ -605,22 +605,21 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                       user: User,
                       needsConversion: Boolean,
                       datasetSizeBytes: Long,
-                      viaAddRoute: Boolean): Fox[Unit] =
+                      addVariantLabel: String): Fox[Unit] =
     for {
-      _ <- Fox.runIf(!needsConversion)(logDatasetUploadToSlack(user, dataset._id, viaAddRoute))
+      _ <- Fox.runIf(!needsConversion)(logDatasetUploadToSlack(user, dataset._id, addVariantLabel))
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext)
       _ = analyticsService.track(UploadDatasetEvent(user, dataset, dataStore, datasetSizeBytes))
       _ = if (!needsConversion) mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()
 
-  private def logDatasetUploadToSlack(user: User, datasetId: ObjectId, viaAddRoute: Boolean): Fox[Unit] =
+  private def logDatasetUploadToSlack(user: User, datasetId: ObjectId, addVariantLabel: String): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       resultLink = s"${conf.Http.uri}/datasets/$datasetId"
-      addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
+      _ = slackNotificationService.info(s"Dataset added ($addVariantLabel)$superUserLabel",
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
 

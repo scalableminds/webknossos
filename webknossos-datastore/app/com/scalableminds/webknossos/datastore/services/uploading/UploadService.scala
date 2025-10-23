@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
 import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat, Reads}
@@ -31,6 +32,7 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters._
+import scala.util.Try
 
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -95,6 +97,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
                               managedS3Service: ManagedS3Service,
+                              slackNotificationService: DSSlackNotificationService,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
@@ -134,6 +137,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
+  private def redisKeyForReportedTooLargeUpload(uploadId: String): String =
+    s"upload___${uploadId}___tooLargeUpload"
 
   cleanUpOrphanUploads()
 
@@ -162,6 +167,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                     reserveUploadAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
+      newDataSourceId = DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)
+      _ = logger.info(
+        f"Reserving ${uploadFullName(reserveUploadInfo.uploadId, reserveUploadAdditionalInfo.newDatasetId, newDataSourceId)}...")
       _ <- Fox.fromBool(
         !reserveUploadInfo.needsConversion.getOrElse(false) || !reserveUploadInfo.layersToLink
           .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
@@ -176,7 +184,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               .insertLong(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), 0L)
           ))
       }
-      newDataSourceId = DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(newDataSourceId))
@@ -191,12 +198,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       )
       filePaths = Json.stringify(Json.toJson(reserveUploadInfo.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
+      _ <- runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(reserveUploadInfo.uploadId), "false")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
       )
-      _ = logger.info(
-        f"Reserving ${uploadFullName(reserveUploadInfo.uploadId, reserveUploadAdditionalInfo.newDatasetId, newDataSourceId)}...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
@@ -263,17 +269,31 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        runningUploadMetadataStore
-          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
-          .flatMap(newTotalFileSizeInBytesOpt => {
-            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-                Fox.failure("dataset.upload.moreBytesThanReserved"))
-            } else {
-              Fox.successful(())
-            }
-          })
+      alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
+        redisKeyForReportedTooLargeUpload(uploadId))
+      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                             String.valueOf(currentChunkNumber))
+      _ <- Fox.runIf(isNewChunk) {
+        Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+          runningUploadMetadataStore
+            .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
+            .flatMap(newTotalFileSizeInBytesOpt => {
+              if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+                runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(uploadId), "true")
+                logger.warn(
+                  s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                    .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
+                if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
+                  slackNotificationService.noticeTooLargeUploadChunkRequest(
+                    s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                      .getOrElse(0L)}, which is more than reserved $maxFileSize.")
+                }
+                Fox.successful(())
+              } else {
+                Fox.successful(())
+              }
+            })
+        }
       }
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
@@ -282,8 +302,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
                                               String.valueOf(totalChunkCount)))
       }
-      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
-                                                             String.valueOf(currentChunkNumber))
     } yield
       if (isNewChunk) {
         try {
@@ -317,27 +335,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-        for {
-          _ <- removeFromRedis(uploadId)
-          _ <- PathUtils.deleteDirectoryRecursively(uploadDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
-        } yield ()
+        cleanUpUploadedDataset(uploadDirectoryFor(dataSourceId.organizationId, uploadId),
+                               uploadId,
+                               reason = "Cancelled by user")
       } else Fox.failure(s"Unknown upload")
   }
 
   private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
     s"upload $uploadId of dataset $datasetId ($dataSourceId)"
-
-  private def assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir: Path, uploadId: String): Fox[Unit] =
-    for {
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map(actualFileSize =>
-          if (actualFileSize > maxFileSize.toLong) {
-            cleanUpDatasetExceedingSize(uploadDir, uploadId)
-            Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
-          } else Fox.successful(()))
-      }
-    } yield ()
 
   def finishUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = {
     val uploadId = uploadInformation.uploadId
@@ -349,12 +354,26 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
-      _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
+      // Temporarily disabled till reserved size for upload is fixed.
+      // _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      reservedTotalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+      actualUploadedFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(
+        redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
+      // Logging successful uploads which exceeded size to notice how large the difference is. Should be removed later.
+      _ = reservedTotalFileSizeInBytesOpt.foreach(reservedBytes =>
+        actualUploadedFileSizeInBytesOpt.foreach(actualBytes => {
+          if (actualBytes > reservedBytes) {
+            logger.warn(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+            slackNotificationService.noticeTooLargeUploadChunkRequest(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+          }
+        }))
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.")
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,
                             dataSourceId,
@@ -755,18 +774,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
   }
 
-  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Fox[Unit] = {
-    this.synchronized {
-      PathUtils.deleteDirectoryRecursively(uploadDir)
-    }
-    removeFromRedis(uploadId)
-  }
-
-  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] =
     for {
-      datasetId <- getDatasetIdByUploadId(uploadId)
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- remoteWebknossosClient.deleteDataset(datasetId)
+      _ <- Fox.successful(logger.info(s"Cleaning up uploaded dataset. Reason: $reason"))
+      _ <- removeFromRedis(uploadId)
+      _ <- this.synchronized {
+        PathUtils.deleteDirectoryRecursively(uploadDir).toFox
+      }
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =
@@ -788,7 +802,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))
-
+      _ <- runningUploadMetadataStore.remove(redisKeyForReportedTooLargeUpload(uploadId))
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

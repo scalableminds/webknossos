@@ -239,7 +239,7 @@ class DatasetController @Inject()(userService: UserService,
                                            user,
                                            needsConversion = false,
                                            datasetSizeBytes = 0,
-                                           viaAddRoute = false)
+                                           addVariantLabel = "via explore+add")
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -663,7 +663,7 @@ class DatasetController @Inject()(userService: UserService,
                                            request.identity,
                                            needsConversion = false,
                                            datasetSizeBytes = 0,
-                                           viaAddRoute = false)
+                                           addVariantLabel = "via uploadToPaths/publish")
       } yield Ok
     }
 

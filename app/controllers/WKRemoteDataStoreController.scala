@@ -134,7 +134,7 @@ class WKRemoteDataStoreController @Inject()(
                                              user,
                                              request.body.needsConversion,
                                              request.body.datasetSizeBytes,
-                                             viaAddRoute = false)
+                                             addVariantLabel = "upload without conversion")
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)

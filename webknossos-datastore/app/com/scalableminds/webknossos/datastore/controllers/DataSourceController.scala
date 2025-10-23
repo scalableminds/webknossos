@@ -418,7 +418,6 @@ class DataSourceController @Inject()(
             dataSourceId.directoryName,
             Some(datasetId),
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-
         } yield Ok
       }
     }

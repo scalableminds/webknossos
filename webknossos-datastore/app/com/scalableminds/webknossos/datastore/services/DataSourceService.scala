@@ -307,11 +307,13 @@ class DataSourceService @Inject()(
     for {
       _ <- Fox.serialCombined(localPaths) {
         _.toLocalPath.flatMap {
-          deleteDirectoryRecursively
+          PathUtils.deleteDirectoryRecursively
         }.toFox
       }
       _ <- managedS3Service.deletePaths(managedS3Paths)
     } yield ()
   }
 
+  def existsOnDisk(dataSourceId: DataSourceId): Boolean =
+    Files.exists(dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
 }

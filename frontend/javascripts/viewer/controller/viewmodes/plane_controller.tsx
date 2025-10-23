@@ -18,10 +18,10 @@ import {
   FillCellToolController,
   LineMeasurementToolController,
   MoveToolController,
-  VoxelPipetteToolController,
   ProofreadToolController,
   QuickSelectToolController,
   SkeletonToolController,
+  VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
 import * as VolumeHandlers from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {

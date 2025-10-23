@@ -599,7 +599,12 @@ export class VoxelPipetteToolController {
         MoveHandlers.moveWhenAltIsPressed(_delta, position, plane, event);
         // lineMeasurementGeometry.updateLatestPointPosition(newPos);
       },
-      leftClick: (position: Point2, plane: OrthoView, _event: MouseEvent) => {
+      leftClick: (position: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          VolumeHandlers.handlePickCell(position);
+          return;
+        }
+
         const state = Store.getState();
         const lastMeasuredGlobalPosition =
           state.uiInformation.measurementToolInfo.lastMeasuredPosition;
@@ -622,7 +627,7 @@ export class VoxelPipetteToolController {
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _userConfiguration: UserConfiguration,
-    _shiftKey: boolean,
+    shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
@@ -630,7 +635,7 @@ export class VoxelPipetteToolController {
   ): ActionDescriptor {
     return {
       leftClick:
-        _activeToolWithoutModifiers === AnnotationTool.VOXEL_PIPETTE
+        _activeToolWithoutModifiers === AnnotationTool.VOXEL_PIPETTE && !shiftKey
           ? "Pin Tooltip"
           : "Activate Segment ID",
       rightClick: "Context Menu",

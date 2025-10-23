@@ -136,10 +136,10 @@ export function handleOpenContextMenu(
   meshIntersectionPosition?: Vector3 | null | undefined,
   unmappedSegmentId?: number | null | undefined,
 ) {
-  const { activeViewport } = Store.getState().viewModeData.plane;
+  const state = Store.getState();
+  const { activeViewport } = state.viewModeData.plane;
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
-  const state = Store.getState();
   // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
   // only works for the data viewports, but this function is also called for the 3d viewport.
   const globalPosition = calculateMaybeGlobalPos(state, position);

@@ -18,6 +18,7 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         activeOrganization: state.activeOrganization,
         uiInformation: {
           ...defaultState.uiInformation,
+          theme: state.uiInformation.theme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
         },

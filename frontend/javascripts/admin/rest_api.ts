@@ -154,8 +154,8 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
-export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+export async function logoutUser(): Promise<string> {
+  return await Request.receiveJSON("/api/auth/logout", { method: "POST" });
 }
 
 export async function logoutUserEverywhere(): Promise<void> {

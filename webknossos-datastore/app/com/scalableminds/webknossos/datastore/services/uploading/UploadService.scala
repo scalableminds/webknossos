@@ -281,25 +281,29 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
         redisKeyForReportedTooLargeUpload(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        runningUploadMetadataStore
-          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
-          .flatMap(newTotalFileSizeInBytesOpt => {
-            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(uploadId), "true")
-              logger.warn(
-                s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
-                  .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
-              if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
-                slackNotificationService.noticeTooLargeUploadChunkRequest(
+      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                             String.valueOf(currentChunkNumber))
+      _ <- Fox.runIf(isNewChunk) {
+        Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+          runningUploadMetadataStore
+            .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
+            .flatMap(newTotalFileSizeInBytesOpt => {
+              if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+                runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(uploadId), "true")
+                logger.warn(
                   s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
-                    .getOrElse(0L)}, which is more than reserved $maxFileSize.")
+                    .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
+                if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
+                  slackNotificationService.noticeTooLargeUploadChunkRequest(
+                    s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                      .getOrElse(0L)}, which is more than reserved $maxFileSize.")
+                }
+                Fox.successful(())
+              } else {
+                Fox.successful(())
               }
-              Fox.successful(())
-            } else {
-              Fox.successful(())
-            }
-          })
+            })
+        }
       }
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
@@ -308,8 +312,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
                                               String.valueOf(totalChunkCount)))
       }
-      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
-                                                             String.valueOf(currentChunkNumber))
     } yield
       if (isNewChunk) {
         try {

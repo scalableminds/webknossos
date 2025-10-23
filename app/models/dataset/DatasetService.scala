@@ -567,8 +567,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
             datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
             datastore <- dataStoreFor(dataset)
-            datasetsPointingInHere <- findDatasetsUsingDataFromDir(datasetDir, datastore)
-            _ <- Fox.fromBool(datasetsPointingInHere.isEmpty) ?~> s"Cannot delete dataset because ${datasetsPointingInHere.length} other datasets reference its data: ${datasetsPointingInHere
+            datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
+            _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
               .mkString(",")}"
             _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
           } yield ()
@@ -577,10 +577,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       } yield ()
     }
 
-  private def findDatasetsUsingDataFromDir(directory: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] =
+  private def findDatasetsUsingDataFromDir(directory: UPath,
+                                           dataStore: DataStore,
+                                           ignoredDatasetId: ObjectId): Fox[Seq[ObjectId]] =
     for {
-      datasetsWithMagsInDir <- datasetMagsDAO.findDatasetsWithMagsInDir(directory, dataStore)
-      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithMagsInDir(directory, dataStore)
+      datasetsWithMagsInDir <- datasetMagsDAO.findDatasetsWithMagsInDir(directory, dataStore, ignoredDatasetId)
+      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithAttachmentsInDir(directory,
+                                                                                                  dataStore,
+                                                                                                  ignoredDatasetId)
     } yield (datasetsWithMagsInDir ++ datasetsWithAttachmentsInDir).distinct
 
   def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =

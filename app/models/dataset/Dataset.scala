@@ -915,7 +915,20 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
-  def findDatasetsWithMagsInDir(absolutePath: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] = ??? // TODO
+  def findDatasetsWithMagsInDir(absolutePath: UPath,
+                                dataStore: DataStore,
+                                ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
+    // ensure trailing slash on absolutePath to avoid string prefix false positives
+    val absolutePathWithTrailingSlash =
+      if (absolutePath.toString.endsWith("/")) absolutePath.toString else absolutePath.toString + "/"
+    run(q"""
+        SELECT d._id FROM webknossos.dataset_mags m
+        JOIN webknossos.datasets d ON m._dataset = d._id
+        WHERE starts_with(m.realpath, $absolutePathWithTrailingSlash)
+        AND d._id != $ignoredDataset
+        AND d.dataStore = ${dataStore.name.trim}
+       """.as[ObjectId])
+  }
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
@@ -1302,7 +1315,20 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
-  def findDatasetsWithMagsInDir(absolutePath: UPath, dataStore: DataStore): Fox[Seq[ObjectId]] = ??? // TODO
+  def findDatasetsWithAttachmentsInDir(absolutePath: UPath,
+                                       dataStore: DataStore,
+                                       ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
+    // ensure trailing slash on absolutePath to avoid string prefix false positives
+    val absolutePathWithTrailingSlash =
+      if (absolutePath.toString.endsWith("/")) absolutePath.toString else absolutePath.toString + "/"
+    run(q"""
+        SELECT d._id FROM webknossos.dataset_layer_attachments a
+        JOIN webknossos.datasets d ON a._dataset = d._id
+        WHERE starts_with(a.path, $absolutePathWithTrailingSlash)
+        AND d._id != $ignoredDataset
+        AND d.dataStore = ${dataStore.name.trim}
+       """.as[ObjectId])
+  }
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

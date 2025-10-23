@@ -30,11 +30,14 @@ import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { Store, api } from "viewer/singletons";
 
-function VoxelValueEntry({ layerName, value }: { layerName: string; value: string }) {
+function VoxelValueEntry({
+  layerName,
+  value,
+  category,
+}: { layerName: string; value: string; category: "color" | "segmentation" }) {
   return (
     <div>
-      <strong>{layerName}: </strong>
-      {value}{" "}
+      {category === "color" ? "Intensity" : "Segment ID"} in <strong>{layerName}</strong>: {value}{" "}
       <Tooltip title="Copy to clipboard">
         <CopyOutlined
           onClick={() => {
@@ -152,7 +155,15 @@ export default function VoxelValueTooltip() {
             magIndex,
             additionalCoordinates,
           );
-          return [getReadableNameForLayerName(dataset, annotation, layer.name), dataValue];
+
+          if (dataValue === 1232077) {
+            console.log("positionInLayer", positionInLayer);
+          }
+
+          return [
+            getReadableNameForLayerName(dataset, annotation, layer.name),
+            [layer.category, dataValue],
+          ];
         }),
       );
     },
@@ -164,7 +175,7 @@ export default function VoxelValueTooltip() {
     return null;
   }
 
-  const voxelValuesByLayer: Record<string, string> | null =
+  const voxelValuesByLayer: Record<string, ["color" | "segmentation", string]> | null =
     layerNamesWithDataValue != null ? Object.fromEntries(layerNamesWithDataValue) : null;
 
   // If the tooltip is pinned, there should be no offset
@@ -193,10 +204,14 @@ export default function VoxelValueTooltip() {
         pointerEvents: lastMeasuredGlobalPosition == null ? "none" : "auto",
       }}
     >
-      Data values per layer:
       {voxelValuesByLayer != null
-        ? Object.entries(voxelValuesByLayer).map(([layerName, value]) => (
-            <VoxelValueEntry key={layerName} layerName={layerName} value={value} />
+        ? Object.entries(voxelValuesByLayer).map(([layerName, [category, value]]) => (
+            <VoxelValueEntry
+              key={layerName}
+              category={category}
+              layerName={layerName}
+              value={value}
+            />
           ))
         : "Loading..."}
     </div>

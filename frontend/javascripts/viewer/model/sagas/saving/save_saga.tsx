@@ -42,38 +42,40 @@ export function* setupSavingToServer(): Saga<void> {
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
-const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL = 10 * 1000;
-const CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW = 120 * 1000;
+// interval at which the number of buckets in save queue is checked
+const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS = 10 * 1000;
+// sliding time window for which the number of buckets in save queue is summed up
+const CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS = 120 * 1000;
 
 function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
   let bucketsForCurrentInterval = 0;
-  let currentBuckets: Array<number> = [];
+  let currentBucketCounts: Array<number> = [];
   const bucketCountArrayLength = Math.floor(
-    CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL,
+    CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
   );
   yield* call(
     setInterval,
     () => {
-      const sumOfBuckets = _.sum(currentBuckets);
+      const sumOfBuckets = _.sum(currentBucketCounts);
       console.log(
         "buckets in last interval: ",
         bucketsForCurrentInterval,
         "currentBucketsArray: ",
-        currentBuckets,
+        currentBucketCounts,
         "sumOfBuckets: ",
         sumOfBuckets,
       );
       if (sumOfBuckets > bucketSaveWarningThreshold) {
         Store.dispatch(showManyBucketUpdatesWarningAction());
       }
-      currentBuckets.push(bucketsForCurrentInterval);
-      if (currentBuckets.length > bucketCountArrayLength) {
-        currentBuckets.shift();
+      currentBucketCounts.push(bucketsForCurrentInterval);
+      if (currentBucketCounts.length > bucketCountArrayLength) {
+        currentBucketCounts.shift();
       }
       bucketsForCurrentInterval = 0;
     },
-    CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL,
+    CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
   );
   yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
     bucketsForCurrentInterval += action.count;

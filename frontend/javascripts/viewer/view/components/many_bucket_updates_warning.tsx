@@ -1,5 +1,4 @@
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
-import { useInterval } from "libs/react_helpers";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { useCallback, useEffect, useRef } from "react";
@@ -9,22 +8,21 @@ const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
 const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressBucketWarning";
 
 export function ManyBucketUpdatesWarning(): React.ReactNode {
-  const notificationAPIRef = useRef(Toast.notificationAPI);
   const neverShowAgainRef = useRef(false);
   const dontShowAgainInThisSessionRef = useRef(false);
 
   useEffect(() => {
-    if (Toast.notificationAPI != null) {
-      notificationAPIRef.current = Toast.notificationAPI;
-    }
-  }, []);
-  useInterval(() => {
-    UserLocalStorage.setItem("suppressBucketWarning", "false");
-    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
-  }, 120 * 1000); //TODO_C dev
+    const intervalId = setInterval(() => {
+      UserLocalStorage.setItem("suppressBucketWarning", "false");
+      console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
+    }, 120 * 1000);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []); //TODO_C dev
 
   const onClose = useCallback(() => {
-    notificationAPIRef.current?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
+    Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
     UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.current.toString());
   }, []);
   const handleCheckboxChange = (event: CheckboxChangeEvent) => {
@@ -40,38 +38,26 @@ export function ManyBucketUpdatesWarning(): React.ReactNode {
       Never show this again
     </Checkbox>
   );
-  const closeButton = (
-    <Button
-      onClick={() => {
-        onClose();
-      }}
-    >
-      Close
-    </Button>
-  );
+  const closeButton = <Button onClick={onClose}>Close</Button>;
   const linkToDocsButton = (
     <Button href={linkToDocs} target="_blank" rel="noopener noreferrer" type="primary">
       Learn how
     </Button>
   );
   const footer = (
-    <div>
-      <Space>
-        {linkToDocsButton}
-        {closeButton}
-      </Space>
-    </div>
+    <Space>
+      {linkToDocsButton}
+      {closeButton}
+    </Space>
   );
 
   const showWarningToast = () => {
     const suppressManyBucketUpdatesWarning = UserLocalStorage.getItem(
       WARNING_SUPPRESSION_USER_STORAGE_KEY,
     );
-    if (notificationAPIRef.current == null) {
-      return null;
-    }
+
     if (
-      suppressManyBucketUpdatesWarning !== "true" &&
+      (suppressManyBucketUpdatesWarning || (false as boolean)) !== true &&
       dontShowAgainInThisSessionRef.current !== true
     ) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);

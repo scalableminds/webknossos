@@ -1,32 +1,43 @@
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
-import { useCallback, useEffect, useRef } from "react";
-import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
+import { takeEvery } from "typed-redux-saga";
+import type { Saga } from "viewer/model/sagas/effect-generators";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
 const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressBucketWarning";
 
-export function ManyBucketUpdatesWarning(): React.ReactNode {
-  const neverShowAgainRef = useRef(false);
-  const dontShowAgainInThisSessionRef = useRef(false);
+function* manyBucketUpdatesWarning(): Saga<void> {
+  let dontShowAgainInThisSessionRef = false;
+  const setDontShowAgainInThisSession = (value: boolean) => {
+    dontShowAgainInThisSessionRef = value;
+  };
+  yield takeEvery(
+    "SHOW_MANY_BUCKET_UPDATES_WARNING",
+    showWarningToast,
+    dontShowAgainInThisSessionRef,
+    setDontShowAgainInThisSession,
+  );
+}
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      UserLocalStorage.setItem("suppressBucketWarning", "false");
-      console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
-    }, 120 * 1000);
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []); //TODO_C dev
+function* showWarningToast(
+  dontShowAgainInThisSession: boolean,
+  setDontShowAgainInThisSession: (value: boolean) => void,
+): Saga<void> {
+  let neverShowAgainRef = false;
 
-  const onClose = useCallback(() => {
+  setInterval(() => {
+    UserLocalStorage.setItem("suppressBucketWarning", "false");
+    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
+  }, 120 * 1000);
+  //TODO_C dev
+
+  const onClose = () => {
     Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-    UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.current.toString());
-  }, []);
+    UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.toString());
+  };
   const handleCheckboxChange = (event: CheckboxChangeEvent) => {
-    neverShowAgainRef.current = event.target.checked;
+    neverShowAgainRef = event.target.checked;
   };
 
   const warningMessage =
@@ -51,35 +62,35 @@ export function ManyBucketUpdatesWarning(): React.ReactNode {
     </Space>
   );
 
-  const showWarningToast = () => {
-    const suppressManyBucketUpdatesWarning = UserLocalStorage.getItem(
-      WARNING_SUPPRESSION_USER_STORAGE_KEY,
-    );
+  const suppressManyBucketUpdatesWarning = UserLocalStorage.getItem(
+    WARNING_SUPPRESSION_USER_STORAGE_KEY,
+  );
 
-    if (
-      (suppressManyBucketUpdatesWarning || (false as boolean)) !== true &&
-      dontShowAgainInThisSessionRef.current !== true
-    ) {
-      console.warn(warningMessage + " For more info, visit: " + linkToDocs);
-      Toast.warning(
-        <>
-          {warningMessage}
-          <br />
-          {neverShowAgainCheckbox}
-        </>,
-        {
-          customFooter: footer,
-          key: TOO_MANY_BUCKETS_TOAST_KEY,
-          sticky: true,
-          onClose,
-          className: "many-bucket-updates-warning",
-        },
-      );
-      dontShowAgainInThisSessionRef.current = true;
-    } else {
-      console.log("suppressing warning toast"); //TODO_C dev
-    }
-  };
-  useReduxActionListener("SHOW_MANY_BUCKET_UPDATES_WARNING", () => showWarningToast());
-  return null;
+  if (
+    (suppressManyBucketUpdatesWarning || (false as boolean)) !== true &&
+    dontShowAgainInThisSession !== true
+  ) {
+    console.warn(warningMessage + " For more info, visit: " + linkToDocs);
+    Toast.warning(
+      <>
+        {warningMessage}
+        <br />
+        {neverShowAgainCheckbox}
+      </>,
+      {
+        customFooter: footer,
+        key: TOO_MANY_BUCKETS_TOAST_KEY,
+        sticky: true,
+        onClose,
+        className: "many-bucket-updates-warning",
+      },
+    );
+    setDontShowAgainInThisSession(true);
+  } else {
+    console.log("suppressing warning toast"); //TODO_C dev
+  }
+}
+
+export default function* manyBucketUpdatesWarningSaga(): Saga<void> {
+  yield takeEvery("WK_READY", manyBucketUpdatesWarning);
 }

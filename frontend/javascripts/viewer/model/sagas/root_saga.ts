@@ -18,6 +18,7 @@ import UndoSaga from "viewer/model/sagas/undo_saga";
 import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
 import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
+import manyBucketUpdatesWarningSaga from "viewer/view/components/many_bucket_updates_warning";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
@@ -88,6 +89,7 @@ function* restartableSaga(): Saga<void> {
       ...DatasetSagas.map((saga) => call(saga)),
       call(splitBoundaryMeshSaga),
       call(toolSaga),
+      call(manyBucketUpdatesWarningSaga),
     ]);
   } catch (err: any) {
     rootSagaCrashed = true;

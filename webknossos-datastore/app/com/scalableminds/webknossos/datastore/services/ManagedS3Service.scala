@@ -150,7 +150,7 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
   }
 
   def pathIsInManagedS3(path: UPath): Boolean =
-    // TODO guard against string prefix false positives
-    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c => path.toString.startsWith(c.name))
+    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
+      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
 
 }

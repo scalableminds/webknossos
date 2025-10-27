@@ -8,7 +8,6 @@ import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/co
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions from "viewer/model/dimensions";
 import {
   scaleGlobalPositionWithMagnification,
@@ -29,18 +28,10 @@ export class VoxelBuffer2D {
   readonly width: number;
   readonly height: number;
   readonly minCoord2d: Vector2;
-  readonly get3DCoordinate: (arg0: Vector2) => Vector3;
   readonly getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
 
   static empty(): VoxelBuffer2D {
-    return new VoxelBuffer2D(
-      new Uint8Array(0),
-      0,
-      0,
-      [0, 0],
-      () => [0, 0, 0],
-      () => {},
-    );
+    return new VoxelBuffer2D(new Uint8Array(0), 0, 0, [0, 0], () => {});
   }
 
   constructor(
@@ -48,14 +39,12 @@ export class VoxelBuffer2D {
     width: number,
     height: number,
     minCoord2d: Vector2,
-    get3DCoordinate: (arg0: Vector2) => Vector3,
     getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   ) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
-    this.get3DCoordinate = get3DCoordinate;
     this.getFast3DCoordinate = getFast3DCoordinate;
 
     if (!V2.equals(this.minCoord2d, V2.floor(this.minCoord2d))) {
@@ -159,6 +148,8 @@ class SectionLabeler {
 
   readonly activeMag: Vector3;
 
+  fast3DCoordinateFunction: (coordX: number, coordY: number, out: Vector3 | Float32Array) => void;
+
   constructor(
     volumeTracingId: string,
     plane: OrthoView,
@@ -172,9 +163,14 @@ class SectionLabeler {
     this.activeMag = activeMag;
     const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
+
+    this.fast3DCoordinateFunction = getFast3DCoordinateHelper(this.plane, this.thirdDimensionValue);
   }
 
   updateArea(globalPos: Vector3): void {
+    /*
+     * Adapts minCoord and maxCoord to the given position if necessary.
+     */
     const pos = scaleGlobalPositionWithMagnification(globalPos, this.activeMag);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
@@ -334,14 +330,7 @@ class SectionLabeler {
       map.fill(fillValue);
     }
 
-    return new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
+    return new VoxelBuffer2D(map, width, height, minCoord2d, this.fast3DCoordinateFunction);
   }
 
   private getRectangleBetweenCircles(
@@ -494,28 +483,18 @@ class SectionLabeler {
   }
 
   private get2DCoordinate(coord3d: Vector3): Vector2 {
-    // Throw out 'thirdCoordinate' which is equal anyways
+    // Throw out 'thirdCoordinate' which is always the same, anyway.
     const transposed = Dimensions.transDim(coord3d, this.plane);
     return [transposed[0], transposed[1]];
   }
 
-  private get3DCoordinate(coord2d: Vector2): Vector3 {
-    return Dimensions.transDim([coord2d[0], coord2d[1], this.thirdDimensionValue], this.plane);
-  }
-
-  private getFast3DCoordinateFunction(): (
-    coordX: number,
-    coordY: number,
-    out: Vector3 | Float32Array,
-  ) => void {
-    return getFast3DCoordinateHelper(this.plane, this.thirdDimensionValue);
-  }
-
   getUnzoomedCentroid(): Vector3 {
-    /* The return value is in global coordinate system */
+    /* Returns the centroid (in the global coordinate system).
+     *
+     * Formula:
+     * https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+     */
 
-    // Formula:
-    // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
@@ -536,13 +515,14 @@ class SectionLabeler {
 
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
-    const zoomedPosition = this.get3DCoordinate([cx, cy]);
-    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeMag);
+    const outZoomedPosition: Vector3 = [0, 0, 0];
+    this.fast3DCoordinateFunction(cx, cy, outZoomedPosition);
+    const pos = zoomedPositionToGlobalPosition(outZoomedPosition, this.activeMag);
     return pos;
   }
 }
 
-export function getFast3DCoordinateHelper(
+function getFast3DCoordinateHelper(
   plane: OrthoView,
   thirdDimensionValue: number,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {

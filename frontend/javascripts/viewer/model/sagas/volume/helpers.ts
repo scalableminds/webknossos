@@ -188,8 +188,15 @@ export function* labelWithVoxelBuffer2D(
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
-  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
-    voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
+  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) => {
+    const outVar: Vector3 = [0, 0, 0];
+    voxelBuffer.getFast3DCoordinate(
+      x + voxelBuffer.minCoord2d[0],
+      y + voxelBuffer.minCoord2d[1],
+      outVar,
+    );
+    return outVar;
+  };
 
   const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
   const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
@@ -201,8 +208,8 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  console.log("topLeft3DCoord", topLeft3DCoord)
-  console.log("bottomRight3DCoord", bottomRight3DCoord)
+  console.log("topLeft3DCoord", topLeft3DCoord);
+  console.log("bottomRight3DCoord", bottomRight3DCoord);
   for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(

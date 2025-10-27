@@ -115,11 +115,6 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSourcePaths)
 
-  def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId/paths")
-      .addQueryParam("key", dataStoreKey)
-      .getWithJsonResponse[List[LayerMagLinkInfo]]
-
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
     for {

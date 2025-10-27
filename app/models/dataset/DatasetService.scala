@@ -497,28 +497,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
 
-  /**
-    * Returns a list of tuples, where the first element is the magInfo and the second element is a list of all magInfos
-    * that share the same realPath but have a different dataSourceId. For each mag in the data layer there is one tuple.
-    * @param datasetId id of the dataset
-    * @param layerName name of the layer in the dataset
-    * @return
-    */
-  def getPathsForDataLayer(datasetId: ObjectId,
-                           layerName: String): Fox[List[(DataSourceMagInfo, List[DataSourceMagInfo])]] =
-    for {
-      magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
-      magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
-        magInfo.realPath match {
-          case Some(realPath) =>
-            for {
-              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
-              filteredPathInfos = pathInfos.filter(_.dataSourceId != magInfo.dataSourceId)
-            } yield (magInfo, filteredPathInfos)
-          case None => Fox.successful((magInfo, List()))
-      })
-    } yield magInfosAndLinkedMags
-
   def validatePaths(paths: Seq[UPath], dataStore: DataStore): Fox[Unit] =
     for {
       _ <- Fox.successful(())

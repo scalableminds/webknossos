@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -816,8 +816,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.mags.map { mag =>
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, realPath, axisOrder, channelIndex, credentialId)
-            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
       }
     }
@@ -867,34 +867,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         )
       }
     )
-
-  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): List[DataSourceMagInfo] = {
-    val mags = rows.map(_.mag)
-    val dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
-    rows.toList.zip(mags).zip(dataSources).map {
-      case ((row, mag), dataSource) =>
-        DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
-    }
-  }
-
-  def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
-    for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
-            WHERE _dataset = $datasetId
-            AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
-      magInfos = rowsToMagInfos(rows)
-    } yield magInfos
-
-  def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
-    for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
-            WHERE realPath = $realPath""".as[DataSourceMagRow])
-      magInfos = rowsToMagInfos(rows)
-    } yield magInfos
 
   def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {

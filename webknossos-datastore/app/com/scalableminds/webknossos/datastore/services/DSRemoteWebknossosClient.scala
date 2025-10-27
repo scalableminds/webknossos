@@ -38,16 +38,18 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: Seq[MagPathInfo])
+case class DataSourcePathInfo(dataSourceId: DataSourceId,
+                              magPathInfos: Seq[RealPathInfo],
+                              attachmentPathInfos: Seq[RealPathInfo])
 
 object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
 
-object MagPathInfo {
-  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+object RealPathInfo {
+  implicit val jsonFormat: OFormat[RealPathInfo] = Json.format[RealPathInfo]
 }
 
 trait RemoteWebknossosClient {

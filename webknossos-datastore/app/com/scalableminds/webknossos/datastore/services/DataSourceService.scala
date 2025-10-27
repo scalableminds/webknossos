@@ -95,22 +95,22 @@ class DataSourceService @Inject()(
     val magPathInfosAndFailures = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
     logRealPathScanFailures(magPathInfosAndFailures, verbose)
     magPathInfosAndFailures.flatMap {
-      case (ds, (magPathInfos, _)) if magPathInfos.nonEmpty => Some(DataSourcePathInfo(ds.id, magPathInfos))
+      case (ds, (magPathInfos, _)) if magPathInfos.nonEmpty => Some(DataSourcePathInfo(ds.id, magPathInfos, Seq.empty))
       case _                                                => None
     }
   }
 
-  private def logRealPathScanFailures(infosByDatasource: Seq[(DataSource, (Seq[MagPathInfo], Seq[Failure]))],
-                                      verbose: Boolean) = {}
+  private def logRealPathScanFailures(infosByDatasource: Seq[(DataSource, (Seq[RealPathInfo], Seq[Failure]))],
+                                      verbose: Boolean) = {} // TODO
 
-  private def determineMagRealPathsForDataSource(dataSource: DataSource): (Seq[MagPathInfo], Seq[Failure]) = {
+  // TODO attachments
+  private def determineMagRealPathsForDataSource(dataSource: DataSource): (Seq[RealPathInfo], Seq[Failure]) = {
     val datasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val resultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
           dataLayer.mags.map(mag => getMagPathInfo(datasetPath, dataLayer.name, mag))
         }
-        // TODO log failures in sensible format. (verbose every x times?)
         (resultBoxes.flatten, resultBoxes.flatMap {
           case f: Failure => Some(f)
           case _          => None
@@ -119,21 +119,21 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def getMagPathInfo(datasetPath: Path, layerName: String, mag: MagLocator): Box[MagPathInfo] = {
+  private def getMagPathInfo(datasetPath: Path, layerName: String, mag: MagLocator): Box[RealPathInfo] = {
     val resolvedMagPath = dataVaultService.resolveMagPath(
       mag,
       datasetPath,
       datasetPath.resolve(layerName)
     )
     if (resolvedMagPath.isRemote) {
-      Full(MagPathInfo(resolvedMagPath, resolvedMagPath, hasLocalData = false))
+      Full(RealPathInfo(resolvedMagPath, resolvedMagPath, hasLocalData = false))
     } else {
       for {
         magPath <- resolvedMagPath.toLocalPath
         realMagPath <- tryo(magPath.toRealPath())
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
         isDatasetLocal = realMagPath.startsWith(datasetPath.toAbsolutePath)
-      } yield MagPathInfo(resolvedMagPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+      } yield RealPathInfo(resolvedMagPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
     }
   }
 

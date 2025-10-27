@@ -42,6 +42,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                datasetMagsDAO: DatasetMagsDAO,
+                               datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                multiUserDAO: MultiUserDAO,
@@ -474,7 +475,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
     datasetBox.flatMap {
       case Full(dataset) if !dataset.isVirtual =>
-        datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        for {
+          _ <- datasetMagsDAO.updateMagRealPathsForDataset(dataset._id, pathInfo.magPathInfos)
+          _ <- datasetLayerAttachmentsDAO.updateAttachmentRealPathsForDataset(dataset._id, pathInfo.attachmentPathInfos)
+        } yield ()
       case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
         Fox.successful(())
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)

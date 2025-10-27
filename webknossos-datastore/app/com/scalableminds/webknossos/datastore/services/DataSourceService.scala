@@ -94,8 +94,9 @@ class DataSourceService @Inject()(
   private def scanRealPaths(dataSources: List[DataSource], verbose: Boolean): Seq[DataSourcePathInfo] = {
     val magPathInfosAndFailures = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
     logRealPathScanFailures(magPathInfosAndFailures, verbose)
-    magPathInfosAndFailures.map {
-      case (ds, (magPathInfos, _)) => DataSourcePathInfo(ds.id, magPathInfos)
+    magPathInfosAndFailures.flatMap {
+      case (ds, (magPathInfos, _)) if magPathInfos.nonEmpty => Some(DataSourcePathInfo(ds.id, magPathInfos))
+      case _                                                => None
     }
   }
 
@@ -206,7 +207,10 @@ class DataSourceService @Inject()(
             val dataSourceWithAttachments = dataSource.copy(
               dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
             )
-            dataSourceWithAttachments.copy(id)
+            val dataSourceWithMagPaths = dataSourceWithAttachments.copy(
+              dataLayers = addMagPaths(path, dataSourceWithAttachments)
+            )
+            dataSourceWithMagPaths.copy(id)
           } else
             UnusableDataSource(id,
                                None,
@@ -223,6 +227,9 @@ class DataSourceService @Inject()(
       UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
     }
   }
+
+  private def addMagPaths(dataSourcePath: Path, dataSource: UsableDataSource): List[StaticLayer] =
+    dataSource.dataLayers // TODO
 
   def resolvePathsInNewBasePath(dataSource: UsableDataSource, newBasePath: UPath): UsableDataSource = {
     val updatedDataLayers = dataSource.dataLayers.map { layer =>

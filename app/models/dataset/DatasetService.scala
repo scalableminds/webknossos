@@ -470,26 +470,23 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
-  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
-    if (pathInfo.magPathInfos.isEmpty) {
-      Fox.successful(())
-    } else {
-      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
-      dataset.flatMap {
-        case Full(dataset) if !dataset.isVirtual =>
-          datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
-        case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
-          Fox.successful(())
-        case Empty => // Dataset reported but ignored (non-existing/forbidden org)
-          Fox.successful(())
-        case e: EmptyBox =>
-          Fox.failure("dataset.notFound", e)
-      }
+  private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
+    datasetBox.flatMap {
+      case Full(dataset) if !dataset.isVirtual =>
+        datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+      case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
+        Fox.successful(())
+      case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+        Fox.successful(())
+      case e: EmptyBox =>
+        Fox.failure("dataset.notFound", e)
     }
+  }
 
   def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(pathInfos)(updateRealPath)
+      _ <- Fox.serialCombined(pathInfos)(updateRealPathsForDataSource)
     } yield ()
 
   /**

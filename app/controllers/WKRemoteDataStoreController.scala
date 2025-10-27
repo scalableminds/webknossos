@@ -195,7 +195,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updatePaths(name: String, key: String): Action[List[DataSourcePathInfo]] =
+  def updateRealPaths(name: String, key: String): Action[List[DataSourcePathInfo]] =
     Action.async(validateJson[List[DataSourcePathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {

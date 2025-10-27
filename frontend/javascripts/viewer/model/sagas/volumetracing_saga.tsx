@@ -80,7 +80,7 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
-import type SectionLabeler from "viewer/model/volumetracing/volumelayer";
+import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";

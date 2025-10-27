@@ -12,6 +12,7 @@ import {
   updateSegmentAction,
   setActiveCellAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
 import { Store } from "viewer/singletons";
 import { sleep } from "libs/utils";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -21,6 +22,7 @@ import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -28,7 +30,7 @@ function makeProofreadAnnotation(
   tracings: (ServerSkeletonTracing | ServerVolumeTracing)[],
 ): (ServerSkeletonTracing | ServerVolumeTracing)[] {
   return tracings.map((tracing) => {
-    if (tracing.typ === "Volume") {
+    if (tracing.typ === "Volume" && tracing.id === volumeTracing.id) {
       return update(tracing, {
         hasEditableMapping: { $set: true },
         mappingName: { $set: "volumeTracingId" },
@@ -226,7 +228,7 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = false should not try to instantly acquire the mutex nor should it be fetched upon proofreading action.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayEdit = false should not try to instantly acquire the mutex nor should it be fetched upon proofreading action.", async (context: WebknossosTestContext) => {
     WkDevFlags.liveCollab = false;
     await setupWebknossosForTesting(
       context,
@@ -248,7 +250,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = true and liveCollab = true should not try to instantly acquire the mutex; only after an proofread annotation action.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab = true should not try to instantly acquire the mutex; only after an proofread annotation action.", async (context: WebknossosTestContext) => {
     WkDevFlags.liveCollab = true;
     await setupWebknossosForTesting(
       context,
@@ -274,7 +276,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
 
-  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayShare = true and liveCollab disabled should try to instantly acquire the mutex.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab disabled should try to instantly acquire the mutex.", async (context: WebknossosTestContext) => {
     WkDevFlags.liveCollab = false;
     await setupWebknossosForTesting(
       context,
@@ -305,7 +307,7 @@ describe("Save Mutex Saga", () => {
   describe.each(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport)(
     "[With AnnotationTool=%s]:",
     (annotationToolWithoutLiveCollabSupport) => {
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
         WkDevFlags.liveCollab = true;
         await setupWebknossosForTesting(
           context,
@@ -332,7 +334,7 @@ describe("Save Mutex Saga", () => {
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       });
 
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayShare = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
         WkDevFlags.liveCollab = true;
         await setupWebknossosForTesting(
           context,
@@ -360,4 +362,43 @@ describe("Save Mutex Saga", () => {
       });
     },
   );
+
+  const othersMayEditValues = [true, false];
+  describe.each(othersMayEditValues)("[With othersMayEdit=%s]:", (othersMayEdit) => {
+    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = ${othersMayEditValues} should ${!othersMayEditValues ? "not " : ""}try to acquire the mutex upon activating a different volume annotation layer.`, async (context: WebknossosTestContext) => {
+      WkDevFlags.liveCollab = true;
+      await setupWebknossosForTesting(
+        context,
+        "multiVolume",
+        ({ tracings, annotationProto, dataset, annotation }) => {
+          const annotationWithUpdatingAllowedTrue = update(annotation, {
+            restrictions: { allowUpdate: { $set: true }, allowSave: { $set: true } },
+            othersMayEdit: { $set: othersMayEdit },
+          });
+          return {
+            tracings: makeProofreadAnnotation(tracings),
+            annotationProto,
+            dataset,
+            annotation: annotationWithUpdatingAllowedTrue,
+          };
+        },
+      );
+      mockInitialBucketAndAgglomerateData(context);
+      // Give mutex saga time to potentially acquire the mutex. This should not happen!
+      await sleep(500);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      const volumeTracingId2 = Store.getState().annotation.volumes.at(-1);
+      if (!volumeTracingId2) {
+        throw new Error("No additional volume tracing found to activate.");
+      }
+      // Switch to other layer. Saga should, depending on othersMayEdit, try to acquire mutex now as the active layer no longer has an editable mapping and thus no liveCollab support.
+      Store.dispatch(updateLayerSettingAction(volumeTracingId2.tracingId, "isDisabled", true));
+      await sleep(500);
+      if (othersMayEdit) {
+        expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+      } else {
+        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      }
+    });
+  });
 });

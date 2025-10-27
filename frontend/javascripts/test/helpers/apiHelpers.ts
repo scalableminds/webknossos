@@ -55,6 +55,11 @@ import {
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
 } from "test/fixtures/hybridtracing_server_objects";
+import {
+  tracings as MULTI_VOLUME_TRACINGS,
+  annotation as MULTI_VOLUME_ANNOTATION,
+  annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
+} from "test/fixtures/multivolume_server_objects";
 import type {
   APIAnnotation,
   APIDataset,
@@ -366,6 +371,12 @@ const modelData = {
     tracings: HYBRID_TRACINGS,
     annotation: HYBRID_ANNOTATION,
     annotationProto: HYBRID_ANNOTATION_PROTO,
+  },
+  multiVolume: {
+    dataset: DATASET,
+    tracings: MULTI_VOLUME_TRACINGS,
+    annotation: MULTI_VOLUME_ANNOTATION,
+    annotationProto: MULTI_VOLUME_ANNOTATION_PROTO,
   },
   task: {
     dataset: DATASET,

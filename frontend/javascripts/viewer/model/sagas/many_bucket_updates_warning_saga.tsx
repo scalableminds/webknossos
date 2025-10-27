@@ -12,6 +12,11 @@ function* manyBucketUpdatesWarning(): Saga<void> {
   const setDontShowAgainInThisSession = (value: boolean) => {
     dontShowAgainInThisSession = value;
   };
+  setInterval(() => {
+    UserLocalStorage.setItem("suppressBucketWarning", "false");
+    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
+  }, 120 * 1000);
+  //TODO_C dev
   yield takeEvery(
     "SHOW_MANY_BUCKET_UPDATES_WARNING",
     showWarningToast,
@@ -25,12 +30,6 @@ function* showWarningToast(
   setDontShowAgainInThisSession: (value: boolean) => void,
 ): Saga<void> {
   let neverShowAgain = false;
-
-  setInterval(() => {
-    UserLocalStorage.setItem("suppressBucketWarning", "false");
-    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
-  }, 120 * 1000);
-  //TODO_C dev
 
   const onClose = () => {
     Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);

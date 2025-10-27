@@ -330,7 +330,11 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
     if (propertyName !== "isDisabled") {
       return;
     }
-    const previousOnlyRequiredOnSaveState = mutexLogicState.fetchingStrategy;
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (!othersMayEdit) {
+      return;
+    }
+    const previousFetchingStrategy = mutexLogicState.fetchingStrategy;
     if (value === false) {
       // New volume annotation layer was activated. Check if this is a proofreading only annotation to determine whether the mutex should be fetched only on save.
       const isMappingEditable = yield* select((state) => hasEditableMapping(state, layerName));
@@ -344,7 +348,7 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
     } else {
       mutexLogicState.fetchingStrategy = MutexFetchingStrategy.Continuously;
     }
-    if (previousOnlyRequiredOnSaveState !== mutexLogicState.fetchingStrategy) {
+    if (previousFetchingStrategy !== mutexLogicState.fetchingStrategy) {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     }
   }
@@ -353,6 +357,10 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
 
 function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void> {
   function* reactToActiveToolChange(action: SetToolAction | CycleToolAction): Saga<void> {
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (!othersMayEdit) {
+      return;
+    }
     let newToolId;
     if (action.type === "SET_TOOL") {
       newToolId = action.tool.id;

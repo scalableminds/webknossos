@@ -192,7 +192,7 @@ class SectionLabeler {
     this.maxCoord = maxCoord;
   }
 
-  getArea(): number {
+  private getArea(): number {
     const [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -201,15 +201,6 @@ class SectionLabeler {
 
     const difference = V3.sub(maxCoord, minCoord);
     return difference[0] * difference[1] * difference[2];
-  }
-
-  getLabeledBoundingBox(): BoundingBox | null {
-    if (this.minCoord == null || this.maxCoord == null) {
-      return null;
-    }
-    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeMag);
-    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeMag);
-    return new BoundingBox({ min, max });
   }
 
   getContourList(useGlobalCoords: boolean = false) {
@@ -303,7 +294,7 @@ class SectionLabeler {
     return buffer2D;
   }
 
-  vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
+  private vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
     const dx = pos2[0] - pos1[0];
 
     if (dx === 0) {
@@ -317,7 +308,7 @@ class SectionLabeler {
     }
   }
 
-  vector2Norm(vector: Vector2): number {
+  private vector2Norm(vector: Vector2): number {
     let norm = 0;
 
     for (const i of Vector2Indices) {
@@ -327,7 +318,7 @@ class SectionLabeler {
     return Math.sqrt(norm);
   }
 
-  vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
+  private vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
     let distance = 0;
 
     for (const i of Vector2Indices) {
@@ -353,7 +344,7 @@ class SectionLabeler {
     );
   }
 
-  getRectangleBetweenCircles(
+  private getRectangleBetweenCircles(
     centre1: Vector2,
     centre2: Vector2,
     radius: number,
@@ -479,7 +470,7 @@ class SectionLabeler {
     return buffer2D;
   }
 
-  drawOutlineVoxels(setMap: (arg0: number, arg1: number) => void): void {
+  private drawOutlineVoxels(setMap: (arg0: number, arg1: number) => void): void {
     const contourList = this.getContourList();
     let p1;
     let p2;
@@ -491,7 +482,7 @@ class SectionLabeler {
     }
   }
 
-  fillOutsideArea(map: Uint8Array, width: number, height: number): void {
+  private fillOutsideArea(map: Uint8Array, width: number, height: number): void {
     const setMap = (x: number, y: number) => {
       map[x * height + y] = 0;
     };
@@ -502,17 +493,17 @@ class SectionLabeler {
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
 
-  get2DCoordinate(coord3d: Vector3): Vector2 {
+  private get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
     const transposed = Dimensions.transDim(coord3d, this.plane);
     return [transposed[0], transposed[1]];
   }
 
-  get3DCoordinate(coord2d: Vector2): Vector3 {
+  private get3DCoordinate(coord2d: Vector2): Vector3 {
     return Dimensions.transDim([coord2d[0], coord2d[1], this.thirdDimensionValue], this.plane);
   }
 
-  getFast3DCoordinateFunction(): (
+  private getFast3DCoordinateFunction(): (
     coordX: number,
     coordY: number,
     out: Vector3 | Float32Array,
@@ -521,6 +512,8 @@ class SectionLabeler {
   }
 
   getUnzoomedCentroid(): Vector3 {
+    /* The return value is in global coordinate system */
+
     // Formula:
     // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
     let sumArea = 0;

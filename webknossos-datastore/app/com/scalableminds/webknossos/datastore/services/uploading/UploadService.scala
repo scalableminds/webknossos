@@ -778,7 +778,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
-                                                           maxDepth = 2,
+                                                           maxDepth = 3,
                                                            silent = false,
                                                            filters = p => p.getFileName.toString == headerFile)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
@@ -795,16 +795,18 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } else Full(())
 
   private def looksLikeMagDir(headerFilePaths: Seq[Path]): Boolean =
-    headerFilePaths.headOption.exists { oneHeaderFilePath =>
-      pathDepth(oneHeaderFilePath) == 0
-    }
-
-  private def pathDepth(path: Path) = path.toString.count(_ == '/')
+    pathExistsWithDepth(0, headerFilePaths) && !pathExistsWithDepth(1, headerFilePaths) && !pathExistsWithDepth(
+      2,
+      headerFilePaths)
 
   private def looksLikeLayerDir(headerFilePaths: Seq[Path]): Boolean =
-    headerFilePaths.headOption.exists { oneHeaderFilePath =>
-      pathDepth(oneHeaderFilePath) == 1
-    }
+    pathExistsWithDepth(1, headerFilePaths) && !pathExistsWithDepth(2, headerFilePaths)
+
+  private def pathExistsWithDepth(pathDepth: Int, paths: Seq[Path]) =
+    paths.exists(getPathDepth(_) == pathDepth)
+
+  private def getPathDepth(path: Path) =
+    path.toString.count(_ == '/')
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId): Fox[Unit] =
     for {

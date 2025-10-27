@@ -4,7 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
-import { call, fork, put, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
@@ -54,35 +54,28 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketCountArrayLength = Math.floor(
     CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
   );
-  const intervalId = yield* call(
-    setInterval,
-    () => {
-      const sumOfBuckets = _.sum(currentBucketCounts);
-      console.log(
-        "buckets in last interval: ",
-        bucketsForCurrentInterval,
-        "currentBucketsArray: ",
-        currentBucketCounts,
-        "sumOfBuckets: ",
-        sumOfBuckets,
-      );
-      if (sumOfBuckets > bucketSaveWarningThreshold) {
-        Store.dispatch(showManyBucketUpdatesWarningAction());
-      }
-      currentBucketCounts.push(bucketsForCurrentInterval);
-      if (currentBucketCounts.length > bucketCountArrayLength) {
-        currentBucketCounts.shift();
-      }
-      bucketsForCurrentInterval = 0;
-    },
-    CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
-  );
-  try {
-    yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
-      bucketsForCurrentInterval += action.count;
-    });
-  } finally {
-    yield* call(clearInterval, intervalId);
+  yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
+    bucketsForCurrentInterval += action.count;
+  });
+  while (true) {
+    yield* delay(CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS);
+    const sumOfBuckets = _.sum(currentBucketCounts);
+    console.log(
+      "buckets in last interval: ",
+      bucketsForCurrentInterval,
+      "currentBucketsArray: ",
+      currentBucketCounts,
+      "sumOfBuckets: ",
+      sumOfBuckets,
+    );
+    if (sumOfBuckets > bucketSaveWarningThreshold) {
+      Store.dispatch(showManyBucketUpdatesWarningAction());
+    }
+    currentBucketCounts.push(bucketsForCurrentInterval);
+    if (currentBucketCounts.length > bucketCountArrayLength) {
+      currentBucketCounts.shift();
+    }
+    bucketsForCurrentInterval = 0;
   }
 }
 

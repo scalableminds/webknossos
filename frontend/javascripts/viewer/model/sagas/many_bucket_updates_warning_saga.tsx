@@ -33,8 +33,9 @@ function* showWarningToast(
   //TODO_C dev
 
   const onClose = () => {
+    UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgainRef.toString());
+    console.log("setting suppressBucketWarning to ", neverShowAgainRef);
     Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-    UserLocalStorage.setItem("suppressBucketWarning", neverShowAgainRef.toString());
   };
   const handleCheckboxChange = (event: CheckboxChangeEvent) => {
     neverShowAgainRef = event.target.checked;
@@ -66,10 +67,7 @@ function* showWarningToast(
     WARNING_SUPPRESSION_USER_STORAGE_KEY,
   );
 
-  if (
-    (suppressManyBucketUpdatesWarning || (false as boolean)) !== true &&
-    dontShowAgainInThisSession !== true
-  ) {
+  if (suppressManyBucketUpdatesWarning !== "true" && dontShowAgainInThisSession !== true) {
     console.warn(warningMessage + " For more info, visit: " + linkToDocs);
     Toast.warning(
       <>

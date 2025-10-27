@@ -229,7 +229,15 @@ class DataSourceService @Inject()(
   }
 
   private def addMagPaths(dataSourcePath: Path, dataSource: UsableDataSource): List[StaticLayer] =
-    dataSource.dataLayers // TODO
+    dataSource.dataLayers.map { dataLayer =>
+      dataLayer.mapped(
+        newMags = Some(dataLayer.mags.map { magLocator =>
+          magLocator.copy(
+            path =
+              Some(dataVaultService.resolveMagPath(magLocator, dataSourcePath, dataSourcePath.resolve(dataLayer.name))))
+        })
+      )
+    }
 
   def resolvePathsInNewBasePath(dataSource: UsableDataSource, newBasePath: UPath): UsableDataSource = {
     val updatedDataLayers = dataSource.dataLayers.map { layer =>

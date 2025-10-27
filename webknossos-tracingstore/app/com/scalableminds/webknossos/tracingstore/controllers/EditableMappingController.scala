@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{EditableMappingSegmentListResult, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebknossosClient,
+  TracingStoreAccessTokenService
+}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingIOService,
@@ -30,6 +34,7 @@ class EditableMappingController @Inject()(
     remoteWebknossosClient: TSRemoteWebknossosClient,
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
+    remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -139,14 +144,26 @@ class EditableMappingController @Inject()(
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)
-            _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
-            agglomerateGraph <- editableMappingService.getAgglomerateGraphForIdWithFallback(editableMappingInfo,
-                                                                                            tracingId,
-                                                                                            tracing.version,
-                                                                                            agglomerateId,
-                                                                                            remoteFallbackLayer)
+            agglomerateGraph <- if (tracing.getHasEditableMapping) {
+              for {
+                editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
+                agglomerateGraphWithFallback <- editableMappingService.getAgglomerateGraphForIdWithFallback(
+                  editableMappingInfo,
+                  tracingId,
+                  tracing.version,
+                  agglomerateId,
+                  remoteFallbackLayer)
+              } yield agglomerateGraphWithFallback
+            } else {
+              // If there is no editable mapping, we can still try to fetch an agglomerateGraph from the static agglomerate file.
+              for {
+                mappingName <- tracing.mappingName.toFox ?~> "Cannot get agglomerate graph: No mapping selected in the volume layer."
+                agglomerateGraphFromDatastore <- remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
+                                                                                           mappingName,
+                                                                                           agglomerateId)
+              } yield agglomerateGraphFromDatastore
+            }
           } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
         }
       }

@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.datavault.S3DataVault
-import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, S3AccessKeyCredential}
 import com.typesafe.scalalogging.LazyLogging
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
@@ -38,7 +37,7 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
     }
 
   lazy val s3UploadBucketOpt: Option[String] =
-    S3DataVault.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
+    S3UriUtils.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
 
   private lazy val s3UploadEndpoint: URI = {
     val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
@@ -76,7 +75,7 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
   } yield S3TransferManager.builder().s3Client(client).build()
 
   def deletePaths(paths: Seq[UPath])(implicit ec: ExecutionContext): Fox[Unit] = {
-    val pathsByBucket: Map[Option[String], Seq[UPath]] = paths.groupBy(bucketForS3UPath)
+    val pathsByBucket: Map[Option[String], Seq[UPath]] = paths.groupBy(S3UriUtils.hostBucketFromUpath)
     for {
       _ <- Fox.serialCombined(pathsByBucket.keys) { bucket: Option[String] =>
         deleteS3PathsOnBucket(bucket, pathsByBucket(bucket))
@@ -89,7 +88,7 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
     for {
       bucket <- bucketOpt.toFox ?~> "Could not determine S3 bucket from UPath"
       s3Client <- s3ClientBox.toFox ?~> "No managed s3 client configured"
-      prefixes <- Fox.combined(paths.map(path => S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
+      prefixes <- Fox.combined(paths.map(path => S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
       keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
       uniqueKeys = keys.distinct
       _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket")
@@ -149,9 +148,6 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
     logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
     res
   }
-
-  private def bucketForS3UPath(path: UPath): Option[String] =
-    S3DataVault.hostBucketFromUri(path.toRemoteUriUnsafe)
 
   def pathIsInManagedS3(path: UPath): Boolean =
     // TODO guard against string prefix false positives

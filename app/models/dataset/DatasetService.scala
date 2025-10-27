@@ -532,20 +532,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-
-      /* Find paths not used by other datasets (neither as realpath nor as path), delete those
-           (Caution, what if symlink chains go through this dataset? those won’t be detected as realpaths)
-         If virtual:
-           - find paths not used by other datasets (neither as realpath nor as path), delete those
-         If not virtual:
-           - for path in paths:
-              - find datasets with realpaths pointing to those paths
-           - if no such datasets,
-             - delete on disk, no rewriting symlinks
-           - else:
-             - abort
-         Delete in the DB if no annotations reference it, otherwise mark as deleted and clear datasource
-       */
       datastoreClient <- clientFor(dataset)
       _ <- if (dataset.isVirtual) {
         for {

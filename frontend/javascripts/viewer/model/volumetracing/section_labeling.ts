@@ -1,5 +1,5 @@
 import Drawing from "libs/drawing";
-import { V2, V3 } from "libs/mjs";
+import { Matrix4x4, V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
@@ -16,6 +16,11 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
+import {
+  invertTransform,
+  Transform,
+  transformPointUnscaled,
+} from "../helpers/transformation_helpers";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -51,6 +56,15 @@ export class VoxelBuffer2D {
       throw new Error("Minimum coordinate passed to VoxelBuffer2D is not an integer vector.");
     }
   }
+
+  getTopLeft3DCoord = () => this.get3DCoordinateFromLocal2D([0, 0]);
+  getBottomRight3DCoord = () => this.get3DCoordinateFromLocal2D([this.width, this.height]);
+
+  private get3DCoordinateFromLocal2D = ([x, y]: Vector2) => {
+    const outVar: Vector3 = [0, 0, 0];
+    this.getFast3DCoordinate(x + this.minCoord2d[0], y + this.minCoord2d[1], outVar);
+    return outVar;
+  };
 
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
@@ -199,7 +213,7 @@ class SectionLabeler {
     return difference[0] * difference[1] * difference[2];
   }
 
-  getContourList(useGlobalCoords: boolean = false) {
+  private getContourList(useGlobalCoords: boolean = false) {
     const globalContourList = getVolumeTracingById(
       Store.getState().annotation,
       this.volumeTracingId,

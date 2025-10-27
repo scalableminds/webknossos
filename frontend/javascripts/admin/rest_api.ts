@@ -2106,7 +2106,7 @@ export function getEditableAgglomerateSkeleton(
   version: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) => {
-    const params = new URLSearchParams({token, version: version.toString()})
+    const params = new URLSearchParams({ token, version: version.toString() });
     return Request.receiveArraybuffer(
       `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
@@ -2115,9 +2115,8 @@ export function getEditableAgglomerateSkeleton(
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,
       },
-    ),
-  }
-  );
+    );
+  });
 }
 
 export async function getMeshfilesForDatasetLayer(

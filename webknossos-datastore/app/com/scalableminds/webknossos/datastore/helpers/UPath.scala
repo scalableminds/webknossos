@@ -7,6 +7,7 @@ import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsVal
 
 import java.net.URI
 import java.nio.file.Path
+import scala.collection.mutable.ListBuffer
 
 trait UPath {
   def toRemoteUriUnsafe: URI
@@ -179,9 +180,19 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
 
   override def basename: String = segments.findLast(_.nonEmpty).getOrElse("")
 
-  override def parent: UPath =
+  override def parent: RemoteUPath =
     // < 2 check to avoid deleting “authority” (hostname:port)
     if (segments.length < 2) this else RemoteUPath(scheme, segments.dropRight(1))
+
+  def parents: Seq[RemoteUPath] = {
+    val listBuffer = ListBuffer[RemoteUPath]()
+    var current = this
+    while (current.segments.length >= 2) {
+      listBuffer.addOne(current)
+      current = current.parent
+    }
+    listBuffer.toSeq
+  }
 
   override def getScheme: Option[String] = Some(scheme)
 
@@ -197,7 +208,7 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
 
   def startsWith(other: UPath): Boolean = other match {
     case otherRemote: RemoteUPath =>
-      this.normalize.toString.startsWith(otherRemote.normalize.toString)
+      this.normalize.parents.contains(otherRemote.normalize)
     case _ => false
   }
 

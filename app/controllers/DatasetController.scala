@@ -583,13 +583,17 @@ class DatasetController @Inject()(userService: UserService,
 
   def delete(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
-        _ <- datasetService.deleteDataset(dataset)
-      } yield Ok
+      log() {
+        for {
+          dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+          _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
+          _ = logger.info(
+            s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
+          _ <- datasetService.deleteDataset(dataset)
+        } yield Ok
+      }
     }
 
   def compose(): Action[ComposeRequest] =

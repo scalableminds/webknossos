@@ -91,8 +91,9 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
       prefixes <- Fox.combined(paths.map(path => S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
       keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
       uniqueKeys = keys.distinct
-      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket")
+      _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket...")
       _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
+      _ = logger.info(s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.")
     } yield ()
 
   private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String])(

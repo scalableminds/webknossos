@@ -165,7 +165,7 @@ object StorageTransformerSpecification {
 
 object Zarr3ArrayHeader extends JsonImplicits {
 
-  def FILENAME_ZARR_JSON = "zarr.json"
+  val FILENAME_ZARR_JSON = "zarr.json"
   implicit object Zarr3ArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
     override def reads(json: JsValue): JsResult[Zarr3ArrayHeader] =
       for {

@@ -765,13 +765,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def getZarrLayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
+      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).getOrElse(false))
     } yield layerDirs
 
   private def getZarr3LayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      layerDirs = potentialLayers.filter(p => looksLikeZarr3Array(p, maxDepth = 2).isDefined)
+      layerDirs = potentialLayers.filter(p => looksLikeZarr3Array(p, maxDepth = 2).getOrElse(false))
     } yield layerDirs
 
   private def addLayerAndMagDirIfMissing(dataSourceDir: Path, headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =

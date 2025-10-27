@@ -536,6 +536,83 @@ class SectionLabeler {
   }
 }
 
+export class TransformedSectionLabeler {
+  private readonly base: SectionLabeler;
+  private readonly transform: Transform;
+  applyTransform: (pos: Vector3) => Vector3;
+  applyInverseTransform: (pos: Vector3) => Vector3;
+
+  constructor(
+    volumeTracingId: string,
+    plane: OrthoView,
+    thirdDimensionValue: number,
+    activeMag: Vector3,
+    transform: Transform,
+  ) {
+    this.assertOrthogonalTransform(transform);
+    this.transform = transform;
+    this.base = new SectionLabeler(volumeTracingId, plane, thirdDimensionValue, activeMag);
+
+    this.applyTransform = transformPointUnscaled(this.transform);
+    this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
+  }
+
+  // --- Core coordinate helpers ---
+
+  // private applyTransformList(list: Vector3[]): Vector3[] {
+  //   return list.map((v) => this.applyTransform(v));
+  // }
+
+  private applyInverseTransformList(list: Vector3[]): Vector3[] {
+    return list.map((v) => this.applyInverseTransform(v));
+  }
+
+  private assertOrthogonalTransform(_m: Transform): void {
+    // todop
+    // Quick check for orthogonal ±1 rotation/flip matrices
+    // const shouldBeIdentity = Transform.multiply(m, Transform.transpose(m));
+    // const isOrtho = Transform.isCloseToIdentity(shouldBeIdentity);
+    // const hasValidEntries = m.flat().every((x) => Math.abs(x) === 0 || Math.abs(x) === 1);
+    // if (!isOrtho || !hasValidEntries) {
+    //   throw new Error("Transformation matrix must be an orthogonal ±1 rotation/flip/scale matrix");
+    // }
+  }
+
+  // --- Delegated methods with coordinate adaptation ---
+
+  updateArea(globalPos: Vector3): void {
+    this.base.updateArea(this.applyTransform(globalPos));
+  }
+
+  isEmpty(): boolean {
+    return this.base.isEmpty();
+  }
+
+  getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
+    // Buffer orientation could be left unchanged unless 2D plane transforms are needed.
+    return this.base.getFillingVoxelBuffer2D(mode);
+  }
+
+  getRectangleVoxelBuffer2D(
+    lastUnzoomedPosition: Vector3,
+    unzoomedPosition: Vector3,
+  ): VoxelBuffer2D | null {
+    const p1 = this.applyTransform(lastUnzoomedPosition);
+    const p2 = this.applyTransform(unzoomedPosition);
+    return this.base.getRectangleVoxelBuffer2D(p1, p2);
+  }
+
+  getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
+    const p = this.applyTransform(position);
+    return this.base.getCircleVoxelBuffer2D(p);
+  }
+
+  getUnzoomedCentroid(): Vector3 {
+    const centroid = this.base.getUnzoomedCentroid();
+    return this.applyInverseTransform(centroid);
+  }
+}
+
 function getFast3DCoordinateHelper(
   plane: OrthoView,
   thirdDimensionValue: number,

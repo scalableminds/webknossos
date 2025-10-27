@@ -188,18 +188,8 @@ export function* labelWithVoxelBuffer2D(
   const magInfo = yield* call(getMagInfo, segmentationLayer.mags);
   const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
-  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) => {
-    const outVar: Vector3 = [0, 0, 0];
-    voxelBuffer.getFast3DCoordinate(
-      x + voxelBuffer.minCoord2d[0],
-      y + voxelBuffer.minCoord2d[1],
-      outVar,
-    );
-    return outVar;
-  };
-
-  const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
-  const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
+  const topLeft3DCoord = voxelBuffer.getTopLeft3DCoord();
+  const bottomRight3DCoord = voxelBuffer.getBottomRight3DCoord();
   // Since the bottomRight3DCoord is exclusive for the described bounding box,
   // the third dimension has to be increased by one (otherwise, the volume of the bounding
   // box would be empty)

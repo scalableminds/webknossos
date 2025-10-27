@@ -76,25 +76,18 @@ class DataVaultService @Inject()(ws: WSClient,
       resolvedMagPath <- resolveMagPath(datasetId, layerName, magLocator).toFox
     } yield CredentializedUPath(resolvedMagPath, credentialBox.toOption)
 
-  def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path, layerName: String): UPath =
+  def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
         if (magLocatorPath.isAbsolute) {
           magLocatorPath
         } else {
           // relative local path, resolve in dataset dir
-          val pathRelativeToDataset = localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize
-          val pathRelativeToLayer =
-            localDatasetDir.resolve(layerName).resolve(magLocatorPath.toLocalPathUnsafe).normalize
-          if (pathRelativeToDataset.toFile.exists) {
-            UPath.fromLocalPath(pathRelativeToDataset)
-          } else {
-            UPath.fromLocalPath(pathRelativeToLayer)
-          }
+          UPath.fromLocalPath(localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize)
         }
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
-        val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral())
+        val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = false))
         if (localDirWithScalarMag.toFile.exists) {
           UPath.fromLocalPath(localDirWithScalarMag)
         } else {
@@ -106,7 +99,7 @@ class DataVaultService @Inject()(ws: WSClient,
     val localDatasetDir =
       config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val localLayerDir = localDatasetDir.resolve(layerName)
-    resolveMagPath(magLocator, localDatasetDir, localLayerDir, layerName)
+    resolveMagPath(magLocator, localDatasetDir, localLayerDir)
   }
 
   private lazy val globalCredentials = {

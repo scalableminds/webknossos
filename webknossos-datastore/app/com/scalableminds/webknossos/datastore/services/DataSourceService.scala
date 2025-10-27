@@ -133,8 +133,7 @@ class DataSourceService @Inject()(
     val resolvedMagPath = dataVaultService.resolveMagPath(
       mag,
       absoluteDatasetPath,
-      absoluteRealLayerPath,
-      absoluteRealLayerPath.getFileName.toString,
+      absoluteRealLayerPath
     )
     if (resolvedMagPath.isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)

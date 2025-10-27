@@ -68,7 +68,7 @@ async function makeProofreadMerge(context: WebknossosTestContext): Promise<void>
   await task.toPromise();
 }
 
-describe("Annotation Saga", () => {
+describe("Save Mutex Saga", () => {
   afterEach<WebknossosTestContext>(async (context) => {
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,

@@ -308,6 +308,7 @@ function* getAgglomerateSkeletonTracing(
         annotation.tracingStore.url,
         editableMapping.tracingId,
         agglomerateId,
+        annotation.version,
       );
     }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");

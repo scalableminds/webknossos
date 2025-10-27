@@ -2103,10 +2103,12 @@ export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
+  version: number,
 ): Promise<ArrayBuffer> {
-  return doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams({token, version: version.toString()})
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2114,6 +2116,7 @@ export function getEditableAgglomerateSkeleton(
         showErrorToast: false,
       },
     ),
+  }
   );
 }
 

@@ -144,7 +144,7 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
 
 class SectionLabeler {
   /*
-  From the outside, the VolumeLayer accepts only global positions. Internally,
+  From the outside, the SectionLabeler accepts only global positions. Internally,
   these are converted to the actual used mags (activeMag).
   Therefore, members of this class are in the mag space of
   `activeMag`.

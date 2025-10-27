@@ -10,7 +10,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}

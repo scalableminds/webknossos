@@ -5,7 +5,6 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -227,21 +226,6 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
             GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
-      }
-    }
-
-  def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          layers <- datasetLayerDAO.findAllForDataset(dataset._id)
-          magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
-          magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
-          layersAndMagLinkInfos = layers.zip(magLinkInfos).map {
-            case (layer, magLinkInfo) => LayerMagLinkInfo(layer.name, magLinkInfo)
-          }
-        } yield Ok(Json.toJson(layersAndMagLinkInfos))
       }
     }
 

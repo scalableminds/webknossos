@@ -23,7 +23,9 @@ function* manyBucketUpdatesWarning(): Saga<void> {
 
     const onClose = () => {
       Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-      UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgain.toString());
+      if (neverShowAgain) {
+        UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgain.toString());
+      }
     };
     const handleCheckboxChange = (event: CheckboxChangeEvent) => {
       neverShowAgain = event.target.checked;

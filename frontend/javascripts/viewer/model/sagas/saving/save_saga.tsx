@@ -54,7 +54,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   const bucketCountArrayLength = Math.floor(
     CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
   );
-  yield* call(
+  const intervalId = yield* call(
     setInterval,
     () => {
       const sumOfBuckets = _.sum(currentBucketCounts);
@@ -77,9 +77,13 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
     },
     CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
   );
-  yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
-    bucketsForCurrentInterval += action.count;
-  });
+  try {
+    yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
+      bucketsForCurrentInterval += action.count;
+    });
+  } finally {
+    yield* call(clearInterval, intervalId);
+  }
 }
 
 function* watchForSaveConflicts(): Saga<void> {

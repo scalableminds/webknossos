@@ -8,14 +8,14 @@ const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
 const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressBucketWarning";
 
 function* manyBucketUpdatesWarning(): Saga<void> {
-  let dontShowAgainInThisSessionRef = false;
+  let dontShowAgainInThisSession = false;
   const setDontShowAgainInThisSession = (value: boolean) => {
-    dontShowAgainInThisSessionRef = value;
+    dontShowAgainInThisSession = value;
   };
   yield takeEvery(
     "SHOW_MANY_BUCKET_UPDATES_WARNING",
     showWarningToast,
-    dontShowAgainInThisSessionRef,
+    dontShowAgainInThisSession,
     setDontShowAgainInThisSession,
   );
 }
@@ -24,7 +24,7 @@ function* showWarningToast(
   dontShowAgainInThisSession: boolean,
   setDontShowAgainInThisSession: (value: boolean) => void,
 ): Saga<void> {
-  let neverShowAgainRef = false;
+  let neverShowAgain = false;
 
   setInterval(() => {
     UserLocalStorage.setItem("suppressBucketWarning", "false");
@@ -33,12 +33,11 @@ function* showWarningToast(
   //TODO_C dev
 
   const onClose = () => {
-    UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgainRef.toString());
-    console.log("setting suppressBucketWarning to ", neverShowAgainRef);
     Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
+    UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgain.toString());
   };
   const handleCheckboxChange = (event: CheckboxChangeEvent) => {
-    neverShowAgainRef = event.target.checked;
+    neverShowAgain = event.target.checked;
   };
 
   const warningMessage =

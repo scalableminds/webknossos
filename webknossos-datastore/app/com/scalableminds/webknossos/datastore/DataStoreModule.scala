@@ -60,7 +60,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ZarrConnectomeFileService]).asEagerSingleton()
     bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
-    bind(classOf[ChunkCacheService]).asEagerSingleton()
+    bind(classOf[DSChunkCacheService]).asEagerSingleton()
     bind(classOf[DatasetCache]).asEagerSingleton()
   }
 }

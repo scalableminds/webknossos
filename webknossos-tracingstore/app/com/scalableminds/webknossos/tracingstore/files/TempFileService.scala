@@ -30,21 +30,30 @@ trait TempFileService extends LazyLogging {
   private def ensureParent(): Path =
     Files.createDirectories(tmpDir)
 
-  def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours): Path = {
+  def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours, isDirectory: Boolean = false): Path = {
     ensureParent()
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
-    logger.debug(f"Creating temp file at $path")
-    Files.createFile(path)
+    logger.debug(f"Creating temp ${if (isDirectory) "dir" else "file"} at $path")
+    if (isDirectory)
+      Files.createDirectory(path)
+    else
+      Files.createFile(path)
     activeTempFiles.add((path, Instant.now + lifeTime))
     path
   }
+
+  def createDirectory(prefix: String = "tmpDir", lifeTime: FiniteDuration = 2 hours): Path =
+    create(prefix, lifeTime, isDirectory = true)
 
   private def cleanUpExpiredFiles(): Fox[Unit] = {
     val now = Instant.now
     activeTempFiles.foreach {
       case (path, expiryTime) =>
         if (expiryTime < now) {
-          tryo(Files.delete(path))
+          if (Files.isDirectory(path))
+            tryo(FileUtils.deleteDirectory(path.toFile))
+          else
+            tryo(Files.delete(path))
           activeTempFiles.remove((path, expiryTime))
         }
     }

@@ -1,12 +1,23 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
+import com.scalableminds.webknossos.datastore.datavault.{FileSystemDataVault, VaultPath}
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.tracingstore.TSChunkCacheService
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
+import play.api.libs.json.Json
+import ucar.ma2.{Array => MultiArray}
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.ByteBuffer
@@ -14,7 +25,13 @@ import java.nio.file.Path
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
-class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) extends LazyLogging {
+class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
+                                         tracingDataStore: TracingDataStore,
+                                         chunkCacheService: TSChunkCacheService,
+                                         editableMappingService: EditableMappingService)
+    extends LazyLogging
+    with FoxImplicits
+    with KeyValueStoreImplicits {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)
   private val ChunkSize: Int = 10000
@@ -111,4 +128,104 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService) ext
 
   private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor
 
+  def initializeFromUploadedZip(tracingId: String,
+                                annotationId: ObjectId,
+                                startVersion: Long,
+                                baseMappingName: String,
+                                editedEdgesZip: File)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      _ <- tracingDataStore.editableMappingsInfo.put(
+        tracingId,
+        0L, // Note: updates start at startVersion, but info is V0 for consistency with the annotationProto v0
+        toProtoBytes(editableMappingService.create(baseMappingName))
+      )
+      // The zarr file contains two arrays, editedEdges encodes the source and destination segment ids
+      // and edgeIsAddition contains a bool for each edge on whether it was
+      // added (edgeIsAddition==true; corresponds to a merge agglomerate action).
+      // or removed (edgeIsAddition==false; corresponds to a splict agglomerate action)
+      (editedEdgesArray, edgeIsAdditionArray) <- unzipAndReadZarr(editedEdgesZip)
+      timestamp = Instant.now.epochMillis
+      updateActions: Seq[UpdateAction] = (0 until edgeIsAdditionArray.getSize.toInt).map { edgeIndex =>
+        val edgeSrc = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 0)))
+        val edgeDst = editedEdgesArray.getLong(editedEdgesArray.getIndex.set(Array(edgeIndex, 1)))
+        val edgeIsAddition = edgeIsAdditionArray.getBoolean(edgeIndex)
+        buildUpdateActionFromEdge(edgeSrc, edgeDst, edgeIsAddition, tracingId, timestamp)
+      }
+      updatesGrouped = updateActions.grouped(100).toSeq
+      _ <- Fox.serialCombined(updatesGrouped.zipWithIndex) {
+        case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
+          tracingDataStore.annotationUpdates.put(annotationId.toString,
+                                                 startVersion + updateGroupIndex,
+                                                 Json.toJson(updateGroup))
+      }
+      numberOfSavedVersions = updatesGrouped.length
+    } yield numberOfSavedVersions
+
+  private def unzipAndReadZarr(editedEdgesZip: File)(implicit ec: ExecutionContext,
+                                                     tc: TokenContext): Fox[(MultiArray, MultiArray)] = {
+    val unzippedDir = tempFileService.createDirectory()
+    for {
+      _ <- ZipIO
+        .unzipToDirectory(editedEdgesZip,
+                          unzippedDir,
+                          includeHiddenFiles = true,
+                          List.empty,
+                          truncateCommonPrefix = false,
+                          excludeFromPrefix = None)
+        .toFox
+      unzippedVaultPath = new VaultPath(UPath.fromLocalPath(unzippedDir), FileSystemDataVault.create)
+      editedEdgesZarrArray <- Zarr3Array.open(unzippedVaultPath / "edges/",
+                                              DataSourceId("dummy", "unused"),
+                                              "layer",
+                                              None,
+                                              None,
+                                              None,
+                                              chunkCacheService.sharedChunkContentsCache)
+      edgeIsAdditionZarrArray <- Zarr3Array.open(unzippedVaultPath / "edgeIsAddition/",
+                                                 DataSourceId("dummy", "unused"),
+                                                 "layer",
+                                                 None,
+                                                 None,
+                                                 None,
+                                                 chunkCacheService.sharedChunkContentsCache)
+      numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
+      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
+      editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
+      edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
+    } yield (editedEdges, edgeIsAddition)
+  }
+
+  private def buildUpdateActionFromEdge(edgeSrc: Long,
+                                        edgeDst: Long,
+                                        edgeIsAddition: Boolean,
+                                        tracingId: String,
+                                        timestamp: Long): EditableMappingUpdateAction =
+    if (edgeIsAddition) {
+      MergeAgglomerateUpdateAction(
+        agglomerateId1 = 0,
+        agglomerateId2 = 0,
+        segmentPosition1 = None,
+        segmentPosition2 = None,
+        segmentId1 = Some(edgeSrc),
+        segmentId2 = Some(edgeDst),
+        mag = Vec3Int.ones, // unused, as we do not look up segment ids by positions
+        actionTracingId = tracingId,
+        actionTimestamp = Some(timestamp),
+        actionAuthorId = None,
+        info = None
+      )
+    } else {
+      SplitAgglomerateUpdateAction(
+        agglomerateId = 0,
+        segmentPosition1 = None,
+        segmentPosition2 = None,
+        segmentId1 = Some(edgeSrc),
+        segmentId2 = Some(edgeDst),
+        mag = Vec3Int.ones, // unused, as we do not look up segment ids by positions
+        actionTracingId = tracingId,
+        actionTimestamp = Some(timestamp),
+        actionAuthorId = None,
+        info = None
+      )
+    }
 }

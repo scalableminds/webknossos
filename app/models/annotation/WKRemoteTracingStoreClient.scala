@@ -249,6 +249,23 @@ class WKRemoteTracingStoreClient(
     } yield ()
   }
 
+  def saveEditableMappingIfPresent(annotationId: ObjectId,
+                                   newTracingId: String,
+                                   editedMappingEdgesZip: Option[File],
+                                   editedMappingBaseMappingName: Option[String],
+                                   startVersion: Long): Fox[Long] =
+    (editedMappingEdgesZip, editedMappingBaseMappingName) match {
+      case (Some(zipfile), Some(baseMappingName)) =>
+        rpc(s"${tracingStore.url}/tracings/mapping/$newTracingId/save").withLongTimeout
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .addQueryParam("annotationId", annotationId)
+          .addQueryParam("baseMappingName", baseMappingName)
+          .addQueryParam("startVersion", startVersion)
+          .postFileWithJsonResponse[Long](zipfile)
+      case (None, None) => Fox.successful(0L)
+      case _            => Fox.failure("annotation.upload.editableMappingIncompleteInformation")
+    }
+
   def getVolumeTracing(annotationId: ObjectId,
                        annotationLayer: AnnotationLayer,
                        version: Option[Long],

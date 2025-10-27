@@ -24,7 +24,7 @@ import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
-import VolumeLayer, { type VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
+import SectionLabeler, { type VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
 import { Model } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
 
@@ -283,13 +283,13 @@ export function* labelWithVoxelBuffer2D(
   }
 }
 
-export function* createVolumeLayer(
+export function* createSectionLabeler(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledMags: Vector3,
   thirdDimValue?: number,
-): Saga<VolumeLayer> {
+): Saga<SectionLabeler> {
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledMags);
+  return new SectionLabeler(volumeTracing.tracingId, planeId, thirdDimValue, labeledMags);
 }

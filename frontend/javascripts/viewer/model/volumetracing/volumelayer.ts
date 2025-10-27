@@ -142,7 +142,7 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
   }
 }
 
-class VolumeLayer {
+class SectionLabeler {
   /*
   From the outside, the VolumeLayer accepts only global positions. Internally,
   these are converted to the actual used mags (activeMag).
@@ -580,4 +580,4 @@ export function getFast3DCoordinateHelper(
     }
   }
 }
-export default VolumeLayer;
+export default SectionLabeler;

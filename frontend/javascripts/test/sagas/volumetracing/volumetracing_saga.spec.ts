@@ -12,12 +12,12 @@ import * as VolumeTracingActions from "viewer/model/actions/volumetracing_action
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import type { ActiveMappingInfo } from "viewer/store";
 import { askUserForLockingActiveMapping } from "viewer/model/sagas/saga_helpers";
-import { editVolumeLayerAsync, finishLayer } from "viewer/model/sagas/volumetracing_saga";
+import { editVolumeLayerAsync, finishSectionLabeler } from "viewer/model/sagas/volumetracing_saga";
 import {
   requestBucketModificationInVolumeTracing,
   ensureMaybeActiveMappingIsLocked,
 } from "viewer/model/sagas/saga_helpers";
-import VolumeLayer from "viewer/model/volumetracing/volumelayer";
+import SectionLabeler from "viewer/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model, Store } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -158,13 +158,13 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(); // advance from the put action
 
-    const volumeLayer = new VolumeLayer(
+    const sectionLabeler = new SectionLabeler(
       volumeTracing.tracingId,
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
     );
-    saga.next(volumeLayer);
+    saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
     saga.next(addToLayerActionFn([1, 2, 3]));
@@ -173,8 +173,8 @@ describe("VolumeTracingSaga", () => {
     saga.next(OrthoViews.PLANE_XY);
     saga.next(addToLayerActionFn([3, 4, 5]));
     saga.next(OrthoViews.PLANE_XY);
-    expect(volumeLayer.minCoord).toEqual([-1, 0, 1]);
-    expect(volumeLayer.maxCoord).toEqual([5, 6, 7]);
+    expect(sectionLabeler.minCoord).toEqual([-1, 0, 1]);
+    expect(sectionLabeler.maxCoord).toEqual([5, 6, 7]);
   });
 
   it("should finish a volume layer (saga test)", () => {
@@ -213,13 +213,13 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(); // advance from the put action
 
-    const volumeLayer = new VolumeLayer(
+    const sectionLabeler = new SectionLabeler(
       volumeTracing.tracingId,
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
     );
-    saga.next(volumeLayer);
+    saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
     saga.next(addToLayerActionFn([1, 2, 3]));
@@ -232,8 +232,8 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next(finishEditingAction),
       call(
-        finishLayer,
-        volumeLayer,
+        finishSectionLabeler,
+        sectionLabeler,
         AnnotationTool.TRACE,
         ContourModeEnum.DRAW,
         OverwriteModeEnum.OVERWRITE_ALL,
@@ -282,13 +282,13 @@ describe("VolumeTracingSaga", () => {
     );
     saga.next(); // advance from the put action
 
-    const volumeLayer = new VolumeLayer(
+    const sectionLabeler = new SectionLabeler(
       volumeTracing.tracingId,
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
     );
-    saga.next(volumeLayer);
+    saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
     saga.next(addToLayerActionFn([1, 2, 3]));
@@ -301,8 +301,8 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next(finishEditingAction),
       call(
-        finishLayer,
-        volumeLayer,
+        finishSectionLabeler,
+        sectionLabeler,
         AnnotationTool.TRACE,
         ContourModeEnum.DELETE,
         OverwriteModeEnum.OVERWRITE_ALL,

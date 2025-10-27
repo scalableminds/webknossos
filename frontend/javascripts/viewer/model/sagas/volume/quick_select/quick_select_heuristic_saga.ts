@@ -60,7 +60,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "../helpers";
+import { createSectionLabeler, labelWithVoxelBuffer2D } from "../helpers";
 import { copyNdArray } from "../volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
@@ -512,10 +512,16 @@ export function* finalizeQuickSelectForSlice(
   skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  const volumeLayer = yield* call(createVolumeLayer, volumeTracing, activeViewport, labeledMag, w);
+  const sectionLabeler = yield* call(
+    createSectionLabeler,
+    volumeTracing,
+    activeViewport,
+    labeledMag,
+    w,
+  );
   const sizeUVWInMag = mask.shape;
-  const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
-    V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+  const voxelBuffer2D = sectionLabeler.createVoxelBuffer2D(
+    V2.floor(sectionLabeler.globalCoordToMag2DFloat(boundingBoxMag1.min)),
     sizeUVWInMag[0],
     sizeUVWInMag[1],
   );

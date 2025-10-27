@@ -80,14 +80,14 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
-import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
+import type SectionLabeler from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import Dimensions from "../dimensions";
 
@@ -237,20 +237,20 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
     const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
 
-    const w = Dimensions.thirdDimensionForPlane(startEditingAction.planeId)
-    const currentLayer = yield* call(
-      createVolumeLayer,
+    const w = Dimensions.thirdDimensionForPlane(startEditingAction.planeId);
+    const currentSectionLabeler = yield* call(
+      createSectionLabeler,
       volumeTracing,
       window.hardPlaneId ?? startEditingAction.planeId,
       labeledMag,
-      startEditingAction.position[w]
+      startEditingAction.position[w],
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     if (isBrushTool(activeTool)) {
       yield* call(
         labelWithVoxelBuffer2D,
-        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
+        currentSectionLabeler.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
         overwriteMode,
         labeledZoomStep,
@@ -290,11 +290,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing).
-        currentLayer.updateArea(addToLayerAction.position);
+        currentSectionLabeler.updateArea(addToLayerAction.position);
       }
 
       if (isBrushTool(activeTool)) {
-        const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
+        const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
           lastPosition,
           addToLayerAction.position,
         );
@@ -313,7 +313,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
         yield* call(
           labelWithVoxelBuffer2D,
-          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
+          currentSectionLabeler.getCircleVoxelBuffer2D(addToLayerAction.position),
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
@@ -326,8 +326,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     yield* call(
-      finishLayer,
-      currentLayer,
+      finishSectionLabeler,
+      currentSectionLabeler,
       activeTool,
       contourTracingMode,
       overwriteMode,
@@ -363,8 +363,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
   }
 }
 
-export function* finishLayer(
-  layer: VolumeLayer,
+export function* finishSectionLabeler(
+  layer: SectionLabeler,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,

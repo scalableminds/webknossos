@@ -76,11 +76,12 @@ class DataSourceService @Inject()(
       _ <- PathUtils.listDirectories(dataBaseDir, silent = false, filters = selectedOrgaFilter) match {
         case Full(organizationDirs) =>
           if (verbose && organizationId.isEmpty) logEmptyDirs(organizationDirs)
-          val foundInboxSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
-          logFoundDatasources(foundInboxSources, verbose, selectedOrgaLabel)
+          val foundDataSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
+          logFoundDatasources(foundDataSources, verbose, selectedOrgaLabel)
+          val realPathInfos = scanRealPaths(foundDataSources, verbose)
           for {
-            _ <- remoteWebknossosClient.reportDataSources(foundInboxSources, organizationId)
-            _ <- reportRealPaths(foundInboxSources)
+            _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
+            _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
           } yield ()
         case e =>
           val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
@@ -90,23 +91,18 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def reportRealPaths(dataSources: List[DataSource]) =
-    for {
-      _ <- Fox.successful(())
-      magPathBoxes = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
-      pathInfos = magPathBoxes.map {
-        case (ds, Full(magPaths)) => DataSourcePathInfo(ds.id, magPaths)
-        case (ds, failure: Failure) =>
-          logger.error(s"Failed to determine real paths of mags of ${ds.id}: ${formatFailureChain(failure)}")
-          DataSourcePathInfo(ds.id, List())
-        case (ds, Empty) =>
-          logger.error(s"Failed to determine real paths for mags of ${ds.id}")
-          DataSourcePathInfo(ds.id, List())
-      }
-      _ <- remoteWebknossosClient.reportRealPaths(pathInfos)
-    } yield ()
+  private def scanRealPaths(dataSources: List[DataSource], verbose: Boolean): Seq[DataSourcePathInfo] = {
+    val magPathInfosAndFailures = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
+    logRealPathScanFailures(magPathInfosAndFailures, verbose)
+    magPathInfosAndFailures.map {
+      case (ds, (magPathInfos, _)) => DataSourcePathInfo(ds.id, magPathInfos)
+    }
+  }
 
-  private def determineMagRealPathsForDataSource(dataSource: DataSource): Seq[MagPathInfo] = {
+  private def logRealPathScanFailures(infosByDatasource: Seq[(DataSource, (Seq[MagPathInfo], Seq[Failure]))],
+                                      verbose: Boolean) = {}
+
+  private def determineMagRealPathsForDataSource(dataSource: DataSource): (Seq[MagPathInfo], Seq[Failure]) = {
     val datasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
       case Some(usableDataSource) =>
@@ -114,8 +110,11 @@ class DataSourceService @Inject()(
           dataLayer.mags.map(mag => getMagPathInfo(datasetPath, dataLayer.name, mag))
         }
         // TODO log failures in sensible format. (verbose every x times?)
-        resultBoxes.flatten
-      case None => Seq.empty
+        (resultBoxes.flatten, resultBoxes.flatMap {
+          case f: Failure => Some(f)
+          case _          => None
+        })
+      case None => (Seq.empty, Seq.empty)
     }
   }
 

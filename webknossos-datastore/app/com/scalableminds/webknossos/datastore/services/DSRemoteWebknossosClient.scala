@@ -38,7 +38,7 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: Seq[MagPathInfo])
 
 object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
@@ -109,7 +109,7 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSources)
 
-  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
+  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
       .addQueryParam("key", dataStoreKey)
       .silent

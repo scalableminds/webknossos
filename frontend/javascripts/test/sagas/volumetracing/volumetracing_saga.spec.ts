@@ -17,7 +17,7 @@ import {
   requestBucketModificationInVolumeTracing,
   ensureMaybeActiveMappingIsLocked,
 } from "viewer/model/sagas/saga_helpers";
-import SectionLabeler from "viewer/model/volumetracing/volumelayer";
+import SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { Model, Store } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";

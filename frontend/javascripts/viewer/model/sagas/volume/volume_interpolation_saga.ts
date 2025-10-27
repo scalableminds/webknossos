@@ -33,7 +33,7 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
+import type { VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
 import { Model, api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";

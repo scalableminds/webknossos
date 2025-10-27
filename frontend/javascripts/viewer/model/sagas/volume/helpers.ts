@@ -24,7 +24,7 @@ import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
-import SectionLabeler, { type VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
+import SectionLabeler, { type VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
 import { Model } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
 

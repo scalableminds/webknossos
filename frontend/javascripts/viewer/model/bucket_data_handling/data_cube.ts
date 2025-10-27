@@ -34,7 +34,7 @@ import type { DimensionMap } from "viewer/model/dimensions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "viewer/model/volumetracing/volumelayer";
+import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "viewer/model/volumetracing/section_labeling";
 import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";

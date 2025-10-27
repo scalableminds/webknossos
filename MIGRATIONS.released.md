@@ -6,6 +6,16 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.11.0](https://github.com/scalableminds/webknossos/releases/tag/25.11.0) - 2025-10-27
+[Commits](https://github.com/scalableminds/webknossos/compare/25.10.0...25.11.0)
+
+- New keys have been added to the application.conf of the datastore.
+
+### Postgres Evolutions
+- [143-remote-storage-analysis.sql](conf/evolutions/143-remote-storage-analysis.sql)
+- [141-allows-upload-to-paths.sql](conf/evolutions/141-allows-upload-to-paths.sql)
+- Rename PricingPlan enums from Basic to Personal: [142-personal-plan](/conf/evolutions/142-personal-plan.sql)
+
 ## [25.10.0](https://github.com/scalableminds/webknossos/releases/tag/25.10.0) - 2025-09-22
 [Commits](https://github.com/scalableminds/webknossos/compare/25.09.0...25.10.0)
 

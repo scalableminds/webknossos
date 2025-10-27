@@ -46,11 +46,11 @@ export type Rect = {
   height: number;
 };
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
-export const Vector2Indicies = [0, 1] as const;
-export const Vector3Indicies = [0, 1, 2] as const;
-export const Vector4Indicies = [0, 1, 2, 3] as const;
-export const Vector5Indicies = [0, 1, 2, 3, 4] as const;
-export const Vector6Indicies = [0, 1, 2, 3, 4, 5] as const;
+export const Vector2Indices = [0, 1] as const;
+export const Vector3Indices = [0, 1, 2] as const;
+export const Vector4Indices = [0, 1, 2, 3] as const;
+export const Vector5Indices = [0, 1, 2, 3, 4] as const;
+export const Vector6Indices = [0, 1, 2, 3, 4, 5] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",

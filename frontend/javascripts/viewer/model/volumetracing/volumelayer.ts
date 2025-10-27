@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
-import Constants, { OrthoViews, Vector3Indicies, Vector2Indicies } from "viewer/constants";
+import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -25,12 +25,12 @@ import Store from "viewer/store";
   should be applied.
  */
 export class VoxelBuffer2D {
-  map: Uint8Array;
-  width: number;
-  height: number;
-  minCoord2d: Vector2;
-  get3DCoordinate: (arg0: Vector2) => Vector3;
-  getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
+  readonly map: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly minCoord2d: Vector2;
+  readonly get3DCoordinate: (arg0: Vector2) => Vector3;
+  readonly getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
 
   static empty(): VoxelBuffer2D {
     return new VoxelBuffer2D(
@@ -149,15 +149,15 @@ class VolumeLayer {
   Therefore, members of this class are in the mag space of
   `activeMag`.
   */
-  volumeTracingId: string;
-  plane: OrthoView;
-  thirdDimensionValue: number;
+  readonly volumeTracingId: string;
+  readonly plane: OrthoView;
+  readonly thirdDimensionValue: number;
 
   // Stored in global (but mag-dependent) coordinates:
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
-  activeMag: Vector3;
+  readonly activeMag: Vector3;
 
   constructor(
     volumeTracingId: string,
@@ -183,7 +183,7 @@ class VolumeLayer {
       minCoord = _.clone(pos);
     }
 
-    for (const i of Vector3Indicies) {
+    for (const i of Vector3Indices) {
       minCoord[i] = Math.min(minCoord[i], Math.floor(pos[i]) - 2);
       maxCoord[i] = Math.max(maxCoord[i], Math.ceil(pos[i]) + 2);
     }
@@ -320,7 +320,7 @@ class VolumeLayer {
   vector2Norm(vector: Vector2): number {
     let norm = 0;
 
-    for (const i of Vector2Indicies) {
+    for (const i of Vector2Indices) {
       norm += Math.pow(vector[i], 2);
     }
 
@@ -330,7 +330,7 @@ class VolumeLayer {
   vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
     let distance = 0;
 
-    for (const i of Vector2Indicies) {
+    for (const i of Vector2Indices) {
       distance += Math.pow((pos2[i] - pos1[i]) / scale[i], 2);
     }
 

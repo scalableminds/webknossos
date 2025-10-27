@@ -91,7 +91,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
@@ -1161,7 +1161,7 @@ class TracingApi {
       version,
     );
     Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(wkReadyAction());
+    Store.dispatch(wkInitializedAction());
     UrlManager.updateUnthrottled();
   }
 

@@ -445,7 +445,6 @@ function mapStateToProps(state: WebknossosState) {
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
-    isWkReady: state.uiInformation.isWkReady,
   };
 }
 

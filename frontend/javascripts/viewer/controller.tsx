@@ -22,7 +22,7 @@ import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { wkReadyAction } from "viewer/model/actions/actions";
+import { wkInitializedAction } from "viewer/model/actions/actions";
 import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
@@ -43,7 +43,7 @@ type StateProps = {
   viewMode: ViewMode;
   user: APIUser | null | undefined;
   isUiReady: boolean;
-  isWkReady: boolean;
+  isWkInitialized: boolean;
 };
 type Props = OwnProps & StateProps;
 type PropsWithRouter = Props & RouteComponentProps & WithBlockerProps;
@@ -176,8 +176,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
-    app.vent.emit("webknossos:ready");
-    Store.dispatch(wkReadyAction());
+    app.vent.emit("webknossos:initialization");
+    Store.dispatch(wkInitializedAction());
     this.props.setControllerStatus("loaded");
   }
 
@@ -306,7 +306,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode, isUiReady, isWkReady } = this.props;
+    const { user, viewMode, isUiReady, isWkInitialized } = this.props;
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
 
     let cover = null;
@@ -333,9 +333,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    // If wk is not ready yet, only render the cover. If it is ready, start rendering the controllers
+    // If wk is not initialized yet, only render the cover. If it is initialized, start rendering the controllers
     // in the background, hidden by the cover.
-    if (!isWkReady) {
+    if (!isWkInitialized) {
       return cover;
     }
 
@@ -376,7 +376,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     isUiReady: state.uiInformation.isUiReady,
-    isWkReady: state.uiInformation.isWkReady,
+    isWkInitialized: state.uiInformation.isWkInitialized,
     viewMode: state.temporaryConfiguration.viewMode,
     user: state.activeUser,
   };

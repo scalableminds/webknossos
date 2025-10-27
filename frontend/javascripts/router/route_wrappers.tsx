@@ -14,6 +14,7 @@ import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
 import window from "libs/window";
 import { isNumber } from "lodash";
+import { useEffect } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -21,6 +22,12 @@ import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/da
 import { Store } from "viewer/singletons";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { PageNotFoundView } from "./page_not_found_view";
+
+function markTracingViewLoadStartEffect() {
+  const markName = "tracing_view_load_start";
+  performance.mark(markName);
+  return () => performance.clearMarks(markName);
+}
 
 export function RootRouteWrapper() {
   const isAuthenticated = useWkSelector((state) => state.activeUser != null);
@@ -169,7 +176,7 @@ export function ShortLinksRouteWrapper() {
 export function TracingViewRouteWrapper() {
   const { type, id } = useParams();
   const initialMaybeCompoundType = type != null ? coalesce(APICompoundTypeEnum, type) : null;
-  performance.mark("tracing_view_load_start");
+  useEffect(markTracingViewLoadStartEffect, []);
   return (
     <TracingLayoutView
       initialMaybeCompoundType={initialMaybeCompoundType}
@@ -269,7 +276,7 @@ export function TracingViewModeRouteWrapper() {
 
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
   const getParams = Utils.getUrlParamsObjectFromString(location.search);
-  performance.mark("tracing_view_load_start");
+  useEffect(markTracingViewLoadStartEffect, []);
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
     // The schema is something like <authority>/datasets/:datasetName/view

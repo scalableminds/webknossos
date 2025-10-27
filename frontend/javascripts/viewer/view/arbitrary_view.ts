@@ -114,8 +114,8 @@ class ArbitraryView {
         // Counter-intuitively this is not the moment where the webgl program is fully compiled.
         // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
         // Only once that is done, the compilation process is fully finished, see `renderFunction`.
-        Store.dispatch(uiReadyAction());
         this.animate();
+        Store.dispatch(uiReadyAction());
       });
 
       // Dont forget to handle window resizing!

@@ -17,11 +17,7 @@ import {
 } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import {
-  getActiveSegmentationTracing,
-  hasEditableMapping,
-  isMappingLocked,
-} from "viewer/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type SetOthersMayEditForAnnotationAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,

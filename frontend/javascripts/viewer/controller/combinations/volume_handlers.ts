@@ -3,8 +3,14 @@ import memoizeOne from "memoize-one";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
-import { getLayerByName, getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { getTransformsForLayer, globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  globalToLayerTransformedPosition,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
@@ -17,7 +23,10 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { invertTransform, transformPointUnscaled } from "viewer/model/helpers/transformation_helpers";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "viewer/model/helpers/transformation_helpers";
 import { Model, Store, api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 
@@ -32,14 +41,22 @@ export function handleDrawStart(pos: Point2, plane: OrthoView) {
 }
 
 function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
-    const { nativelyRenderedLayerName } = state.datasetConfiguration;
-    const maybeLayer = Model.getVisibleSegmentationLayer();
-    if (maybeLayer == null) { throw new Error("Segmentation layer does not exist"); }
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const maybeLayer = Model.getVisibleSegmentationLayer();
+  if (maybeLayer == null) {
+    throw new Error("Segmentation layer does not exist");
+  }
 
-    const layer = getLayerByName(state.dataset, maybeLayer.name);
-    const segmentationTransforms = getTransformsForLayer(state.dataset, layer, nativelyRenderedLayerName);
-    const untransformedPos = transformPointUnscaled(invertTransform(segmentationTransforms))(globalPosRounded);
-    return untransformedPos;
+  const layer = getLayerByName(state.dataset, maybeLayer.name);
+  const segmentationTransforms = getTransformsForLayer(
+    state.dataset,
+    layer,
+    nativelyRenderedLayerName,
+  );
+  const untransformedPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
+    globalPosRounded,
+  );
+  return untransformedPos;
 }
 
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
@@ -61,7 +78,7 @@ export function handleEndForDrawOrErase() {
   Store.dispatch(resetContourAction());
 }
 export function handlePickCell(pos: Point2) {
-   const state = Store.getState();
+  const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
   const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
 

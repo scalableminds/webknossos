@@ -1,10 +1,17 @@
 import Drawing from "libs/drawing";
-import { Matrix4x4, V2, V3 } from "libs/mjs";
+import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
+import * as THREE from "three";
+import { type Euler, Matrix3, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
-import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/constants";
+import Constants, {
+  OrthoViews,
+  Vector3Indices,
+  Vector2Indices,
+  OrthoBaseRotations,
+} from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -17,8 +24,8 @@ import {
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import {
+  type Transform,
   invertTransform,
-  Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
@@ -536,22 +543,69 @@ class SectionLabeler {
   }
 }
 
+function eulerToNormal(e: Euler): ThreeVector3 {
+  const m = new Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromEuler(e));
+  const n = new ThreeVector3(0, 0, 1);
+  n.applyMatrix3(m).normalize();
+  return n;
+}
+
+function mapTransformedPlane(originalPlane: OrthoView, transform: Transform): OrthoView {
+  const originalNormal = eulerToNormal(OrthoBaseRotations[originalPlane]);
+  const transformedNormal = originalNormal
+    .clone()
+    .applyMatrix4(new THREE.Matrix4(...transform.affineMatrix))
+    .normalize();
+
+  const canonical: Record<OrthoView, ThreeVector3> = {
+    [OrthoViews.PLANE_XY]: new ThreeVector3(0, 0, 1),
+    [OrthoViews.PLANE_YZ]: new ThreeVector3(1, 0, 0),
+    [OrthoViews.PLANE_XZ]: new ThreeVector3(0, 1, 0),
+    [OrthoViews.TDView]: new ThreeVector3(1, 1, 1).normalize(),
+  };
+  let bestView = OrthoViews.PLANE_XY;
+  let bestDot = Number.NEGATIVE_INFINITY;
+
+  for (const [view, normal] of Object.entries(canonical)) {
+    const dot = Math.abs(transformedNormal.dot(normal as ThreeVector3));
+    if (dot > bestDot) {
+      bestDot = dot;
+      bestView = view as OrthoView;
+    }
+  }
+
+  return bestView;
+}
+
 export class TransformedSectionLabeler {
   private readonly base: SectionLabeler;
   private readonly transform: Transform;
   applyTransform: (pos: Vector3) => Vector3;
   applyInverseTransform: (pos: Vector3) => Vector3;
+  mappedPlane: OrthoView;
 
   constructor(
     volumeTracingId: string,
     plane: OrthoView,
-    thirdDimensionValue: number,
+    getThirdDimValue: (thirdDim: number) => number,
     activeMag: Vector3,
     transform: Transform,
   ) {
     this.assertOrthogonalTransform(transform);
     this.transform = transform;
-    this.base = new SectionLabeler(volumeTracingId, plane, thirdDimensionValue, activeMag);
+    this.mappedPlane = mapTransformedPlane(plane, transform);
+
+    const thirdDimensionValue = getThirdDimValue(
+      Dimensions.thirdDimensionForPlane(this.mappedPlane),
+    );
+
+    // the base SectionLabeler operates in the *transformed* plane
+    this.base = new SectionLabeler(
+      volumeTracingId,
+      this.mappedPlane,
+      thirdDimensionValue,
+      activeMag,
+    );
 
     this.applyTransform = transformPointUnscaled(this.transform);
     this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
@@ -563,9 +617,9 @@ export class TransformedSectionLabeler {
   //   return list.map((v) => this.applyTransform(v));
   // }
 
-  private applyInverseTransformList(list: Vector3[]): Vector3[] {
-    return list.map((v) => this.applyInverseTransform(v));
-  }
+  // private applyInverseTransformList(list: Vector3[]): Vector3[] {
+  //   return list.map((v) => this.applyInverseTransform(v));
+  // }
 
   private assertOrthogonalTransform(_m: Transform): void {
     // todop
@@ -579,6 +633,10 @@ export class TransformedSectionLabeler {
   }
 
   // --- Delegated methods with coordinate adaptation ---
+
+  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
+    return this.base.createVoxelBuffer2D(minCoord2d, width, height, fillValue);
+  }
 
   updateArea(globalPos: Vector3): void {
     this.base.updateArea(this.applyTransform(globalPos));
@@ -600,6 +658,10 @@ export class TransformedSectionLabeler {
     const p1 = this.applyTransform(lastUnzoomedPosition);
     const p2 = this.applyTransform(unzoomedPosition);
     return this.base.getRectangleVoxelBuffer2D(p1, p2);
+  }
+
+  globalCoordToMag2DFloat(position: Vector3): Vector2 {
+    return this.base.globalCoordToMag2DFloat(position);
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {

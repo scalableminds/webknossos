@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metada
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.datavault.S3DataVault
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
@@ -21,6 +22,7 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService}
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataStoreRedisStore,
@@ -42,6 +44,7 @@ import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters._
+import scala.util.Try
 
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -105,6 +108,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
+                              slackNotificationService: DSSlackNotificationService,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
@@ -144,6 +148,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     s"upload___${uploadId}___datasetId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
+  private def redisKeyForReportedTooLargeUpload(uploadId: String): String =
+    s"upload___${uploadId}___tooLargeUpload"
 
   cleanUpOrphanUploads()
 
@@ -172,6 +178,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                     reserveUploadAdditionalInfo: ReserveAdditionalInformation): Fox[Unit] =
     for {
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
+      newDataSourceId = DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)
+      _ = logger.info(
+        f"Reserving ${uploadFullName(reserveUploadInfo.uploadId, reserveUploadAdditionalInfo.newDatasetId, newDataSourceId)}...")
       _ <- Fox.fromBool(
         !reserveUploadInfo.needsConversion.getOrElse(false) || !reserveUploadInfo.layersToLink
           .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
@@ -186,7 +195,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               .insertLong(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), 0L)
           ))
       }
-      newDataSourceId = DataSourceId(reserveUploadAdditionalInfo.directoryName, reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(newDataSourceId))
@@ -201,12 +209,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       )
       filePaths = Json.stringify(Json.toJson(reserveUploadInfo.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInfo.uploadId), filePaths)
+      _ <- runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(reserveUploadInfo.uploadId), "false")
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInfo.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInfo.layersToLink)))
       )
-      _ = logger.info(
-        f"Reserving ${uploadFullName(reserveUploadInfo.uploadId, reserveUploadAdditionalInfo.newDatasetId, newDataSourceId)}...")
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
@@ -273,17 +280,31 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        runningUploadMetadataStore
-          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
-          .flatMap(newTotalFileSizeInBytesOpt => {
-            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-                Fox.failure("dataset.upload.moreBytesThanReserved"))
-            } else {
-              Fox.successful(())
-            }
-          })
+      alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
+        redisKeyForReportedTooLargeUpload(uploadId))
+      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                             String.valueOf(currentChunkNumber))
+      _ <- Fox.runIf(isNewChunk) {
+        Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+          runningUploadMetadataStore
+            .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
+            .flatMap(newTotalFileSizeInBytesOpt => {
+              if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+                runningUploadMetadataStore.insert(redisKeyForReportedTooLargeUpload(uploadId), "true")
+                logger.warn(
+                  s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                    .getOrElse(0L)}, which is more than reserved $maxFileSize. Allowing upload for now.")
+                if (!alreadyNotifiedAboutExceedingLimitOpt.exists(s => Try(s.toBoolean).getOrElse(false))) {
+                  slackNotificationService.noticeTooLargeUploadChunkRequest(
+                    s"Received upload chunk for $datasetId that pushes total file size to ${newTotalFileSizeInBytesOpt
+                      .getOrElse(0L)}, which is more than reserved $maxFileSize.")
+                }
+                Fox.successful(())
+              } else {
+                Fox.successful(())
+              }
+            })
+        }
       }
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
@@ -292,8 +313,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
                                               String.valueOf(totalChunkCount)))
       }
-      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
-                                                             String.valueOf(currentChunkNumber))
     } yield
       if (isNewChunk) {
         try {
@@ -327,27 +346,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-        for {
-          _ <- removeFromRedis(uploadId)
-          _ <- PathUtils.deleteDirectoryRecursively(uploadDirectoryFor(dataSourceId.organizationId, uploadId)).toFox
-        } yield ()
+        cleanUpUploadedDataset(uploadDirectoryFor(dataSourceId.organizationId, uploadId),
+                               uploadId,
+                               reason = "Cancelled by user")
       } else Fox.failure(s"Unknown upload")
   }
 
   private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
     s"upload $uploadId of dataset $datasetId ($dataSourceId)"
-
-  private def assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir: Path, uploadId: String): Fox[Unit] =
-    for {
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map(actualFileSize =>
-          if (actualFileSize > maxFileSize.toLong) {
-            cleanUpDatasetExceedingSize(uploadDir, uploadId)
-            Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
-          } else Fox.successful(()))
-      }
-    } yield ()
 
   def finishUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = {
     val uploadId = uploadInformation.uploadId
@@ -359,12 +365,26 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
-      _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
+      // Temporarily disabled till reserved size for upload is fixed.
+      // _ <- assertWithinRequestedFileSizeAndCleanUpOtherwise(uploadDir, uploadId)
       _ <- checkAllChunksUploaded(uploadId)
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      reservedTotalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+      actualUploadedFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(
+        redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
+      // Logging successful uploads which exceeded size to notice how large the difference is. Should be removed later.
+      _ = reservedTotalFileSizeInBytesOpt.foreach(reservedBytes =>
+        actualUploadedFileSizeInBytesOpt.foreach(actualBytes => {
+          if (actualBytes > reservedBytes) {
+            logger.warn(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+            slackNotificationService.noticeTooLargeUploadChunkRequest(
+              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedBytes bytes were reserved but $actualBytes were uploaded according to redis store.")
+          }
+        }))
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.")
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,
                             dataSourceId,
@@ -462,13 +482,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         _ <- Fox.successful(())
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
-          case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED |
-              UploadedDataSourceType.N5_MULTISCALES | UploadedDataSourceType.N5_ARRAY =>
+          case UploadedDataSourceType.ZARR | UploadedDataSourceType.ZARR3 |
+              UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED | UploadedDataSourceType.N5_MULTISCALES |
+              UploadedDataSourceType.N5_ARRAY =>
             exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.EXPLORED =>
             checkPathsInUploadedDatasourcePropertiesJson(unpackToDir, dataSourceId.organizationId)
-          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER |
-              UploadedDataSourceType.N5_MULTILAYER =>
+          case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.ZARR3_MULTILAYER |
+              UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
             tryExploringMultipleLayers(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.WKW => addLayerAndMagDirIfMissing(unpackToDir).toFox
         }
@@ -490,6 +511,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
       _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(addLayerAndMagDirIfMissing(path, FILENAME_DOT_ZARRAY).toFox)
+      _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR3)(addLayerAndMagDirIfMissing(path, FILENAME_ZARR_JSON).toFox)
       explored <- exploreLocalLayerService.exploreLocal(path, dataSourceId)
       _ <- exploreLocalLayerService.writeLocalDatasourceProperties(explored, path)
     } yield ()
@@ -499,7 +521,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                          typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
       layerDirs <- typ match {
-        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path).toFox
+        case UploadedDataSourceType.ZARR_MULTILAYER  => getZarrLayerDirectories(path).toFox
+        case UploadedDataSourceType.ZARR3_MULTILAYER => getZarr3LayerDirectories(path).toFox
         case UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
           PathUtils.listDirectories(path, silent = false).toFox
       }
@@ -661,6 +684,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       UploadedDataSourceType.ZARR
     } else if (looksLikeZarrArray(dataSourceDir, maxDepth = 3).getOrElse(false)) {
       UploadedDataSourceType.ZARR_MULTILAYER
+    } else if (looksLikeZarr3Array(dataSourceDir, maxDepth = 2).getOrElse(false)) {
+      UploadedDataSourceType.ZARR3
+    } else if (looksLikeZarr3Array(dataSourceDir, maxDepth = 3).getOrElse(false)) {
+      UploadedDataSourceType.ZARR3_MULTILAYER
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 1).getOrElse(false)) {
       UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED
     } else if (looksLikeNeuroglancerPrecomputed(dataSourceDir, 2).getOrElse(false)) {
@@ -685,6 +712,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def looksLikeZarrArray(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     containsMatchingFile(List(FILENAME_DOT_ZARRAY, FILENAME_DOT_ZATTRS), dataSourceDir, maxDepth)
+
+  private def looksLikeZarr3Array(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
+    containsMatchingFile(List(FILENAME_ZARR_JSON), dataSourceDir, maxDepth)
 
   private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     containsMatchingFile(List(FILENAME_INFO), dataSourceDir, maxDepth)
@@ -735,14 +765,20 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def getZarrLayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
+      layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).getOrElse(false))
+    } yield layerDirs
+
+  private def getZarr3LayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
+    for {
+      potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
+      layerDirs = potentialLayers.filter(p => looksLikeZarr3Array(p, maxDepth = 2).getOrElse(false))
     } yield layerDirs
 
   private def addLayerAndMagDirIfMissing(dataSourceDir: Path, headerFile: String = FILENAME_HEADER_WKW): Box[Unit] =
     if (Files.exists(dataSourceDir)) {
       for {
         listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
-                                                           maxDepth = 2,
+                                                           maxDepth = 3,
                                                            silent = false,
                                                            filters = p => p.getFileName.toString == headerFile)
         listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
@@ -758,17 +794,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield ()
     } else Full(())
 
-  private def looksLikeMagDir(headerWkwPaths: Seq[Path]): Boolean =
-    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
-      pathDepth(oneHeaderWkwPath) == 0
-    }
+  private def looksLikeMagDir(headerFilePaths: Seq[Path]): Boolean =
+    pathExistsWithDepth(0, headerFilePaths) && !pathExistsWithDepth(1, headerFilePaths) && !pathExistsWithDepth(
+      2,
+      headerFilePaths)
 
-  private def pathDepth(path: Path) = path.toString.count(_ == '/')
+  private def looksLikeLayerDir(headerFilePaths: Seq[Path]): Boolean =
+    pathExistsWithDepth(1, headerFilePaths) && !pathExistsWithDepth(2, headerFilePaths)
 
-  private def looksLikeLayerDir(headerWkwPaths: Seq[Path]): Boolean =
-    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
-      pathDepth(oneHeaderWkwPath) == 1
-    }
+  private def pathExistsWithDepth(pathDepth: Int, paths: Seq[Path]) =
+    paths.exists(getPathDepth(_) == pathDepth)
+
+  private def getPathDepth(path: Path) =
+    path.toString.count(_ == '/')
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId): Fox[Unit] =
     for {
@@ -808,18 +846,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     tryo(FileUtils.copyDirectory(uploadDir.toFile, backupDir.toFile))
   }
 
-  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Fox[Unit] = {
-    this.synchronized {
-      PathUtils.deleteDirectoryRecursively(uploadDir)
-    }
-    removeFromRedis(uploadId)
-  }
-
-  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+  private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] =
     for {
-      datasetId <- getDatasetIdByUploadId(uploadId)
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- remoteWebknossosClient.deleteDataset(datasetId)
+      _ <- Fox.successful(logger.info(s"Cleaning up uploaded dataset. Reason: $reason"))
+      _ <- removeFromRedis(uploadId)
+      _ <- this.synchronized {
+        PathUtils.deleteDirectoryRecursively(uploadDir).toFox
+      }
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =
@@ -841,7 +874,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))
-
+      _ <- runningUploadMetadataStore.remove(redisKeyForReportedTooLargeUpload(uploadId))
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =
@@ -883,6 +916,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER, N5_MULTISCALES,
-  N5_MULTILAYER, N5_ARRAY = Value
+  val ZARR, ZARR3, ZARR3_MULTILAYER, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER,
+  N5_MULTISCALES, N5_MULTILAYER, N5_ARRAY = Value
 }

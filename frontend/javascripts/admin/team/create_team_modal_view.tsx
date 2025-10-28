@@ -9,7 +9,7 @@ type Props = {
   isOpen: boolean;
 };
 
-function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isOpen }: Props) {
+function CreateTeamModalForm({ onOk: onOkCallback, onCancel: onCancelCallback, isOpen }: Props) {
   const [form] = Form.useForm();
 
   const onOk = async () => {
@@ -26,8 +26,14 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isOpen }: Props) {
         ],
       };
       const team = await createTeam(newTeam);
+      form.resetFields();
       onOkCallback(team);
     });
+  };
+
+  const onCancel = () => {
+    form.resetFields();
+    onCancelCallback();
   };
 
   return (

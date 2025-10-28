@@ -35,6 +35,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
+import telemetry.SlackNotificationService
 import utils.{MetadataAssertions, WkConf}
 
 import javax.inject.Inject
@@ -140,6 +141,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   usedStorageService: UsedStorageService,
                                   conf: WkConf,
+                                  slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -584,15 +586,19 @@ class DatasetController @Inject()(userService: UserService,
   def delete(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log() {
-        for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-          _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-          _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
-          _ = logger.info(
-            s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
-          _ <- datasetService.deleteDataset(dataset)
-        } yield Ok
+        logTime(slackNotificationService.noticeSlowRequest) {
+          for {
+            dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+            _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
+            before = Instant.now
+            _ = logger.info(
+              s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
+            _ <- datasetService.deleteDataset(dataset)
+            _ = Instant.logSince(before, s"Deleting dataset $datasetId")
+          } yield Ok
+        }
       }
     }
 

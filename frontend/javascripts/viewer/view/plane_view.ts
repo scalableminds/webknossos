@@ -412,14 +412,14 @@ class PlaneView {
     // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
     // is that the time for the intitial resource loading is not included, then.
     let timeToFirstRenderInMs, timeToCompileShaderInMs;
-    if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark")) {
+    if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark").length > 0) {
       timeToFirstRenderInMs = Math.round(
         performance.measure("tracing_view_load_duration", PerformanceMarkEnum.TRACING_VIEW_LOAD)
           .duration,
       );
       console.log(`Time to first render was ${timeToFirstRenderInMs} ms.`);
     }
-    if (performance.getEntriesByName(PerformanceMarkEnum.SHADER_COMPILE, "mark")) {
+    if (performance.getEntriesByName(PerformanceMarkEnum.SHADER_COMPILE, "mark").length > 0) {
       timeToCompileShaderInMs = Math.round(
         performance.measure("shader_compile_duration", PerformanceMarkEnum.SHADER_COMPILE).duration,
       );

@@ -1,5 +1,7 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
 import app from "app";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
@@ -11,7 +13,12 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "viewer/constants";
+import Constants, {
+  OrthoViewColors,
+  OrthoViewValues,
+  OrthoViews,
+  PerformanceMarkEnum,
+} from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
 import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import getSceneController, {
@@ -334,15 +341,22 @@ class PlaneView {
 
     this.isRunning = true;
     this.resize();
-    performance.mark("shader_compile_start");
+    performance.mark(PerformanceMarkEnum.SHADER_COMPILE);
     // The shader is the same for all three viewports, so it doesn't matter which camera is used.
-    renderer.compileAsync(scene, this.cameras[OrthoViews.PLANE_XY]).then(() => {
-      // Counter-intuitively this is not the moment where the webgl program is fully compiled.
-      // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
-      // Only once that is done, the compilation process is fully finished, see `renderFunction`.
-      this.animate();
-      Store.dispatch(uiReadyAction());
-    });
+    renderer
+      .compileAsync(scene, this.cameras[OrthoViews.PLANE_XY])
+      .then(() => {
+        // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+        // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+        // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+        this.animate();
+        Store.dispatch(uiReadyAction());
+      })
+      .catch((error) => {
+        Toast.error(`An unexpected error occurred while compiling the WebGL shaders: ${error}`);
+        console.error(error);
+        ErrorHandling.notify(error);
+      });
     window.addEventListener("resize", this.resizeThrottled);
     this.unsubscribeFunctions.push(
       listenToStoreProperty(
@@ -396,14 +410,21 @@ class PlaneView {
     // not be reloaded when navigating from the tracing view back to the dashboard.
     // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
     // is that the time for the intitial resource loading is not included, then.
-    const timeToFirstRenderInMs = Math.round(
-      performance.measure("tracing_view_load_duration", "tracing_view_load_start").duration,
-    );
-    const timeToCompileShaderInMs = Math.round(
-      performance.measure("shader_compile_duration", "shader_compile_start").duration,
-    );
-    console.log(`Time to compile shaders was ${timeToCompileShaderInMs} ms.`);
-    console.log(`Time to first render was ${timeToFirstRenderInMs} ms.`);
+    let timeToFirstRenderInMs, timeToCompileShaderInMs;
+    if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark")) {
+      timeToFirstRenderInMs = Math.round(
+        performance.measure("tracing_view_load_duration", PerformanceMarkEnum.TRACING_VIEW_LOAD)
+          .duration,
+      );
+      console.log(`Time to first render was ${timeToFirstRenderInMs} ms.`);
+    }
+    if (performance.getEntriesByName(PerformanceMarkEnum.SHADER_COMPILE, "mark")) {
+      timeToCompileShaderInMs = Math.round(
+        performance.measure("shader_compile_duration", PerformanceMarkEnum.SHADER_COMPILE).duration,
+      );
+      console.log(`Time to compile shaders was ${timeToCompileShaderInMs} ms.`);
+    }
+
     sendAnalyticsEvent("time_to_first_render", {
       ...getWebGlAnalyticsInformation(Store.getState()),
       timeToFirstRenderInMs,

@@ -176,7 +176,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
-    app.vent.emit("webknossos:initialization");
+    app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
     this.props.setControllerStatus("loaded");
   }

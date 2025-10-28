@@ -391,7 +391,7 @@ export async function setupWebknossosForTesting(
       true,
     );
     // Trigger the event ourselves, as the webKnossosController is not instantiated
-    app.vent.emit("webknossos:initialization");
+    app.vent.emit("webknossos:initialized");
 
     const api = await webknossos.apiReady();
     testContext.api = api;

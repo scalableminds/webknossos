@@ -17,14 +17,14 @@ import { isNumber } from "lodash";
 import { useEffect } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
-import { ControlModeEnum } from "viewer/constants";
+import { ControlModeEnum, PerformanceMarkEnum } from "viewer/constants";
 import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 import { Store } from "viewer/singletons";
 import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 import { PageNotFoundView } from "./page_not_found_view";
 
 function markTracingViewLoadStartEffect() {
-  const markName = "tracing_view_load_start";
+  const markName = PerformanceMarkEnum.TRACING_VIEW_LOAD;
   performance.mark(markName);
   return () => performance.clearMarks(markName);
 }

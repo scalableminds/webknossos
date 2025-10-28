@@ -208,6 +208,7 @@ export class MoveToolController {
     _ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { useLegacyBindings } = userConfiguration;
     // In legacy mode, don't display a hint for
@@ -377,6 +378,7 @@ export class SkeletonToolController {
     ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { continuousNodeCreation } = Store.getState().userConfiguration;
     const { useLegacyBindings } = userConfiguration;
@@ -514,6 +516,7 @@ export class DrawToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     let rightClick;
     const { useLegacyBindings } = userConfiguration;
@@ -574,6 +577,7 @@ export class EraseToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: `Erase (${activeTool === AnnotationTool.ERASE_BRUSH ? "Brush" : "Trace"})`,
@@ -583,30 +587,59 @@ export class EraseToolController {
 
   static onToolDeselected() {}
 }
-export class PickCellToolController {
+export class VoxelPipetteToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        VolumeHandlers.handlePickCell(pos);
+      mouseMove: (
+        _delta: Point2,
+        position: Point2,
+        plane: OrthoView | null | undefined,
+        event: MouseEvent,
+      ) => {
+        MoveHandlers.moveWhenAltIsPressed(_delta, position, plane, event);
+      },
+      leftClick: (position: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          VolumeHandlers.handlePickCell(position);
+          return;
+        }
+
+        const state = Store.getState();
+        const lastMeasuredGlobalPosition =
+          state.uiInformation.measurementToolInfo.lastMeasuredPosition;
+
+        if (lastMeasuredGlobalPosition == null) {
+          const globalPosition = calculateGlobalPos(state, position, plane).floating;
+          Store.dispatch(setLastMeasuredPositionAction(globalPosition));
+        } else {
+          Store.dispatch(hideMeasurementTooltipAction());
+        }
+        Store.dispatch(setIsMeasuringAction(true));
       },
     };
+  }
+
+  static onToolDeselected() {
+    Store.dispatch(hideMeasurementTooltipAction());
   }
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _userConfiguration: UserConfiguration,
-    _shiftKey: boolean,
+    shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
-      leftClick: "Pick Segment",
+      leftClick:
+        _activeToolWithoutModifiers === AnnotationTool.VOXEL_PIPETTE && !shiftKey
+          ? "Pin Tooltip"
+          : "Activate Segment ID",
       rightClick: "Context Menu",
     };
   }
-
-  static onToolDeselected() {}
 }
 export class FillCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
@@ -630,6 +663,7 @@ export class FillCellToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftClick: "Fill Segment",
@@ -709,6 +743,7 @@ export class BoundingBoxToolController {
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: ctrlOrMetaKey ? "Move Bounding Boxes" : "Create/Resize Bounding Boxes",
@@ -838,6 +873,7 @@ export class QuickSelectToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
@@ -962,6 +998,7 @@ export class LineMeasurementToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftClick: "Left Click to measure distance",
@@ -1041,6 +1078,7 @@ export class AreaMeasurementToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: "Drag to measure area",
@@ -1114,6 +1152,7 @@ export class ProofreadToolController {
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
     isTDViewportActive: boolean,
+    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { isMultiSplitActive } = userConfiguration;
 
@@ -1172,7 +1211,7 @@ const toolToToolController = {
   [AnnotationTool.ERASE_TRACE.id]: EraseToolController,
   [AnnotationTool.ERASE_BRUSH.id]: EraseToolController,
   [AnnotationTool.FILL_CELL.id]: FillCellToolController,
-  [AnnotationTool.PICK_CELL.id]: PickCellToolController,
+  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController,
   [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController,
   [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController,
 };

@@ -24,7 +24,7 @@ import {
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
 import {
-  calculateGlobalPos,
+  getGlobalMousePosition,
   isPlaneMode as getIsPlaneMode,
 } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -201,6 +201,7 @@ function ShortcutsInfo() {
         isControlOrMetaPressed,
         isAltPressed,
         isTDViewportActive,
+        AnnotationTool.SKELETON,
       );
     }
 
@@ -342,6 +343,7 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
     isTDViewportActive,
+    activeTool,
   );
 
   return (
@@ -569,22 +571,9 @@ function MagnificationInfo() {
 function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
-  const mousePosition = useWkSelector((state) => state.temporaryConfiguration.mousePosition);
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
-  const globalMousePositionRounded = useWkSelector((state) => {
-    const { activeViewport } = state.viewModeData.plane;
-
-    if (mousePosition && activeViewport !== OrthoViews.TDView) {
-      const [x, y] = mousePosition;
-      return calculateGlobalPos(state, {
-        x,
-        y,
-      }).rounded;
-    }
-
-    return undefined;
-  });
+  const globalMousePositionRounded = useWkSelector(getGlobalMousePosition);
 
   return (
     <>

@@ -18,10 +18,10 @@ import {
   FillCellToolController,
   LineMeasurementToolController,
   MoveToolController,
-  PickCellToolController,
   ProofreadToolController,
   QuickSelectToolController,
   SkeletonToolController,
+  VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
 import * as VolumeHandlers from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {
@@ -186,7 +186,7 @@ class VolumeKeybindings {
       l: () => setTool(AnnotationTool.TRACE),
       r: () => setTool(AnnotationTool.ERASE_TRACE),
       f: () => setTool(AnnotationTool.FILL_CELL),
-      p: () => setTool(AnnotationTool.PICK_CELL),
+      p: () => setTool(AnnotationTool.VOXEL_PIPETTE),
       q: () => setTool(AnnotationTool.QUICK_SELECT),
       o: () => setTool(AnnotationTool.PROOFREAD),
     };
@@ -353,7 +353,7 @@ class PlaneController extends React.PureComponent<Props> {
     const drawControls = DrawToolController.getPlaneMouseControls(planeId, this.planeView);
     const eraseControls = EraseToolController.getPlaneMouseControls(planeId, this.planeView);
     const fillCellControls = FillCellToolController.getPlaneMouseControls(planeId);
-    const pickCellControls = PickCellToolController.getPlaneMouseControls(planeId);
+    const voxelPipetteControls = VoxelPipetteToolController.getPlaneMouseControls(planeId);
     const boundingBoxControls = BoundingBoxToolController.getPlaneMouseControls(
       planeId,
       this.planeView,
@@ -375,7 +375,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(drawControls),
       Object.keys(eraseControls),
       Object.keys(fillCellControls),
-      Object.keys(pickCellControls),
+      Object.keys(voxelPipetteControls),
       Object.keys(boundingBoxControls),
       Object.keys(quickSelectControls),
       Object.keys(proofreadControls),
@@ -394,7 +394,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationTool.TRACE.id]: drawControls[controlKey],
         [AnnotationTool.ERASE_BRUSH.id]: eraseControls[controlKey],
         [AnnotationTool.ERASE_TRACE.id]: eraseControls[controlKey],
-        [AnnotationTool.PICK_CELL.id]: pickCellControls[controlKey],
+        [AnnotationTool.VOXEL_PIPETTE.id]: voxelPipetteControls[controlKey],
         [AnnotationTool.FILL_CELL.id]: fillCellControls[controlKey],
         [AnnotationTool.BOUNDING_BOX.id]: boundingBoxControls[controlKey],
         [AnnotationTool.QUICK_SELECT.id]: quickSelectControls[controlKey],

@@ -128,6 +128,12 @@ function _calculateMaybeGlobalPos(
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
 
+  // Regarding round and floor in the following code:
+  // The objective is to obtain integer positional values here that correspond "the most" to clicked input
+  // position. In general, this means that we round the position (for example, if the user clicks at x=4.999,
+  // x=5 should be used for the node position).
+  // However, for the third dimension, we use floor, because this is what is rendered. Even at z=1.999, the user
+  // will see z=1 in the XY viewport.
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
@@ -202,7 +208,6 @@ function _calculateMaybePlaneScreenPos(
   const flycamPosition = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
-  const navbarHeight = state.uiInformation.navbarHeight;
 
   const positionInViewportPerspective = calculateInViewportPos(
     globalPosition,
@@ -233,10 +238,7 @@ function _calculateMaybePlaneScreenPos(
       return null;
   }
 
-  point = [
-    Math.round(point[0] + width / 2 + left),
-    Math.round(point[1] + height / 2 + top + navbarHeight),
-  ];
+  point = [Math.round(point[0] + width / 2 + left), Math.round(point[1] + height / 2 + top)];
   return point;
 }
 
@@ -289,6 +291,34 @@ function _calculateGlobalPos(
   return positions;
 }
 
+function _getGlobalMousePositionFloating(state: WebknossosState) {
+  const { activeViewport } = state.viewModeData.plane;
+  const { mousePosition } = state.temporaryConfiguration;
+  if (mousePosition && activeViewport !== OrthoViews.TDView) {
+    const [x, y] = mousePosition;
+    return calculateGlobalPos(state, {
+      x,
+      y,
+    }).floating;
+  }
+
+  return undefined;
+}
+
+function _getGlobalMousePosition(state: WebknossosState) {
+  const { activeViewport } = state.viewModeData.plane;
+  const { mousePosition } = state.temporaryConfiguration;
+  if (mousePosition && activeViewport !== OrthoViews.TDView) {
+    const [x, y] = mousePosition;
+    return calculateGlobalPos(state, {
+      x,
+      y,
+    }).rounded;
+  }
+
+  return undefined;
+}
+
 function _calculateGlobalDelta(
   state: WebknossosState,
   delta: Point2,
@@ -339,6 +369,11 @@ export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
 export const calculateInViewportPos = reuseInstanceOnEquality(_calculateInViewportPos);
+export const getGlobalMousePosition = reuseInstanceOnEquality(_getGlobalMousePosition);
+export const getGlobalMousePositionFloating = reuseInstanceOnEquality(
+  _getGlobalMousePositionFloating,
+);
+
 export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }

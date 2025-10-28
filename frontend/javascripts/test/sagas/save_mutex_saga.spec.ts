@@ -392,7 +392,7 @@ describe("Save Mutex Saga", () => {
         throw new Error("No additional volume tracing found to activate.");
       }
       // Switch to other layer. Saga should, depending on othersMayEdit, try to acquire mutex now as the active layer no longer has an editable mapping and thus no liveCollab support.
-      Store.dispatch(updateLayerSettingAction(volumeTracingId2.tracingId, "isDisabled", true));
+      Store.dispatch(updateLayerSettingAction(volumeTracingId2.tracingId, "isDisabled", false));
       await sleep(500);
       if (othersMayEdit) {
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();

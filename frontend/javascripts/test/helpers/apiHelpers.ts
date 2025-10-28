@@ -461,13 +461,20 @@ export async function setupWebknossosForTesting(
   );
 
   testContext.mocks.parseProtoTracing.mockImplementation(
-    (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
-      const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
-      if (tracing == null) {
-        throw new Error(`Could not find tracing for ${annotationType}.`);
-      }
-      return tracing;
-    },
+    // Wrapping function to track already returned volume tracings in case of multiVolume test mode type.
+    // Needed to return both tracings and not one of them twice.
+    (function wrapperTrackingRepliedVolumeTracings() {
+      const volumeTracings = tracings.filter((tracing) => tracing.typ.toLowerCase() === "volume");
+      const skeletonTracing = tracings.find((tracing) => tracing.typ.toLowerCase() === "skeleton");
+
+      return (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
+        const tracing = annotationType === "volume" ? volumeTracings.shift() : skeletonTracing;
+        if (tracing == null) {
+          throw new Error(`Could not find tracing for ${annotationType}.`);
+        }
+        return tracing;
+      };
+    })(),
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 

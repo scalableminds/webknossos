@@ -11,6 +11,7 @@ const volumeTracingId2 = volumeTracing.id + "_2";
 const volumeTracing2 = {
   ...volumeTracing,
   id: volumeTracingId2,
+  fallbackLayer: undefined,
 };
 export const tracings = [skeletonTracing, volumeTracing, volumeTracing2];
 

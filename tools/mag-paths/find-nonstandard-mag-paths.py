@@ -9,6 +9,7 @@ import json
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("binary_data_dir", type=Path, help="WEBKNOSSOS binary data dir")
+    parser.add_argument("--vec", help="Also check for vec3-style mag paths where scalars would be default.", action="store_true")
     args = parser.parse_args()
     binary_data_dir = args.binary_data_dir
 
@@ -28,10 +29,10 @@ def main():
                                     layer_name = layer["name"]
                                     if "wkwResolutions" in layer:
                                         for mag in layer["wkwResolutions"]:
-                                            seen += check_mag(dataset_dir, layer_name, mag, "resolution")
+                                            seen += check_mag(args, dataset_dir, layer_name, mag, "resolution")
                                     if "mags" in layer:
                                         for mag in layer["mags"]:
-                                            seen += check_mag(dataset_dir, layer_name, mag, "mag")
+                                            seen += check_mag(args, dataset_dir, layer_name, mag, "mag")
             except Exception as e:
                 print(
                     f"Exception while scanning dataset dir at {dataset_dir}: {e}",
@@ -43,7 +44,7 @@ def main():
         file=sys.stderr,
     )
 
-def check_mag(dataset_dir, layer_name, mag, mag_key):
+def check_mag(args, dataset_dir, layer_name, mag, mag_key):
     seen = 0
     if "path" in mag:
         explicit_mag_path = mag["path"]
@@ -51,7 +52,7 @@ def check_mag(dataset_dir, layer_name, mag, mag_key):
             if (dataset_dir / layer_name / explicit_mag_path).exists():
                 seen += 1
                 print(f"[{dataset_dir}] explicit mag_path ‘{explicit_mag_path}’ exists inside of layer dir ‘{layer_name} (full: {(dataset_dir / layer_name / explicit_mag_path)})’ (NONSTANDARD)")
-    else:
+    elif args.vec:
         mag_vec3int = make_vec3int(mag[mag_key])
         mag_scalar = format_scalar(mag_vec3int)
         mag_long = format_long(mag_vec3int)
@@ -61,7 +62,7 @@ def check_mag(dataset_dir, layer_name, mag, mag_key):
                 pass #print("exists scalar (OK)")
             if (dataset_dir / layer_name / mag_long).exists():
                 seen += 1
-                print(f"[{dataset_dir}] long-form mag ‘{mag_long}’ exists (NONSTANDARD)")
+                print(f"[{dataset_dir}] long-form mag ‘{mag_long}’ exists where scalar would be default")
         if (dataset_dir / layer_name / mag_long).exists():
             pass # print("exists long (OK)")
     return seen

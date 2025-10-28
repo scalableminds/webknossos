@@ -353,6 +353,7 @@ class PlaneView {
         Store.dispatch(uiReadyAction());
       })
       .catch((error) => {
+        // This code will not be hit if there are shader compilation errors. To react to those, see https://github.com/mrdoob/three.js/pull/25679
         Toast.error(`An unexpected error occurred while compiling the WebGL shaders: ${error}`);
         console.error(error);
         ErrorHandling.notify(error);

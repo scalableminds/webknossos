@@ -50,6 +50,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
+  UpdateActiveTreeUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -430,6 +431,13 @@ const descriptionFns: Record<
   updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {
       description: `Updated the active node id to ${action.value.activeNode}`,
+      icon: <EditOutlined />,
+    };
+  },
+  // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
+  updateActiveTree: (action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
+    return {
+      description: `Updated the active tree id to ${action.value.activeTree} and node id to ${action.value.activeNode}`,
       icon: <EditOutlined />,
     };
   },

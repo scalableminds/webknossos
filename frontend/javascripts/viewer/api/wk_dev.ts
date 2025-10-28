@@ -12,6 +12,7 @@ import type ApiLoader from "./api_loader";
 // for debugging or one off scripts.
 export const WkDevFlags = {
   logActions: false,
+  liveCollab: false,
   sam: {
     useLocalMask: true,
   },
@@ -28,7 +29,7 @@ export const WkDevFlags = {
     disableLayerNameSanitization: false,
   },
   debugging: {
-    showCurrentVersionInInfoTab: false,
+    showCurrentVersionInInfoTab: true,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,

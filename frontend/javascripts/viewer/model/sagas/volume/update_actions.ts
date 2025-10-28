@@ -33,6 +33,7 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
+export type UpdateActiveTreeUpdateAction = ReturnType<typeof updateActiveTree>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
@@ -106,7 +107,7 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
-export type ApplicableSkeletonUpdateAction =
+type _ApplicableSkeletonUpdateAction =
   | UpdateTreeUpdateAction
   | UpdateNodeUpdateAction
   | CreateNodeUpdateAction
@@ -121,7 +122,24 @@ export type ApplicableSkeletonUpdateAction =
   | AddUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
-  | DeleteUserBoundingBoxInSkeletonTracingAction;
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | UpdateActiveTreeUpdateAction
+  // User specific actions
+  | UpdateActiveNodeUpdateAction
+  | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeGroupVisibilityUpdateAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateTreeGroupsExpandedStateAction;
+
+export type ApplicableSkeletonServerUpdateAction = AsServerAction<_ApplicableSkeletonUpdateAction>;
+export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = Omit<
+  T,
+  "value"
+> & {
+  value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+};
+export type ApplicableSkeletonUpdateAction =
+  WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
@@ -133,7 +151,13 @@ export type ApplicableVolumeUpdateAction =
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
-  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction;
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
+  // User specific actions
+  | UpdateActiveSegmentIdUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
+  | UpdateSegmentGroupVisibilityVolumeAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction;
 
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
@@ -153,6 +177,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | UpdateActiveNodeUpdateAction
+  | UpdateActiveTreeUpdateAction
   | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | AddUserBoundingBoxInSkeletonTracingAction
@@ -445,6 +470,33 @@ export function updateActiveNode(tracing: {
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
+    },
+  } as const;
+}
+
+// Should never be sent to the backend as the backend does neither understand this action
+// nor does it have the property activeTreeId for a skeletonTracing.
+// Only used to correctly keep track of the active tree property during rebasing.
+// Reason: There is a mismatch between the frontend store actions and the update actions.
+// The store action createTree also sets the activeNodeId and activeTreeId, but the update action createTree does not.
+// If we would change that via also applying activeNodeId and activeTreeId for createTree update actions
+// this breaks the deleteEdge store action: This store action maps to the following update actions:
+//  createTree, moveTreeComponents, deleteEdge. Where the createTree update action should not
+// set activeNodeId and activeTreeId when applied. Therefore, this action tracks whether the activeTreeId should change.
+// Tracking of activeNodeId is already handled by updateActiveNode (see above). This action is understood by the backend.
+// So no problem there.
+export function updateActiveTree(tracing: {
+  tracingId: string;
+  activeTreeId: number | null | undefined;
+  activeNodeId: number | null | undefined;
+}) {
+  return {
+    name: "updateActiveTree",
+    value: {
+      actionTracingId: tracing.tracingId,
+      activeTree: tracing.activeTreeId,
+      activeNode: tracing.activeNodeId,
+      isFrontendOnly: true,
     },
   } as const;
 }
@@ -895,24 +947,31 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
+  agglomerateId: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Removes the edges between segmentId1 and segmentId2 that exist in the agglomerate graph.
+   * If the edge removal leads to an actual split of the two agglomerates,
+   * the agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   * The other agglomerate will be assigned a new id (largestAgglomerateId + 1).
+   */
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId: number; // Unused in back-end.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // agglomerateId is needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
+    agglomerateId?: number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3; // Unused in back-end but may exist in older update actions
   };
 } {
   return {
@@ -920,34 +979,38 @@ export function splitAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
+      agglomerateId: Number(agglomerateId),
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: NumberLike,
-  agglomerateId2: NumberLike,
   segmentId1: NumberLike,
   segmentId2: NumberLike,
-  mag: Vector3,
+  agglomerateId1: NumberLike,
+  agglomerateId2: NumberLike,
   actionTracingId: string,
 ): {
+  /*
+   * Merges the agglomerates that belong to segmentId1 and segmentId2.
+   * The agglomerate that belongs to segmentId1 will keep its agglomerate id.
+   */
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number; // unused in backend
-    agglomerateId2: number; // unused in backend
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // agglomerateId1 and agglomerateId2 are needed in live collab setting to notice changes of loaded agglomerates done by other users.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
+    agglomerateId1?: number;
+    agglomerateId2?: number;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)
     // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
-    mag: Vector3;
+    mag?: Vector3;
   };
 } {
   return {
@@ -955,11 +1018,10 @@ export function mergeAgglomerate(
     value: {
       actionTracingId,
       // TODO: Proper 64 bit support (#6921)
-      agglomerateId1: Number(agglomerateId1),
-      agglomerateId2: Number(agglomerateId2),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
-      mag,
+      agglomerateId1: Number(agglomerateId1),
+      agglomerateId2: Number(agglomerateId2),
     },
   } as const;
 }

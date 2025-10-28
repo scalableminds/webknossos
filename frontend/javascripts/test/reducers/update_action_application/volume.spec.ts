@@ -40,6 +40,7 @@ const initialState: WebknossosState = update(defaultVolumeState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     annotationType: { $set: "Explorational" },
   },
   dataset: {
@@ -70,6 +71,9 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   deleteUserBoundingBoxInVolumeTracing: true,
   updateSegmentGroupsExpandedState: true,
   updateUserBoundingBoxVisibilityInVolumeTracing: true,
+  updateActiveSegmentId: true,
+  updateSegmentVisibility: true,
+  updateSegmentGroupVisibility: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 
@@ -112,6 +116,20 @@ describe("Update Action Application for VolumeTracing", () => {
       [makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")],
       tracingId,
     ),
+    VolumeTracingActions.updateSegmentAction(3, { isVisible: false }, tracingId),
+    // Needs to be visible again for the toggleSegmentGroupAction to turn all segments invisible and thus trigger a compact updateSegmentGroupVisibilityAction.
+    VolumeTracingActions.updateSegmentAction(3, { isVisible: true }, tracingId),
+    // The group with id 3 needs at least one visible cells for the reducer to make to toggle it.
+    VolumeTracingActions.updateSegmentAction(2, { groupId: 3 }, tracingId),
+    // Moreover, at least two are needed to make the compaction evict a updateSegmentGroupVisibilityAction.
+    VolumeTracingActions.createCellAction(4, 4),
+    VolumeTracingActions.setActiveCellAction(4),
+    VolumeTracingActions.updateSegmentAction(
+      4,
+      { groupId: 3, somePosition: [7, 8, 9], isVisible: true },
+      tracingId,
+    ),
+    VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
   ];
@@ -141,27 +159,23 @@ describe("Update Action Application for VolumeTracing", () => {
             : _.range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-          const state2WithActiveTree = applyActions(
+          const state2WithActiveCell = applyActions(
             initialState,
             userActions.slice(0, beforeVersionIndex),
           );
 
-          const state2WithoutActiveState = applyActions(state2WithActiveTree, [
-            VolumeTracingActions.setActiveCellAction(0),
+          const state2WithoutActiveBoundingBox = applyActions(state2WithActiveCell, [
             setActiveUserBoundingBoxId(null),
           ]);
 
           const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
           const state3 = applyActions(
-            state2WithActiveTree,
-            actionsToApply.concat([
-              VolumeTracingActions.setActiveCellAction(0),
-              setActiveUserBoundingBoxId(null),
-            ]),
+            state2WithActiveCell,
+            actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
           );
-          expect(state2WithoutActiveState !== state3).toBeTruthy();
+          expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
 
-          const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveState);
+          const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
           const volumeTracing3 = enforceVolumeTracing(state3);
 
           const updateActionsBeforeCompaction = Array.from(
@@ -180,15 +194,36 @@ describe("Update Action Application for VolumeTracing", () => {
             seenActionTypes.add(action.name);
           }
 
-          const reappliedNewState = transformStateAsReadOnly(state2WithoutActiveState, (state) =>
-            applyActions(state, [
-              VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
-              VolumeTracingActions.setActiveCellAction(0),
-              setActiveUserBoundingBoxId(null),
-            ]),
+          let reappliedNewState = transformStateAsReadOnly(
+            state2WithoutActiveBoundingBox,
+            (state) =>
+              applyActions(state, [
+                VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+                setActiveUserBoundingBoxId(null),
+              ]),
           );
 
-          expect(reappliedNewState).toEqual(state3);
+          // fixing activeUnmappedSegmentId mismatch as the frontend supports a createCellAction,
+          // which sets activeUnmappedSegmentId to null but the matching annotation update action equivalent
+          // "updateActiveSegmentId" sets activeUnmappedSegmentId to undefined.
+          if (
+            reappliedNewState.annotation.volumes[0].activeUnmappedSegmentId == null &&
+            state3.annotation.volumes[0].activeUnmappedSegmentId == null
+          ) {
+            reappliedNewState = update(reappliedNewState, {
+              annotation: {
+                volumes: {
+                  [0]: {
+                    activeUnmappedSegmentId: {
+                      $set: state3.annotation.volumes[0].activeUnmappedSegmentId,
+                    },
+                  },
+                },
+              },
+            });
+          }
+
+          expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
         });
       });
     },

@@ -7,14 +7,17 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  dispatchEnsureHasAnnotationMutexAsync,
+  dispatchEnsureHasNewestVersionAsync,
+  doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
@@ -31,12 +34,13 @@ import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 
-const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
-
 export function* pushSaveQueueAsync(): Saga<never> {
+  /*
+   * This saga continuously drains the save queue by sending its content to the server.
+   */
   yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction());
@@ -65,7 +69,16 @@ export function* pushSaveQueueAsync(): Saga<never> {
       forcePush: take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true));
-
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (othersMayEdit && WkDevFlags.liveCollab) {
+      // Wait until we may save (due to mutex acquisition).
+      yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+      // Wait until we have the newest version. This *must* happen after
+      // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+      // race condition where the frontend thinks that it knows about the newest
+      // version when in fact somebody else saved a newer version in the meantime.
+      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    }
     // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
@@ -97,6 +110,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
         break;
       }
     }
+    yield* put(doneSavingAction());
     yield* put(setSaveBusyAction(false));
   }
 }
@@ -106,10 +120,6 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-// The value for this boolean does not need to be restored to false
-// at any time, because the browser page is reloaded after the message is shown, anyway.
-let didShowFailedSimultaneousTracingError = false;
-
 export function* sendSaveRequestToServer(): Saga<number> {
   /*
    * Saves a reasonably-sized part of the save queue to the server (plus retry-mechanism).
@@ -117,7 +127,8 @@ export function* sendSaveRequestToServer(): Saga<number> {
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+  const withoutFEOnlyActions = filterOutFrontendOnlySupportedActions(fullSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(withoutFEOnlyActions);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const version = yield* select((state) => state.annotation.version);
   const annotationId = yield* select((state) => state.annotation.annotationId);
@@ -203,21 +214,10 @@ export function* sendSaveRequestToServer(): Saga<number> {
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
-        if (!didShowFailedSimultaneousTracingError) {
-          // If the saving fails for one tracing (e.g., skeleton), it can also
-          // fail for another tracing (e.g., volume). The message simply tells the
-          // user that the saving in general failed. So, there is no sense in showing
-          // the message multiple times.
-          yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-          location.reload();
-          didShowFailedSimultaneousTracingError = true;
-        }
 
-        // Wait "forever" to avoid that the caller initiates other save calls afterwards (e.g.,
-        // can happen if the caller tries to force-flush the save queue).
-        // The reason we don't throw an error immediately is that this would immediately
-        // crash all sagas (including saving other tracings).
-        yield* call(sleep, ONE_YEAR_MS);
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+        location.reload();
+
         throw new Error("Saving failed due to conflict.");
       }
 
@@ -300,6 +300,16 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   }
 
   return slicedBatches;
+}
+
+function filterOutFrontendOnlySupportedActions(
+  updateActionsBatches: Array<SaveQueueEntry>,
+): Array<SaveQueueEntry> {
+  const batchesWithoutFrontendOnlyActions = updateActionsBatches.map((batch) => ({
+    ...batch,
+    actions: batch.actions.filter((a) => !("isFrontendOnly" in a.value && a.value.isFrontendOnly)),
+  }));
+  return batchesWithoutFrontendOnlyActions;
 }
 
 export function addVersionNumbers(

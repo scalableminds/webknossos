@@ -72,6 +72,7 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  updateActiveTree,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -307,6 +308,7 @@ function* getAgglomerateSkeletonTracing(
         annotation.tracingStore.url,
         editableMapping.tracingId,
         agglomerateId,
+        annotation.version,
       );
     }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
@@ -379,7 +381,7 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -669,6 +671,10 @@ export function* diffSkeletonTracing(
     );
   }
 
+  if (prevSkeletonTracing.activeTreeId !== skeletonTracing.activeTreeId) {
+    yield updateActiveTree(skeletonTracing);
+  }
+  // Active node id should always have precedence over the tree id, thus set it last.
   if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
     yield updateActiveNode(skeletonTracing);
   }

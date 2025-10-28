@@ -33,6 +33,7 @@ export function makeBasicGroupObject(
     groupId,
     name,
     children,
+    isExpanded: false, // TODOM: check whether this does not change the default behaviour
   };
 }
 

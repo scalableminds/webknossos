@@ -737,6 +737,12 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
+export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
+    method: "DELETE",
+  });
+}
+
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
@@ -2044,9 +2050,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     );
   });
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
+  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
@@ -2088,9 +2092,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
+  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
 
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
@@ -2101,18 +2103,20 @@ export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
+  version: number,
 ): Promise<ArrayBuffer> {
-  return doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams({ token, version: version.toString() });
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
 export async function getMeshfilesForDatasetLayer(

@@ -541,6 +541,10 @@ class SectionLabeler {
     const pos = zoomedPositionToGlobalPosition(outZoomedPosition, this.activeMag);
     return pos;
   }
+
+  getPlane(): OrthoView {
+    return this.plane;
+  }
 }
 
 function eulerToNormal(e: Euler): ThreeVector3 {
@@ -665,13 +669,17 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    const p = this.applyTransform(position);
-    return this.base.getCircleVoxelBuffer2D(p);
+    // const p = this.applyTransform(position);
+    return this.base.getCircleVoxelBuffer2D(position);
   }
 
   getUnzoomedCentroid(): Vector3 {
     const centroid = this.base.getUnzoomedCentroid();
     return this.applyInverseTransform(centroid);
+  }
+
+  getPlane(): OrthoView {
+    return this.mappedPlane;
   }
 }
 

@@ -14,7 +14,7 @@ export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTr
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
-type AddToLayerAction = ReturnType<typeof addToLayerAction>;
+type AddToContourListAction = ReturnType<typeof addToContourListAction>;
 export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
@@ -83,7 +83,7 @@ export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
   | StartEditingAction
-  | AddToLayerAction
+  | AddToContourListAction
   | FloodFillAction
   | PerformMinCutAction
   | FinishEditingAction
@@ -181,9 +181,9 @@ export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
     planeId,
   }) as const;
 
-export const addToLayerAction = (position: Vector3) =>
+export const addToContourListAction = (position: Vector3) =>
   ({
-    type: "ADD_TO_LAYER",
+    type: "ADD_TO_CONTOUR_LIST",
     position,
   }) as const;
 

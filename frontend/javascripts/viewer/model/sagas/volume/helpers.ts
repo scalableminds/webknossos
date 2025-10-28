@@ -10,7 +10,11 @@ import Constants, {
   type Vector2,
   type Vector3,
 } from "viewer/constants";
-import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getDatasetBoundingBox,
+  getLayerByName,
+  getMagInfo,
+} from "viewer/model/accessors/dataset_accessor";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";

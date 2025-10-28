@@ -260,17 +260,17 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     let lastPosition = startEditingAction.position;
-    const channel = yield* actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
+    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
 
     while (true) {
       const currentAction = yield* take(channel);
-      const { addToLayerAction, finishEditingAction } = {
-        addToLayerAction: currentAction.type === "ADD_TO_LAYER" ? currentAction : null,
+      const { addToContourListAction, finishEditingAction } = {
+        addToContourListAction: currentAction.type === "ADD_TO_CONTOUR_LIST" ? currentAction : null,
         finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
       };
       if (finishEditingAction) break;
 
-      if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
+      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 
@@ -281,7 +281,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         continue;
       }
 
-      if (V3.equals(lastPosition, addToLayerAction.position)) {
+      if (V3.equals(lastPosition, addToContourListAction.position)) {
         // The voxel position did not change since the last action (the mouse moved
         // within a voxel). There is no need to do anything.
         continue;
@@ -290,13 +290,13 @@ export function* editVolumeLayerAsync(): Saga<any> {
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing).
-        currentSectionLabeler.updateArea(addToLayerAction.position);
+        currentSectionLabeler.updateArea(addToContourListAction.position);
       }
 
       if (isBrushTool(activeTool)) {
         const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
           lastPosition,
-          addToLayerAction.position,
+          addToContourListAction.position,
         );
 
         if (rectangleVoxelBuffer2D) {
@@ -313,7 +313,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
         yield* call(
           labelWithVoxelBuffer2D,
-          currentSectionLabeler.getCircleVoxelBuffer2D(addToLayerAction.position),
+          currentSectionLabeler.getCircleVoxelBuffer2D(addToContourListAction.position),
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
@@ -322,7 +322,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         );
       }
 
-      lastPosition = addToLayerAction.position;
+      lastPosition = addToContourListAction.position;
     }
 
     yield* call(
@@ -677,7 +677,7 @@ function* maintainContourGeometry(): Saga<void> {
   const { contour } = SceneController;
 
   while (true) {
-    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+    yield* take(["ADD_TO_CONTOUR_LIST", "RESET_CONTOUR"]);
     const isTraceToolActive = yield* select((state) => isTraceTool(state.uiInformation.activeTool));
     const volumeTracing = yield* select(getActiveSegmentationTracing);
 

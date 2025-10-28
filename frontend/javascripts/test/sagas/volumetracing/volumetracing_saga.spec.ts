@@ -39,7 +39,7 @@ const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: tr
 const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
-const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
+const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 
 describe("VolumeTracingSaga", () => {
@@ -167,11 +167,11 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(addToContourListActionFn([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
-    saga.next(addToLayerActionFn([2, 3, 4]));
+    saga.next(addToContourListActionFn([2, 3, 4]));
     saga.next(OrthoViews.PLANE_XY);
-    saga.next(addToLayerActionFn([3, 4, 5]));
+    saga.next(addToContourListActionFn([3, 4, 5]));
     saga.next(OrthoViews.PLANE_XY);
     expect(sectionLabeler.minCoord).toEqual([-1, 0, 1]);
     expect(sectionLabeler.maxCoord).toEqual([5, 6, 7]);
@@ -222,7 +222,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(addToContourListActionFn([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     // Validate that finishLayer was called
     const wroteVoxelsBox = {
@@ -291,7 +291,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(addToContourListActionFn([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     const wroteVoxelsBox = {
       value: false,

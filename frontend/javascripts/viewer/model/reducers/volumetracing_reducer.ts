@@ -37,7 +37,7 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
-  addToLayerReducer,
+  addToContourListReducer,
   createCellReducer,
   hideBrushReducer,
   removeMissingGroupsFromSegments,
@@ -592,8 +592,8 @@ function VolumeTracingReducer(
       return updateDirectionReducer(state, volumeTracing, action.centroid);
     }
 
-    case "ADD_TO_LAYER": {
-      return addToLayerReducer(state, volumeTracing, action.position);
+    case "ADD_TO_CONTOUR_LIST": {
+      return addToContourListReducer(state, volumeTracing, action.position);
     }
 
     case "RESET_CONTOUR": {

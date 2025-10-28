@@ -8,7 +8,7 @@ import { getTransformsForLayer, globalToLayerTransformedPosition } from "viewer/
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
-  addToLayerAction,
+  addToContourListAction,
   finishEditingAction,
   floodFillAction,
   resetContourAction,
@@ -28,7 +28,7 @@ export function handleDrawStart(pos: Point2, plane: OrthoView) {
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
   Store.dispatch(startEditingAction(untransformedPos, plane));
-  Store.dispatch(addToLayerAction(untransformedPos));
+  Store.dispatch(addToContourListAction(untransformedPos));
 }
 
 function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
@@ -54,7 +54,7 @@ export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
   const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
-  Store.dispatch(addToLayerAction(untransformedPos));
+  Store.dispatch(addToContourListAction(untransformedPos));
 }
 export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());

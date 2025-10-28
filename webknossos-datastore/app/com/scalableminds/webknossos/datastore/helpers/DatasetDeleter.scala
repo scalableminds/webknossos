@@ -31,25 +31,26 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
       deleteWithRetry(dataSourcePath, targetPath)
     } else {
       Fox.successful(logger.info(
-        s"Dataset deletion requested for dataset at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
+        s"Dataset deletion requested for dataset $datasetId at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
     }
   }
 
   @tailrec
   private def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0)(
       implicit ec: ExecutionContext): Fox[Unit] =
-    try {
-      val deduplicatedTargetPath =
-        if (retryCount == 0) targetPath else targetPath.resolveSibling(f"${targetPath.getFileName} ($retryCount)")
-      val path = Files.move(sourcePath, deduplicatedTargetPath)
-      if (path == null) {
-        throw new Exception("Deleting dataset failed")
+    if (retryCount > 15) {
+      Fox.failure(s"Deleting dataset failed: too many retries.")
+    } else {
+      try {
+        val deduplicatedTargetPath =
+          if (retryCount == 0) targetPath else targetPath.resolveSibling(f"${targetPath.getFileName} ($retryCount)")
+        Files.move(sourcePath, deduplicatedTargetPath)
+        logger.info(s"Successfully moved dataset from $sourcePath to $targetPath.")
+        Fox.successful(())
+      } catch {
+        case _: java.nio.file.FileAlreadyExistsException => deleteWithRetry(sourcePath, targetPath, retryCount + 1)
+        case e: Exception                                => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
       }
-      logger.info(s"Successfully moved dataset from $sourcePath to $targetPath...")
-      Fox.successful(())
-    } catch {
-      case _: java.nio.file.FileAlreadyExistsException => deleteWithRetry(sourcePath, targetPath, retryCount + 1)
-      case e: Exception                                => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
     }
 
 }

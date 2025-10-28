@@ -37,9 +37,11 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
     }
 
   lazy val s3UploadBucketOpt: Option[String] =
+    // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
     S3UriUtils.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
 
   private lazy val s3UploadEndpoint: URI = {
+    // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
     val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
     new URI(
       "https",

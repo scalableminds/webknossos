@@ -513,8 +513,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datastoreClient <- clientFor(dataset)
       _ <- if (dataset.isVirtual) {
         for {
-          magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
-          attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findPathsUsedOnlyByThisDataset(dataset._id)
+          magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findMagPathsUsedOnlyByThisDataset(dataset._id)
+          attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findAttachmentPathsUsedOnlyByThisDataset(
+            dataset._id)
           pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
           // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
           _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
@@ -551,9 +552,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Full(dataset) =>
           for {
             annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-            _ = datasetDAO
-              .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-              .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+            _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+            _ <- usedStorageService.refreshStorageReportForDataset(dataset)
           } yield ()
         case _ => Fox.successful(())
       }

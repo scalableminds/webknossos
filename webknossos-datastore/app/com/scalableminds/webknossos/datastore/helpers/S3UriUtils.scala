@@ -8,7 +8,9 @@ object S3UriUtils {
 
   def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
-    if (isShortStyle(uri)) { // assume host is omitted from uri, shortcut form s3://bucket/key
+    if (host == null) {
+      None
+    } else if (isShortStyle(uri)) { // assume host is omitted from uri, shortcut form s3://bucket/key
       Some(host)
     } else if (isVirtualHostedStyle(uri)) {
       Some(host.substring(0, host.length - ".s3.amazonaws.com".length))

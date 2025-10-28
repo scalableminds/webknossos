@@ -868,23 +868,25 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       }
     )
 
-  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+  def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {
-      pathsStr <- run(q"""
+      pathsStrOpts <- run(q"""
            SELECT m1.path FROM webknossos.dataset_mags m1
            WHERE m1._dataset = $datasetId
+           AND m1.path IS NOT NULL
            AND NOT EXISTS (
               SELECT m2.path
               FROM webknossos.dataset_mags m2
               WHERE m2._dataset != $datasetId
               AND (
                 m2.path = m1.path
-                OR
-                m2.realpath = m1.realpath
+                OR (
+                  m2.realpath IS NOT NULL AND m2.realpath = m1.realpath
+                )
               )
            )
-              """.as[String])
-      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+              """.as[Option[String]])
+      paths <- pathsStrOpts.flatten.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
   def findDatasetsWithMagsInDir(absolutePath: UPath,
@@ -896,7 +898,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     run(q"""
         SELECT d._id FROM webknossos.dataset_mags m
         JOIN webknossos.datasets d ON m._dataset = d._id
-        WHERE starts_with(m.realpath, $absolutePathWithTrailingSlash)
+        WHERE m.realpath IS NOT NULL
+        AND starts_with(m.realpath, $absolutePathWithTrailingSlash)
         AND d._id != $ignoredDataset
         AND d._datastore = ${dataStore.name.trim}
        """.as[ObjectId])
@@ -1272,7 +1275,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
 
-  def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+  def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {
       pathsStr <- run(q"""
            SELECT a1.path FROM webknossos.dataset_layer_attachments a1

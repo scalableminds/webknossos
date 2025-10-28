@@ -157,9 +157,9 @@ export const tracing: ServerSkeletonTracing = {
   },
   editPositionAdditionalCoordinates: null,
   editRotation: {
-    x: 79.99999570976581,
-    y: 73.99999869555745,
-    z: 4.908922051072295e-7,
+    x: 0,
+    y: 0,
+    z: 0,
   },
   zoomLevel: 2,
   additionalAxes: [],

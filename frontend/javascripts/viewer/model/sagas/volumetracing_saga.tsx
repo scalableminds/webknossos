@@ -90,6 +90,7 @@ import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import Dimensions from "../dimensions";
+import { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -237,13 +238,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
     const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
 
-    const w = Dimensions.thirdDimensionForPlane(startEditingAction.planeId);
     const currentSectionLabeler = yield* call(
       createSectionLabeler,
       volumeTracing,
-      window.hardPlaneId ?? startEditingAction.planeId,
+      startEditingAction.planeId,
       labeledMag,
-      startEditingAction.position[w],
+      (thirdDim) => startEditingAction.position[thirdDim],
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -364,7 +364,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 }
 
 export function* finishSectionLabeler(
-  layer: SectionLabeler,
+  layer: SectionLabeler | TransformedSectionLabeler,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,

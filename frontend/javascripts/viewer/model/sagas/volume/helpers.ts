@@ -28,9 +28,13 @@ import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
-import SectionLabeler, { type VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
-import { Model } from "viewer/singletons";
+import SectionLabeler, {
+  TransformedSectionLabeler,
+  type VoxelBuffer2D,
+} from "viewer/model/volumetracing/section_labeling";
+import { Model, Store } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
+import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -284,13 +288,23 @@ export function* labelWithVoxelBuffer2D(
   }
 }
 
-export function* createSectionLabeler(
+export function createSectionLabeler(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledMags: Vector3,
-  thirdDimValue?: number,
-): Saga<SectionLabeler> {
-  const position = yield* select((state) => getFlooredPosition(state.flycam));
-  thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new SectionLabeler(volumeTracing.tracingId, planeId, thirdDimValue, labeledMags);
+  getThirdDimValue: (thirdDim: number) => number,
+): SectionLabeler | TransformedSectionLabeler {
+  const state = Store.getState();
+  const { dataset } = state;
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const layer = getLayerByName(dataset, volumeTracing.tracingId);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+
+  return new TransformedSectionLabeler(
+    volumeTracing.tracingId,
+    planeId,
+    getThirdDimValue,
+    labeledMags,
+    segmentationTransforms,
+  );
 }

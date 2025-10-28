@@ -372,7 +372,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       volumeTracing,
       activeViewport,
       labeledMag,
-      relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
+      (thirdDim) => relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
     );
     interpolationVoxelBuffers[targetOffsetW] = sectionLabeler.createVoxelBuffer2D(
       V2.floor(

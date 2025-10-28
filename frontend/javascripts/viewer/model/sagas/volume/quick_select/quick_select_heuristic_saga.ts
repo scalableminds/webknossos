@@ -517,7 +517,7 @@ export function* finalizeQuickSelectForSlice(
     volumeTracing,
     activeViewport,
     labeledMag,
-    w,
+    () => w, // todop
   );
   const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = sectionLabeler.createVoxelBuffer2D(

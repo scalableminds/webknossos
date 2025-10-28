@@ -22,7 +22,7 @@ import {
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
-import { stringToColor } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
@@ -287,6 +287,11 @@ class DatasetRenderer {
     return DatasetRenderer.getRowKey(this.data);
   }
 
+  renderStorageColumn(): React.ReactNode {
+    return this.data.usedStorageBytes != null
+      ? formatCountToDataAmountUnit(this.data.usedStorageBytes, true)
+      : null;
+  }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
@@ -387,6 +392,9 @@ class FolderRenderer {
         </div>
       </>
     );
+  }
+  renderStorageColumn(): React.ReactNode {
+    return null;
   }
   renderCreationDateColumn(): React.ReactNode {
     return null;
@@ -604,7 +612,20 @@ class DatasetTable extends React.PureComponent<Props, State> {
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },
-
+      {
+        title: "Size",
+        key: "size",
+        width: 120,
+        render: (_: any, rowRenderer: RowRenderer) => {
+          return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
+        },
+        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+          isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
+            ? rowRenderer.data.usedStorageBytes
+            : 0,
+        ),
+        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
+      },
       {
         width: 200,
         title: "Actions",

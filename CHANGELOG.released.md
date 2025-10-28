@@ -38,7 +38,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The tracingstore route `/mapping/:tracingId/agglomerateGraph/:agglomerateId` used by the python client now returns the static fallback agglomerate graph from the datastore in case of volume annotation layers with no editable mapping. [#9013](https://github.com/scalableminds/webknossos/pull/9013)
 
 ### Fixed
-- Change that WEBKNOSSOS takes mapping types more friendly and defaults back to HDF5 in case the type is unkown. [#8880](https://github.com/scalableminds/webknossos/pull/8880)
+- Changed that WEBKNOSSOS takes mapping types more friendly and defaults back to HDF5 in case the type is unkown. [#8880](https://github.com/scalableminds/webknossos/pull/8880)
 - Fixed a bug where exploring remote datasets served by WEBKNOSSOS would yield invalid paths. [#8897](https://github.com/scalableminds/webknossos/pull/8897)
 - Fixed multiple mesh related frontend API function (setMeshVisibility, removeMesh, and resetMeshes). Moreover, the mesh visibility is now applied even when changed during loading the mesh. [#8936](https://github.com/scalableminds/webknossos/pull/8936)
 - Fixed WebGL crashes for datasets with many layers and sped up shader compilation time. [#8950](https://github.com/scalableminds/webknossos/pull/8950)

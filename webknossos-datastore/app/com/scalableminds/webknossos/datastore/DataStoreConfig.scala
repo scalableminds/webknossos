@@ -55,9 +55,6 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
-    object ReportUsedStorage {
-      val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
-    }
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }

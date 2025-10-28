@@ -89,6 +89,7 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
+    usedStorageBytes: Option[Long],
 ) {
   def dataSourceId = new DataSourceId(directoryName, owningOrganization)
 }
@@ -288,7 +289,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               d.status,
               d.tags,
               cl.names AS colorLayerNames,
-              sl.names AS segmentationLayerNames
+              sl.names AS segmentationLayerNames,
+              0 AS usedStorageBytes -- // TODO
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -316,7 +318,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            String,
            String,
            String,
-           String)])
+           String,
+           Option[Long])])
     } yield
       rows.toList.map(
         row =>
@@ -334,7 +337,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             tags = parseArrayLiteral(row._11),
             isUnreported = DataSourceStatus.unreportedStatusList.contains(row._10),
             colorLayerNames = parseArrayLiteral(row._12),
-            segmentationLayerNames = parseArrayLiteral(row._13)
+            segmentationLayerNames = parseArrayLiteral(row._13),
+            usedStorageBytes = row._14,
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],

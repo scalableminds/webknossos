@@ -81,6 +81,7 @@ import {
   updateSegmentVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
 import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
@@ -89,8 +90,6 @@ import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-import Dimensions from "../dimensions";
-import { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 

@@ -7,7 +7,6 @@ import Constants, {
   type OrthoView,
   type OverwriteMode,
   OverwriteModeEnum,
-  type Vector2,
   type Vector3,
 } from "viewer/constants";
 import {
@@ -15,7 +14,7 @@ import {
   getLayerByName,
   getMagInfo,
 } from "viewer/model/accessors/dataset_accessor";
-import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
+import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -25,16 +24,16 @@ import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_con
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
-import sampleVoxelMapToMagnification, {
-  applyVoxelMap,
-} from "viewer/model/volumetracing/volume_annotation_sampling";
-import SectionLabeler, {
+import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import {
   TransformedSectionLabeler,
   type VoxelBuffer2D,
 } from "viewer/model/volumetracing/section_labeling";
+import sampleVoxelMapToMagnification, {
+  applyVoxelMap,
+} from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model, Store } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
-import { getTransformsForLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {

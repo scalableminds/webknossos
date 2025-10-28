@@ -5,13 +5,11 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
-import { IdentityTransform } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
+import { isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
 import {
   type AgglomerateState,
@@ -335,10 +333,10 @@ function getDisabledVolumeInfo(state: WebknossosState) {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed = false;
   // todop: set to true if not a 90 deg rotation
-    // segmentationTracingLayer != null &&
-    // getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
-    //   segmentationTracingLayer.tracingId
-    // ] !== IdentityTransform;
+  // segmentationTracingLayer != null &&
+  // getTransformsPerLayer(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)[
+  //   segmentationTracingLayer.tracingId
+  // ] !== IdentityTransform;
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&

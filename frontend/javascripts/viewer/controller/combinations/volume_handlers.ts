@@ -41,6 +41,9 @@ export function handleDrawStart(pos: Point2, plane: OrthoView) {
 }
 
 function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
+  /*
+   * Converts the given position from world space to layer space.
+   */
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const maybeLayer = Model.getVisibleSegmentationLayer();
   if (maybeLayer == null) {

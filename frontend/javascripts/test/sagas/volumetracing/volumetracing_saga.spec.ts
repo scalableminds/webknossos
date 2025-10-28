@@ -238,7 +238,6 @@ describe("VolumeTracingSaga", () => {
         ContourModeEnum.DRAW,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
-        OrthoViews.PLANE_XY,
         wroteVoxelsBox,
       ),
     );
@@ -307,7 +306,6 @@ describe("VolumeTracingSaga", () => {
         ContourModeEnum.DELETE,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
-        OrthoViews.PLANE_XY,
         wroteVoxelsBox,
       ),
     );

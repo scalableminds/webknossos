@@ -253,7 +253,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         contourTracingMode,
         overwriteMode,
         labeledZoomStep,
-        initialViewport,
+        currentSectionLabeler.getPlane(),
         wroteVoxelsBox,
       );
     }
@@ -305,7 +305,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
-            activeViewport,
+            currentSectionLabeler.getPlane(),
             wroteVoxelsBox,
           );
         }
@@ -316,7 +316,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
-          activeViewport,
+          currentSectionLabeler.getPlane(),
           wroteVoxelsBox,
         );
       }
@@ -331,7 +331,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
-      initialViewport,
       wroteVoxelsBox,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
@@ -363,31 +362,30 @@ export function* editVolumeLayerAsync(): Saga<any> {
 }
 
 export function* finishSectionLabeler(
-  layer: SectionLabeler | TransformedSectionLabeler,
+  sectionLabeler: SectionLabeler | TransformedSectionLabeler,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
-  activeViewport: OrthoView,
   wroteVoxelsBox: BooleanBox,
 ): Saga<void> {
-  if (layer == null || layer.isEmpty()) {
+  if (sectionLabeler == null || sectionLabeler.isEmpty()) {
     return;
   }
 
   if (isVolumeDrawingTool(activeTool)) {
     yield* call(
       labelWithVoxelBuffer2D,
-      layer.getFillingVoxelBuffer2D(activeTool),
+      sectionLabeler.getFillingVoxelBuffer2D(activeTool),
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
-      activeViewport,
+      sectionLabeler.getPlane(),
       wroteVoxelsBox,
     );
   }
 
-  yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
+  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
 export function* ensureToolIsAllowedInMag(): Saga<void> {

@@ -177,7 +177,7 @@ export const createCellAction = (activeCellId: number, largestSegmentId: number)
 export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
   ({
     type: "START_EDITING",
-    position,
+    position, // in layer space
     planeId,
   }) as const;
 

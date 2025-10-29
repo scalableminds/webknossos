@@ -760,6 +760,7 @@ export type APIFeatureToggles = {
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
+  readonly bucketSaveWarningThreshold: number;
   readonly defaultToLegacyBindings: boolean;
   readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;

@@ -61,6 +61,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
 {
   "alignmentCostPerGVx": 0.5,
   "allowDeleteDatasets": true,
+  "bucketSaveWarningThreshold": 1000,
   "costPerCreditInDollar": 5.75,
   "costPerCreditInEuro": 5,
   "defaultToLegacyBindings": false,

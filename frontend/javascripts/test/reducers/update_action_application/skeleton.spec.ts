@@ -261,7 +261,9 @@ describe("Update Action Application for SkeletonTracing", () => {
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
     );
-    const updateActionsWithoutUpdatingActiveNode = updateActions.slice(0, 2);
+    const updateActionsWithoutUpdatingActiveNode = updateActions.filter(
+      (a) => a.name !== "updateActiveNode",
+    );
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
         SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(
@@ -273,7 +275,10 @@ describe("Update Action Application for SkeletonTracing", () => {
     let { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
     expect(activeNodeId).toBe(null);
 
-    const updateActiveNodeAction = updateActions[2];
+    const updateActiveNodeAction = updateActions.find((a) => a.name === "updateActiveNode");
+    if (!updateActiveNodeAction) {
+      throw new Error("Expected update actions to include an updateActiveNode action.");
+    }
     const newState4 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
         SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction([updateActiveNodeAction]),

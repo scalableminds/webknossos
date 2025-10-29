@@ -131,7 +131,6 @@ class WKRemoteDataStoreController @Inject()(
         for {
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -149,6 +148,7 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)(GlobalAccessContext)
           }
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
         } yield Ok
       }
     }
@@ -157,11 +157,9 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         val okLabel = if (request.body.ok) "ok" else "not ok"
-        logger.debug(s"Status update from data store '$name'. Status $okLabel")
+        logger.debug(s"Status update from data store ‘$name’. Status $okLabel")
         for {
           _ <- dataStoreDAO.updateUrlByName(name, request.body.url)
-          _ <- dataStoreDAO.updateReportUsedStorageEnabledByName(name,
-                                                                 request.body.reportUsedStorageEnabled.getOrElse(false))
         } yield Ok
       }
   }

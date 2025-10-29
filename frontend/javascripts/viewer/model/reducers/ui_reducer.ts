@@ -21,6 +21,8 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
           theme: state.uiInformation.theme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
+          isWkInitialized: false,
+          isUiReady: false,
         },
       };
     }

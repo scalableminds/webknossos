@@ -8,6 +8,10 @@ function setSceneControllerInitialized() {
   isSceneControllerInitialized = true;
 }
 
+export function setSceneControllerUninitialized() {
+  isSceneControllerInitialized = false;
+}
+
 function* listenForSceneControllerInitialized(): Saga<void> {
   yield* takeEvery("SCENE_CONTROLLER_INITIALIZED", setSceneControllerInitialized);
 }

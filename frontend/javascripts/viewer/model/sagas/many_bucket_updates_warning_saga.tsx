@@ -1,19 +1,20 @@
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
+import { stringToBoolean } from "libs/utils";
 import { takeEvery } from "typed-redux-saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
-const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressBucketWarning";
+const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressManyBucketUpdatesWarning";
 
 function* manyBucketUpdatesWarning(): Saga<void> {
-  let dontShowAgainInThisSession = false;
-  const setDontShowAgainInThisSession = (value: boolean) => {
-    dontShowAgainInThisSession = value;
+  let showWarningToastInThisSession = true;
+  const setShowWarningToastInThisSession = (value: boolean) => {
+    showWarningToastInThisSession = value;
   };
   setInterval(() => {
-    UserLocalStorage.setItem("suppressBucketWarning", "false");
+    UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, "false");
     console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
   }, 120 * 1000);
   //TODO_C dev
@@ -53,11 +54,11 @@ function* manyBucketUpdatesWarning(): Saga<void> {
       </Space>
     );
 
-    const suppressManyBucketUpdatesWarning = UserLocalStorage.getItem(
-      WARNING_SUPPRESSION_USER_STORAGE_KEY,
+    const suppressManyBucketUpdatesWarning = stringToBoolean(
+      UserLocalStorage.getItem(WARNING_SUPPRESSION_USER_STORAGE_KEY) || "false",
     );
 
-    if (suppressManyBucketUpdatesWarning !== "true" && dontShowAgainInThisSession !== true) {
+    if (showWarningToastInThisSession && !suppressManyBucketUpdatesWarning) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);
       Toast.warning(
         <>
@@ -73,7 +74,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
           className: "many-bucket-updates-warning",
         },
       );
-      setDontShowAgainInThisSession(true);
+      setShowWarningToastInThisSession(false);
     } else {
       console.log("suppressing warning toast"); //TODO_C dev
     }

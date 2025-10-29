@@ -47,7 +47,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
+import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 
 const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 32;
@@ -490,13 +490,13 @@ function* loadPrecomputedMeshesInChunksForLod(
 }
 
 export default function* precomputedMeshSaga(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
 
-  yield* call(ensureSceneControllerReady);
-  yield* call(ensureWkReady);
+  yield* call(ensureSceneControllerInitialized);
+  yield* call(ensureWkInitialized);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
 }

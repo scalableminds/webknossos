@@ -12,7 +12,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json._
 
 trait DataLayer {
@@ -22,7 +22,7 @@ trait DataLayer {
   def resolutions: List[Vec3Int]
   def elementClass: ElementClass.Value
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
@@ -70,10 +70,10 @@ trait StaticLayer extends DataLayer {
 
   def dataFormat: DataFormat.Value
 
-  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new DatasetArrayBucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
+    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def bucketProviderCacheKey: String = this.name
 

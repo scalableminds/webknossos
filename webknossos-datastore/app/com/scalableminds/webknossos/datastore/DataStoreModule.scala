@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.datastore.services.segmentindex.{
   ZarrSegmentIndexFileService
 }
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 
 class DataStoreModule extends AbstractModule {
 
@@ -60,6 +60,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ZarrConnectomeFileService]).asEagerSingleton()
     bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
+    bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
     bind(classOf[DSChunkCacheService]).asEagerSingleton()
     bind(classOf[DatasetCache]).asEagerSingleton()
   }

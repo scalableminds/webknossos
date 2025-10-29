@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
 import com.scalableminds.util.tools.Box
 import ucar.ma2.{Array => MultiArray}
@@ -114,7 +114,7 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  override def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
+  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     volumeBucketProvider

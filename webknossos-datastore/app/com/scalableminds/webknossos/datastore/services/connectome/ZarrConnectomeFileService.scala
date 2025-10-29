@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, VoxelyticsZarrArtifactUtils}
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import jakarta.inject.Inject
 import play.api.libs.json.{JsResult, JsValue, Reads}
 
@@ -41,7 +41,8 @@ object ConnectomeFileAttributes extends VoxelyticsZarrArtifactUtils with Connect
   }
 }
 
-class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
+class ZarrConnectomeFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                          chunkCacheService: DSChunkCacheService)
     extends FoxImplicits
     with ConnectomeFileUtils {
   private lazy val openArraysCache = AlfuCache[(ConnectomeFileKey, String), DatasetArray]()
@@ -54,7 +55,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       connectomeFileKey,
       _ =>
         for {
-          groupVaultPath <- dataVaultService.vaultPathFor(connectomeFileKey.attachment)
+          groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(connectomeFileKey.attachment)
           groupHeaderBytes <- (groupVaultPath / ConnectomeFileAttributes.FILENAME_ZARR_JSON)
             .readBytes() ?~> "Could not read connectome file zarr group file."
           connectomeFileAttributes <- JsonHelper
@@ -179,7 +180,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       (connectomeFileKey, zarrArrayName),
       _ =>
         for {
-          groupVaultPath <- dataVaultService.vaultPathFor(connectomeFileKey.attachment)
+          groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(connectomeFileKey.attachment)
           zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
                                        DataSourceId("dummy", "unused"),
                                        "layer",

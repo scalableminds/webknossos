@@ -26,7 +26,7 @@ import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificat
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataStoreRedisStore,
-  DataVaultService,
+  RemoteSourceDescriptorService,
   S3AccessKeyCredential
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -105,7 +105,7 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              dataVaultService: DataVaultService,
+                              remoteSourceDescriptorService: RemoteSourceDescriptorService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
                               slackNotificationService: DSSlackNotificationService,
@@ -499,8 +499,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkPathsInUploadedDatasourcePropertiesJson(unpackToDir: Path, organizationId: String): Fox[Unit] = {
     val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId)
     for {
-      _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
-        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)))
+      _ <- Fox.runOptional(dataSource.toUsable)(
+        usableDataSource =>
+          Fox.fromBool(
+            usableDataSource.allExplicitPaths.forall(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)))
     } yield ()
   }
 

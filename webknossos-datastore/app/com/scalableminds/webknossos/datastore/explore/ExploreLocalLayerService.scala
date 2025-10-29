@@ -6,7 +6,7 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.Json
@@ -44,10 +44,11 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       magDirectories <- tryo(Files.list(path.resolve(layerDirectory)).iterator().asScala.toList).toFox ?~> s"Could not resolve color directory as child of $path"
       layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
         for {
+          remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(UPath.fromLocalPath(dir), None))
           mag <- Vec3Int
             .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
             .toFox ?~> s"invalid mag: ${dir.getFileName}"
-          vaultPath <- dataVaultService.vaultPathFor(dir) ?~> "dataVault.setup.failed"
+          vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
           layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
@@ -133,7 +134,9 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         val subdirs = Files.list(path).iterator().asScala.toList
         if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
       } else layerDirectory
-      vaultPath <- dataVaultService.vaultPathFor(path.resolve(layer)) ?~> "dataVault.setup.failed"
+      fullPath = path.resolve(layer)
+      remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(UPath.fromLocalPath(fullPath), None))
+      vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)(TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)

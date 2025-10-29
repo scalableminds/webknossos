@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
-    dataVaultService: DataVaultService,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val actorSystem: ActorSystem
@@ -130,12 +130,7 @@ class DataSourceService @Inject()(
                              absoluteRawLayerPath: Path,
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
-    val resolvedMagPath = dataVaultService.resolveMagPath(
-      mag,
-      absoluteDatasetPath,
-      absoluteRealLayerPath,
-      absoluteRealLayerPath.getFileName.toString,
-    )
+    val resolvedMagPath = resolveMagPath(absoluteDatasetPath, absoluteRealLayerPath, mag)
     if (resolvedMagPath.isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
     } else {
@@ -151,6 +146,14 @@ class DataSourceService @Inject()(
                   hasLocalData = isDatasetLocal)
     }
   }
+
+  private def resolveMagPath(datasetPath: Path, layerPath: Path, mag: MagLocator): UPath =
+    remoteSourceDescriptorService.resolveMagPath(
+      datasetPath,
+      layerPath,
+      layerPath.getFileName.toString,
+      mag
+    )
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
     if (relativePath.isAbsolute) {
@@ -290,9 +293,10 @@ class DataSourceService @Inject()(
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
-        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
+        _ = dataLayer.mags.foreach(mag =>
+          remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
         _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
-          dataVaultService.removeVaultFromCache(attachment)))
+          remoteSourceDescriptorService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 

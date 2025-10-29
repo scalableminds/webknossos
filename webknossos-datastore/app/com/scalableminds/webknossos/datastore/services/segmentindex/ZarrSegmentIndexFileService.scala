@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   VoxelyticsZarrArtifactUtils
 }
 import ucar.ma2.{Array => MultiArray}
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{JsResult, JsValue, Reads}
 
 import javax.inject.Inject
@@ -49,7 +49,8 @@ object SegmentIndexFileAttributes extends SegmentIndexFileUtils with VoxelyticsZ
   }
 }
 
-class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, chunkCacheService: DSChunkCacheService)
+class ZarrSegmentIndexFileService @Inject()(remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                            chunkCacheService: DSChunkCacheService)
     extends FoxImplicits
     with SegmentIndexFileUtils {
 
@@ -65,7 +66,7 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     for {
-      groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(segmentIndexFileKey.attachment)
       groupHeaderBytes <- (groupVaultPath / SegmentIndexFileAttributes.FILENAME_ZARR_JSON)
         .readBytes() ?~> "Could not read segment index file zarr group file"
       segmentIndexFileAttributes <- JsonHelper
@@ -126,7 +127,7 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[DatasetArray] =
     for {
-      groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
+      groupVaultPath <- remoteSourceDescriptorService.vaultPathFor(segmentIndexFileKey.attachment)
       zarrArray <- Zarr3Array.open(groupVaultPath / zarrArrayName,
                                    DataSourceId("dummy", "unused"),
                                    "layer",

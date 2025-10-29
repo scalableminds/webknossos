@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -31,7 +31,8 @@ object PathStorageUsageResponse {
 
 case class PathPair(original: String, upath: UPath)
 
-class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
+class DSUsedStorageService @Inject()(config: DataStoreConfig,
+                                     remoteSourceDescriptorService: RemoteSourceDescriptorService)
     extends FoxImplicits
     with LazyLogging {
 
@@ -64,7 +65,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
                 .map(registeredPath => path.upath.startsWith(registeredPath))
                 .getOrElse(false)))
       vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
-        dataVaultService.vaultPathFor(pathPair.upath))
+        remoteSourceDescriptorService.vaultPathFor(pathPair.upath))
       usedBytes <- Fox.fromFuture(
         Fox.serialSequence(vaultPathsForPathPairsToMeasure)(vaultPath => vaultPath.getUsedStorageBytes))
       pathPairsWithStorageUsedBox = pathPairsToMeasure.zip(usedBytes)

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
-import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, CredentializedUPath}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -85,7 +85,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         .toFox ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(upath)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
-      remotePath <- dataVaultService.vaultPathFor(CredentializedUPath(upath, credentialOpt)) ?~> "dataVault.setup.failed"
+      remoteSource = RemoteSourceDescriptor(upath, credentialOpt)
+      remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
         List((remotePath, 0)),
         credentialId,

@@ -8,6 +8,7 @@ import type {
   TablePaginationConfig,
 } from "antd/lib/table/interface";
 import classNames from "classnames";
+import FastTooltip from "components/fast_tooltip";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
@@ -288,9 +289,11 @@ class DatasetRenderer {
   }
 
   renderStorageColumn(): React.ReactNode {
-    return this.data.usedStorageBytes != null
-      ? formatCountToDataAmountUnit(this.data.usedStorageBytes, true)
-      : null;
+    return this.data.usedStorageBytes != null ? (
+      <FastTooltip title={"Note that linked and remote layers aren’t measured."}>
+        {formatCountToDataAmountUnit(this.data.usedStorageBytes, true)}
+      </FastTooltip>
+    ) : null;
   }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
@@ -419,6 +422,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   // rendering). That's why it's not included in this.state (also it
   // would lead to infinite loops, too).
   currentPageData: RowRenderer[] = [];
+  isUserAdminOrDatasetManager: boolean = this.props.isUserAdmin || this.props.isUserDatasetManager;
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: { sortedInfo: SorterResult<string> } | EmptyObject = // Clear the sorting exactly when the search box is initially filled
@@ -471,9 +475,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
-      this.props.isUserAdmin || this.props.isUserDatasetManager
-        ? datasets
-        : datasets.filter((dataset) => dataset.isActive);
+      this.isUserAdminOrDatasetManager ? datasets : datasets.filter((dataset) => dataset.isActive);
 
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
@@ -613,6 +615,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },
       {
+        width: 200,
+        title: "Actions",
+        key: "actions",
+        fixed: "right",
+        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
+      },
+    ];
+    if (this.isUserAdminOrDatasetManager) {
+      const datasetStorageSizeColumn = {
         title: "Size",
         key: "size",
         width: 120,
@@ -624,16 +635,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
             ? rowRenderer.data.usedStorageBytes
             : 0,
         ),
-        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
-      },
-      {
-        width: 200,
-        title: "Actions",
-        key: "actions",
-        fixed: "right",
-        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
-      },
-    ];
+        sortOrder: sortedInfo.columnKey === "size" ? sortedInfo.order : undefined,
+      };
+      columns.splice(2, 0, datasetStorageSizeColumn);
+    }
 
     return (
       <DndProvider backend={HTML5Backend}>

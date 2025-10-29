@@ -324,7 +324,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            String,
            String,
            String,
-           Option[Long])])
+           Long)])
     } yield
       rows.toList.map(
         row =>
@@ -344,7 +344,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             colorLayerNames = parseArrayLiteral(row._12),
             segmentationLayerNames = parseArrayLiteral(row._13),
             // Only include usedStorage for datasets of your own organization.
-            usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else None,
+            usedStorageBytes = if (requestingUserOrga.contains(row._3) && row._14 > 0) Some(row._14) else None,
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],

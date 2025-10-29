@@ -184,16 +184,6 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
     // < 2 check to avoid deleting “authority” (hostname:port)
     if (segments.length < 2) this else RemoteUPath(scheme, segments.dropRight(1))
 
-  def parents: Seq[RemoteUPath] = {
-    val listBuffer = ListBuffer[RemoteUPath]()
-    var current = this
-    while (current.segments.length >= 2) {
-      listBuffer.addOne(current)
-      current = current.parent
-    }
-    listBuffer.toSeq
-  }
-
   override def getScheme: Option[String] = Some(scheme)
 
   override def toRemoteUriUnsafe: URI = new URI(toString)
@@ -207,8 +197,11 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def toAbsolute: UPath = this
 
   def startsWith(other: UPath): Boolean = other match {
-    case otherRemote: RemoteUPath =>
-      this.normalize.parents.contains(otherRemote.normalize)
+    case otherRemote: RemoteUPath => {
+      val thisNormalized = this.normalize
+      val otherNormalized = otherRemote.normalize
+      thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherNormalized.segments)
+    }
     case _ => false
   }
 

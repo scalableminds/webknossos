@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
-import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, DataVaultService}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -94,7 +94,7 @@ object CancelUploadInformation {
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
-                              remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                              dataVaultService: DataVaultService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
                               managedS3Service: ManagedS3Service,
@@ -489,10 +489,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkPathsInUploadedDatasourcePropertiesJson(unpackToDir: Path, organizationId: String): Fox[Unit] = {
     val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId)
     for {
-      _ <- Fox.runOptional(dataSource.toUsable)(
-        usableDataSource =>
-          Fox.fromBool(
-            usableDataSource.allExplicitPaths.forall(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)))
+      _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
+        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)))
     } yield ()
   }
 

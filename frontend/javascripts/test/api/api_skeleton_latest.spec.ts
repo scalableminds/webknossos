@@ -45,7 +45,6 @@ function applyRotationInFlycamReducerSpace(
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "skeleton", undefined, {
-      dontDispatchWkReady: true,
       dontDispatchWkInitialized: true,
     });
   });

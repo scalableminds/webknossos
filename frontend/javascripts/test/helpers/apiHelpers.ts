@@ -51,6 +51,7 @@ import {
 import {
   resetStoreAction,
   restartSagaAction,
+  uiReadyAction,
   wkInitializedAction,
 } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
@@ -406,7 +407,7 @@ export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
   applyChangesToModelData?: ModelModifyingFun,
-  options?: { dontDispatchWkReady?: boolean; dontDispatchWkInitialized?: boolean },
+  options?: { dontDispatchWkInitialized?: boolean },
 ): Promise<void> {
   /*
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.

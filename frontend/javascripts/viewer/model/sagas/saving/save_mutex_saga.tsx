@@ -32,7 +32,7 @@ import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_act
 import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "../ready_sagas";
+import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
@@ -117,7 +117,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
    * This saga is directly called by the root saga.
    *
    */
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   // If the user is potentially allowed to update the annotation, start mutex fetching procedure.
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) {

@@ -231,18 +231,19 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,
-                               isUnreported: Option[Boolean] = None,
-                               organizationIdOpt: Option[String] = None,
-                               folderIdOpt: Option[ObjectId] = None,
-                               uploaderIdOpt: Option[ObjectId] = None,
-                               searchQuery: Option[String] = None,
-                               requestingUserIdOpt: Option[ObjectId] = None,
-                               includeSubfolders: Boolean = false,
-                               statusOpt: Option[String] = None,
-                               createdSinceOpt: Option[Instant] = None,
-                               limitOpt: Option[Int] = None,
-  )(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  def findAllCompactWithSearch(
+      isActiveOpt: Option[Boolean] = None,
+      isUnreported: Option[Boolean] = None,
+      organizationIdOpt: Option[String] = None,
+      folderIdOpt: Option[ObjectId] = None,
+      uploaderIdOpt: Option[ObjectId] = None,
+      searchQuery: Option[String] = None,
+      requestingUserIdOpt: Option[ObjectId] = None,
+      includeSubfolders: Boolean = false,
+      statusOpt: Option[String] = None,
+      createdSinceOpt: Option[Instant] = None,
+      limitOpt: Option[Int] = None,
+      requestingUserOrga: Option[String] = None)(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
                                                       isUnreported,
@@ -290,7 +291,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               d.tags,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames,
-              0 AS usedStorageBytes -- // TODO
+              COALESCE(magStorage.storage, 0) + COALESCE(attachmentStorage.storage, 0) AS usedStorageBytes
             FROM
             (SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery) d
             JOIN webknossos.organizations o
@@ -303,6 +304,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               ON d._id = cl._dataset
             LEFT JOIN (SELECT _dataset, ARRAY_AGG(name ORDER BY name) AS names FROM webknossos.dataset_layers WHERE category = 'segmentation' GROUP BY _dataset) sl
               ON d._id = sl._dataset
+            LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_mags GROUP BY _dataset) magStorage
+              ON d._id = magStorage._dataset
+            LEFT JOIN (SELECT _dataset, COALESCE(SUM(usedStorageBytes), 0) AS storage FROM webknossos.organization_usedStorage_attachments GROUP BY _dataset) attachmentStorage
+              ON d._id = attachmentStorage._dataset
             """
       rows <- run(
         query.as[
@@ -338,7 +343,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             isUnreported = DataSourceStatus.unreportedStatusList.contains(row._10),
             colorLayerNames = parseArrayLiteral(row._12),
             segmentationLayerNames = parseArrayLiteral(row._13),
-            usedStorageBytes = row._14,
+            // Only include usedStorage for datasets of your own organization.
+            usedStorageBytes = if (requestingUserOrga.contains(row._3)) row._14 else None,
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],

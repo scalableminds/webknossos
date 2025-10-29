@@ -421,6 +421,19 @@ program
   });
 
 program
+  .command("enable-storage-scan")
+  .description("Activates dataset storage scan in WEBKNOSSOS for the default datastore.")
+  .action(() => {
+    console.log("Activating dataset storage scan in WEBKNOSSOS for the default datastore...");
+    console.log(
+      callPsql(
+        `UPDATE webknossos.datastores SET reportUsedStorageEnabled = TRUE WHERE name = 'localhost'`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
   .command("dump-schema <schemaDir>")
   .description("Dumps current schema into a folder")
   .action((schemaDir) => {

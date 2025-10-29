@@ -91,7 +91,7 @@ import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "v
 import { getCurrentMag } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
-import { ensureWkReady } from "../ready_sagas";
+import { ensureWkInitialized } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
@@ -112,7 +112,7 @@ export const PROOFREADING_BUSY_REASON = "Proofreading in progress";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],

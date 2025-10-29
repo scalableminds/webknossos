@@ -79,7 +79,7 @@ import type { Action } from "../../actions/actions";
 import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
-import { ensureWkReady } from "../ready_sagas";
+import { ensureWkInitialized } from "../ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -146,9 +146,9 @@ export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
   };
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",

@@ -23,7 +23,7 @@ import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/v
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type {
   Mapping,
@@ -309,7 +309,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 export const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 
 function* watchForNewerAnnotationVersion(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   const channel = yield* actionChannel(
     ["ENSURE_HAS_NEWEST_VERSION"],

@@ -30,7 +30,7 @@ import { getLastActiveLayout, getLayoutConfig } from "viewer/view/layouting/layo
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
 
@@ -176,7 +176,7 @@ export function* warnAboutSegmentationZoom(): Saga<never> {
     }
   }
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();

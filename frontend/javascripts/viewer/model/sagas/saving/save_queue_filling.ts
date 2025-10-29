@@ -23,7 +23,7 @@ import {
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   type UpdateActionWithoutIsolationRequirement,
@@ -45,7 +45,7 @@ import type { BatchedAnnotationInitializationAction } from "../../actions/annota
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,
 ): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   while (true) {
     let prevFlycam = yield* select((state) => state.flycam);
@@ -95,7 +95,7 @@ export function* setupSavingForTracingType(
   }
   let prevTracing = yield* getTracing();
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   const actionBuffer = buffers.expanding<Action>();
   const tracingActionChannel = yield* actionChannel(

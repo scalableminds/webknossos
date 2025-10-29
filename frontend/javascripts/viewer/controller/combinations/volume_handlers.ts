@@ -137,9 +137,22 @@ export function handlePickCellFromGlobalPosition(
   if (segmentId === 0) {
     return;
   }
-  Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
-
   const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+
+  const positionInLayerSpace =
+    visibleSegmentationLayer != null
+      ? globalToLayerTransformedPosition(
+          globalPos,
+          visibleSegmentationLayer.name,
+          "segmentation",
+          Store.getState(),
+        )
+      : null;
+
+  Store.dispatch(
+    setActiveCellAction(segmentId, positionInLayerSpace || globalPos, additionalCoordinates),
+  );
+
   if (visibleSegmentationLayer == null) {
     return;
   }

@@ -92,30 +92,37 @@ class DataSourceService @Inject()(
   }
 
   private def scanRealPaths(dataSources: List[DataSource], verbose: Boolean): Seq[DataSourcePathInfo] = {
-    val magPathInfosAndFailures = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
-    logRealPathScanFailures(magPathInfosAndFailures, verbose)
-    magPathInfosAndFailures.flatMap {
-      case (ds, (magPathInfos, _)) if magPathInfos.nonEmpty => Some(DataSourcePathInfo(ds.id, magPathInfos, Seq.empty))
-      case _                                                => None
+    val pathInfosAndFailures = dataSources.map(ds => (ds, determineMagRealPathsForDataSource(ds)))
+    logRealPathScanFailures(pathInfosAndFailures, verbose)
+    pathInfosAndFailures.flatMap {
+      case (ds, (magPathInfos, attachmentPathInfos, _)) if magPathInfos.nonEmpty =>
+        Some(DataSourcePathInfo(ds.id, magPathInfos, attachmentPathInfos))
+      case _ => None
     }
   }
 
-  private def logRealPathScanFailures(infosByDatasource: Seq[(DataSource, (Seq[RealPathInfo], Seq[Failure]))],
-                                      verbose: Boolean) = {} // TODO
+  private def logRealPathScanFailures(
+      infosByDatasource: Seq[(DataSource, (Seq[RealPathInfo], Seq[RealPathInfo], Seq[Failure]))],
+      verbose: Boolean): Unit = {} // TODO
 
-  // TODO attachments
-  private def determineMagRealPathsForDataSource(dataSource: DataSource): (Seq[RealPathInfo], Seq[Failure]) = {
+  private def determineMagRealPathsForDataSource(
+      dataSource: DataSource): (Seq[RealPathInfo], Seq[RealPathInfo], Seq[Failure]) = {
     val datasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
     dataSource.toUsable match {
       case Some(usableDataSource) =>
-        val resultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
+        val magResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
           dataLayer.mags.map(mag => getMagPathInfo(datasetPath, dataLayer.name, mag))
         }
-        (resultBoxes.flatten, resultBoxes.flatMap {
+        val attachmentResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
+          dataLayer.attachments
+            .flatMap(_.allAttachments)
+            .map(attachment => getAttachmentPathInfo(datasetPath, attachment))
+        }
+        (magResultBoxes.flatten, attachmentResultBoxes.flatten, (magResultBoxes ++ attachmentResultBoxes).flatMap {
           case f: Failure => Some(f)
           case _          => None
         })
-      case None => (Seq.empty, Seq.empty)
+      case None => (Seq.empty, Seq.empty, Seq.empty)
     }
   }
 
@@ -136,6 +143,19 @@ class DataSourceService @Inject()(
       } yield RealPathInfo(resolvedMagPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
     }
   }
+
+  private def getAttachmentPathInfo(datasetPath: Path, attachment: LayerAttachment): Box[RealPathInfo] =
+    // TODO is attachmentPath always absolute?
+    if (attachment.path.isRemote) {
+      Full(RealPathInfo(attachment.path, attachment.path, hasLocalData = false))
+    } else {
+      for {
+        attachmentPath <- attachment.path.toLocalPath
+        realAttachmentPath <- tryo(attachmentPath.toRealPath())
+        // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
+        isDatasetLocal = realAttachmentPath.startsWith(datasetPath.toAbsolutePath)
+      } yield RealPathInfo(realAttachmentPath, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
+    }
 
   private def logFoundDatasources(foundInboxSources: Seq[DataSource],
                                   verbose: Boolean,

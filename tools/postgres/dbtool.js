@@ -430,6 +430,11 @@ program
         `UPDATE webknossos.datastores SET reportUsedStorageEnabled = TRUE WHERE name = 'localhost'`,
       ),
     );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET lastStorageScanTime = '1970-01-01T00:00:00.000Z' WHERE _id = 'sample_organization'`,
+      ),
+    );
     console.log("✨✨ Done");
   });
 

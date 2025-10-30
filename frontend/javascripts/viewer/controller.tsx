@@ -311,12 +311,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode, isUiReady, isWkInitialized } = this.props;
+    const { user, viewMode, isWkInitialized } = this.props;
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
 
     let cover = null;
     // Show the brain spinner during loading and until the UI is ready
-    if (status === "loading" || (status === "loaded" && !isUiReady)) {
+    if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
       return (

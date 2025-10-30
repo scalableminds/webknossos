@@ -622,7 +622,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       },
     ];
-    if (this.isUserAdminOrDatasetManager && context) {
+    if (
+      this.isUserAdminOrDatasetManager &&
+      context.usedStorageInOrga != null &&
+      context.usedStorageInOrga > 0
+    ) {
       const datasetStorageSizeColumn = {
         title: "Used Storage",
         key: "storage",

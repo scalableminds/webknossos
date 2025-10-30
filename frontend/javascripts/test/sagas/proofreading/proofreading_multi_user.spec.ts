@@ -44,7 +44,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
-    backendMock.planVersionInjection(7, [
+    backendMock.planVersionInjection(5, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -67,6 +67,7 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -83,7 +84,6 @@ describe("Proofreading (Multi User)", () => {
       expect(mapping1).toEqual(initialMapping);
       // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
       // TODOM: Support integrating this action, if it originates from this user.
-      yield put(setOthersMayEditForAnnotationAction(true));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(

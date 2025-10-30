@@ -87,6 +87,12 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
+  def baseDirAbsolute: Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+      Fox.successful(Ok(Json.toJson(dataSourceService.dataBaseDir.toAbsolutePath.toString)))
+    }
+  }
+
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId
@@ -406,24 +412,24 @@ class DataSourceController @Inject()(
 
   def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+          dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- if (dataSourceService.existsOnDisk(dataSourceId)) {
-            for {
-              _ <- dataSourceService.deleteOnDisk(
-                dataSourceId.organizationId,
-                dataSourceId.directoryName,
-                Some(datasetId),
-                reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
-            } yield ()
-          } else
-            for {
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId)
-              _ = logger.warn(s"Tried to delete dataset ${dataSource.id} ($datasetId), but is not present on disk.")
-            } yield ()
+          _ <- dataSourceService.deleteOnDisk(
+            datasetId,
+            dataSourceId.organizationId,
+            dataSourceId.directoryName,
+            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+        } yield Ok
+      }
+    }
+
+  def deletePaths(): Action[Seq[UPath]] =
+    Action.async(validateJson[Seq[UPath]]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.deletePathsFromDiskOrManagedS3(request.body)
         } yield Ok
       }
     }

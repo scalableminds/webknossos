@@ -11,9 +11,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.io.Directory
 import scala.util.Random
 
-object PathUtils extends PathUtils
-
-trait PathUtils extends LazyLogging {
+object PathUtils extends LazyLogging {
 
   private def directoryFilter(path: Path): Boolean =
     Files.isDirectory(path) && !Files.isHidden(path)

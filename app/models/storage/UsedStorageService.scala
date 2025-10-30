@@ -16,7 +16,6 @@ import models.dataset.{
   Dataset,
   DatasetLayerAttachmentsDAO,
   DatasetMagsDAO,
-  DatasetService,
   StorageRelevantDataLayerAttachment,
   WKRemoteDataStoreClient
 }
@@ -34,7 +33,6 @@ import scala.concurrent.duration._
 class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
-                                   datasetService: DatasetService,
                                    dataStoreDAO: DataStoreDAO,
                                    datasetMagDAO: DatasetMagsDAO,
                                    datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
@@ -213,7 +211,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      dataStore <- datasetService.dataStoreFor(dataset)
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
       _ <- if (dataStore.reportUsedStorageEnabled) {
         for {
           organization <- organizationDAO.findOne(dataset._organization)

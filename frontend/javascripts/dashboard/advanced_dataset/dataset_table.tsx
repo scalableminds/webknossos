@@ -289,11 +289,11 @@ class DatasetRenderer {
   }
 
   renderStorageColumn(): React.ReactNode {
-    return this.data.usedStorageBytes != null ?
-      (<FastTooltip title={"Note that linked and remote layers aren’t measured."}>
-        ? formatCountToDataAmountUnit(this.data.usedStorageBytes, true)
+    return this.data.usedStorageBytes != null ? (
+      <FastTooltip title={"Note that linked and remote layers aren’t measured."}>
+        {formatCountToDataAmountUnit(this.data.usedStorageBytes, true)}
       </FastTooltip>
-      ) : null;
+    ) : null;
   }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
@@ -429,11 +429,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
       // (searchQuery changes from empty string to non-empty string)
       nextProps.searchQuery !== "" && prevState.prevSearchQuery === ""
         ? {
-          sortedInfo: {
-            columnKey: "",
-            order: "ascend",
-          },
-        }
+            sortedInfo: {
+              columnKey: "",
+              order: "ascend",
+            },
+          }
         : {};
     return {
       prevSearchQuery: nextProps.searchQuery,
@@ -566,20 +566,20 @@ class DatasetTable extends React.PureComponent<Props, State> {
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
       isSearchQueryLongEnough && sortedInfo.columnKey == null
         ? _.chain([...filteredDataSource, ...activeSubfolders])
-          .map((datasetOrFolder) => {
-            const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
-            const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
-            const rankCoefficient = 1 - rank / filteredDataSource.length;
-            const coefficient = (diceCoefficient + rankCoefficient) / 2;
-            return {
-              datasetOrFolder,
-              coefficient,
-            };
-          })
-          .sortBy("coefficient")
-          .map(({ datasetOrFolder }) => datasetOrFolder)
-          .reverse()
-          .value()
+            .map((datasetOrFolder) => {
+              const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
+              const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
+              const rankCoefficient = 1 - rank / filteredDataSource.length;
+              const coefficient = (diceCoefficient + rankCoefficient) / 2;
+              return {
+                datasetOrFolder,
+                coefficient,
+              };
+            })
+            .sortBy("coefficient")
+            .map(({ datasetOrFolder }) => datasetOrFolder)
+            .reverse()
+            .value()
         : dataSourceSortedByRank;
     const sortedDataSourceRenderers: RowRenderer[] = sortedDataSource.map((record) =>
       isRecordADataset(record)
@@ -652,7 +652,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
           editFolder={
-            folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => { }
+            folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
           }
         />
         <FixedExpandableTable

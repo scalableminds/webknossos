@@ -67,7 +67,7 @@ class TSRemoteDatastoreClient @Inject()(
         .addQueryParam("width", 1)
         .addQueryParam("height", 1)
         .addQueryParam("depth", 1)
-        .addQueryParam("mag", mag.toMagLiteral())
+        .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
         .silent
         .getWithBytesResponse
     } yield result

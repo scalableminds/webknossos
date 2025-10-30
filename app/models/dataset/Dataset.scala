@@ -31,7 +31,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   ThinPlateSplineCorrespondences,
   DataLayerAttachments => AttachmentWrapper
 }
-import com.scalableminds.webknossos.datastore.services.MagPathInfo
+import com.scalableminds.webknossos.datastore.services.RealPathInfo
 import com.scalableminds.webknossos.schema.Tables._
 import controllers.DatasetUpdateParameters
 
@@ -824,16 +824,15 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 
-  def updateMagPathsForDataset(datasetId: ObjectId, magPathInfos: List[MagPathInfo]): Fox[Unit] =
+  // Note: also see attachments
+  def updateMagRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      updateQueries = magPathInfos.map(magPathInfo => {
-        val magLiteral = s"(${magPathInfo.mag.x}, ${magPathInfo.mag.y}, ${magPathInfo.mag.z})"
+      updateQueries = realPathInfos.map(realPathInfo => {
         q"""UPDATE webknossos.dataset_mags
-                 SET path = ${magPathInfo.path}, realPath = ${magPathInfo.realPath}, hasLocalData = ${magPathInfo.hasLocalData}
-                 WHERE _dataset = $datasetId
-                  AND dataLayerName = ${magPathInfo.layerName}
-                  AND mag = CAST($magLiteral AS webknossos.vector3)""".asUpdate
+            SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
+            WHERE _dataset = $datasetId
+            AND path = ${realPathInfo.path}""".asUpdate
       })
       composedQuery = DBIO.sequence(updateQueries)
       _ <- run(
@@ -1130,7 +1129,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
-      rows <- run(q"""SELECT _dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending
+      rows <- run(
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
@@ -1169,6 +1169,24 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
+
+  // Note: also see mags.
+  def updateAttachmentRealPathsForDataset(datasetId: ObjectId, realPathInfos: Seq[RealPathInfo]): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      updateQueries = realPathInfos.map(realPathInfo => {
+        q"""UPDATE webknossos.dataset_layer_attachments
+            SET realPath = ${realPathInfo.realPath}, hasLocalData = ${realPathInfo.hasLocalData}
+            WHERE _dataset = $datasetId
+            AND path = ${realPathInfo.path}""".asUpdate
+      })
+      composedQuery = DBIO.sequence(updateQueries)
+      _ <- run(
+        composedQuery.transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
+    } yield ()
 
   def insertPending(datasetId: ObjectId,
                     layerName: String,

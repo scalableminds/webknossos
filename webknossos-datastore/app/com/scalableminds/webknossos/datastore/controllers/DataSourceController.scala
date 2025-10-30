@@ -708,7 +708,9 @@ class DataSourceController @Inject()(
         Some(
           dataSourceService.dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
-            dataSourceId.organizationId))
+            dataSourceId.organizationId,
+            resolveMagPaths = true
+          ))
       } else None
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)

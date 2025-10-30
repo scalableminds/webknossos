@@ -259,7 +259,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const loadTreesAndMergeUpdateActions = context.receivedDataPerSaveRequest[2];
       yield expect(loadTreesAndMergeUpdateActions).toMatchFileSnapshot(
-        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/performMergeTreesProofreading_updateActions.json",
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_merge_trees_proofreading_update_actions.json",
       );
     });
 
@@ -429,7 +429,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
       yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
-        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/loadAgglomerateTreeUpdateActions.json",
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/load_agglomerate_tree_update_actions.json",
       );
     });
 
@@ -590,7 +590,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
       yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
-        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/performMinCutWithNodesProofreading.json",
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_min_cut_with_nodes_proofreading.json",
       );
     });
 

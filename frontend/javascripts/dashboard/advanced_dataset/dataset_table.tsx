@@ -422,7 +422,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
   // rendering). That's why it's not included in this.state (also it
   // would lead to infinite loops, too).
   currentPageData: RowRenderer[] = [];
-  isUserAdminOrDatasetManager: boolean = this.props.isUserAdmin || this.props.isUserDatasetManager;
+  getIsUserAdminOrDatasetManager(): boolean {
+    return this.props.isUserAdmin || this.props.isUserDatasetManager;
+  }
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: { sortedInfo: SorterResult<string> } | EmptyObject = // Clear the sorting exactly when the search box is initially filled
@@ -475,7 +477,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
-      this.isUserAdminOrDatasetManager ? datasets : datasets.filter((dataset) => dataset.isActive);
+      this.getIsUserAdminOrDatasetManager()
+        ? datasets
+        : datasets.filter((dataset) => dataset.isActive);
 
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
@@ -623,7 +627,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       },
     ];
     if (
-      this.isUserAdminOrDatasetManager &&
+      this.getIsUserAdminOrDatasetManager() &&
       context.usedStorageInOrga != null &&
       context.usedStorageInOrga > 0
     ) {

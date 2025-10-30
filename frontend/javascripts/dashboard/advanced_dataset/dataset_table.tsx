@@ -624,9 +624,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
     ];
     if (this.isUserAdminOrDatasetManager && context) {
       const datasetStorageSizeColumn = {
-        title: "Size",
-        key: "size",
-        width: 120,
+        title: "Used Storage",
+        key: "storage",
+        width: 150,
         render: (_: any, rowRenderer: RowRenderer) => {
           return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
         },
@@ -635,7 +635,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             ? rowRenderer.data.usedStorageBytes
             : 0,
         ),
-        sortOrder: sortedInfo.columnKey === "size" ? sortedInfo.order : undefined,
+        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
       };
       columns.splice(2, 0, datasetStorageSizeColumn);
     }

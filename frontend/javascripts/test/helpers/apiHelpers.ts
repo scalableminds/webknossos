@@ -51,7 +51,6 @@ import {
 import {
   resetStoreAction,
   restartSagaAction,
-  uiReadyAction,
   wkInitializedAction,
 } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";

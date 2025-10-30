@@ -316,7 +316,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     let cover = null;
     // Show the brain spinner during loading and until the UI is ready
-    if (status === "loading") {
+    if (status === "loading" || (status === "loaded" && !isUiReady)) {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
       return (
@@ -338,7 +338,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    console.error("isWkInitialized", isWkInitialized);
     // If wk is not initialized yet, only render the cover. If it is initialized, start rendering the controllers
     // in the background, hidden by the cover.
     if (!isWkInitialized) {

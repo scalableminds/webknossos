@@ -73,7 +73,6 @@ class PlaneView {
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    console.error("Creating Plane View");
     const { scene } = getSceneController();
     // Initialize main js components
     const cameras = {} as OrthoViewMap<OrthographicCamera>;

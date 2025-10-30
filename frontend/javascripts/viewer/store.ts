@@ -426,9 +426,16 @@ export type AnnotationMutexInformation = {
   readonly blockedByUser: APIUserCompact | null | undefined;
 };
 
-// rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
-// It always has the newest version of this information which is synced with the backend.
-// Unsaved changes should never be part of the RebaseRelevantAnnotationState.
+// RebaseRelevantAnnotationState holds the data required to rebase the
+// current user's local annotation changes onto the latest version from the server.
+//
+// This state should always reflect the most recent annotation version stored,
+// on the server that is known to the user.
+// After successfully pulling and applying the latest updates from the server,
+// it must be updated to match that version.
+//
+// Note: Unsaved local changes should never be included in the RebaseRelevantAnnotationState.
+
 export type RebaseRelevantAnnotationState = {
   readonly annotationVersion: number;
   readonly annotationDescription: string;

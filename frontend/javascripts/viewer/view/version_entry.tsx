@@ -435,10 +435,10 @@ const descriptionFns: Record<
     };
   },
   // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
-  updateActiveTree: (action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
+  updateActiveTree: (_action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
     return {
-      description: `Updated the active tree id to ${action.value.activeTree} and node id to ${action.value.activeNode}`,
-      icon: <EditOutlined />,
+      description: "",
+      icon: <div />,
     };
   },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {

@@ -155,15 +155,14 @@ export function* setupSavingForTracingType(
       (state) =>
         state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    // if (!allowUpdate) continue; TODOM: remove line
-    // Ignore changes while rebasing as during this time actions are replayed to the rebased state to
-    // reapply the changes made by the user.
+    // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
+    // Therefore, these actions were already added to the save queue and should not be added again.
     const isRebasing = yield* select(
       (state) => state.save.rebaseRelevantServerAnnotationState.isRebasing,
     );
     if (!allowUpdate || isRebasing) {
       if (ensureAction) {
-        console.error("ignoring ensure action due to currently rebasing");
+        console.log("Ignoring ensure action due to current rebase operation.");
         yield* call(resolveEnsureDiffedActions);
       }
       continue;

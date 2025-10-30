@@ -134,6 +134,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchForOthersMayEditChange, mutexLogicState);
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
+  yield* fork(watchForHasEditableMappingChange, mutexLogicState);
   yield* takeEvery("ENSURE_HAS_ANNOTATION_MUTEX", resolveEnsureHasAnnotationMutexActions);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
@@ -158,10 +159,7 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
   mutexLogicState.fetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
-  console.log(
-    "Acquiring mutex mutexLogicState.onlyRequiredOnSave",
-    mutexLogicState.fetchingStrategy,
-  );
+  console.log("Acquiring mutex fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(acquireMutexUponEnsureHasAnnotationMutexAction, mutexLogicState);
   } else {
@@ -355,22 +353,23 @@ function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void>
     }
 
     // TODO: also check for livecollab flag and editable mapping locked and so on.
-    const isToolWithAdHocSupportActive = TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(newToolId);
-    const isCurrentlyAdHocFetching =
-      mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc;
-    if (isToolWithAdHocSupportActive !== isCurrentlyAdHocFetching) {
-      mutexLogicState.fetchingStrategy = isToolWithAdHocSupportActive
-        ? MutexFetchingStrategy.AdHoc
-        : MutexFetchingStrategy.Continuously;
-      yield* call(restartMutexAcquiringSaga, mutexLogicState);
-    }
+    yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
   yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
+}
+
+function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Saga<void> {
+  function* reactToHasEditableMappingChange(): Saga<void> {
+    yield* call(restartMutexAcquiringSaga, mutexLogicState);
+  }
+  yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
 }
 
 function* acquireMutexUponEnsureHasAnnotationMutexAction(
   mutexLogicState: MutexLogicState,
 ): Saga<never> {
+  // While the fetching strategy is ad hoc, updating should be allowed.
+  yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
   while (true) {
     yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
     // TODOM: ensure tryAcquireMutexForSaving works correctly even when mutex not received initially.

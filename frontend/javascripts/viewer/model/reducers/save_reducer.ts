@@ -212,7 +212,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
 
     case "PREPARE_REBASING": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
-      console.error("Setting isRebasing = true");
       return update(state, {
         annotation: {
           version: {
@@ -239,7 +238,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "FINISHED_REBASING": {
-      console.error("Setting isRebasing = false");
       return update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {

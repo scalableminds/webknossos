@@ -474,17 +474,31 @@ export function updateActiveNode(tracing: {
   } as const;
 }
 
-// Should never be sent to the backend as the backend does neither understand this action
-// nor does it have the property activeTreeId for a skeletonTracing.
-// Only used to correctly keep track of the active tree property during rebasing.
-// Reason: There is a mismatch between the frontend store actions and the update actions.
-// The store action createTree also sets the activeNodeId and activeTreeId, but the update action createTree does not.
-// If we would change that via also applying activeNodeId and activeTreeId for createTree update actions
-// this breaks the deleteEdge store action: This store action maps to the following update actions:
-//  createTree, moveTreeComponents, deleteEdge. Where the createTree update action should not
-// set activeNodeId and activeTreeId when applied. Therefore, this action tracks whether the activeTreeId should change.
-// Tracking of activeNodeId is already handled by updateActiveNode (see above). This action is understood by the backend.
-// So no problem there.
+// This action should never be sent to the backend:
+// - The backend does not recognize this action type.
+// - The annotation proto in the backend does have the `activeTreeId` property for a `skeletonTracing`.
+//
+// Purpose:
+// This action exists only to keep track of the `activeTreeId` in the frontend during rebasing.
+//
+// Background:
+// There is a mismatch between frontend redux store actions and backend update actions.
+// The store action `createTree` sets both `activeNodeId` and `activeTreeId`,
+// but the corresponding update action `createTree` from the backend does not.
+// Instead additional update actions are needed to reflect the changes to `activeNodeId` and `activeTreeId`.
+//
+// Why we can’t simply fix this:
+// If we modified the backend `createTree` update action to also apply `activeNodeId` and `activeTreeId`,
+// it would break other logic — for example, the `deleteEdge` store action maps to multiple update actions:
+//   1. `createTree`
+//   2. `moveTreeComponents`
+//   3. `deleteEdge`
+// In that sequence, the `createTree` update action must **not** set `activeNodeId` or `activeTreeId`
+// if an edge was deleted where the active node was not involved. e.g. via frontend api calls or so.
+//
+// Therefore, this special frontend-only update action is used to track whether the `activeTreeId` should change.
+// Thus, the redux action `createTree` maps to the update actions `createTree`, `updateActiveNode` and `updateActiveTree`.
+// (Note: `activeNodeId` changes are already handled by the `updateActiveNode` action, which *is* supported by the backend.)
 export function updateActiveTree(tracing: {
   tracingId: string;
   activeTreeId: number | null | undefined;
@@ -964,7 +978,7 @@ export function splitAgglomerate(
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // agglomerateId is needed in live collab setting to notice changes of loaded agglomerates done by other users.
-    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. It may be undefined in old update actions.
     agglomerateId?: number | undefined;
     // For backwards compatibility reasons,
     // older segments are defined using their positions (and mag)

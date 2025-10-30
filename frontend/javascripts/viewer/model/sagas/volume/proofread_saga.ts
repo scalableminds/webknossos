@@ -548,7 +548,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         mapping: splitMapping,
       }),
     );
-    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
     yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
 
@@ -755,7 +755,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
       mapping: splitMapping,
     }),
   );
-  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
   yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   /* Reload meshes */
@@ -922,7 +922,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(
+    (state) =>
+      state.annotation.restrictions.allowUpdate && state.annotation.isUpdatingCurrentlyAllowed,
+  );
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -1033,7 +1036,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
     );
 
-    // TODO: Fix why external ids are no longer loaded.
     const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
     sourceAgglomerateId = Number(
       (activeMapping.mapping as NumberLikeMap | undefined)?.get(
@@ -1060,7 +1062,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         mapping: splitMapping,
       }),
     );
-    // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+    // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
     yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
     console.log("finished updating the mapping after a min-cut");
@@ -1225,7 +1227,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       mapping: mappingAfterSplit,
     }),
   );
-  // As this split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
+  // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
   yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([

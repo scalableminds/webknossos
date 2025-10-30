@@ -1,17 +1,10 @@
-import type { Vector3 } from "viewer/constants";
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
+
 // This is a class with static methods and constants dealing with drawing
-// lines and filling polygons
-// Macros
-// Constants
-const SMOOTH_LENGTH = 4;
-const SMOOTH_ALPHA = 0.2;
+// lines and filling polygons.
 
 class Drawing {
-  alpha: number = SMOOTH_ALPHA;
-  smoothLength: number = SMOOTH_LENGTH;
-
-  drawHorizontalLine2d(
+  private drawHorizontalLine2d(
     y: number,
     x1: number,
     x2: number,
@@ -91,7 +84,7 @@ class Drawing {
     }
   }
 
-  addNextLine(
+  private addNextLine(
     newY: number,
     isNext: boolean,
     downwards: boolean,
@@ -135,7 +128,7 @@ class Drawing {
     }
   }
 
-  paintBorder(
+  private paintBorder(
     x1: number,
     y1: number,
     x2: number,
@@ -212,19 +205,15 @@ class Drawing {
 
     while (ranges.length) {
       const r = ranges.pop();
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+      if (r == null) {
+        throw new Error("Array is exptected to be not empty.");
+      }
       let minX = r[0];
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       let maxX = r[1];
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       y = r[2];
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const down = r[3] === true;
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const up = r[3] === false;
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const extendLeft = r[4];
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const extendRight = r[5];
 
       if (extendLeft) {
@@ -250,19 +239,15 @@ class Drawing {
           maxX++;
         }
       } else {
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         r[0]--;
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         r[1]++;
       }
 
       if (y < height) {
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'RangeItem | undefined' is not as... Remove this comment to see the full error message
         this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint);
       }
 
       if (y > 0) {
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'RangeItem | undefined' is not as... Remove this comment to see the full error message
         this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint);
       }
     }
@@ -287,40 +272,6 @@ class Drawing {
         }
       }
     }
-  }
-
-  // Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
-  smoothLine(points: Array<Vector3>, callback: (arg0: Vector3) => void): Array<Vector3> {
-    const smoothLength = this.smoothLength || SMOOTH_LENGTH;
-    const a = this.alpha || SMOOTH_ALPHA;
-
-    if (points.length > 2 + smoothLength) {
-      for (let i = 0; i < smoothLength; i++) {
-        const j = points.length - i - 2;
-        const p0 = points[j];
-        const p1 = points[j + 1];
-        const p = [0, 0, 0];
-
-        for (let k = 0; k < 3; k++) {
-          p[k] = p0[k] * (1 - a) + p1[k] * a;
-        }
-
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-        callback(p);
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-        points[j] = p;
-      }
-    }
-
-    return points;
-  }
-
-  setSmoothLength(v: number): void {
-    this.smoothLength = v;
-  }
-
-  setAlpha(v: number): void {
-    this.alpha = v;
   }
 }
 

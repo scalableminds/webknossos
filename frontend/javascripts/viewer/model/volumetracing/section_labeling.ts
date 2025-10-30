@@ -3,12 +3,18 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
+import * as THREE from "three";
+import { type Euler, Matrix3, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
-import Constants, { OrthoViews, Vector3Indicies, Vector2Indicies } from "viewer/constants";
+import Constants, {
+  OrthoViews,
+  Vector3Indices,
+  Vector2Indices,
+  OrthoBaseRotations,
+} from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions from "viewer/model/dimensions";
 import {
   scaleGlobalPositionWithMagnification,
@@ -17,6 +23,11 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
+import {
+  type Transform,
+  invertTransform,
+  transformPointUnscaled,
+} from "../helpers/transformation_helpers";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -25,22 +36,14 @@ import Store from "viewer/store";
   should be applied.
  */
 export class VoxelBuffer2D {
-  map: Uint8Array;
-  width: number;
-  height: number;
-  minCoord2d: Vector2;
-  get3DCoordinate: (arg0: Vector2) => Vector3;
-  getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
+  readonly map: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly minCoord2d: Vector2;
+  readonly getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void;
 
   static empty(): VoxelBuffer2D {
-    return new VoxelBuffer2D(
-      new Uint8Array(0),
-      0,
-      0,
-      [0, 0],
-      () => [0, 0, 0],
-      () => {},
-    );
+    return new VoxelBuffer2D(new Uint8Array(0), 0, 0, [0, 0], () => {});
   }
 
   constructor(
@@ -48,20 +51,27 @@ export class VoxelBuffer2D {
     width: number,
     height: number,
     minCoord2d: Vector2,
-    get3DCoordinate: (arg0: Vector2) => Vector3,
     getFast3DCoordinate: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   ) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
-    this.get3DCoordinate = get3DCoordinate;
     this.getFast3DCoordinate = getFast3DCoordinate;
 
     if (!V2.equals(this.minCoord2d, V2.floor(this.minCoord2d))) {
       throw new Error("Minimum coordinate passed to VoxelBuffer2D is not an integer vector.");
     }
   }
+
+  getTopLeft3DCoord = () => this.get3DCoordinateFromLocal2D([0, 0]);
+  getBottomRight3DCoord = () => this.get3DCoordinateFromLocal2D([this.width, this.height]);
+
+  private get3DCoordinateFromLocal2D = ([x, y]: Vector2) => {
+    const outVar: Vector3 = [0, 0, 0];
+    this.getFast3DCoordinate(x + this.minCoord2d[0], y + this.minCoord2d[1], outVar);
+    return outVar;
+  };
 
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
@@ -142,22 +152,24 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
   }
 }
 
-class VolumeLayer {
+class SectionLabeler {
   /*
-  From the outside, the VolumeLayer accepts only global positions. Internally,
+  From the outside, the SectionLabeler accepts only global positions. Internally,
   these are converted to the actual used mags (activeMag).
   Therefore, members of this class are in the mag space of
   `activeMag`.
   */
-  volumeTracingId: string;
-  plane: OrthoView;
-  thirdDimensionValue: number;
+  readonly volumeTracingId: string;
+  readonly plane: OrthoView;
+  readonly thirdDimensionValue: number;
 
   // Stored in global (but mag-dependent) coordinates:
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
-  activeMag: Vector3;
+  readonly activeMag: Vector3;
+
+  fast3DCoordinateFunction: (coordX: number, coordY: number, out: Vector3 | Float32Array) => void;
 
   constructor(
     volumeTracingId: string,
@@ -172,13 +184,14 @@ class VolumeLayer {
     this.activeMag = activeMag;
     const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
-  }
 
-  addContour(globalPos: Vector3): void {
-    this.updateArea(globalPos);
+    this.fast3DCoordinateFunction = getFast3DCoordinateHelper(this.plane, this.thirdDimensionValue);
   }
 
   updateArea(globalPos: Vector3): void {
+    /*
+     * Adapts minCoord and maxCoord to the given position if necessary.
+     */
     const pos = scaleGlobalPositionWithMagnification(globalPos, this.activeMag);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
@@ -187,7 +200,7 @@ class VolumeLayer {
       minCoord = _.clone(pos);
     }
 
-    for (const i of Vector3Indicies) {
+    for (const i of Vector3Indices) {
       minCoord[i] = Math.min(minCoord[i], Math.floor(pos[i]) - 2);
       maxCoord[i] = Math.max(maxCoord[i], Math.ceil(pos[i]) + 2);
     }
@@ -196,7 +209,7 @@ class VolumeLayer {
     this.maxCoord = maxCoord;
   }
 
-  getArea(): number {
+  private getArea(): number {
     const [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -207,16 +220,7 @@ class VolumeLayer {
     return difference[0] * difference[1] * difference[2];
   }
 
-  getLabeledBoundingBox(): BoundingBox | null {
-    if (this.minCoord == null || this.maxCoord == null) {
-      return null;
-    }
-    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeMag);
-    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeMag);
-    return new BoundingBox({ min, max });
-  }
-
-  getContourList(useGlobalCoords: boolean = false) {
+  private getContourList(useGlobalCoords: boolean = false) {
     const globalContourList = getVolumeTracingById(
       Store.getState().annotation,
       this.volumeTracingId,
@@ -307,7 +311,7 @@ class VolumeLayer {
     return buffer2D;
   }
 
-  vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
+  private vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
     const dx = pos2[0] - pos1[0];
 
     if (dx === 0) {
@@ -321,20 +325,20 @@ class VolumeLayer {
     }
   }
 
-  vector2Norm(vector: Vector2): number {
+  private vector2Norm(vector: Vector2): number {
     let norm = 0;
 
-    for (const i of Vector2Indicies) {
+    for (const i of Vector2Indices) {
       norm += Math.pow(vector[i], 2);
     }
 
     return Math.sqrt(norm);
   }
 
-  vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
+  private vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
     let distance = 0;
 
-    for (const i of Vector2Indicies) {
+    for (const i of Vector2Indices) {
       distance += Math.pow((pos2[i] - pos1[i]) / scale[i], 2);
     }
 
@@ -342,29 +346,15 @@ class VolumeLayer {
   }
 
   createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
-    const map = this._createMap(width, height, fillValue);
-
-    return new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
-  }
-
-  _createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
     const map = new Uint8Array(width * height);
-
     if (fillValue !== 0) {
       map.fill(fillValue);
     }
 
-    return map;
+    return new VoxelBuffer2D(map, width, height, minCoord2d, this.fast3DCoordinateFunction);
   }
 
-  getRectangleBetweenCircles(
+  private getRectangleBetweenCircles(
     centre1: Vector2,
     centre2: Vector2,
     radius: number,
@@ -490,7 +480,7 @@ class VolumeLayer {
     return buffer2D;
   }
 
-  drawOutlineVoxels(setMap: (arg0: number, arg1: number) => void): void {
+  private drawOutlineVoxels(setMap: (arg0: number, arg1: number) => void): void {
     const contourList = this.getContourList();
     let p1;
     let p2;
@@ -502,7 +492,7 @@ class VolumeLayer {
     }
   }
 
-  fillOutsideArea(map: Uint8Array, width: number, height: number): void {
+  private fillOutsideArea(map: Uint8Array, width: number, height: number): void {
     const setMap = (x: number, y: number) => {
       map[x * height + y] = 0;
     };
@@ -513,27 +503,19 @@ class VolumeLayer {
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
 
-  get2DCoordinate(coord3d: Vector3): Vector2 {
-    // Throw out 'thirdCoordinate' which is equal anyways
+  private get2DCoordinate(coord3d: Vector3): Vector2 {
+    // Throw out 'thirdCoordinate' which is always the same, anyway.
     const transposed = Dimensions.transDim(coord3d, this.plane);
     return [transposed[0], transposed[1]];
   }
 
-  get3DCoordinate(coord2d: Vector2): Vector3 {
-    return Dimensions.transDim([coord2d[0], coord2d[1], this.thirdDimensionValue], this.plane);
-  }
-
-  getFast3DCoordinateFunction(): (
-    coordX: number,
-    coordY: number,
-    out: Vector3 | Float32Array,
-  ) => void {
-    return getFast3DCoordinateHelper(this.plane, this.thirdDimensionValue);
-  }
-
   getUnzoomedCentroid(): Vector3 {
-    // Formula:
-    // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+    /* Returns the centroid (in the global coordinate system).
+     *
+     * Formula:
+     * https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+     */
+
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
@@ -554,13 +536,154 @@ class VolumeLayer {
 
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
-    const zoomedPosition = this.get3DCoordinate([cx, cy]);
-    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeMag);
+    const outZoomedPosition: Vector3 = [0, 0, 0];
+    this.fast3DCoordinateFunction(cx, cy, outZoomedPosition);
+    const pos = zoomedPositionToGlobalPosition(outZoomedPosition, this.activeMag);
     return pos;
+  }
+
+  getPlane(): OrthoView {
+    return this.plane;
   }
 }
 
-export function getFast3DCoordinateHelper(
+function eulerToNormal(e: Euler): ThreeVector3 {
+  const m = new Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromEuler(e));
+  const n = new ThreeVector3(0, 0, 1);
+  n.applyMatrix3(m).normalize();
+  return n;
+}
+
+function mapTransformedPlane(originalPlane: OrthoView, transform: Transform): OrthoView {
+  const originalNormal = eulerToNormal(OrthoBaseRotations[originalPlane]);
+  const transformedNormal = originalNormal
+    .clone()
+    .applyMatrix4(new THREE.Matrix4(...transform.affineMatrix))
+    .normalize();
+
+  const canonical: Record<OrthoView, ThreeVector3> = {
+    [OrthoViews.PLANE_XY]: new ThreeVector3(0, 0, 1),
+    [OrthoViews.PLANE_YZ]: new ThreeVector3(1, 0, 0),
+    [OrthoViews.PLANE_XZ]: new ThreeVector3(0, 1, 0),
+    [OrthoViews.TDView]: new ThreeVector3(1, 1, 1).normalize(),
+  };
+  let bestView = OrthoViews.PLANE_XY;
+  let bestDot = Number.NEGATIVE_INFINITY;
+
+  for (const [view, normal] of Object.entries(canonical)) {
+    const dot = Math.abs(transformedNormal.dot(normal as ThreeVector3));
+    if (dot > bestDot) {
+      bestDot = dot;
+      bestView = view as OrthoView;
+    }
+  }
+
+  return bestView;
+}
+
+export class TransformedSectionLabeler {
+  private readonly base: SectionLabeler;
+  private readonly transform: Transform;
+  applyTransform: (pos: Vector3) => Vector3;
+  applyInverseTransform: (pos: Vector3) => Vector3;
+  mappedPlane: OrthoView;
+
+  constructor(
+    volumeTracingId: string,
+    plane: OrthoView,
+    getThirdDimValue: (thirdDim: number) => number,
+    activeMag: Vector3,
+    transform: Transform,
+  ) {
+    this.assertOrthogonalTransform(transform);
+    this.transform = transform;
+    this.mappedPlane = mapTransformedPlane(plane, transform);
+
+    const thirdDimensionValue = getThirdDimValue(
+      Dimensions.thirdDimensionForPlane(this.mappedPlane),
+    );
+
+    // the base SectionLabeler operates in the *transformed* plane
+    this.base = new SectionLabeler(
+      volumeTracingId,
+      this.mappedPlane,
+      thirdDimensionValue,
+      activeMag,
+    );
+
+    this.applyTransform = transformPointUnscaled(this.transform);
+    this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
+  }
+
+  // --- Core coordinate helpers ---
+
+  // private applyTransformList(list: Vector3[]): Vector3[] {
+  //   return list.map((v) => this.applyTransform(v));
+  // }
+
+  // private applyInverseTransformList(list: Vector3[]): Vector3[] {
+  //   return list.map((v) => this.applyInverseTransform(v));
+  // }
+
+  private assertOrthogonalTransform(_m: Transform): void {
+    // todop
+    // Quick check for orthogonal ±1 rotation/flip matrices
+    // const shouldBeIdentity = Transform.multiply(m, Transform.transpose(m));
+    // const isOrtho = Transform.isCloseToIdentity(shouldBeIdentity);
+    // const hasValidEntries = m.flat().every((x) => Math.abs(x) === 0 || Math.abs(x) === 1);
+    // if (!isOrtho || !hasValidEntries) {
+    //   throw new Error("Transformation matrix must be an orthogonal ±1 rotation/flip/scale matrix");
+    // }
+  }
+
+  // --- Delegated methods with coordinate adaptation ---
+
+  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
+    return this.base.createVoxelBuffer2D(minCoord2d, width, height, fillValue);
+  }
+
+  updateArea(globalPos: Vector3): void {
+    this.base.updateArea(this.applyTransform(globalPos));
+  }
+
+  isEmpty(): boolean {
+    return this.base.isEmpty();
+  }
+
+  getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
+    // Buffer orientation could be left unchanged unless 2D plane transforms are needed.
+    return this.base.getFillingVoxelBuffer2D(mode);
+  }
+
+  getRectangleVoxelBuffer2D(
+    lastUnzoomedPosition: Vector3,
+    unzoomedPosition: Vector3,
+  ): VoxelBuffer2D | null {
+    const p1 = this.applyTransform(lastUnzoomedPosition);
+    const p2 = this.applyTransform(unzoomedPosition);
+    return this.base.getRectangleVoxelBuffer2D(p1, p2);
+  }
+
+  globalCoordToMag2DFloat(position: Vector3): Vector2 {
+    return this.base.globalCoordToMag2DFloat(position);
+  }
+
+  getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
+    // const p = this.applyTransform(position);
+    return this.base.getCircleVoxelBuffer2D(position);
+  }
+
+  getUnzoomedCentroid(): Vector3 {
+    const centroid = this.base.getUnzoomedCentroid();
+    return this.applyInverseTransform(centroid);
+  }
+
+  getPlane(): OrthoView {
+    return this.mappedPlane;
+  }
+}
+
+function getFast3DCoordinateHelper(
   plane: OrthoView,
   thirdDimensionValue: number,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {
@@ -591,4 +714,4 @@ export function getFast3DCoordinateHelper(
     }
   }
 }
-export default VolumeLayer;
+export default SectionLabeler;

@@ -188,7 +188,10 @@ class DataSourceService @Inject()(
       shortForm
     }
     logger.info(msg)
-    // TODO if verbose, log full failure infos
+    if (verbose && realPathScanFailures.nonEmpty) {
+      val realPathScanFailuresFormatted = realPathScanFailures.flatMap(_.exception).map(_.toString).mkString(", ")
+      logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
+    }
   }
 
   private def logEmptyDirs(paths: List[Path]): Unit = {

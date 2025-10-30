@@ -301,7 +301,7 @@ describe("Update Action Application for SkeletonTracing", () => {
       createNode, // nodeId=1
       createNode, // nodeId=2
       SkeletonTracingActions.setActiveTreeAction(2),
-    ]); // active tree: 2, active bode: null
+    ]); // active tree: 2, active node: null
     expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);
 
     // newState2 has active tree: 2, active node: null

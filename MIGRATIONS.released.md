@@ -13,7 +13,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions
 - [141-allows-upload-to-paths.sql](conf/evolutions/141-allows-upload-to-paths.sql)
-- [142-personal-plan](/conf/evolutions/142-personal-plan.sql)
+- [142-personal-plan.sql](conf/evolutions/142-personal-plan.sql)
 - [143-remote-storage-analysis.sql](conf/evolutions/143-remote-storage-analysis.sql)
 - [144-improve-storage-scan.sql](conf/evolutions/144-improve-storage-scan.sql)
 

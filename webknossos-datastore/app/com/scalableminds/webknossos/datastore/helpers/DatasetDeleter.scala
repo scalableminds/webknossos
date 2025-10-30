@@ -30,8 +30,9 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
         s"Deleting dataset $datasetId by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}")
       deleteWithRetry(dataSourcePath, targetPath)
     } else {
-      Fox.successful(logger.info(
-        s"Dataset deletion requested for dataset $datasetId at $dataSourcePath, but it does not exist. Skipping deletion on disk."))
+      logger.info(
+        s"Dataset deletion requested for dataset $datasetId at $dataSourcePath, but it does not exist. Skipping deletion on disk.")
+      Fox.successful(())
     }
   }
 

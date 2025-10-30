@@ -125,10 +125,8 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
       implicit ec: ExecutionContext): Fox[Seq[String]] = {
     def listRecursive(continuationToken: Option[String], acc: Seq[String]): Fox[Seq[String]] = {
       val builder = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).maxKeys(1000)
-      val request = continuationToken match {
-        case Some(token) => builder.continuationToken(token).build()
-        case None        => builder.build()
-      }
+      continuationToken.foreach(builder.continuationToken)
+      val request = builder.build()
       for {
         response <- Fox.fromFuture(s3Client.listObjectsV2(request).asScala)
         keys = response.contents().asScala.map(_.key())

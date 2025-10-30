@@ -7,7 +7,6 @@ import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsVal
 
 import java.net.URI
 import java.nio.file.Path
-import scala.collection.mutable.ListBuffer
 
 trait UPath {
   def toRemoteUriUnsafe: URI

@@ -208,7 +208,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, false, true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(500);
+    await sleep(100);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
@@ -219,7 +219,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, true, true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(500);
+    await sleep(100);
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     await makeProofreadMerge(context);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
@@ -230,7 +230,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTestingWithRestrictions(context, true, true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!
-    await sleep(500);
+    await sleep(100);
     expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
   });
   const ToolsAllowedInProofreadingModeWithoutLiveCollabSupport = [
@@ -246,10 +246,10 @@ describe("Save Mutex Saga", () => {
         await setupWebknossosForTestingWithRestrictions(context, false, true, true);
         mockInitialBucketAndAgglomerateData(context);
         // Give mutex saga time to potentially acquire the mutex. This should not happen!
-        await sleep(500);
+        await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
         Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
-        await sleep(500);
+        await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       });
 
@@ -258,10 +258,10 @@ describe("Save Mutex Saga", () => {
         await setupWebknossosForTestingWithRestrictions(context, true, true, true);
         mockInitialBucketAndAgglomerateData(context);
         // Give mutex saga time to potentially acquire the mutex. This should not happen!
-        await sleep(500);
+        await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
         Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
-        await sleep(500);
+        await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       });
     },
@@ -280,7 +280,7 @@ describe("Save Mutex Saga", () => {
       );
       mockInitialBucketAndAgglomerateData(context);
       // Give mutex saga time to potentially acquire the mutex. This should not happen!
-      await sleep(500);
+      await sleep(100);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       const volumeTracingId2 = Store.getState().annotation.volumes.at(-1);
       if (!volumeTracingId2) {
@@ -288,7 +288,7 @@ describe("Save Mutex Saga", () => {
       }
       // Switch to other layer. Saga should, depending on othersMayEdit, try to acquire mutex now as the active layer no longer has an editable mapping and thus no liveCollab support.
       Store.dispatch(updateLayerSettingAction(volumeTracingId2.tracingId, "isDisabled", false));
-      await sleep(500);
+      await sleep(100);
       if (othersMayEdit) {
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       } else {

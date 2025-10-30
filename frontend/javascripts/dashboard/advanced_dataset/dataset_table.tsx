@@ -1,6 +1,13 @@
-import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import type { DatasetUpdater } from "admin/rest_api";
 import { Dropdown, type MenuProps, Tag, Tooltip } from "antd";
+import { Space } from "antd/lib";
 import type {
   ColumnType,
   FilterValue,
@@ -290,7 +297,7 @@ class DatasetRenderer {
 
   renderStorageColumn(): React.ReactNode {
     return this.data.usedStorageBytes != null ? (
-      <FastTooltip title={"Note that linked and remote layers aren’t measured."}>
+      <FastTooltip title={`${new Intl.NumberFormat().format(this.data.usedStorageBytes)} bytes`}>
         {formatCountToDataAmountUnit(this.data.usedStorageBytes, true)}
       </FastTooltip>
     ) : null;
@@ -632,9 +639,28 @@ class DatasetTable extends React.PureComponent<Props, State> {
       context.usedStorageInOrga > 0
     ) {
       const datasetStorageSizeColumn = {
-        title: "Used Storage",
+        title: (
+          <Space>
+            Used Storage{" "}
+            <Tooltip
+              title={
+                <>
+                  Storage used by this dataset within your organization. It may be zero because:
+                  <ul>
+                    <li>The storage hasn't been scanned yet.</li>
+                    <li>The data is streamed from outside sources.</li>
+                    <li>It’s counted in other datasets.</li>
+                    <li>The dataset belongs to another organization.</li>
+                  </ul>
+                </>
+              }
+            >
+              <InfoCircleOutlined />
+            </Tooltip>{" "}
+          </Space>
+        ),
         key: "storage",
-        width: 150,
+        width: 200,
         render: (_: any, rowRenderer: RowRenderer) => {
           return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
         },

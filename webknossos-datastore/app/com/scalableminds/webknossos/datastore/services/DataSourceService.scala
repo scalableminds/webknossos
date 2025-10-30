@@ -221,7 +221,7 @@ class DataSourceService @Inject()(
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization))
+        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization, resolveMagPaths = true))
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
@@ -229,7 +229,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def dataSourceFromDir(path: Path, organizationId: String): DataSource = {
+  def dataSourceFromDir(path: Path, organizationId: String, resolveMagPaths: Boolean): DataSource = {
     val id = DataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
@@ -241,9 +241,12 @@ class DataSourceService @Inject()(
             val dataSourceWithAttachments = dataSource.copy(
               dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
             )
-            val dataSourceWithMagPaths = dataSourceWithAttachments.copy(
-              dataLayers = addMagPaths(path, dataSourceWithAttachments)
-            )
+            val dataSourceWithMagPaths =
+              if (resolveMagPaths)
+                dataSourceWithAttachments.copy(
+                  dataLayers = addMagPaths(path, dataSourceWithAttachments)
+                )
+              else dataSourceWithAttachments
             dataSourceWithMagPaths.copy(id)
           } else
             UnusableDataSource(id,

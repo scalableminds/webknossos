@@ -18,6 +18,7 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         activeOrganization: state.activeOrganization,
         uiInformation: {
           ...defaultState.uiInformation,
+          theme: state.uiInformation.theme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
         },
@@ -144,11 +145,14 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_IS_WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    case "SET_IS_WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: action.isInitialized });
     }
-    case "WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: true });
+    case "WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: true });
+    }
+    case "UI_READY": {
+      return updateKey(state, "uiInformation", { isUiReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {

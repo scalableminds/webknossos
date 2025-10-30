@@ -537,13 +537,16 @@ class AuthenticationController @Inject()(
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    val redirectUrlStr: String = conf.SingleSignOn.OpenIdConnect.logoutRedirectUrl.getOrElse("/")
+    val rawResultWithRedirect = Ok(Json.toJson(redirectUrlStr))
     request.authenticator match {
       case Some(authenticator) =>
         for {
-          authenticatorResult <- combinedAuthenticatorService.discard(authenticator, Ok)
+          authenticatorResult <- combinedAuthenticatorService.discard(authenticator, rawResultWithRedirect)
           _ = logger.info(f"User ${request.identity.map(_._id).getOrElse("id unknown")} logged out.")
         } yield authenticatorResult
-      case _ => Future.successful(Ok)
+      case _ =>
+        Future.successful(rawResultWithRedirect)
     }
   }
 

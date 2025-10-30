@@ -34,16 +34,27 @@ export type Action =
   | ConnectomeAction
   | ProofreadAction
   | OrganizationAction
-  | ReturnType<typeof wkReadyAction>
-  | ReturnType<typeof sceneControllerReadyAction>
+  | ReturnType<typeof wkInitializedAction>
+  | ReturnType<typeof uiReadyAction>
+  | ReturnType<typeof sceneControllerInitializedAction>
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
   | ReturnType<typeof cancelSagaAction>
   | EscalateErrorAction;
 
-export const wkReadyAction = () =>
+// This action indicates that webknossos was initialized successfully, meaning all relevant data
+// was fetched and the controllers, sagas and keyboard handlers were initialized.
+export const wkInitializedAction = () =>
   ({
-    type: "WK_READY",
+    type: "WK_INITIALIZED",
+  }) as const;
+
+// This action indicates that in addition to the successful webknossos initialization, all relevant views
+// were initialized, the WebGL shaders were compiled and the first render pass was completed.
+// Once this action was dispatched, the loading spinner will be hidden and the full UI is shown.
+export const uiReadyAction = () =>
+  ({
+    type: "UI_READY",
   }) as const;
 
 export const resetStoreAction = () =>
@@ -51,9 +62,9 @@ export const resetStoreAction = () =>
     type: "RESET_STORE",
   }) as const;
 
-export const sceneControllerReadyAction = () =>
+export const sceneControllerInitializedAction = () =>
   ({
-    type: "SCENE_CONTROLLER_READY",
+    type: "SCENE_CONTROLLER_INITIALIZED",
   }) as const;
 
 export const restartSagaAction = () =>

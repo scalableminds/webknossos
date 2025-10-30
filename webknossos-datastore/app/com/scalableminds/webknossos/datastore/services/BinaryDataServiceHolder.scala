@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -16,15 +16,15 @@ import scala.concurrent.ExecutionContext
  */
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
-                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                        dataVaultService: DataVaultService,
                                         datasetErrorLoggingService: DSDatasetErrorLoggingService,
-                                        chunkCacheService: ChunkCacheService,
+                                        chunkCacheService: DSChunkCacheService,
                                         agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     config.Datastore.baseDirectory,
     Some(agglomerateService),
-    Some(remoteSourceDescriptorService),
+    Some(dataVaultService),
     Some(chunkCacheService.sharedChunkContentsCache),
     datasetErrorLoggingService
   )

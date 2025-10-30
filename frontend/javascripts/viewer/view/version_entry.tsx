@@ -167,7 +167,7 @@ const descriptionFns: Record<
         ? `at position ${action.value.segmentPosition1}`
         : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
-      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+      action.value.segmentPosition2 ?? action.value.segmentId2 ?? "unknown";
     const description = `Split agglomerate ${action.value.agglomerateId} by separating the segments ${segment1Description} and ${segment2Description}.`;
     return {
       description,
@@ -180,7 +180,7 @@ const descriptionFns: Record<
         ? `at position ${action.value.segmentPosition1}`
         : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
-      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+      action.value.segmentPosition2 ?? action.value.segmentId2 ?? "unknown";
     const description = `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments  ${segment1Description} and ${segment2Description}.`;
     return {
       description,

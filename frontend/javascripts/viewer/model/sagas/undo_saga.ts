@@ -42,7 +42,7 @@ import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants
 import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
@@ -159,7 +159,7 @@ export function* manageUndoStates(): Saga<never> {
     }
   > = {};
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   // Initialization of the local state variables from above.
   prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);

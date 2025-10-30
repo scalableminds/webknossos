@@ -74,7 +74,10 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
         if (channel != null && channel.isOpen) channel.close()
     }
 
-    Fox.fromFutureBox(promise.future)
+    for {
+      box <- Fox.fromFuture(promise.future)
+      result <- box.toFox
+    } yield result
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =

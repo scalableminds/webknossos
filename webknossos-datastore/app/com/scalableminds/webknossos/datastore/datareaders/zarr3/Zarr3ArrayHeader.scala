@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.libs.json.{Format, JsArray, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsArray, JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
 
 import java.nio.ByteOrder
 
@@ -43,7 +43,11 @@ case class Zarr3ArrayHeader(
 
   override lazy val order: ArrayOrder = getOrder
 
-  override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
+  override lazy val byteOrder: ByteOrder = if (codecs.exists {
+                                                 case BytesCodecConfiguration(endian) if endian.contains("big") => true
+                                                 case _                                                         => false
+                                               }) ByteOrder.BIG_ENDIAN
+  else ByteOrder.LITTLE_ENDIAN
 
   private def zarr3DataType: Zarr3DataType =
     Zarr3DataType.fromString(data_type.left.getOrElse("extension")).getOrElse(raw)
@@ -161,7 +165,7 @@ object StorageTransformerSpecification {
 
 object Zarr3ArrayHeader extends JsonImplicits {
 
-  def FILENAME_ZARR_JSON = "zarr.json"
+  val FILENAME_ZARR_JSON = "zarr.json"
   implicit object Zarr3ArrayHeaderFormat extends Format[Zarr3ArrayHeader] {
     override def reads(json: JsValue): JsResult[Zarr3ArrayHeader] =
       for {
@@ -171,7 +175,18 @@ object Zarr3ArrayHeader extends JsonImplicits {
         data_type <- (json \ "data_type").validate[String]
         chunk_grid <- (json \ "chunk_grid").validate[ChunkGridSpecification]
         chunk_key_encoding <- (json \ "chunk_key_encoding").validate[ChunkKeyEncoding]
-        fill_value <- (json \ "fill_value").validate[Either[String, Number]]
+        fill_value_raw = json \ "fill_value"
+        fill_value <- (fill_value_raw.validate[String],
+                       fill_value_raw.validate[Number],
+                       fill_value_raw.validate[Boolean]) match {
+          case (asStr: JsSuccess[String], _, _) =>
+            asStr.flatMap(value => JsSuccess[Either[String, Number]](Left(value)))
+          case (_, asNum: JsSuccess[Number], _) =>
+            asNum.flatMap(value => JsSuccess[Either[String, Number]](Right(value)))
+          case (_, _, asBool: JsSuccess[Boolean]) =>
+            asBool.flatMap(value => JsSuccess[Either[String, Number]](Left(value.toString)))
+          case _ => JsError("Could not parse fill_value as string, number or boolean value.")
+        }
         attributes = (json \ "attributes").validate[JsObject].asOpt
         codecsJsValue <- (json \ "codecs").validate[JsValue]
         codecs = readCodecs(codecsJsValue)

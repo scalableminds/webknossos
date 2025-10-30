@@ -9,4 +9,6 @@ case class NmlVolumeTag(dataZipPath: String,
                         name: Option[String],
                         segments: Seq[Segment],
                         largestSegmentId: Option[Long],
-                        segmentGroups: Seq[SegmentGroup]) {}
+                        segmentGroups: Seq[SegmentGroup],
+                        editedMappingEdgesLocation: Option[String],
+                        editedMappingBaseMappingName: Option[String])

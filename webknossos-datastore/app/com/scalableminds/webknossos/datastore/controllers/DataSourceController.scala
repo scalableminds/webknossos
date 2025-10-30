@@ -32,13 +32,13 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
 }
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
@@ -77,7 +77,7 @@ class DataSourceController @Inject()(
     fullMeshService: DSFullMeshService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
@@ -142,40 +142,43 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      val uploadForm = Form(
-        tuple(
-          "resumableChunkNumber" -> number,
-          "resumableChunkSize" -> number,
-          "resumableCurrentChunkSize" -> number,
-          "resumableTotalChunks" -> longNumber,
-          "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, -1, ""))
+      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+        val uploadForm = Form(
+          tuple(
+            "resumableChunkNumber" -> number,
+            "resumableChunkSize" -> number,
+            "resumableCurrentChunkSize" -> number,
+            "resumableTotalChunks" -> longNumber,
+            "resumableIdentifier" -> nonEmptyText
+          )).fill((-1, -1, -1, -1, ""))
 
-      uploadForm
-        .bindFromRequest(request.body.dataParts)
-        .fold(
-          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-          success = {
-            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-              for {
-                datasetId <- uploadService
-                  .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                  for {
-                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                    _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                         chunkSize,
-                                                         currentChunkSize,
-                                                         totalChunkCount,
-                                                         chunkNumber,
-                                                         new File(chunkFile.ref.path.toString))
-                  } yield Ok
-                }
-              } yield result
-          }
-        )
+        uploadForm
+          .bindFromRequest(request.body.dataParts)
+          .fold(
+            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+            success = {
+              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                for {
+                  datasetId <- uploadService
+                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  result <- accessTokenService
+                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                      for {
+                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                             chunkSize,
+                                                             currentChunkSize,
+                                                             totalChunkCount,
+                                                             chunkNumber,
+                                                             new File(chunkFile.ref.path.toString))
+                      } yield Ok
+                    }
+                } yield result
+            }
+          )
+      }
     }
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
@@ -193,7 +196,7 @@ class DataSourceController @Inject()(
     }
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log(Some(slackNotificationService.noticeFailedFinishUpload)) {
+    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           datasetId <- uploadService
@@ -682,7 +685,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- Fox.successful(())
-          pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)
+          pathsAllowed = request.body.map(dataVaultService.pathIsAllowedToAddDirectly)
           result = request.body.zip(pathsAllowed).map {
             case (path, isAllowed) => PathValidationResult(path, isAllowed)
           }

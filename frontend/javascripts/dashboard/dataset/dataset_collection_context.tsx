@@ -1,6 +1,6 @@
 import { useIsMutating } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
-import { useEffectOnlyOnce, usePrevious } from "libs/react_hooks";
+import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import type React from "react";
@@ -55,6 +55,7 @@ export type DatasetCollectionContextValue = {
     deleteFolderMutation: ReturnType<typeof useDeleteFolderMutation>;
     updateDatasetMutation: ReturnType<typeof useUpdateDatasetMutation>;
   };
+  usedStorageInOrga: number | undefined;
 };
 
 export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
@@ -84,6 +85,7 @@ export default function DatasetCollectionContextProvider({
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder, isError: didFolderLoadingError } = useFolderQuery(activeFolderId);
+  const usedStorageInOrga = useWkSelector((state) => state.activeOrganization?.usedStorageBytes);
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
@@ -254,6 +256,7 @@ export default function DatasetCollectionContextProvider({
         moveFolderMutation,
         updateDatasetMutation,
       },
+      usedStorageInOrga,
     }),
     [
       isChecking,
@@ -279,6 +282,7 @@ export default function DatasetCollectionContextProvider({
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,
+      usedStorageInOrga,
     ],
   );
 

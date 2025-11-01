@@ -104,6 +104,7 @@
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/viewer/api/api_loader.ts frontend/javascripts/viewer/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
+    "enable-storage-scan": "./tools/postgres/dbtool.js enable-storage-scan",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "insert-local-datastore": "./tools/postgres/dbtool.js insert-local-datastore",

@@ -94,7 +94,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       includeSubfolders = true,
       statusOpt = Some(DataSourceStatus.notYetUploaded),
       // Only list pending uploads since the two last weeks.
-      createdSinceOpt = Some(Instant.now - (14 days))
+      createdSinceOpt = Some(Instant.now - (14 days)),
+      requestingUserOrga = Some(organizationId)
     ) ?~> "dataset.list.fetchFailed"
 
   def createAndSetUpDataset(datasetName: String,

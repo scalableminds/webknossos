@@ -272,6 +272,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
+  usedStorageBytes?: number | null;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
@@ -295,6 +296,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
+    usedStorageBytes: dataset.usedStorageBytes,
   };
 }
 

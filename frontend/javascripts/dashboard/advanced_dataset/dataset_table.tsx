@@ -296,11 +296,29 @@ class DatasetRenderer {
   }
 
   renderStorageColumn(): React.ReactNode {
-    return this.data.usedStorageBytes != null ? (
+    if (this.data.usedStorageBytes == null) return null;
+    const formattedBytes = formatCountToDataAmountUnit(this.data.usedStorageBytes, true);
+    return this.data.usedStorageBytes > 0 ? (
       <FastTooltip title={`${new Intl.NumberFormat().format(this.data.usedStorageBytes)} bytes`}>
-        {formatCountToDataAmountUnit(this.data.usedStorageBytes, true)}
+        {formattedBytes}
       </FastTooltip>
-    ) : null;
+    ) : (
+      <Tooltip
+        title={
+          <>
+            The storage may be zero because:
+            <ul>
+              <li>The storage hasn't been scanned yet</li>
+              <li>The data is streamed from outside sources</li>
+              <li>It’s counted in other datasets</li>
+              <li>The dataset belongs to another organization</li>
+            </ul>
+          </>
+        }
+      >
+        {formattedBytes}
+      </Tooltip>
+    );
   }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
@@ -642,19 +660,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         title: (
           <Space>
             Used Storage{" "}
-            <Tooltip
-              title={
-                <>
-                  Storage used by this dataset within your organization. It may be zero because:
-                  <ul>
-                    <li>The storage hasn't been scanned yet.</li>
-                    <li>The data is streamed from outside sources.</li>
-                    <li>It’s counted in other datasets.</li>
-                    <li>The dataset belongs to another organization.</li>
-                  </ul>
-                </>
-              }
-            >
+            <Tooltip title={"Storage used by this dataset within your organization."}>
               <InfoCircleOutlined />
             </Tooltip>{" "}
           </Space>

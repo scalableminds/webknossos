@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
-trait DataSourceToDiskWriter extends PathUtils with DataSourceValidation with FoxImplicits {
+trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Path.of("datasource-properties-backups.log")
@@ -27,7 +27,7 @@ trait DataSourceToDiskWriter extends PathUtils with DataSourceValidation with Fo
     for {
       _ <- Fox.runIf(validate)(assertValidDataSource(dataSource).toFox)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
+      _ <- Fox.runIf(!expectExisting)(PathUtils.ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)

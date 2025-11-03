@@ -14,7 +14,6 @@ function* manyBucketUpdatesWarning(): Saga<void> {
   const suppressWarningToast = yield* select(
     (state) => state.activeUser.novelUserExperienceInfos.suppressManyBucketUpdatesWarning,
   );
-  console.log("suppressWarningToast:", suppressWarningToast);
   if (suppressWarningToast) {
     return;
   }

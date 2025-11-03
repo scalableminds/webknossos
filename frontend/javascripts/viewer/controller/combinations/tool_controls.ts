@@ -208,7 +208,6 @@ export class MoveToolController {
     _ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { useLegacyBindings } = userConfiguration;
     // In legacy mode, don't display a hint for
@@ -378,7 +377,6 @@ export class SkeletonToolController {
     ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { continuousNodeCreation } = Store.getState().userConfiguration;
     const { useLegacyBindings } = userConfiguration;
@@ -516,7 +514,6 @@ export class DrawToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     let rightClick;
     const { useLegacyBindings } = userConfiguration;
@@ -577,7 +574,6 @@ export class EraseToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: `Erase (${activeTool === AnnotationTool.ERASE_BRUSH ? "Brush" : "Trace"})`,
@@ -629,13 +625,9 @@ export class VoxelPipetteToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
-      leftClick:
-        _activeToolWithoutModifiers === AnnotationTool.VOXEL_PIPETTE && !shiftKey
-          ? "Pin Tooltip"
-          : "Activate Segment ID",
+      leftClick: !shiftKey ? "Pin Tooltip" : "Activate Segment ID",
       rightClick: "Context Menu",
     };
   }
@@ -662,7 +654,6 @@ export class FillCellToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftClick: "Fill Segment",
@@ -742,7 +733,6 @@ export class BoundingBoxToolController {
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: ctrlOrMetaKey ? "Move Bounding Boxes" : "Create/Resize Bounding Boxes",
@@ -872,7 +862,6 @@ export class QuickSelectToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
@@ -997,7 +986,6 @@ export class LineMeasurementToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftClick: "Left Click to measure distance",
@@ -1077,7 +1065,6 @@ export class AreaMeasurementToolController {
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     return {
       leftDrag: "Drag to measure area",
@@ -1151,7 +1138,6 @@ export class ProofreadToolController {
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
     isTDViewportActive: boolean,
-    _activeToolWithoutModifiers: AnnotationTool,
   ): ActionDescriptor {
     const { isMultiSplitActive } = userConfiguration;
 

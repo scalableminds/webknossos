@@ -14,7 +14,7 @@ class ApiLoader {
 
   constructor(webKnossosModel: WebKnossosModel) {
     this.readyPromise = new Promise((resolve) => {
-      app.vent.on("webknossos:initialized", resolve);
+      app.vent.on("webknossos:ready", resolve);
     });
     this.model = webKnossosModel;
     this.DEV = new WkDev(this);

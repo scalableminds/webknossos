@@ -25,7 +25,7 @@ import type {
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../../actions/volumetracing_actions";
-import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
 
 export const NO_LOD_MESH_INDEX = -1;
 
@@ -125,7 +125,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
-  yield* call(ensureWkInitialized);
+  yield* call(ensureWkReady);
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const { segmentMeshController } = yield* call(getSceneController);
@@ -207,8 +207,8 @@ function* handleBatchSegmentColorChange(
 }
 
 export default function* commonMeshSaga(): Saga<void> {
-  yield* call(ensureSceneControllerInitialized);
-  yield* call(ensureWkInitialized);
+  yield* call(ensureSceneControllerReady);
+  yield* call(ensureWkReady);
   yield* takeEvery("TRIGGER_MESH_DOWNLOAD", downloadMeshCell);
   yield* takeEvery("TRIGGER_MESHES_DOWNLOAD", downloadMeshCells);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);

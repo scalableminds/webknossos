@@ -15,7 +15,7 @@ export type CycleToolAction = ReturnType<typeof cycleToolAction>;
 type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
-type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
+type SetIsWkReadyAction = ReturnType<typeof setIsWkReadyAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
@@ -59,7 +59,7 @@ export type UiAction =
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
-  | SetIsWkInitializedAction
+  | SetIsWkReadyAction
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
@@ -166,10 +166,10 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       reason,
     },
   }) as const;
-export const setIsWkInitializedAction = (isInitialized: boolean) =>
+export const setIsWkReadyAction = (isReady: boolean) =>
   ({
-    type: "SET_IS_WK_INITIALIZED",
-    isInitialized,
+    type: "SET_IS_WK_READY",
+    isReady,
   }) as const;
 
 export const setPythonClientModalVisibilityAction = (visible: boolean) =>

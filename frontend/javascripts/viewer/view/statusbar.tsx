@@ -42,6 +42,7 @@ import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
 import { CommandPalette } from "./components/command_palette";
+import { getUntransformedSegmentationPosition } from "viewer/controller/combinations/volume_handlers";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -573,6 +574,11 @@ function SegmentAndMousePosition() {
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
   const globalMousePositionRounded = useWkSelector(getGlobalMousePosition);
 
+  const untransformedPos =
+    globalMousePositionRounded != null
+      ? getUntransformedSegmentationPosition(Store.getState(), globalMousePositionRounded)
+      : [0, 0, 0];
+
   return (
     <>
       {isPlaneMode ? <SegmentInfo /> : null}
@@ -582,7 +588,7 @@ function SegmentAndMousePosition() {
           {globalMousePositionRounded
             ? getPosString(globalMousePositionRounded, additionalCoordinates)
             : "-,-,-"}
-          ]
+          ] Layer Pos [{untransformedPos.join(", ")}]
         </span>
       ) : null}
     </>

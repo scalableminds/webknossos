@@ -205,8 +205,10 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
+
   console.log("topLeft3DCoord", topLeft3DCoord);
   console.log("bottomRight3DCoord", bottomRight3DCoord);
+
   for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
     const bucketZoomedAddress = zoomedPositionToZoomedAddress(
@@ -222,19 +224,15 @@ export function* labelWithVoxelBuffer2D(
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
+    // voxelBuffer.print();
+
     // globalA (first dim) and globalB (second dim) are global coordinates
     // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
     // and the LabeledVoxelMap
     for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
       for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
-        if (
-          voxelBuffer.map[
-            voxelBuffer.linearizeIndex(
-              globalA - voxelBuffer.minCoord2d[0],
-              globalB - voxelBuffer.minCoord2d[1],
-            )
-          ]
-        ) {
+        if (voxelBuffer.getValueFromGlobal(globalA, globalB)) {
+          // console.log("setting 1 at", globalA, globalB);
           labelMapOfBucket[
             (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
               (globalB % Constants.BUCKET_WIDTH)

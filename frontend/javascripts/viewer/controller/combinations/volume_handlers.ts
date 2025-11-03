@@ -40,7 +40,10 @@ export function handleDrawStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(addToContourListAction(untransformedPos));
 }
 
-function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
+export function getUntransformedSegmentationPosition(
+  state: WebknossosState,
+  globalPosRounded: Vector3,
+) {
   /*
    * Converts the given position from world space to layer space.
    */

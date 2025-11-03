@@ -73,7 +73,7 @@ export class VoxelBuffer2D {
     return outVar;
   };
 
-  linearizeIndex(x: number, y: number): number {
+  private linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
   }
 
@@ -81,8 +81,30 @@ export class VoxelBuffer2D {
     this.map[this.linearizeIndex(x, y)] = value;
   }
 
+  getValue(x: number, y: number): number {
+    return this.map[this.linearizeIndex(x, y)];
+  }
+
+  getValueFromGlobal(globalX: number, globalY: number): number {
+    return this.map[
+      this.linearizeIndex(globalX - this.minCoord2d[0], globalY - this.minCoord2d[1])
+    ];
+  }
+
   isEmpty(): boolean {
     return this.width === 0 || this.height === 0;
+  }
+
+  print(): void {
+    const lines = [];
+    for (let y = 0; y < this.width; y++) {
+      const line = [];
+      for (let x = 0; x < this.width; x++) {
+        line.push(this.getValue(x, y));
+      }
+      lines.push(line);
+    }
+    console.log("VoxelBuffer content:", lines.join("\n"));
   }
 }
 export class VoxelNeighborQueue3D {
@@ -159,33 +181,31 @@ class SectionLabeler {
   Therefore, members of this class are in the mag space of
   `activeMag`.
   */
-  readonly volumeTracingId: string;
-  readonly plane: OrthoView;
   readonly thirdDimensionValue: number;
 
   // Stored in global (but mag-dependent) coordinates:
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
-  readonly activeMag: Vector3;
-
   fast3DCoordinateFunction: (coordX: number, coordY: number, out: Vector3 | Float32Array) => void;
 
   constructor(
-    volumeTracingId: string,
-    plane: OrthoView,
+    public readonly volumeTracingId: string,
+    public readonly plane: OrthoView,
     thirdDimensionValue: number,
-    activeMag: Vector3,
+    public readonly activeMag: Vector3,
+    public readonly isFlipped: boolean,
   ) {
-    this.volumeTracingId = volumeTracingId;
-    this.plane = plane;
     this.maxCoord = null;
     this.minCoord = null;
-    this.activeMag = activeMag;
     const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
 
-    this.fast3DCoordinateFunction = getFast3DCoordinateHelper(this.plane, this.thirdDimensionValue);
+    this.fast3DCoordinateFunction = getFast3DCoordinateFn(
+      this.plane,
+      this.thirdDimensionValue,
+      isFlipped,
+    );
   }
 
   updateArea(globalPos: Vector3): void {
@@ -438,7 +458,7 @@ class SectionLabeler {
     );
   }
 
-  getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
+  getCircleVoxelBuffer2D(position: Vector3, scale?: Vector2): VoxelBuffer2D {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const dimIndices = Dimensions.getIndices(this.plane);
@@ -460,9 +480,29 @@ class SectionLabeler {
     ];
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const [scaleX, scaleY] = this.get2DCoordinate(
+    let [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     );
+    // if (window.wscale) {
+    //   scaleX = window.wscale[0];
+    //   scaleY = window.wscale[1];
+    // }
+    if (this.isFlipped) {
+      [scaleX, scaleY] = [scaleY, scaleX];
+    }
+    if (scale) {
+      [scaleX, scaleY] = scale;
+    }
+    if (window.wscale) {
+      // Original scale is 1, 1, 0.39
+      // XY -> XZ -> 1, 1
+      // XZ -> XY -> 1, 0.39285714285714285
+      // YZ -> YZ _> 1, 0.39285714285714285
+      [scaleX, scaleY] = window.wscale;
+    }
+
+    console.log("this.plane", this.plane);
+    console.log(`scaleX=${scaleX}, scaleY=${scaleY}`);
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -503,9 +543,9 @@ class SectionLabeler {
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
 
-  private get2DCoordinate(coord3d: Vector3): Vector2 {
+  public get2DCoordinate(coord3d: Vector3, plane?: OrthoView): Vector2 {
     // Throw out 'thirdCoordinate' which is always the same, anyway.
-    const transposed = Dimensions.transDim(coord3d, this.plane);
+    const transposed = Dimensions.transDim(coord3d, plane ?? this.plane);
     return [transposed[0], transposed[1]];
   }
 
@@ -554,7 +594,21 @@ function eulerToNormal(e: Euler): ThreeVector3 {
   return n;
 }
 
-function mapTransformedPlane(originalPlane: OrthoView, transform: Transform): OrthoView {
+export function mapTransformedPlane(
+  originalPlane: OrthoView,
+  transform: Transform,
+): [OrthoView, boolean] {
+  if (originalPlane === "PLANE_XY") {
+    return ["PLANE_XZ", false];
+  }
+  if (originalPlane === "PLANE_XZ") {
+    return ["PLANE_XY", false];
+  }
+  if (originalPlane === "PLANE_YZ") {
+    return ["PLANE_YZ", true];
+  }
+  throw new Error("Unexpected input plane");
+
   const originalNormal = eulerToNormal(OrthoBaseRotations[originalPlane]);
   const transformedNormal = originalNormal
     .clone()
@@ -583,21 +637,20 @@ function mapTransformedPlane(originalPlane: OrthoView, transform: Transform): Or
 
 export class TransformedSectionLabeler {
   private readonly base: SectionLabeler;
-  private readonly transform: Transform;
   applyTransform: (pos: Vector3) => Vector3;
   applyInverseTransform: (pos: Vector3) => Vector3;
-  mappedPlane: OrthoView;
+  readonly mappedPlane: OrthoView;
+  private readonly isFlipped: boolean;
 
   constructor(
     volumeTracingId: string,
-    plane: OrthoView,
+    private readonly originalPlane: OrthoView,
     getThirdDimValue: (thirdDim: number) => number,
     activeMag: Vector3,
-    transform: Transform,
+    private readonly transform: Transform,
   ) {
     this.assertOrthogonalTransform(transform);
-    this.transform = transform;
-    this.mappedPlane = mapTransformedPlane(plane, transform);
+    [this.mappedPlane, this.isFlipped] = mapTransformedPlane(originalPlane, transform);
 
     const thirdDimensionValue = getThirdDimValue(
       Dimensions.thirdDimensionForPlane(this.mappedPlane),
@@ -609,6 +662,7 @@ export class TransformedSectionLabeler {
       this.mappedPlane,
       thirdDimensionValue,
       activeMag,
+      this.isFlipped,
     );
 
     this.applyTransform = transformPointUnscaled(this.transform);
@@ -670,7 +724,16 @@ export class TransformedSectionLabeler {
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
     // const p = this.applyTransform(position);
-    return this.base.getCircleVoxelBuffer2D(position);
+
+    let scale = this.base.get2DCoordinate(
+      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
+      this.originalPlane,
+    );
+    if (this.isFlipped) {
+      scale = [scale[1], scale[0]];
+    }
+
+    return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 
   getUnzoomedCentroid(): Vector3 {
@@ -683,35 +746,19 @@ export class TransformedSectionLabeler {
   }
 }
 
-function getFast3DCoordinateHelper(
+function getFast3DCoordinateFn(
   plane: OrthoView,
   thirdDimensionValue: number,
+  _isFlipped: boolean,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {
-  switch (plane) {
-    case OrthoViews.PLANE_XY:
-      return (coordX, coordY, out) => {
-        out[0] = coordX;
-        out[1] = coordY;
-        out[2] = thirdDimensionValue;
-      };
-
-    case OrthoViews.PLANE_YZ:
-      return (coordX, coordY, out) => {
-        out[0] = thirdDimensionValue;
-        out[1] = coordY;
-        out[2] = coordX;
-      };
-
-    case OrthoViews.PLANE_XZ:
-      return (coordX, coordY, out) => {
-        out[0] = coordX;
-        out[1] = thirdDimensionValue;
-        out[2] = coordY;
-      };
-
-    default: {
-      throw new Error("Unknown plane id");
-    }
-  }
+  let [u, v, w] = Dimensions.getIndices(plane);
+  // if (isFlipped) {
+  //   [u, v] = [v, u];
+  // }
+  return (coordX, coordY, out) => {
+    out[u] = coordX;
+    out[v] = coordY;
+    out[w] = thirdDimensionValue;
+  };
 }
 export default SectionLabeler;

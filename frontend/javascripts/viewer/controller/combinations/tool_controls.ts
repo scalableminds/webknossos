@@ -614,7 +614,6 @@ export class VoxelPipetteToolController {
         } else {
           Store.dispatch(hideMeasurementTooltipAction());
         }
-        Store.dispatch(setIsMeasuringAction(true));
       },
     };
   }

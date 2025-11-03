@@ -567,6 +567,7 @@ export class DataBucket {
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
             data[voxelAddress] = segmentId;
+            // console.log("out coord", out);
             wroteVoxels = true;
           }
         }

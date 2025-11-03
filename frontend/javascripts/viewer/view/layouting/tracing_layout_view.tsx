@@ -4,7 +4,6 @@ import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { document, location } from "libs/window";
-import window from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
@@ -129,7 +128,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // For super users, we don't enforce a page reload.
       // They'll act as a guinea pig for this performance
       // improvement for now.
-      window.measuredTimeToFirstRender = false;
       return;
     }
 
@@ -445,6 +443,7 @@ function mapStateToProps(state: WebknossosState) {
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
+    isWkReady: state.uiInformation.isWkReady,
   };
 }
 

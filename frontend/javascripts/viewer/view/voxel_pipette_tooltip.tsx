@@ -34,14 +34,16 @@ function VoxelValueEntry({
   layerName,
   value,
   category,
-}: { layerName: string; value: string; category: "color" | "segmentation" }) {
+}: { layerName: string; value: number[]; category: "color" | "segmentation" }) {
+  const valueString = value.join(", ");
   return (
     <div>
-      {category === "color" ? "Intensity" : "Segment ID"} in <strong>{layerName}</strong>: {value}{" "}
+      {category === "color" ? "Intensity" : "Segment ID"} in <strong>{layerName}</strong>:{" "}
+      {valueString}{" "}
       <Tooltip title="Copy to clipboard">
         <CopyOutlined
           onClick={() => {
-            copyToClipboad(value);
+            copyToClipboad(valueString);
           }}
         />
       </Tooltip>
@@ -129,7 +131,7 @@ export default function VoxelValueTooltip() {
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const layers = _.compact([visibleSegmentationLayer, ...colorLayers]);
 
-  const layerNamesWithDataValue = useFetch(
+  const layerNamesWithDataValues = useFetch(
     async () => {
       if (positionToPick == null) {
         return null;
@@ -149,12 +151,19 @@ export default function VoxelValueTooltip() {
             Store.getState(),
           );
 
-          const dataValue = await api.data.getDataValue(
-            layer.name,
-            positionInLayer.map((el) => Math.floor(el)) as Vector3,
-            magIndex,
-            additionalCoordinates,
-            true,
+          const channelCount = api.data.getChannelCount(layer.name);
+
+          const dataValue = await Promise.all(
+            _.range(channelCount).map((channelIndex) =>
+              api.data.getDataValue(
+                layer.name,
+                positionInLayer.map((el) => Math.floor(el)) as Vector3,
+                magIndex,
+                additionalCoordinates,
+                true,
+                channelIndex,
+              ),
+            ),
           );
 
           return [
@@ -172,8 +181,8 @@ export default function VoxelValueTooltip() {
     return null;
   }
 
-  const voxelValuesByLayer: Record<string, ["color" | "segmentation", string]> | null =
-    layerNamesWithDataValue != null ? Object.fromEntries(layerNamesWithDataValue) : null;
+  const voxelValueByLayer: Record<string, ["color" | "segmentation", number[]]> | null =
+    layerNamesWithDataValues != null ? Object.fromEntries(layerNamesWithDataValues) : null;
 
   // If the tooltip is pinned, there should be no offset
   const OFFSET = lastMeasuredGlobalPosition == null ? 8 : 0;
@@ -201,8 +210,8 @@ export default function VoxelValueTooltip() {
         pointerEvents: lastMeasuredGlobalPosition == null ? "none" : "auto",
       }}
     >
-      {voxelValuesByLayer != null
-        ? Object.entries(voxelValuesByLayer).map(([layerName, [category, value]]) => (
+      {voxelValueByLayer != null
+        ? Object.entries(voxelValueByLayer).map(([layerName, [category, value]]) => (
             <VoxelValueEntry
               key={layerName}
               category={category}

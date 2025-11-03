@@ -1868,6 +1868,7 @@ class DataApi {
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
     respectMapping: boolean = false,
+    channelIndex: number = 0,
   ): Promise<number> {
     let zoomStep;
     const state = Store.getState();
@@ -1898,8 +1899,31 @@ class DataApi {
     }
 
     // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(position, additionalCoordinates, mapping, zoomStep);
+    const dataValue = cube.getDataValue(
+      position,
+      additionalCoordinates,
+      mapping,
+      zoomStep,
+      channelIndex,
+    );
     return dataValue;
+  }
+
+  /**
+   * Returns the channel count of a layer. Except for RGB layers (which have three channels),
+   * layers always have one channel.
+   *
+   * @example
+   * api.data.getChannelCount("color") === 1; // true
+   * api.data.getChannelCount("uint32_segmentation") === 1; // true
+   * api.data.getChannelCount("rgb-layer") === 3; // true
+   */
+  getChannelCount(layerName: string): number {
+    const state = Store.getState();
+
+    const layer = getLayerByName(state.dataset, layerName);
+    const channelCount = getConstructorForElementClass(layer.elementClass)[1];
+    return channelCount;
   }
 
   /**

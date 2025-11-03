@@ -38,6 +38,7 @@ import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "viewer/model/volumet
 import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
+import { getConstructorForElementClass } from "../helpers/typed_buffer";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -92,7 +93,7 @@ const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
 };
 
 class DataCube {
-  BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT: number = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   private cubes: Record<string, CubeEntry>;
@@ -106,6 +107,7 @@ class DataCube {
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
+  channelCount: number;
   magInfo: MagInfo;
   layerName: string;
   emitter: Emitter;
@@ -137,6 +139,7 @@ class DataCube {
     layerName: string,
   ) {
     this.elementClass = elementClass;
+    this.channelCount = getConstructorForElementClass(this.elementClass)[1];
     this.isSegmentation = isSegmentation;
     this.magInfo = magInfo;
     this.layerName = layerName;
@@ -969,6 +972,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
+    channelIndex: number = 0,
   ): number {
     if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
@@ -979,7 +983,7 @@ class DataCube {
     const bucket = this.getBucket(
       this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
     );
-    const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
+    const voxelIndex = this.getVoxelIndex(voxel, zoomStep, channelIndex);
 
     if (bucket.hasData()) {
       const data = bucket.getData();
@@ -1037,9 +1041,11 @@ class DataCube {
     return voxelOffset;
   }
 
-  getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
+  getVoxelIndex(voxel: Vector3, zoomStep: number = 0, channelIndex: number = 0): number {
     const voxelOffset = this.getVoxelOffset(voxel, zoomStep);
-    return this.getVoxelIndexByVoxelOffset(voxelOffset);
+    const index = this.getVoxelIndexByVoxelOffset(voxelOffset);
+
+    return this.channelCount * index + channelIndex;
   }
 
   positionToZoomedAddress(

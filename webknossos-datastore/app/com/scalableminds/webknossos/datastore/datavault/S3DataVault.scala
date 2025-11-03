@@ -8,8 +8,8 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Empty, Full, Failure => BoxFailure}
-import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
+import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
@@ -49,7 +49,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
                   implicit val ec: ExecutionContext)
     extends DataVault
     with FoxImplicits {
-  private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
+  private lazy val bucketName = S3UriUtils.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
   }
@@ -109,7 +109,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
-      objectKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      objectKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
         case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
@@ -121,7 +121,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      prefixKey <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      prefixKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
       vaultPaths <- tryo(s3SubPrefixKeys.map(key =>
         new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
@@ -159,7 +159,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     }
 
     for {
-      rawPrefix <- S3DataVault.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      rawPrefix <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       // add a trailing slash only if it's missing
       prefixKey = if (rawPrefix.endsWith("/")) rawPrefix else rawPrefix + "/"
       client <- clientFox
@@ -191,41 +191,6 @@ object S3DataVault {
     new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, ws, ec)
   }
 
-  def hostBucketFromUri(uri: URI): Option[String] = {
-    val host = uri.getHost
-    if (isShortStyle(uri)) { // assume host is omitted from uri, shortcut form s3://bucket/key
-      Some(host)
-    } else if (isVirtualHostedStyle(uri)) {
-      Some(host.substring(0, host.length - ".s3.amazonaws.com".length))
-    } else if (isPathStyle(uri)) {
-      Some(uri.getPath.substring(1).split("/")(0))
-    } else {
-      None
-    }
-  }
-
-  // https://bucket-name.s3.region-code.amazonaws.com/key-name
-  private def isVirtualHostedStyle(uri: URI): Boolean =
-    uri.getHost.endsWith(".s3.amazonaws.com")
-
-  // https://s3.region-code.amazonaws.com/bucket-name/key-name
-  private def isPathStyle(uri: URI): Boolean =
-    uri.getHost.matches("s3(.[\\w\\-_]+)?.amazonaws.com") ||
-      (!uri.getHost.contains("amazonaws.com") && uri.getHost.contains("."))
-
-  // S3://bucket-name/key-name
-  private def isShortStyle(uri: URI): Boolean =
-    !uri.getHost.contains(".")
-
-  private def objectKeyFromUri(uri: URI): Box[String] =
-    if (isVirtualHostedStyle(uri)) {
-      Full(uri.getPath)
-    } else if (isPathStyle(uri)) {
-      Full(uri.getPath.substring(1).split("/").tail.mkString("/"))
-    } else if (isShortStyle(uri)) {
-      Full(uri.getPath.tail)
-    } else BoxFailure(s"Not a valid s3 uri: $uri")
-
   private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
     credentialOpt match {
       case Some(s3AccessKeyCredential: S3AccessKeyCredential) =>
@@ -239,9 +204,6 @@ object S3DataVault {
       case None =>
         AnonymousCredentialsProvider.create()
     }
-
-  private def isNonAmazonHost(uri: URI): Boolean =
-    (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"
 
   private def determineProtocol(uri: URI, ws: WSClient)(implicit ec: ExecutionContext): Fox[String] = {
     // If the endpoint supports HTTPS, use it. Otherwise, use HTTP.
@@ -261,7 +223,7 @@ object S3DataVault {
       implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
     val basic =
       S3AsyncClient.builder().credentialsProvider(getCredentialsProvider(credentialOpt)).crossRegionAccessEnabled(true)
-    if (isNonAmazonHost(uri)) {
+    if (S3UriUtils.isNonAmazonHost(uri)) {
       for {
         protocol <- determineProtocol(uri, ws)
       } yield

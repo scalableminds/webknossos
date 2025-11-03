@@ -43,11 +43,7 @@ import {
   sendSaveRequestWithToken,
   type MinCutTargetEdge,
 } from "admin/rest_api";
-import {
-  resetStoreAction,
-  restartSagaAction,
-  wkInitializedAction,
-} from "viewer/model/actions/actions";
+import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   tracings as HYBRID_TRACINGS,
@@ -318,7 +314,7 @@ startSaga(rootSaga);
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
-  options?: { dontDispatchWkInitialized?: boolean },
+  options?: { dontDispatchWkReady?: boolean },
 ): Promise<void> {
   /*
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -391,7 +387,7 @@ export async function setupWebknossosForTesting(
       true,
     );
     // Trigger the event ourselves, as the webKnossosController is not instantiated
-    app.vent.emit("webknossos:initialized");
+    app.vent.emit("webknossos:ready");
 
     const api = await webknossos.apiReady();
     testContext.api = api;
@@ -399,9 +395,9 @@ export async function setupWebknossosForTesting(
     // Ensure the slow compression is disabled by default. Tests may change
     // this individually.
     testContext.setSlowCompression(false);
-    if (!options?.dontDispatchWkInitialized) {
-      // Dispatch the wkInitializedAction, so the sagas are started
-      Store.dispatch(wkInitializedAction());
+    if (!options?.dontDispatchWkReady) {
+      // Dispatch the wkReadyAction, so the sagas are started
+      Store.dispatch(wkReadyAction());
     }
   } catch (error) {
     console.error("model.fetch() failed", error);

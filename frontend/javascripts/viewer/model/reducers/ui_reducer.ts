@@ -145,14 +145,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_IS_WK_INITIALIZED": {
-      return updateKey(state, "uiInformation", { isWkInitialized: action.isInitialized });
+    case "SET_IS_WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
     }
-    case "WK_INITIALIZED": {
-      return updateKey(state, "uiInformation", { isWkInitialized: true });
-    }
-    case "UI_READY": {
-      return updateKey(state, "uiInformation", { isUiReady: true });
+    case "WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {

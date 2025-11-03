@@ -104,9 +104,9 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   );
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
 
-  const userCanSaveAndNoneCollabAnnotation = allowSave && !othersMayEdit;
+  const userCanSaveAndNoCollab = allowSave && !othersMayEdit;
   const userCanSaveAndNoLiveCollab = allowSave && !WkDevFlags.liveCollab;
-  if (userCanSaveAndNoneCollabAnnotation || userCanSaveAndNoLiveCollab) {
+  if (userCanSaveAndNoCollab || userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
     // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
     // between the page load and this check here.
@@ -340,8 +340,6 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       // and ensures wk is busy until the proofreading actions are saved.
       [PROOFREADING_BUSY_REASON],
     );
-    const annotation = yield* select((state) => state.annotation);
-    console.log(annotation);
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
       break;
@@ -405,7 +403,6 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxVisibilityInVolumeTracing":
         case "updateSegmentGroupsExpandedState": {
           if (areUnsavedChangesOfUser) {
-            // Maybe write tests for these? Maybe part of M4
             yield* put(applyVolumeUpdateActionsFromServerAction([action]));
           }
           break;
@@ -603,7 +600,7 @@ export function* tryToIncorporateActions(
   return { success: true };
 }
 
-type IdsToReloadPerMapping = Record<string, number[]>;
+type IdsToReloadPerMappingId = Record<string, number[]>;
 
 // Gathers mapped agglomerate ids for unknown but relevant segments to apply the passed save queue entries correctly.
 // This is needed in case proofreading was done via mesh interactions whose mapping info is present in the meshes
@@ -612,11 +609,11 @@ type IdsToReloadPerMapping = Record<string, number[]>;
 // Returns a list of segment ids to reload for each needed volume / editable tracing id.
 function* getAllUnknownSegmentIdsInPendingUpdates(
   saveQueue: SaveQueueEntry[],
-): Saga<IdsToReloadPerMapping> {
+): Saga<IdsToReloadPerMappingId> {
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  const idsToRequestByLayerId = {} as IdsToReloadPerMapping;
+  const idsToReloadByMappingId = {} as IdsToReloadPerMappingId;
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
       switch (action.name) {
@@ -636,36 +633,36 @@ function* getAllUnknownSegmentIdsInPendingUpdates(
             adaptToType(segmentId2),
           );
           if (!updatedAgglomerateId1) {
-            if (!(actionTracingId in idsToRequestByLayerId)) {
-              idsToRequestByLayerId[actionTracingId] = [];
+            if (!(actionTracingId in idsToReloadByMappingId)) {
+              idsToReloadByMappingId[actionTracingId] = [];
             }
-            idsToRequestByLayerId[actionTracingId].push(segmentId1);
+            idsToReloadByMappingId[actionTracingId].push(segmentId1);
           }
           if (!updatedAgglomerateId2) {
-            if (!(actionTracingId in idsToRequestByLayerId)) {
-              idsToRequestByLayerId[actionTracingId] = [];
+            if (!(actionTracingId in idsToReloadByMappingId)) {
+              idsToReloadByMappingId[actionTracingId] = [];
             }
-            idsToRequestByLayerId[actionTracingId].push(segmentId2);
+            idsToReloadByMappingId[actionTracingId].push(segmentId2);
           }
         }
       }
     }
   }
-  return idsToRequestByLayerId;
+  return idsToReloadByMappingId;
 }
 
-// For each passed mapping reload the segment ids' mapping information and store it in the local mapping.
+// For each passed mapping, reload the segment ids' mapping information and store it in the local mapping.
 // Needed after getAllUnknownSegmentIdsInPendingUpdates to load updated mapping info for segment ids of
 // mesh interaction proofreading actions to ensure reapplying these actions is done with up-to-date mapping info.
-function* addMissingSegmentsToLoadedMappings(idsToRequest: IdsToReloadPerMapping): Saga<void> {
+function* addMissingSegmentsToLoadedMappings(idsToReload: IdsToReloadPerMappingId): Saga<void> {
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const version = yield* select((state) => state.annotation.version);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  for (const volumeTracingId of Object.keys(idsToRequest)) {
-    if (idsToRequest[volumeTracingId].length === 0) {
+  for (const volumeTracingId of Object.keys(idsToReload)) {
+    if (idsToReload[volumeTracingId].length === 0) {
       continue;
     }
     const activeMapping = activeMappingByLayer[volumeTracingId];
@@ -675,7 +672,7 @@ function* addMissingSegmentsToLoadedMappings(idsToRequest: IdsToReloadPerMapping
       getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreUrl,
       volumeTracingId,
-      idsToRequest[volumeTracingId],
+      idsToReload[volumeTracingId],
       annotationId,
       version,
     );
@@ -696,7 +693,7 @@ function* addMissingSegmentsToLoadedMappings(idsToRequest: IdsToReloadPerMapping
 // This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
-// to apply them correctly during rebasing. Last the save queue is replaced with the updated save queue entries.
+// to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
 function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
       success: false;

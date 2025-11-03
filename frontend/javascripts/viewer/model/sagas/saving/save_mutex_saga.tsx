@@ -211,16 +211,13 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         // Therefore, we also print the error in the test context.
         console.error("Error while trying to acquire mutex:", error);
       }
-      // todop: I think this needs to happen in a finally block?
-      const wasCanceled = yield* cancelled();
-      console.log("wasCanceled", wasCanceled);
-      if (!wasCanceled) {
-        console.error("Error while trying to acquire mutex.", error);
-        yield* put(setUserHoldingMutexAction(undefined));
-        yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-        if (yield* call(getDoesHaveMutex)) {
-          yield* put(setIsMutexAcquiredAction(false));
-        }
+      // No need to check whether the saga was cancelled.
+      // A cancelled saga does not reach the catch block but the finally block.
+      console.error("Error while trying to acquire mutex.", error);
+      yield* put(setUserHoldingMutexAction(undefined));
+      yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+      if (yield* call(getDoesHaveMutex)) {
+        yield* put(setIsMutexAcquiredAction(false));
       }
     }
     mutexLogicState.isInitialRequest = false;
@@ -338,21 +335,11 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
 }
 
 function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToActiveToolChange(action: SetToolAction | CycleToolAction): Saga<void> {
+  function* reactToActiveToolChange(_action: SetToolAction | CycleToolAction): Saga<void> {
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     if (!othersMayEdit) {
       return;
     }
-    let newToolId;
-    if (action.type === "SET_TOOL") {
-      newToolId = action.tool.id;
-    } else {
-      // Cycle Tool action
-      const newActiveTool = yield* select((state) => state.uiInformation.activeTool);
-      newToolId = newActiveTool.id;
-    }
-
-    // TODO: also check for livecollab flag and editable mapping locked and so on.
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
   yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
@@ -427,8 +414,8 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
 
 function* releaseMutex() {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  // TODOM: Mutex is auto released after a Model.ensureSavedState or so, sometimes (e.g. a proofreading action),
-  // directly triggers new updates afterwards. Currently, this needs to re-acquire the mutex, but that should be necessary IMO.
+  // TODO: Mutex is auto released after a Model.ensureSavedState or so, sometimes (e.g. a proofreading action),
+  // directly triggers new updates afterwards. Currently, this needs to re-acquire the mutex, but that should not be necessary IMO.
   yield* retry(
     RETRY_COUNT,
     ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,

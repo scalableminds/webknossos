@@ -97,6 +97,9 @@ function applySingleAction(
         ua,
       );
     }
+
+    // These update actions below are user specific and only need to be applied
+    // if these actions originate from the current user (this happens when rebasing such actions).
     case "updateSegmentGroupsExpandedState": {
       const { areExpanded, groupIds, actionTracingId } = ua.value;
       const { segmentGroups } = getVolumeTracingById(state.annotation, actionTracingId);

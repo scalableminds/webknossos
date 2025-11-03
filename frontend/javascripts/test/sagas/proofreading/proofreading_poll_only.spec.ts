@@ -87,7 +87,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update action was received.
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
       const updateBatch = context.receivedDataPerSaveRequest[0][0];
@@ -172,7 +172,7 @@ describe("Proofreading (Poll only)", () => {
       );
 
       yield call(() => api.tracing.save());
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update action was received.
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
       const updateBatch1 = context.receivedDataPerSaveRequest[0][0];
@@ -212,7 +212,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update action was received.
       // split action:
       expect(context.receivedDataPerSaveRequest.length).toBe(2);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
@@ -275,7 +275,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update action was received.
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
       const updateBatch = context.receivedDataPerSaveRequest[0][0];
@@ -352,7 +352,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update actions were received.
       // split 1
       expect(context.receivedDataPerSaveRequest.length).toBe(2);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
@@ -567,7 +567,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(() => api.tracing.save());
 
-      // Checking that only the injected update action were received.
+      // Checking that only the injected update action was received.
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);
       const updateBatch = context.receivedDataPerSaveRequest[0][0];

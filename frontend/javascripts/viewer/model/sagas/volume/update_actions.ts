@@ -1016,7 +1016,7 @@ export function mergeAgglomerate(
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // agglomerateId1 and agglomerateId2 are needed in live collab setting to notice changes of loaded agglomerates done by other users.
-    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga.
+    // Kept up-to-date in save queue by updateSaveQueueEntriesToStateAfterRebase saga. Might be undefined in case of old update actions.
     agglomerateId1?: number;
     agglomerateId2?: number;
     // For backwards compatibility reasons,

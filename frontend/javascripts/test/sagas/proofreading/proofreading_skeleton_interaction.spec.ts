@@ -765,4 +765,4 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   // TODO: code interleaving test where version is injected after agglomerate trees are created and before the merge.
 });
 
-// TODOM: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others
+// TODO: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others

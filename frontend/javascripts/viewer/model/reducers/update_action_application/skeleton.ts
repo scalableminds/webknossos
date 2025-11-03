@@ -322,26 +322,18 @@ function applySingleAction(
       return SkeletonTracingReducer(state, setTreeGroupsAction(ua.value.treeGroups));
     }
 
-    case "updateTreeGroupsExpandedState": {
-      const skeletonTracing = enforceSkeletonTracing(state.annotation);
-      const treeGroupsMap = getTreeGroupsMap(skeletonTracing);
-      const currentlyExpandedTreeGroupIds = new Set(
-        Object.values(treeGroupsMap).filter((group) => group.isExpanded),
-      );
-      const groupIdSet = new Set(ua.value.groupIds);
-      const newlyExpandedTreeGroupIds = ua.value.areExpanded
-        ? currentlyExpandedTreeGroupIds.union(groupIdSet)
-        : currentlyExpandedTreeGroupIds.difference(groupIdSet);
-      // changes to user specific state does not need to be reacted to
-      return setExpandedTreeGroups(state, (group: TreeGroup) =>
-        newlyExpandedTreeGroupIds.has(group.groupId),
-      );
-    }
-
     case "updateTreeEdgesVisibility": {
       return SkeletonTracingReducer(
         state,
         setTreeEdgeVisibilityAction(ua.value.treeId, ua.value.edgesAreVisible),
+      );
+    }
+
+    case "deleteUserBoundingBoxInSkeletonTracing": {
+      return applyDeleteUserBoundingBox(
+        state,
+        enforceSkeletonTracing(state.annotation),
+        withoutActionTimestamp(ua),
       );
     }
 
@@ -359,6 +351,25 @@ function applySingleAction(
         withoutActionTimestamp(ua),
       );
     }
+
+    // These update actions below are user specific and only need to be applied
+    // if these actions originate from the current user (this happens when rebasing such actions).
+    case "updateTreeGroupsExpandedState": {
+      const skeletonTracing = enforceSkeletonTracing(state.annotation);
+      const treeGroupsMap = getTreeGroupsMap(skeletonTracing);
+      const currentlyExpandedTreeGroupIds = new Set(
+        Object.values(treeGroupsMap).filter((group) => group.isExpanded),
+      );
+      const groupIdSet = new Set(ua.value.groupIds);
+      const newlyExpandedTreeGroupIds = ua.value.areExpanded
+        ? currentlyExpandedTreeGroupIds.union(groupIdSet)
+        : currentlyExpandedTreeGroupIds.difference(groupIdSet);
+      // changes to user specific state does not need to be reacted to
+      return setExpandedTreeGroups(state, (group: TreeGroup) =>
+        newlyExpandedTreeGroupIds.has(group.groupId),
+      );
+    }
+
     case "updateUserBoundingBoxVisibilityInSkeletonTracing": {
       // Visibility updates are user-specific and should only be incorporated
       // when rebasing the user's actions from the save queue.
@@ -369,13 +380,7 @@ function applySingleAction(
         }),
       );
     }
-    case "deleteUserBoundingBoxInSkeletonTracing": {
-      return applyDeleteUserBoundingBox(
-        state,
-        enforceSkeletonTracing(state.annotation),
-        withoutActionTimestamp(ua),
-      );
-    }
+
     // User specific actions
     case "updateActiveNode": {
       if (ua.value.activeNode == null) {

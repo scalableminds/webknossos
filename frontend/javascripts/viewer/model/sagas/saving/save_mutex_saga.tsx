@@ -46,6 +46,7 @@ const INITIAL_BACKOFF_TIME = 1000;
 const BACKOFF_TIME_MULTIPLIER = 1.5;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
+const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
 enum MutexFetchingStrategy {
   AdHoc = "AdHoc",
@@ -416,12 +417,20 @@ function* releaseMutex() {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   // TODO: Mutex is auto released after a Model.ensureSavedState or so, sometimes (e.g. a proofreading action),
   // directly triggers new updates afterwards. Currently, this needs to re-acquire the mutex, but that should not be necessary IMO.
-  yield* retry(
-    RETRY_COUNT,
-    ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
-    releaseAnnotationMutex,
-    annotationId,
-  );
+  let successfullyReleaseMutex = false;
+  let backoffTime = 1000;
+  // Enforce released mutex even when initial request failed due to e.g. network error.
+  // In case another user got the mutex in meantime, releasing this users mutex still yield a successful request.
+  while (!successfullyReleaseMutex) {
+    try {
+      yield call(releaseAnnotationMutex, annotationId);
+      successfullyReleaseMutex = true;
+    } catch (error) {
+      console.error("Could not release mutex", error);
+      yield delay(backoffTime);
+      backoffTime = Math.min(backoffTime ** 2, MAX_RELEASE_RETRY_INTERVAL);
+    }
+  }
   yield* put(setUserHoldingMutexAction(null));
   yield* put(setIsMutexAcquiredAction(false));
 }

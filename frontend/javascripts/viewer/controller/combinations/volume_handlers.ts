@@ -186,7 +186,7 @@ function handlePickCellFromGlobalPosition(
     Store.getState(),
   );
 
-  const segmentId = getSegmentIdForPosition(posInLayerSpace);
+  const segmentId = getSegmentIdForPosition(globalPos);
 
   if (segmentId === 0) {
     return;

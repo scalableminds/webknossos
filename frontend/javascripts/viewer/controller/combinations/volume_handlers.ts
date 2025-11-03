@@ -171,7 +171,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
-export function handlePickCellFromGlobalPosition(
+function handlePickCellFromGlobalPosition(
   globalPos: Vector3,
   additionalCoordinates: AdditionalCoordinate[],
 ) {

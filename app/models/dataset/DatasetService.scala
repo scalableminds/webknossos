@@ -590,8 +590,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
-        organizationDAO.getUsedStorageForDataset(dataset._id))
+      usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
+        organizationDAO.getUsedStorageForDataset(dataset._id)
+      else Fox.successful(0L)
     } yield {
       Json.obj(
         "id" -> dataset._id,

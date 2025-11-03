@@ -1385,7 +1385,7 @@ export async function triggerDatasetClearCache(
 }
 
 export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
-  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+  await Request.triggerRequest(`/api/datasets/${datasetId}`, {
     method: "DELETE",
   });
 }

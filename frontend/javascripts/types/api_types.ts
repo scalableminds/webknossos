@@ -330,6 +330,7 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
+  suppressManyBucketUpdatesWarning?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {

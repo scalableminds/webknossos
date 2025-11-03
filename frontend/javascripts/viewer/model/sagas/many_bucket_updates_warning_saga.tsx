@@ -1,31 +1,34 @@
+import { getActiveUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
-import UserLocalStorage from "libs/user_local_storage";
-import { stringToBoolean } from "libs/utils";
-import { takeEvery } from "typed-redux-saga";
+import { call, takeEvery } from "typed-redux-saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
-const WARNING_SUPPRESSION_USER_STORAGE_KEY = "suppressManyBucketUpdatesWarning";
 
 function* manyBucketUpdatesWarning(): Saga<void> {
   let showWarningToastInThisSession = true;
   const setShowWarningToastInThisSession = (value: boolean) => {
     showWarningToastInThisSession = value;
   };
-  setInterval(() => {
-    UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, "false");
-    console.log("resetting suppressBucketWarning to false every 120s for dev purposes");
-  }, 120 * 1000);
-  //TODO_C dev
+  const activeUserAtSessionStart = yield* call(getActiveUser);
+  // Only get the active user once because the toast won't be shown more than once per session,
+  // thus the updated novelUserExperienceInfos won't be needed until the next session.
+  const suppressWarningToastAtSessionStart =
+    activeUserAtSessionStart.novelUserExperienceInfos.suppressManyBucketUpdatesWarning;
 
+  if (suppressWarningToastAtSessionStart) {
+    return;
+  }
   function* showWarningToast(): Saga<void> {
     let neverShowAgain = false;
 
     const onClose = () => {
       Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
       if (neverShowAgain) {
-        UserLocalStorage.setItem(WARNING_SUPPRESSION_USER_STORAGE_KEY, neverShowAgain.toString());
+        updateNovelUserExperienceInfos(activeUserAtSessionStart, {
+          suppressManyBucketUpdatesWarning: true,
+        });
       }
     };
     const handleCheckboxChange = (event: CheckboxChangeEvent) => {
@@ -54,11 +57,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
       </Space>
     );
 
-    const suppressManyBucketUpdatesWarning = stringToBoolean(
-      UserLocalStorage.getItem(WARNING_SUPPRESSION_USER_STORAGE_KEY) || "false",
-    );
-
-    if (showWarningToastInThisSession && !suppressManyBucketUpdatesWarning) {
+    if (showWarningToastInThisSession && !suppressWarningToastAtSessionStart) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);
       Toast.warning(
         <>
@@ -75,8 +74,6 @@ function* manyBucketUpdatesWarning(): Saga<void> {
         },
       );
       setShowWarningToastInThisSession(false);
-    } else {
-      console.log("suppressing warning toast"); //TODO_C dev
     }
   }
   yield takeEvery("SHOW_MANY_BUCKET_UPDATES_WARNING", showWarningToast);

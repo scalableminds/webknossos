@@ -60,14 +60,6 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   while (true) {
     yield* delay(CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS);
     const sumOfBuckets = _.sum(currentBucketCounts);
-    console.log(
-      "buckets in last interval: ",
-      bucketsForCurrentInterval,
-      "currentBucketsArray: ",
-      currentBucketCounts,
-      "sumOfBuckets: ",
-      sumOfBuckets,
-    );
     if (sumOfBuckets > bucketSaveWarningThreshold) {
       Store.dispatch(showManyBucketUpdatesWarningAction());
     }

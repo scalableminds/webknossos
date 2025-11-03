@@ -9,7 +9,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
@@ -116,11 +116,6 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)
-
-  def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId/paths")
-      .addQueryParam("key", dataStoreKey)
-      .getWithJsonResponse[List[LayerMagLinkInfo]]
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =

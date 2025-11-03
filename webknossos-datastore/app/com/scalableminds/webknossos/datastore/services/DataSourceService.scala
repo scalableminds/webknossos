@@ -25,6 +25,7 @@ import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
+    managedS3Service: ManagedS3Service,
     dataVaultService: DataVaultService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
@@ -325,4 +326,15 @@ class DataSourceService @Inject()(
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
+  def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
+    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath)
+    val managedS3Paths = paths.filter(managedS3Service.pathIsInManagedS3)
+    for {
+      _ <- Fox.serialCombined(localPaths)(PathUtils.deleteDirectoryRecursively(_).toFox)
+      _ <- managedS3Service.deletePaths(managedS3Paths)
+    } yield ()
+  }
+
+  def existsOnDisk(dataSourceId: DataSourceId): Boolean =
+    Files.exists(dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
 }

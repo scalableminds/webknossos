@@ -22,7 +22,7 @@ import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { wkInitializedAction } from "viewer/model/actions/actions";
+import { wkReadyAction } from "viewer/model/actions/actions";
 import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
@@ -42,8 +42,6 @@ type OwnProps = {
 type StateProps = {
   viewMode: ViewMode;
   user: APIUser | null | undefined;
-  isUiReady: boolean;
-  isWkInitialized: boolean;
 };
 type Props = OwnProps & StateProps;
 type PropsWithRouter = Props & RouteComponentProps & WithBlockerProps;
@@ -176,9 +174,14 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.initKeyboard();
     this.initTaskScript();
     window.webknossos = new ApiLoader(Model);
-    app.vent.emit("webknossos:initialized");
-    Store.dispatch(wkInitializedAction());
-    this.props.setControllerStatus("loaded");
+    app.vent.emit("webknossos:ready");
+    Store.dispatch(wkReadyAction());
+    setTimeout(() => {
+      // Give wk (sagas and bucket loading) a bit time to catch air before
+      // showing the UI as "ready". The goal here is to avoid that the
+      // UI is still freezing after the loading indicator is gone.
+      this.props.setControllerStatus("loaded");
+    }, 200);
   }
 
   async initTaskScript() {
@@ -306,22 +309,20 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode, isUiReady, isWkInitialized } = this.props;
+    const { user, viewMode } = this.props;
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
 
-    let cover = null;
-    // Show the brain spinner during loading and until the UI is ready
-    if (status === "loading" || (status === "loaded" && !isUiReady)) {
-      cover = <BrainSpinner />;
+    if (status === "loading") {
+      return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
-      cover = (
+      return (
         <BrainSpinnerWithError
           gotUnhandledError={gotUnhandledError}
           organizationToSwitchTo={organizationToSwitchTo}
         />
       );
     } else if (status === "failedLoading") {
-      cover = (
+      return (
         <CoverWithLogin
           onLoggedIn={() => {
             // Close existing error toasts for "Not Found" errors before trying again.
@@ -331,12 +332,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           }}
         />
       );
-    }
-
-    // If wk is not initialized yet, only render the cover. If it is initialized, start rendering the controllers
-    // in the background, hidden by the cover.
-    if (!isWkInitialized) {
-      return cover;
     }
 
     const { allowedModes } = Store.getState().annotation.restrictions;
@@ -352,19 +347,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const isPlane = constants.MODES_PLANE.includes(viewMode);
 
     if (isArbitrary) {
-      return (
-        <>
-          {cover != null ? cover : null}
-          <ArbitraryController viewMode={viewMode} />
-        </>
-      );
+      return <ArbitraryController viewMode={viewMode} />;
     } else if (isPlane) {
-      return (
-        <>
-          {cover != null ? cover : null}
-          <PlaneController />
-        </>
-      );
+      return <PlaneController />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.
@@ -375,8 +360,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
-    isUiReady: state.uiInformation.isUiReady,
-    isWkInitialized: state.uiInformation.isWkInitialized,
     viewMode: state.temporaryConfiguration.viewMode,
     user: state.activeUser,
   };

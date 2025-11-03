@@ -1,8 +1,7 @@
 import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
-import { document, location } from "libs/window";
+import { document } from "libs/window";
 import { WebGLRenderer } from "three";
 import { Store } from "viewer/singletons";
-import type { WebknossosState } from "viewer/store";
 
 let renderer: WebGLRenderer | null = null;
 
@@ -15,7 +14,7 @@ export function destroyRenderer(): void {
   notifyAboutDisposedRenderer();
 }
 
-export function getRenderer(): WebGLRenderer {
+function getRenderer(): WebGLRenderer {
   if (renderer != null) {
     return renderer;
   }
@@ -44,32 +43,6 @@ export function getRenderer(): WebGLRenderer {
   return renderer;
 }
 
-export function getWebGlAnalyticsInformation(state: WebknossosState) {
-  const interpolationEnabled = state.datasetConfiguration.interpolation;
-
-  const info = {
-    url: location.href,
-    userAgent: navigator?.userAgent,
-    platform: navigator?.platform,
-    interpolationEnabled,
-    vendor: null,
-    renderer: null,
-  };
-
-  const canvas = document.createElement("canvas");
-  const gl = canvas.getContext("webgl2");
-
-  if (gl != null) {
-    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-    if (debugInfo != null) {
-      info.vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-      info.renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-    }
-  }
-
-  return info;
-}
-
 if (typeof window !== "undefined") {
   // Call window.testContextLoss() in the console
   // to test the context loss recovery.
@@ -86,4 +59,5 @@ if (typeof window !== "undefined") {
   window.testContextLoss = testContextLoss;
 }
 
+export { getRenderer };
 export default {};

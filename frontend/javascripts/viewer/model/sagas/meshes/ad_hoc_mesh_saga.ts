@@ -51,7 +51,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
-import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -698,11 +698,11 @@ function* refreshMeshWithMap(
 }
 
 export default function* adHocMeshSaga(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_INITIALIZED
+  // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
 
-  yield* call(ensureSceneControllerInitialized);
-  yield* call(ensureWkInitialized);
+  yield* call(ensureSceneControllerReady);
+  yield* call(ensureWkReady);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery("REMOVE_MESH", removeMesh);
   yield* takeEvery("REFRESH_MESHES", refreshMeshes);

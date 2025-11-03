@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -867,33 +867,42 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       }
     )
 
-  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): List[DataSourceMagInfo] = {
-    val mags = rows.map(_.mag)
-    val dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
-    rows.toList.zip(mags).zip(dataSources).map {
-      case ((row, mag), dataSource) =>
-        DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
-    }
+  def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStrOpts <- run(q"""
+           SELECT m1.path FROM webknossos.dataset_mags m1
+           WHERE m1._dataset = $datasetId
+           AND m1.path IS NOT NULL
+           AND NOT EXISTS (
+              SELECT m2.path
+              FROM webknossos.dataset_mags m2
+              WHERE m2._dataset != $datasetId
+              AND (
+                m2.path = m1.path
+                OR (
+                  m2.realpath IS NOT NULL AND m2.realpath = m1.realpath
+                )
+              )
+           )
+              """.as[Option[String]])
+      paths <- pathsStrOpts.flatten.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+    } yield paths
+
+  def findDatasetsWithMagsInDir(absolutePath: UPath,
+                                dataStore: DataStore,
+                                ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
+    // ensure trailing slash on absolutePath to avoid string prefix false positives
+    val absolutePathWithTrailingSlash =
+      if (absolutePath.toString.endsWith("/")) absolutePath.toString else absolutePath.toString + "/"
+    run(q"""
+        SELECT d._id FROM webknossos.dataset_mags m
+        JOIN webknossos.datasets d ON m._dataset = d._id
+        WHERE m.realpath IS NOT NULL
+        AND starts_with(m.realpath, $absolutePathWithTrailingSlash)
+        AND d._id != $ignoredDataset
+        AND d._datastore = ${dataStore.name.trim}
+       """.as[ObjectId])
   }
-
-  def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
-    for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
-            WHERE _dataset = $datasetId
-            AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
-      magInfos = rowsToMagInfos(rows)
-    } yield magInfos
-
-  def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
-    for {
-      rows <- run(q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, _organization, directoryName
-            FROM webknossos.dataset_mags
-            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
-            WHERE realPath = $realPath""".as[DataSourceMagRow])
-      magInfos = rowsToMagInfos(rows)
-    } yield magInfos
 
   private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
     for {
@@ -1283,6 +1292,36 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
             ${datasetIdOpt.map(datasetId => q"AND ranked._dataset = $datasetId").getOrElse(q"")};
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
+
+  def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      pathsStr <- run(q"""
+           SELECT a1.path FROM webknossos.dataset_layer_attachments a1
+           WHERE a1._dataset = $datasetId
+           AND NOT EXISTS (
+              SELECT a2.path
+              FROM webknossos.dataset_layer_attachments a2
+              WHERE a2._dataset != $datasetId
+              AND a2.path = a1.path
+           )
+              """.as[String])
+      paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
+    } yield paths
+
+  def findDatasetsWithAttachmentsInDir(absolutePath: UPath,
+                                       dataStore: DataStore,
+                                       ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
+    // ensure trailing slash on absolutePath to avoid string prefix false positives
+    val absolutePathWithTrailingSlash =
+      if (absolutePath.toString.endsWith("/")) absolutePath.toString else absolutePath.toString + "/"
+    run(q"""
+        SELECT d._id FROM webknossos.dataset_layer_attachments a
+        JOIN webknossos.datasets d ON a._dataset = d._id
+        WHERE starts_with(a.path, $absolutePathWithTrailingSlash)
+        AND d._id != $ignoredDataset
+        AND d._datastore = ${dataStore.name.trim}
+       """.as[ObjectId])
+  }
 }
 
 class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

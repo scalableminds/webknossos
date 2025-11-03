@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessCo
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
-import com.scalableminds.webknossos.datastore.helpers.{DataSourceMagInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
@@ -25,6 +25,8 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
+import models.annotation.AnnotationDAO
+import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
@@ -53,6 +55,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               annotationDAO: AnnotationDAO,
+                               usedStorageService: UsedStorageService,
                                conf: WkConf,
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -493,28 +497,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.serialCombined(pathInfos)(updateRealPathsForDataSource)
     } yield ()
 
-  /**
-    * Returns a list of tuples, where the first element is the magInfo and the second element is a list of all magInfos
-    * that share the same realPath but have a different dataSourceId. For each mag in the data layer there is one tuple.
-    * @param datasetId id of the dataset
-    * @param layerName name of the layer in the dataset
-    * @return
-    */
-  def getPathsForDataLayer(datasetId: ObjectId,
-                           layerName: String): Fox[List[(DataSourceMagInfo, List[DataSourceMagInfo])]] =
-    for {
-      magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
-      magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
-        magInfo.realPath match {
-          case Some(realPath) =>
-            for {
-              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
-              filteredPathInfos = pathInfos.filter(_.dataSourceId != magInfo.dataSourceId)
-            } yield (magInfo, filteredPathInfos)
-          case None => Fox.successful((magInfo, List()))
-      })
-    } yield magInfosAndLinkedMags
-
   def validatePaths(paths: Seq[UPath], dataStore: DataStore): Fox[Unit] =
     for {
       _ <- Fox.successful(())
@@ -526,18 +508,55 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
-  def deleteVirtualOrDiskDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      datastoreClient <- clientFor(dataset)
       _ <- if (dataset.isVirtual) {
-        // At this point, we should also free space in S3 once implemented.
-        // Right now, we can just mark the dataset as deleted in the database.
-        datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = true)
+        for {
+          magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findMagPathsUsedOnlyByThisDataset(dataset._id)
+          attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findAttachmentPathsUsedOnlyByThisDataset(
+            dataset._id)
+          pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+          // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
+          _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
+        } yield ()
       } else {
         for {
-          datastoreClient <- clientFor(dataset)
-          _ <- datastoreClient.deleteOnDisk(dataset._id)
+          datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
+          datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
+          datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
+          datastore <- dataStoreFor(dataset)
+          datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
+          _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
+            .mkString(",")}"
+          _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
         } yield ()
-      } ?~> "dataset.delete.failed"
+      }
+      _ <- deleteDatasetFromDB(dataset._id)
+    } yield ()
+
+  private def findDatasetsUsingDataFromDir(directory: UPath,
+                                           dataStore: DataStore,
+                                           ignoredDatasetId: ObjectId): Fox[Seq[ObjectId]] =
+    for {
+      datasetsWithMagsInDir <- datasetMagsDAO.findDatasetsWithMagsInDir(directory, dataStore, ignoredDatasetId)
+      datasetsWithAttachmentsInDir <- datasetLayerAttachmentsDAO.findDatasetsWithAttachmentsInDir(directory,
+                                                                                                  dataStore,
+                                                                                                  ignoredDatasetId)
+    } yield (datasetsWithMagsInDir ++ datasetsWithAttachmentsInDir).distinct
+
+  def deleteDatasetFromDB(datasetId: ObjectId): Fox[Unit] =
+    for {
+      existingDatasetBox <- datasetDAO.findOne(datasetId)(GlobalAccessContext).shiftBox
+      _ <- existingDatasetBox match {
+        case Full(dataset) =>
+          for {
+            annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+            _ <- datasetDAO.deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+            _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+          } yield ()
+        case _ => Fox.successful(())
+      }
     } yield ()
 
   def generateDirectoryName(datasetName: String, datasetId: ObjectId): String =

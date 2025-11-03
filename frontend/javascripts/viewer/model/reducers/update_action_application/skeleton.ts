@@ -328,10 +328,10 @@ function applySingleAction(
       const currentlyExpandedTreeGroupIds = new Set(
         Object.values(treeGroupsMap).filter((group) => group.isExpanded),
       );
-      const actionGroupIds = new Set(ua.value.groupIds);
+      const groupIdSet = new Set(ua.value.groupIds);
       const newlyExpandedTreeGroupIds = ua.value.areExpanded
-        ? currentlyExpandedTreeGroupIds.union(actionGroupIds)
-        : currentlyExpandedTreeGroupIds.difference(actionGroupIds);
+        ? currentlyExpandedTreeGroupIds.union(groupIdSet)
+        : currentlyExpandedTreeGroupIds.difference(groupIdSet);
       // changes to user specific state does not need to be reacted to
       return setExpandedTreeGroups(state, (group: TreeGroup) =>
         newlyExpandedTreeGroupIds.has(group.groupId),
@@ -361,7 +361,7 @@ function applySingleAction(
     }
     case "updateUserBoundingBoxVisibilityInSkeletonTracing": {
       // Visibility updates are user-specific and should only be incorporated
-      // if reapplied during rebasing the users actions from the save queue.
+      // when rebasing the user's actions from the save queue.
       return updateUserBoundingBox(
         state,
         changeUserBoundingBoxAction(ua.value.boundingBoxId, {

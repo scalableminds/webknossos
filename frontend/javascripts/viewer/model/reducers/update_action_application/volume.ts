@@ -105,10 +105,10 @@ function applySingleAction(
           .filter((g) => g.isExpanded)
           .map((g) => g.groupId),
       );
-      const actionGroupIds = new Set(groupIds);
+      const groupIdSet = new Set(groupIds);
       const newExpandedGroupIds = areExpanded
-        ? currentlyExpandedSegmentGroupIds.union(actionGroupIds)
-        : currentlyExpandedSegmentGroupIds.difference(actionGroupIds);
+        ? currentlyExpandedSegmentGroupIds.union(groupIdSet)
+        : currentlyExpandedSegmentGroupIds.difference(groupIdSet);
       const newGroups = mapGroups(segmentGroups, (group) => {
         const shouldBeExpanded = newExpandedGroupIds.has(group.groupId);
         if (shouldBeExpanded !== group.isExpanded) {

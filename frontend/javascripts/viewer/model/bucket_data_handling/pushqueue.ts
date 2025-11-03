@@ -156,7 +156,6 @@ class PushQueue {
       );
       Store.dispatch(pushSaveQueueTransaction(items));
       Store.dispatch(notifyAboutUpdatedBucketsAction(items.length));
-      console.log("notify about ", items.length, " items");
       this.compressingBucketCount -= batch.length;
     } catch (error) {
       // See other usage of escalateErrorAction for a detailed explanation.

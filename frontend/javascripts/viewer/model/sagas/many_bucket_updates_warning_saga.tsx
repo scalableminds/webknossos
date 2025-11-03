@@ -1,7 +1,7 @@
-import { getActiveUser, updateNovelUserExperienceInfos } from "admin/rest_api";
+import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
-import { call, takeEvery } from "typed-redux-saga";
+import { select, takeEvery } from "typed-redux-saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
@@ -11,22 +11,21 @@ function* manyBucketUpdatesWarning(): Saga<void> {
   const setShowWarningToastInThisSession = (value: boolean) => {
     showWarningToastInThisSession = value;
   };
-  const activeUserAtSessionStart = yield* call(getActiveUser);
-  // Only get the active user once because the toast won't be shown more than once per session,
-  // thus the updated novelUserExperienceInfos won't be needed until the next session.
-  const suppressWarningToastAtSessionStart =
-    activeUserAtSessionStart.novelUserExperienceInfos.suppressManyBucketUpdatesWarning;
-
-  if (suppressWarningToastAtSessionStart) {
+  const suppressWarningToast = yield* select(
+    (state) => state.activeUser.novelUserExperienceInfos.suppressManyBucketUpdatesWarning,
+  );
+  console.log("suppressWarningToast:", suppressWarningToast);
+  if (suppressWarningToast) {
     return;
   }
   function* showWarningToast(): Saga<void> {
+    const activeUser = yield* select((state) => state.activeUser);
     let neverShowAgain = false;
 
     const onClose = () => {
       Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
       if (neverShowAgain) {
-        updateNovelUserExperienceInfos(activeUserAtSessionStart, {
+        updateNovelUserExperienceInfos(activeUser, {
           suppressManyBucketUpdatesWarning: true,
         });
       }
@@ -57,7 +56,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
       </Space>
     );
 
-    if (showWarningToastInThisSession && !suppressWarningToastAtSessionStart) {
+    if (showWarningToastInThisSession && !suppressWarningToast) {
       console.warn(warningMessage + " For more info, visit: " + linkToDocs);
       Toast.warning(
         <>

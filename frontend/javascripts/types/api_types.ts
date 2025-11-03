@@ -233,7 +233,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
-  usedStorageBytes: number | null;
+  usedStorageBytes: number;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -266,13 +266,13 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
+  | "usedStorageBytes"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
-  usedStorageBytes?: number | null;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {

@@ -1,7 +1,5 @@
 package com.scalableminds.util.tools
 
-import com.scalableminds.util.tools.{Box, Empty, Failure, Full, ParamFailure}
-
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Success, Try}

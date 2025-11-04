@@ -22,7 +22,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
-import { ensureWkInitialized } from "./ready_sagas";
+import { ensureWkReady } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -30,7 +30,7 @@ const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Saga<void> {
-  yield* call(ensureWkInitialized);
+  yield* call(ensureWkReady);
 
   const previousProperties = {};
   // Initiate the prefetching once and then only for data relevant changes

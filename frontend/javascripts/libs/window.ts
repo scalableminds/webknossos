@@ -76,7 +76,6 @@ const _window: Window &
     OlvyConfig?: ArbitraryObject | null;
     managers?: Array<TextureBucketManager>;
     materials?: Record<string, ShaderMaterial>;
-    measuredTimeToFirstRender?: boolean;
   } =
   typeof window === "undefined"
     ? ({

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.{JsValue, Json, OFormat}
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 
 import scala.concurrent.ExecutionContext
 
@@ -39,6 +40,10 @@ case class S3AccessKeyCredential(name: String,
                                  organization: Option[String])
     extends DataVaultCredential {
   override def userId: Option[String] = user
+
+  def toCredentialsProvider: StaticCredentialsProvider = StaticCredentialsProvider.create(
+    AwsBasicCredentials.builder.accessKeyId(accessKeyId).secretAccessKey(secretAccessKey).build()
+  )
 }
 
 object S3AccessKeyCredential {

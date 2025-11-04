@@ -4,9 +4,12 @@ import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
-import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentialConfigReader,
+  DataVaultCredential,
+  S3AccessKeyCredential
+}
 import com.typesafe.scalalogging.LazyLogging
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -25,24 +28,44 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 import scala.jdk.FutureConverters._
 
-class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
 
-  private lazy val s3UploadCredentialsOpt: Option[(String, String)] =
-    dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+  def pathIsInManagedS3(path: UPath): Boolean =
+    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
+      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
+
+  def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
+    pathOpt.flatMap(findGlobalCredentialFor)
+
+  private lazy val globalCredentials: Seq[DataVaultCredential] = {
+    val res = config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
       new CredentialConfigReader(credentialConfig).getCredential
-    }.collectFirst {
-      case S3AccessKeyCredential(credentialName, accessKeyId, secretAccessKey, _, _)
-          if dataStoreConfig.Datastore.S3Upload.credentialName == credentialName =>
-        (accessKeyId, secretAccessKey)
+    }
+    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
+    res
+  }
+
+  private lazy val s3UploadCredentialOpt: Option[S3AccessKeyCredential] =
+    globalCredentials.collectFirst {
+      case credential: S3AccessKeyCredential if config.Datastore.S3Upload.credentialName == credential.name =>
+        credential
+    }
+
+  private def findGlobalCredentialFor(path: UPath): Option[S3AccessKeyCredential] =
+    globalCredentials.collectFirst {
+      case credential: S3AccessKeyCredential if path.toString.startsWith(credential.name) => credential
     }
 
   lazy val s3UploadBucketOpt: Option[String] =
     // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
-    S3UriUtils.hostBucketFromUri(new URI(dataStoreConfig.Datastore.S3Upload.credentialName))
+    S3UriUtils.hostBucketFromUri(new URI(config.Datastore.S3Upload.credentialName))
 
-  private lazy val s3UploadEndpoint: URI = {
-    // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
-    val credentialUri = new URI(dataStoreConfig.Datastore.S3Upload.credentialName)
+  private lazy val s3UploadEndpoint: URI =
+    endpointForCredentialName(config.Datastore.S3Upload.credentialName)
+
+  private def endpointForCredentialName(credentialName: String) = {
+    // by convention, the credentialName is the S3 URI so we can extract the endpoint from it.
+    val credentialUri = new URI(credentialName)
     new URI(
       "https",
       null,
@@ -54,26 +77,26 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
     )
   }
 
-  private lazy val s3ClientBox: Box[S3AsyncClient] = for {
-    accessKeyId <- Box(s3UploadCredentialsOpt.map(_._1))
-    secretAccessKey <- Box(s3UploadCredentialsOpt.map(_._2))
-    client <- tryo(
+  private lazy val s3UploadClientBox: Box[S3AsyncClient] = for {
+    s3UploadCredential <- Box(s3UploadCredentialOpt)
+    client <- buildClient(s3UploadEndpoint, s3UploadCredential)
+  } yield client
+
+  private def buildClient(endpoint: URI, credential: S3AccessKeyCredential): Box[S3AsyncClient] =
+    tryo(
       S3AsyncClient
         .builder()
-        .credentialsProvider(StaticCredentialsProvider.create(
-          AwsBasicCredentials.builder.accessKeyId(accessKeyId).secretAccessKey(secretAccessKey).build()
-        ))
+        .credentialsProvider(credential.toCredentialsProvider)
         .crossRegionAccessEnabled(true)
         .forcePathStyle(true)
-        .endpointOverride(s3UploadEndpoint)
+        .endpointOverride(endpoint)
         .region(Region.US_EAST_1)
         // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
         .build())
-  } yield client
 
-  lazy val transferManagerBox: Box[S3TransferManager] = for {
-    client <- s3ClientBox
+  lazy val s3UploadTransferManagerBox: Box[S3TransferManager] = for {
+    client <- s3UploadClientBox
   } yield S3TransferManager.builder().s3Client(client).build()
 
   def deletePaths(paths: Seq[UPath])(implicit ec: ExecutionContext): Fox[Unit] = {
@@ -89,12 +112,15 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
       bucket <- bucketOpt.toFox ?~> "Could not determine S3 bucket from UPath"
-      s3Client <- s3ClientBox.toFox ?~> "No managed s3 client configured"
+      firstPath <- paths.headOption.toFox // groupBy of the caller guarantees that this is not called with empty list.
+      credential <- findGlobalCredentialFor(firstPath).toFox // Convention is that the credentials are per bucket, so we can reuse this for all paths
+      endpoint = endpointForCredentialName(credential.name)
+      s3client <- buildClient(endpoint, credential).toFox
       prefixes <- Fox.combined(paths.map(path => S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
-      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
+      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3client, bucket, _)).map(_.flatten)
       uniqueKeys = keys.distinct
       _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket...")
-      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
+      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3client, bucket, _)).map(_ => ())
       _ = logger.info(s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.")
     } yield ()
 
@@ -141,17 +167,5 @@ class ManagedS3Service @Inject()(dataStoreConfig: DataStoreConfig) extends FoxIm
 
     listRecursive(None, Seq())
   }
-
-  private lazy val globalCredentials = {
-    val res = dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-      new CredentialConfigReader(credentialConfig).getCredential
-    }
-    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
-    res
-  }
-
-  def pathIsInManagedS3(path: UPath): Boolean =
-    path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
-      UPath.fromString(c.name).map(path.startsWith).getOrElse(false))
 
 }

@@ -8,21 +8,19 @@ import {
   formatNumberToLength,
 } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { clamp } from "libs/utils";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { LongUnitToShortUnitMap, type OrthoView, type Vector3 } from "viewer/constants";
+import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
-  calculateInViewportPos,
   calculateMaybePlaneScreenPos,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
 
 function DistanceEntry({ distance }: { distance: string }) {
   return (
@@ -37,25 +35,6 @@ function DistanceEntry({ distance }: { distance: string }) {
       </Tooltip>
     </div>
   );
-}
-
-function isPositionStillInPlane(
-  positionXYZ: Vector3,
-  flycamRotation: Vector3,
-  flycamPosition: Vector3,
-  planeId: OrthoView,
-  baseVoxelFactors: Vector3,
-  zoomStep: number,
-) {
-  const posInViewport = calculateInViewportPos(
-    positionXYZ,
-    flycamPosition,
-    flycamRotation,
-    baseVoxelFactors,
-    zoomStep,
-  ).toArray();
-  const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
-  return Math.abs(posInViewport[thirdDim]) < 1;
 }
 
 export default function DistanceMeasurementTooltip() {
@@ -143,19 +122,14 @@ export default function DistanceMeasurementTooltip() {
     );
   }
 
-  // If the tooltip is pinned, there should be no offset
-  const OFFSET = isMeasuring ? 8 : 0;
-
-  const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
-  const left = clamp(
-    viewportLeft - tooltipWidth + OFFSET, // min
-    tooltipPosition[0] - tooltipWidth - OFFSET, // desired position (left of cursor, small offset)
-    viewportLeft + viewportWidth - tooltipWidth - OFFSET, // max (stay in viewport)
-  );
-  const top = clamp(
-    viewportTop, // min
-    tooltipPosition[1] + OFFSET, // just below cursor
-    viewportTop + viewportHeight - OFFSET, // max
+  const { left, top } = getTooltipPosition(
+    isMeasuring,
+    tooltipRef,
+    viewportLeft,
+    tooltipPosition,
+    viewportWidth,
+    viewportTop,
+    viewportHeight,
   );
 
   return (

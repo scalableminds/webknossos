@@ -3,11 +3,10 @@ import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import { clamp } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { OrthoView, Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import {
   getColorLayers,
   getVisibleSegmentationLayer,
@@ -19,16 +18,15 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  calculateInViewportPos,
   calculateMaybePlaneScreenPos,
   getGlobalMousePositionFloating,
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
-import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { Store, api } from "viewer/singletons";
+import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
 
 function VoxelValueEntry({
   layerName,
@@ -49,28 +47,6 @@ function VoxelValueEntry({
       </Tooltip>
     </div>
   );
-}
-
-function isPositionStillInPlane(
-  positionXYZ: Vector3,
-  flycamRotation: Vector3,
-  flycamPosition: Vector3,
-  planeId: OrthoView,
-  baseVoxelFactors: Vector3,
-  zoomStep: number,
-) {
-  if (planeId === "TDView") {
-    return false;
-  }
-  const posInViewport = calculateInViewportPos(
-    positionXYZ,
-    flycamPosition,
-    flycamRotation,
-    baseVoxelFactors,
-    zoomStep,
-  ).toArray();
-  const thirdDim = Dimensions.thirdDimensionForPlane(planeId);
-  return Math.abs(posInViewport[thirdDim]) < 1;
 }
 
 export default function VoxelValueTooltip() {
@@ -195,20 +171,14 @@ export default function VoxelValueTooltip() {
   const voxelValueByLayer: Record<string, ["color" | "segmentation", number[]]> | null =
     layerNamesWithDataValues != null ? Object.fromEntries(layerNamesWithDataValues) : null;
 
-  // If the tooltip is pinned, there should be no offset
-  const OFFSET = lastMeasuredGlobalPosition == null ? 8 : 0;
-
-  const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
-  // Position tooltip just below and to the left of the cursor
-  const left = clamp(
-    viewportLeft - tooltipWidth + OFFSET, // min
-    tooltipPosition[0] - tooltipWidth - OFFSET, // desired position (left of cursor, small offset)
-    viewportLeft + viewportWidth - tooltipWidth - OFFSET, // max (stay in viewport)
-  );
-  const top = clamp(
-    viewportTop, // min
-    tooltipPosition[1] + OFFSET, // just below cursor
-    viewportTop + viewportHeight - OFFSET, // max
+  const { left, top } = getTooltipPosition(
+    lastMeasuredGlobalPosition == null,
+    tooltipRef,
+    viewportLeft,
+    tooltipPosition,
+    viewportWidth,
+    viewportTop,
+    viewportHeight,
   );
 
   return (

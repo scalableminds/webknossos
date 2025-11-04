@@ -781,6 +781,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
 
+  // Note equivalent in DatasetLayerAttachmentsDAO
   def findAllStorageRelevantMags(organizationId: String,
                                  dataStoreId: String,
                                  datasetIdOpt: Option[ObjectId]): Fox[List[DataSourceMagRow]] =
@@ -867,6 +868,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       }
     )
 
+  // Note equivalent in DatasetLayerAttachmentsDAO
   def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {
       pathsStrOpts <- run(q"""
@@ -888,6 +890,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       paths <- pathsStrOpts.flatten.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
+  // Note equivalent in DataLayerAttachmentsDAO
   def findDatasetsWithMagsInDir(absolutePath: UPath,
                                 dataStore: DataStore,
                                 ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
@@ -1263,6 +1266,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
           r.nextString(),
       ))
 
+  // Note equivalent in DatasetMagsDAO
   def findAllStorageRelevantAttachments(organizationId: String,
                                         dataStoreId: String,
                                         datasetIdOpt: Option[ObjectId]): Fox[List[StorageRelevantDataLayerAttachment]] =
@@ -1274,7 +1278,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
               -- rn is the rank of the attachments with the same path. It is used to deduplicate attachments with the same path
                -- to count each physical attachment only once. Filtering is done below.
               ROW_NUMBER() OVER (
-                PARTITION BY att.path
+                PARTITION BY COALESCE(att.realPath, att.path)
                 ORDER BY ds.created ASC
               ) AS rn
             FROM webknossos.dataset_layer_attachments AS att
@@ -1293,6 +1297,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
            """.as[StorageRelevantDataLayerAttachment])
     } yield storageRelevantAttachments.toList
 
+  // Note equivalent in DatasetMagsDAO
   def findAttachmentPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
     for {
       pathsStr <- run(q"""
@@ -1302,12 +1307,18 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
               SELECT a2.path
               FROM webknossos.dataset_layer_attachments a2
               WHERE a2._dataset != $datasetId
-              AND a2.path = a1.path
+              AND (
+                a2.path = a1.path
+                OR (
+                  a2.realpath IS NOT NULL AND a2.realpath = a1.realpath
+                )
+              )
            )
               """.as[String])
       paths <- pathsStr.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
+  // Note equivalent in DatasetMagsDAO
   def findDatasetsWithAttachmentsInDir(absolutePath: UPath,
                                        dataStore: DataStore,
                                        ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {
@@ -1317,7 +1328,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     run(q"""
         SELECT d._id FROM webknossos.dataset_layer_attachments a
         JOIN webknossos.datasets d ON a._dataset = d._id
-        WHERE starts_with(a.path, $absolutePathWithTrailingSlash)
+        WHERE a.realpath IS NOT NULL
+        AND starts_with(a.realpath, $absolutePathWithTrailingSlash)
         AND d._id != $ignoredDataset
         AND d._datastore = ${dataStore.name.trim}
        """.as[ObjectId])

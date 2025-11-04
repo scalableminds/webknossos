@@ -144,6 +144,7 @@ class BackendMock {
   acquireAnnotationMutex = async (_annotationId: string) => {
     return { canEdit: true, blockedByUser: null };
   };
+  releaseAnnotationMutex = async (_annotationId: string) => {};
 
   private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({
@@ -373,6 +374,7 @@ export function mockInitialBucketAndAgglomerateData(
     backendMock.getCurrentMappingEntriesFromServer,
   );
   mocks.acquireAnnotationMutex.mockImplementation(backendMock.acquireAnnotationMutex);
+  mocks.releaseAnnotationMutex.mockImplementation(backendMock.releaseAnnotationMutex);
   mocks.getNeighborsForAgglomerateNode.mockImplementation(
     backendMock.getNeighborsForAgglomerateNode,
   );

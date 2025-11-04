@@ -39,8 +39,8 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
-const ACQUIRE_MUTEX_INTERVAL = 1000 * 60;
-const DELAY_AFTER_FAILED_MUTEX_FETCH = 1000 * 10;
+const ACQUIRE_MUTEX_INTERVAL = process.env.IS_TESTING ? 1 * 1000 : 60 * 1000;
+const DELAY_AFTER_FAILED_MUTEX_FETCH = process.env.IS_TESTING ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 1000;
 const BACKOFF_TIME_MULTIPLIER = 1.5;
@@ -48,7 +48,7 @@ const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
 const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
-enum MutexFetchingStrategy {
+export enum MutexFetchingStrategy {
   AdHoc = "AdHoc",
   Continuously = "Continuously",
 }
@@ -86,7 +86,7 @@ const TOOLS_WITH_AD_HOC_MUTEX_SUPPORT = [
   AnnotationTool.AREA_MEASUREMENT.id,
 ] as AnnotationToolId[];
 
-function* getCurrentMutexFetchingStrategy(): Saga<MutexFetchingStrategy> {
+export function* getCurrentMutexFetchingStrategy(): Saga<MutexFetchingStrategy> {
   let fetchingStrategy = MutexFetchingStrategy.Continuously;
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -162,7 +162,7 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState.fetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
   console.log("Acquiring mutex fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
-    yield* call(acquireMutexUponEnsureHasAnnotationMutexAction, mutexLogicState);
+    yield* call(tryAcquireMutexAdHoc, mutexLogicState);
   } else {
     yield* call(tryAcquireMutexContinuously, mutexLogicState);
   }
@@ -274,27 +274,39 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   }
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   while (hasMutex) {
+    let canEdit = true;
+    let blockedByUser = null;
     try {
-      const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
-      if (!canEdit) {
-        // TODOM: Think of a better way to handle this. This should usually never happen only if a client disconnects for a longer time while saving.
-        // Maybe its ok to crash / enforce a reload in that case.
-        // One scenario in which this might happen is when the user disconnects from the internet while having the mutex and later reconnects.
-        throw new Error(
-          `No longer owner of the annotation mutex. Instead user ${blockedByUser ? `${blockedByUser.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id})` : "unknown user"} has the mutex.`,
-        );
-      }
+      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
+      canEdit = mutexInfo.canEdit;
+      blockedByUser = mutexInfo.blockedByUser;
       yield* put(setUserHoldingMutexAction(blockedByUser));
       yield* put(setIsMutexAcquiredAction(canEdit));
-      yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+      if (canEdit) {
+        // Only wait for next refretching of the mutex in case the user can edit.
+        // Else directly go to the error case outside the try-catch block below.
+        yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+      }
     } catch (error) {
       console.error("Failed to continuously acquire mutex.", error);
       yield* put(setUserHoldingMutexAction(undefined));
       yield* put(setIsMutexAcquiredAction(false));
-      Toast.error(
+      Toast.warning(
         "Unable to get write-lock needed to update the annotation. Please check your connection to WEBKNOSSOS. See the console for more information. Retrying soon.",
       );
       yield* call(delay, DELAY_AFTER_FAILED_MUTEX_FETCH);
+    }
+    // This needs to be outside of the try block to make sure this saga crashes as intended.
+    if (!canEdit) {
+      // If this code is reached, the user once already had the mutex, but re-acquiring was needed as saving took quite long.
+      // In case of a network error, the catch block should take care of re-trying to acquire the mutex.
+      // But if the server replies that the current user cannot edit at the moment, the previously acquired mutex must have
+      // expanded and another user must have it at the moment. This means that there a likely saving and version conflicts now as
+      // this user lost the mutex while still in the process of syncing with the backend. Thus, throwing an error to show a toast and crashing the saga
+      // leads the user to having to reload wk to minimize lost work, instead of allowing to continue to edit data.
+      throw new Error(
+        `No longer owner of the annotation mutex. Instead user ${blockedByUser ? `${blockedByUser.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id})` : "unknown user"} has the mutex.`,
+      );
     }
   }
 }
@@ -353,9 +365,7 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
   yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
 }
 
-function* acquireMutexUponEnsureHasAnnotationMutexAction(
-  mutexLogicState: MutexLogicState,
-): Saga<never> {
+function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
   // While the fetching strategy is ad hoc, updating should be allowed.
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
   while (true) {
@@ -415,8 +425,6 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
 
 function* releaseMutex() {
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  // TODO: Mutex is auto released after a Model.ensureSavedState or so, sometimes (e.g. a proofreading action),
-  // directly triggers new updates afterwards. Currently, this needs to re-acquire the mutex, but that should not be necessary IMO.
   let successfullyReleaseMutex = false;
   let backoffTime = 1000;
   // Enforce released mutex even when initial request failed due to e.g. network error.

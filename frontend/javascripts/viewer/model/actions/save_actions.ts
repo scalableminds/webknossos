@@ -236,6 +236,7 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
 
 export const prepareRebaseAction = () =>
   ({
+    // Sets the annotation in the store to the info stored in RebaseRelevantAnnotationState.
     type: "PREPARE_REBASING",
   }) as const;
 

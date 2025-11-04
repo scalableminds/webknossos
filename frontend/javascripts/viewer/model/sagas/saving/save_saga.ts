@@ -56,7 +56,6 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-// TODOM: restore to original times
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 5 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
@@ -209,7 +208,7 @@ function* applyNewestMissingUpdateActions(
   return { successful: false };
 }
 
-function* pushPendingSavesAndResetToServerVersion(): Saga<void> {
+function* diffTracingsAndPrepareRebase(): Saga<void> {
   const annotation = yield* select((state) => state.annotation);
   yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
   yield* put(prepareRebaseAction());
@@ -275,7 +274,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     missingUpdateActions.length > 0 &&
     saveQueueEntries.length > 0;
   if (needsRebasing) {
-    yield* call(pushPendingSavesAndResetToServerVersion);
+    yield* call(diffTracingsAndPrepareRebase);
   }
 
   try {
@@ -497,7 +496,7 @@ export function* tryToIncorporateActions(
             activeMapping,
             agglomerateId1,
             agglomerateId2,
-            false,
+            !areUnsavedChangesOfUser,
           );
           break;
         }
@@ -535,7 +534,7 @@ export function* tryToIncorporateActions(
         /*
          * Currently NOT supported:
          */
-        // TODOM: These actions should be supported if applied from own save queue!
+        // TODO: These actions should be supported if applied from own save queue!
 
         // High-level annotation specific
         case "addLayerToAnnotation":

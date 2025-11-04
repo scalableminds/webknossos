@@ -25,9 +25,7 @@ import Store from "viewer/store";
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
-// TODOM: Undo
-// const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
-const WAIT_AFTER_SAVE_TRIGGER = 500;
+const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
 
 // TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {

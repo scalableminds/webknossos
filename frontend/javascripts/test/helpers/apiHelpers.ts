@@ -39,6 +39,7 @@ import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/pr
 import app from "app";
 import {
   acquireAnnotationMutex,
+  releaseAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
   getEditableAgglomerateSkeleton,
@@ -88,6 +89,7 @@ export interface WebknossosTestContext extends BaseTestContext {
     getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
     getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
     acquireAnnotationMutex: Mock<typeof acquireAnnotationMutex>;
+    releaseAnnotationMutex: Mock<typeof releaseAnnotationMutex>;
     getNeighborsForAgglomerateNode: Mock<typeof getNeighborsForAgglomerateNode>;
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
@@ -193,6 +195,7 @@ vi.mock("admin/rest_api.ts", async () => {
       },
     ),
     acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
       (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) =>
         Promise.resolve({
@@ -426,6 +429,7 @@ export async function setupWebknossosForTesting(
     getCurrentMappingEntriesFromServer,
     getEdgesForAgglomerateMinCut: vi.mocked(getEdgesForAgglomerateMinCut),
     acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
+    releaseAnnotationMutex: vi.mocked(releaseAnnotationMutex),
     getNeighborsForAgglomerateNode: vi.mocked(getNeighborsForAgglomerateNode),
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),

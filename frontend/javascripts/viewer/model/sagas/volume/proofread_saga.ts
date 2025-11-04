@@ -473,7 +473,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       activeMapping,
       sourceAgglomerateId,
       targetAgglomerateId,
-      true,
+      false,
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -982,7 +982,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       activeMapping,
       sourceAgglomerateId,
       targetAgglomerateId,
-      true,
+      false,
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -1612,7 +1612,8 @@ export function* updateMappingWithMerge(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
-  isUnsyncedWithServer: boolean,
+  // Must be true if we know that the updated mapping info was already saved on the server.
+  isSyncedWithServer: boolean,
 ) {
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
@@ -1621,7 +1622,7 @@ export function* updateMappingWithMerge(
     targetAgglomerateId,
   );
   if (mergedMapping === activeMapping.mapping) {
-    /* TODOM: in case setMappingAction is called with the same mapping
+    /* TODO: in case setMappingAction is called with the same mapping
      * as already active, the reducer will set the state to ACTIVATING
      * but the listenToStoreProperty handler in mappings.ts will never be
      * triggered, because the callback is only called if the identity of the
@@ -1646,7 +1647,7 @@ export function* updateMappingWithMerge(
       mapping: mergedMapping,
     }),
   );
-  if (!isUnsyncedWithServer) {
+  if (isSyncedWithServer) {
     yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
 }

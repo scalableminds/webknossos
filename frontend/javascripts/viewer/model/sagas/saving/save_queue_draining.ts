@@ -36,6 +36,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
+import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./save_mutex_saga";
 
 export function* pushSaveQueueAsync(): Saga<never> {
   /*
@@ -64,7 +65,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
 
-    const { forcePush } = yield* race({
+    let { forcePush } = yield* race({
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
@@ -97,9 +98,19 @@ export function* pushSaveQueueAsync(): Saga<never> {
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
     //    user didn't use the save button which is usually accompanied by a small pause).
-    const itemCountToSave = forcePush
-      ? Number.POSITIVE_INFINITY
-      : yield* select((state) => state.save.queue.length);
+    // 3) In a live collab scenario we need to drain the whole save queue to get a state
+    //    where we are sure that server is in sync with the backend and after the saving the
+    //    annotation state can be used as a new rebase-able version (RebaseRelevantAnnotationState).
+    //    TODO: Later iterations of live collaboration might need to change this behaviour here.
+    //    e.g. continuous skeleton tracing might save too long / endlessly if traced very fast.
+    //    See https://github.com/scalableminds/webknossos/pull/8723#discussion_r2419981285
+    const currentMutexFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
+    const isLiveCollabActive = currentMutexFetchingStrategy === MutexFetchingStrategy.AdHoc;
+
+    const itemCountToSave =
+      forcePush || isLiveCollabActive
+        ? Number.POSITIVE_INFINITY
+        : yield* select((state) => state.save.queue.length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
       saveQueue = yield* select((state) => state.save.queue);
@@ -110,7 +121,10 @@ export function* pushSaveQueueAsync(): Saga<never> {
         break;
       }
     }
-    yield* put(doneSavingAction());
+    if (isLiveCollabActive) {
+      // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
+      yield* put(doneSavingAction());
+    }
     yield* put(setSaveBusyAction(false));
   }
 }

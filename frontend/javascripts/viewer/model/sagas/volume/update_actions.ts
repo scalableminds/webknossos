@@ -474,9 +474,9 @@ export function updateActiveNode(tracing: {
   } as const;
 }
 
-// This action should never be sent to the backend:
+// This action should never be sent to the backend: (tracking issue #9044)
 // - The backend does not recognize this action type.
-// - The annotation proto in the backend does have the `activeTreeId` property for a `skeletonTracing`.
+// - The annotation proto in the backend does not have the `activeTreeId` property for a `skeletonTracing`.
 //
 // Purpose:
 // This action exists only to keep track of the `activeTreeId` in the frontend during rebasing.

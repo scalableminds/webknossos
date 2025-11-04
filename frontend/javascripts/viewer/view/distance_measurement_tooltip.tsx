@@ -64,12 +64,7 @@ export default function DistanceMeasurementTooltip() {
       : null,
   );
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
-  const {
-    left: viewportLeft,
-    top: viewportTop,
-    width: viewportWidth,
-    height: viewportHeight,
-  } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
+  const viewportRect = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
   // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
@@ -122,15 +117,7 @@ export default function DistanceMeasurementTooltip() {
     );
   }
 
-  const { left, top } = getTooltipPosition(
-    isMeasuring,
-    tooltipRef,
-    viewportLeft,
-    tooltipPosition,
-    viewportWidth,
-    viewportTop,
-    viewportHeight,
-  );
+  const { left, top } = getTooltipPosition(isMeasuring, tooltipRef, viewportRect, tooltipPosition);
 
   return (
     <div

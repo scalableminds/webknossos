@@ -1,6 +1,6 @@
 import { clamp } from "libs/utils";
 import type { RefObject } from "react";
-import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
+import type { OrthoView, Rect, Vector2, Vector3 } from "viewer/constants";
 import { calculateInViewportPos } from "viewer/model/accessors/view_mode_accessor";
 import Dimensions from "viewer/model/dimensions";
 
@@ -29,12 +29,16 @@ export function isPositionStillInPlane(
 export function getTooltipPosition(
   isPinned: boolean,
   tooltipRef: RefObject<HTMLElement>,
-  viewportLeft: number,
+  viewportRect: Rect,
   tooltipPosition: Vector2,
-  viewportWidth: number,
-  viewportTop: number,
-  viewportHeight: number,
 ) {
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = viewportRect;
+
   // If the tooltip is pinned, there should be no offset
   const OFFSET = isPinned ? 8 : 0;
 

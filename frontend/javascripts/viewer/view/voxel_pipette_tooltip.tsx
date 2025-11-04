@@ -83,12 +83,7 @@ export default function VoxelValueTooltip() {
   const tooltipPosition = useWkSelector((state) =>
     positionToPick ? calculateMaybePlaneScreenPos(state, positionToPick, orthoView) : null,
   );
-  const {
-    left: viewportLeft,
-    top: viewportTop,
-    width: viewportWidth,
-    height: viewportHeight,
-  } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
+  const viewportRect = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
   useEffect(() => {
     if (
@@ -174,11 +169,8 @@ export default function VoxelValueTooltip() {
   const { left, top } = getTooltipPosition(
     lastMeasuredGlobalPosition == null,
     tooltipRef,
-    viewportLeft,
+    viewportRect,
     tooltipPosition,
-    viewportWidth,
-    viewportTop,
-    viewportHeight,
   );
 
   return (

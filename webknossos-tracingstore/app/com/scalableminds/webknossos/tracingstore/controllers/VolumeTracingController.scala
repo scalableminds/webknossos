@@ -13,7 +13,8 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   ProtoGeometryImplicits,
-  SegmentStatisticsParameters
+  SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
@@ -286,7 +287,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.loadFull.failed"
         } yield Ok(data)
       }
     }
@@ -344,6 +345,34 @@ class VolumeTracingController @Inject()(
                                                                  request.body.additionalCoordinates)
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
+      }
+    }
+
+  def getSegmentSurfaceArea(tracingId: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
+          baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
+          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            val fullMeshRequest = FullMeshRequest(
+              meshFileName = None, // Cannot use static meshfiles for dynamic volume layers
+              lod = None,
+              segmentId = segmentId,
+              mappingName = baseMappingName,
+              mappingType = baseMappingName.map(_ => "HDF5"),
+              editableMappingTracingId = None,
+              mag = Some(request.body.mag),
+              seedPosition = None,
+              additionalCoordinates = request.body.additionalCoordinates,
+            )
+            for {
+              data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
+            } yield surfaceArea
+          }
+        } yield Ok(Json.toJson(surfaceAreas))
       }
     }
 

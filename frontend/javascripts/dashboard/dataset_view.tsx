@@ -461,7 +461,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
         const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
         return (
           <Row key={job.id} gutter={16}>
-            <Col span={10}>
+            <Col>
               <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
               {job.state === "SUCCESS" && job.resultLink ? (
                 <Link to={job.resultLink}>{job.datasetName}</Link>
@@ -481,7 +481,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
           marginTop: 12,
         }}
       >
-        <Col span={10}>
+        <Col>
           <Link to="/jobs" title="Jobs Overview">
             See complete list
           </Link>

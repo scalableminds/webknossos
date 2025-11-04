@@ -164,6 +164,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
+  def postFileWithJsonResponse[T: Reads](file: File): Fox[T] = {
+    request = request.withBody(file).withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
   def postFormWithJsonResponse[T: Reads](parameters: Map[String, String]): Fox[T] = {
     request = request.withBody(parameters).withMethod("POST")
     parseJsonResponse(performRequest)
@@ -227,6 +232,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def patchJson[T: Writes](body: T): Fox[WSResponse] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PATCH")
+    performRequest
+  }
+
+  def deleteJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("DELETE")
     performRequest
   }
 

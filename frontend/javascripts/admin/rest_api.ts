@@ -154,8 +154,8 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
-export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+export async function logoutUser(): Promise<string> {
+  return await Request.receiveJSON("/api/auth/logout", { method: "POST" });
 }
 
 export async function logoutUserEverywhere(): Promise<void> {
@@ -879,6 +879,41 @@ export function getSegmentVolumes(
   );
 }
 
+type SegmentStatisticsParametersMeshBased = {
+  mag: Vector3;
+  segmentIds: number[];
+  mappingName?: string | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  meshFileName?: string | null;
+};
+
+export function getSegmentSurfaceArea(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  meshFileName: string | undefined | null,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
+  return doWithToken((token) => {
+    const data: SegmentStatisticsParametersMeshBased = {
+      mag,
+      segmentIds,
+      mappingName,
+      additionalCoordinates,
+      meshFileName,
+    };
+    return Request.sendJSONReceiveJSON(
+      `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
+      {
+        data,
+        method: "POST",
+      },
+    );
+  });
+}
+
 export function getSegmentBoundingBoxes(
   layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
@@ -1344,7 +1379,7 @@ export async function triggerDatasetClearCache(
 }
 
 export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
-  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+  await Request.triggerRequest(`/api/datasets/${datasetId}`, {
     method: "DELETE",
   });
 }

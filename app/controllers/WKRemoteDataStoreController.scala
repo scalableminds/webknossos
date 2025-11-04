@@ -3,9 +3,8 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -20,7 +19,6 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
 import models.job.JobDAO
@@ -50,7 +48,6 @@ class WKRemoteDataStoreController @Inject()(
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
-    annotationDAO: AnnotationDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -131,12 +128,11 @@ class WKRemoteDataStoreController @Inject()(
         for {
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
                                              request.body.datasetSizeBytes,
-                                             viaAddRoute = false)
+                                             addVariantLabel = "upload without conversion")
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
@@ -149,6 +145,7 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)(GlobalAccessContext)
           }
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
         } yield Ok
       }
     }
@@ -157,11 +154,9 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         val okLabel = if (request.body.ok) "ok" else "not ok"
-        logger.debug(s"Status update from data store '$name'. Status $okLabel")
+        logger.debug(s"Status update from data store ‘$name’. Status $okLabel")
         for {
           _ <- dataStoreDAO.updateUrlByName(name, request.body.url)
-          _ <- dataStoreDAO.updateReportUsedStorageEnabledByName(name,
-                                                                 request.body.reportUsedStorageEnabled.getOrElse(false))
         } yield Ok
       }
   }
@@ -211,17 +206,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
-          _ <- existingDatasetBox match {
-            case Full(dataset) =>
-              for {
-                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-                _ = datasetDAO
-                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-              } yield ()
-            case _ => Fox.successful(())
-          }
+          _ <- datasetService.deleteDatasetFromDB(request.body)
         } yield Ok
       }
   }
@@ -242,37 +227,21 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
-          layers <- datasetLayerDAO.findAllForDataset(dataset._id)
-          magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
-          magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
-          layersAndMagLinkInfos = layers.zip(magLinkInfos).map {
-            case (layer, magLinkInfo) => LayerMagLinkInfo(layer.name, magLinkInfo)
-          }
-        } yield Ok(Json.toJson(layersAndMagLinkInfos))
-      }
-    }
-
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
-
     }
 
   def updateDataSource(name: String, key: String, datasetId: ObjectId): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!dataset.isVirtual)(
             datasetDAO.updateDataSource(datasetId,
                                         name,

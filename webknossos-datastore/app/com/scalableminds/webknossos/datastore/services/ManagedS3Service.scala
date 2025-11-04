@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -120,8 +121,11 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
       keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3client, bucket, _)).map(_.flatten)
       uniqueKeys = keys.distinct
       _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket...")
+      before = Instant.now
       _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3client, bucket, _)).map(_ => ())
-      _ = logger.info(s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.")
+      _ = Instant.logSince(before,
+                           s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.",
+                           logger)
     } yield ()
 
   private def deleteBatch(s3Client: S3AsyncClient, bucket: String, keys: Seq[String])(

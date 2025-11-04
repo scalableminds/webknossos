@@ -5,7 +5,7 @@ import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import _ from "lodash";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { OrthoView, Vector3 } from "viewer/constants";
 import {
@@ -93,6 +93,17 @@ export default function VoxelValueTooltip() {
 
   const positionToPick = lastMeasuredGlobalPosition ?? globalMousePosition;
 
+  const [debouncedPosition, setDebouncedPosition] = useState(positionToPick);
+
+  useEffect(() => {
+    const handler = _.debounce(() => {
+      setDebouncedPosition(positionToPick);
+    }, 50);
+
+    handler();
+    return handler.cancel;
+  }, [positionToPick]);
+
   const tooltipPosition = useWkSelector((state) =>
     positionToPick ? calculateMaybePlaneScreenPos(state, positionToPick, orthoView) : null,
   );
@@ -174,7 +185,7 @@ export default function VoxelValueTooltip() {
       );
     },
     [],
-    [positionToPick],
+    [debouncedPosition],
   );
 
   if (tooltipPosition == null) {

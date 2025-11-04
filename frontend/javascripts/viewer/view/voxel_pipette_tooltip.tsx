@@ -23,7 +23,7 @@ import {
   getInputCatcherRect,
 } from "viewer/model/accessors/view_mode_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
-import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
+import { setVoxelPipetteTooltipPinnedPositionAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { Store, api } from "viewer/singletons";
 import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
@@ -50,8 +50,8 @@ function VoxelValueEntry({
 }
 
 export default function VoxelValueTooltip() {
-  const lastMeasuredGlobalPosition = useWkSelector(
-    (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+  const pinnedPosition = useWkSelector(
+    (state) => state.uiInformation.voxelPipetteToolInfo.pinnedPosition,
   );
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
@@ -67,7 +67,7 @@ export default function VoxelValueTooltip() {
   const dispatch = useDispatch();
   const orthoView = useWkSelector((state) => state.viewModeData.plane.activeViewport);
 
-  const positionToPick = lastMeasuredGlobalPosition ?? globalMousePosition;
+  const positionToPick = pinnedPosition ?? globalMousePosition;
 
   const [debouncedPosition, setDebouncedPosition] = useState(positionToPick);
 
@@ -87,9 +87,9 @@ export default function VoxelValueTooltip() {
 
   useEffect(() => {
     if (
-      lastMeasuredGlobalPosition &&
+      pinnedPosition &&
       !isPositionStillInPlane(
-        lastMeasuredGlobalPosition,
+        pinnedPosition,
         flycamRotation,
         flycamPosition,
         orthoView,
@@ -97,17 +97,9 @@ export default function VoxelValueTooltip() {
         zoomStep,
       )
     ) {
-      dispatch(hideMeasurementTooltipAction());
+      dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
     }
-  }, [
-    dispatch,
-    lastMeasuredGlobalPosition,
-    flycamRotation,
-    flycamPosition,
-    orthoView,
-    datasetScale,
-    zoomStep,
-  ]);
+  }, [dispatch, pinnedPosition, flycamRotation, flycamPosition, orthoView, datasetScale, zoomStep]);
 
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
@@ -167,7 +159,7 @@ export default function VoxelValueTooltip() {
     layerNamesWithDataValues != null ? Object.fromEntries(layerNamesWithDataValues) : null;
 
   const { left, top } = getTooltipPosition(
-    lastMeasuredGlobalPosition == null,
+    pinnedPosition == null,
     tooltipRef,
     viewportRect,
     tooltipPosition,
@@ -180,7 +172,7 @@ export default function VoxelValueTooltip() {
       style={{
         left,
         top,
-        pointerEvents: lastMeasuredGlobalPosition == null ? "none" : "auto",
+        pointerEvents: pinnedPosition == null ? "none" : "auto",
       }}
     >
       {voxelValueByLayer != null

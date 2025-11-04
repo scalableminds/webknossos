@@ -52,6 +52,7 @@ import {
   setIsMeasuringAction,
   setLastMeasuredPositionAction,
   setQuickSelectStateAction,
+  setVoxelPipetteTooltipPinnedPositionAction,
 } from "viewer/model/actions/ui_actions";
 import {
   computeQuickSelectForPointAction,
@@ -601,21 +602,20 @@ export class VoxelPipetteToolController {
         }
 
         const state = Store.getState();
-        const lastMeasuredGlobalPosition =
-          state.uiInformation.measurementToolInfo.lastMeasuredPosition;
+        const { pinnedPosition } = state.uiInformation.voxelPipetteToolInfo;
 
-        if (lastMeasuredGlobalPosition == null) {
+        if (pinnedPosition == null) {
           const globalPosition = calculateGlobalPos(state, position, plane).floating;
-          Store.dispatch(setLastMeasuredPositionAction(globalPosition));
+          Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(globalPosition));
         } else {
-          Store.dispatch(hideMeasurementTooltipAction());
+          Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
         }
       },
     };
   }
 
   static onToolDeselected() {
-    Store.dispatch(hideMeasurementTooltipAction());
+    Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
   }
 
   static getActionDescriptors(

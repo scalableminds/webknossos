@@ -268,6 +268,9 @@ const defaultState: WebknossosState = {
       lastMeasuredPosition: null,
       isMeasuring: false,
     },
+    voxelPipetteToolInfo: {
+      pinnedPosition: null,
+    },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
     contextInfo: {
       contextMenuPosition: null,

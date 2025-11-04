@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import {
-  getColorLayers,
   getOrderedColorLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";

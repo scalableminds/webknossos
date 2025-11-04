@@ -27,7 +27,7 @@ export function isPositionStillInPlane(
 }
 
 export function getTooltipPosition(
-  isPinned: boolean,
+  isNotPinned: boolean,
   tooltipRef: RefObject<HTMLElement>,
   viewportRect: Rect,
   tooltipPosition: Vector2,
@@ -40,7 +40,7 @@ export function getTooltipPosition(
   } = viewportRect;
 
   // If the tooltip is pinned, there should be no offset
-  const OFFSET = isPinned ? 8 : 0;
+  const OFFSET = isNotPinned ? 8 : 0;
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   // Position tooltip just below and to the left of the cursor

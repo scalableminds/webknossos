@@ -1430,7 +1430,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 key: "select-cell",
                 onClick: () => {
                   Store.dispatch(
-                    setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
+                    setActiveCellAction(
+                      segmentIdAtPosition,
+                      positionInLayerSpace || globalPosition,
+                      additionalCoordinates,
+                    ),
                   );
                 },
                 disabled:

@@ -378,13 +378,6 @@ function CreateAnimationModal(props: Props) {
               and select the color layer and meshes you want to render. The resulting video file can
               be used for presentations, publications, or your website.
             </p>
-            <p style={{ paddingLeft: 10 }}>
-              For custom animations, please{" "}
-              <a target="_blank" href="mailto:sales@webknossos.org" rel="noopener noreferrer">
-                contact us
-              </a>
-              .
-            </p>
           </Col>
         </Row>
         <Divider

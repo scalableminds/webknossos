@@ -82,8 +82,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
@@ -165,8 +163,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -261,8 +257,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -347,8 +341,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -447,8 +439,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -612,8 +602,6 @@ describe("Proofreading (Multi User)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping1).toEqual(initialExpectedMapping);
-      // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-      // TODOM: Support integrating this action, if it originates from this user.
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the1339 actual merge and wait for the finished mapping.

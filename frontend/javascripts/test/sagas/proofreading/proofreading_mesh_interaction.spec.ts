@@ -78,8 +78,6 @@ describe("Proofreading (with mesh actions)", () => {
         ).mapping,
     );
     expect(mapping1).toEqual(initialMapping);
-    // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-    // TODOM: Support integrating this action, if it originates from this user.
     yield put(setOthersMayEditForAnnotationAction(true));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
@@ -252,8 +250,6 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
-    // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-    // TODOM: Support integrating this action, if it originates from this user.
     yield put(setOthersMayEditForAnnotationAction(true));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
@@ -482,8 +478,6 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
-    // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-    // TODOM: Support integrating this action, if it originates from this user.
     yield put(setOthersMayEditForAnnotationAction(true));
 
     //Activate Multi-split tool

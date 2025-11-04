@@ -53,8 +53,6 @@ function* performMergeTreesProofreading(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(initialMapping);
-  // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-  // TODOM: Support integrating this action, if it originates from this user.
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -114,8 +112,6 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(initialMapping);
-  // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-  // TODOM: Support integrating this action, if it originates from this user.
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -166,8 +162,6 @@ function* performMinCutWithNodesProofreading(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(initialMapping);
-  // setOthersMayEditForAnnotationAction must be after making the mapping editable as this action is not supported to be integrated.
-  // TODOM: Support integrating this action, if it originates from this user.
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -761,8 +755,4 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     await task.toPromise();
   }, 8000);
-
-  // TODO: code interleaving test where version is injected after agglomerate trees are created and before the merge.
 });
-
-// TODO: Write test for backend manipulating same agglomerate skeleton - should this be synched? check with others

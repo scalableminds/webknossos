@@ -9,6 +9,7 @@ import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import {
   getColorLayers,
+  getOrderedColorLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -101,9 +102,12 @@ export default function VoxelValueTooltip() {
     }
   }, [dispatch, pinnedPosition, flycamRotation, flycamPosition, orthoView, datasetScale, zoomStep]);
 
-  const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
+  const colorLayers = useWkSelector((state) =>
+    getOrderedColorLayers(state.dataset, state.datasetConfiguration.colorLayerOrder),
+  );
+
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
-  const layers = _.compact([visibleSegmentationLayer, ...colorLayers]);
+  const layers = _.compact([...colorLayers, visibleSegmentationLayer]);
 
   const layerNamesWithDataValues = useFetch(
     async () => {

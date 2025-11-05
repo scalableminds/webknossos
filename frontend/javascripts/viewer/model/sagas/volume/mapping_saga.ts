@@ -436,7 +436,7 @@ function* handleSetMapping(
     if (process.env.IS_TESTING) {
       // in test context, the mapping.ts code is not executed (which is usually responsible
       // for finishing the initialization).
-      // todop: this is quite messy. refactor?
+      // TODO: this is quite messy. refactor?
       yield put(finishMappingInitializationAction(layerName));
     }
     return;

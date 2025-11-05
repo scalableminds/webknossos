@@ -151,10 +151,11 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
   const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
   if (didStrategyChange && mutexLogicState.runningMutexAcquiringSaga != null) {
     yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
-    if (oldFetchingStrategy === MutexFetchingStrategy.Continuously) {
-      // Switching from continuously acquiring the mutex to ad-hoc mutex fetching. Thus, the mutex must be released.
-      yield* call(releaseMutex);
-    }
+    mutexLogicState.runningMutexAcquiringSaga = null;
+  }
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  if (!othersMayEdit) {
+    return;
   }
   if (didStrategyChange || mutexLogicState.runningMutexAcquiringSaga == null) {
     mutexLogicState.fetchingStrategy = newFetchingStrategy;
@@ -376,6 +377,11 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
 function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
   // While the fetching strategy is ad hoc, updating should be allowed.
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
+  // If we still have the mutex, release it first as strategy is now ad-hoc.
+  const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+  if (currentlyHavingMutex) {
+    yield* call(releaseMutex);
+  }
   while (true) {
     yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
     const { doneSaving } = yield* race({

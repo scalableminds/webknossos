@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
   LegacyDataVaultCredential,
-  RemoteSourceDescriptor
+  CredentializedUPath
 }
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -158,11 +158,11 @@ object HttpsDataVault {
 
   /**
     * Factory method to create a new HttpsDataVault instance.
-    * @param remoteSourceDescriptor
+    * @param credentializedUpath
     * @param ws
     * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
     * @return
     */
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor, ws: WSClient, dataStoreHost: String): HttpsDataVault =
-    new HttpsDataVault(remoteSourceDescriptor.credential, ws, dataStoreHost)
+  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): HttpsDataVault =
+    new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost)
 }

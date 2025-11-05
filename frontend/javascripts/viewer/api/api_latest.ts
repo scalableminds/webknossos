@@ -2763,8 +2763,11 @@ class DataApi {
    * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
   setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+    const state = Store.getState();
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
 
@@ -2781,7 +2784,20 @@ class DataApi {
     );
 
     if (meshOpacity != null) {
-      Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
+      if (meshOpacity < 0 || meshOpacity > 1) {
+        throw new Error(`meshOpacity must be between 0 and 1, but got ${meshOpacity}`);
+      }
+      if (
+        state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+          segmentId
+        ] != null
+      ) {
+        Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
+      } else {
+        throw new Error(
+          `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        );
+      }
     }
   }
 }

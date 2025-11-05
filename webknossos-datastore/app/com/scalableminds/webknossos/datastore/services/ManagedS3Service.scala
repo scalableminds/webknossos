@@ -38,6 +38,11 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
   def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[S3AccessKeyCredential] =
     pathOpt.flatMap(findGlobalCredentialFor)
 
+  private def findGlobalCredentialFor(path: UPath): Option[S3AccessKeyCredential] =
+    globalCredentials.collectFirst {
+      case credential: S3AccessKeyCredential if path.toString.startsWith(credential.name) => credential
+    }
+
   private lazy val globalCredentials: Seq[DataVaultCredential] = {
     val res = config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
       new CredentialConfigReader(credentialConfig).getCredential
@@ -50,11 +55,6 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
     globalCredentials.collectFirst {
       case credential: S3AccessKeyCredential if config.Datastore.S3Upload.credentialName == credential.name =>
         credential
-    }
-
-  private def findGlobalCredentialFor(path: UPath): Option[S3AccessKeyCredential] =
-    globalCredentials.collectFirst {
-      case credential: S3AccessKeyCredential if path.toString.startsWith(credential.name) => credential
     }
 
   lazy val s3UploadBucketOpt: Option[String] =
@@ -116,13 +116,13 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
       firstPath <- paths.headOption.toFox // groupBy of the caller guarantees that this is not called with empty list.
       credential <- findGlobalCredentialFor(firstPath).toFox // Convention is that the credentials are per bucket, so we can reuse this for all paths
       endpoint = endpointForCredentialName(credential.name)
-      s3client <- buildClient(endpoint, credential).toFox
+      s3Client <- buildClient(endpoint, credential).toFox
       prefixes <- Fox.combined(paths.map(path => S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox))
-      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3client, bucket, _)).map(_.flatten)
+      keys: Seq[String] <- Fox.serialCombined(prefixes)(listKeysAtPrefix(s3Client, bucket, _)).map(_.flatten)
       uniqueKeys = keys.distinct
       _ = logger.info(s"Deleting ${uniqueKeys.length} objects from managed S3 bucket $bucket...")
       before = Instant.now
-      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3client, bucket, _)).map(_ => ())
+      _ <- Fox.serialCombined(uniqueKeys.grouped(1000).toSeq)(deleteBatch(s3Client, bucket, _)).map(_ => ())
       _ = Instant.logSince(before,
                            s"Successfully deleted ${uniqueKeys.length} objects from managed S3 bucket $bucket.",
                            logger)

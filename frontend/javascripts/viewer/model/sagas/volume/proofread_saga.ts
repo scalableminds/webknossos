@@ -14,7 +14,7 @@ import _ from "lodash";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
-import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
+import { MappingStatusEnum, SagaIdentifier, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
@@ -71,7 +71,12 @@ import {
   deleteEdgeAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
+import {
+  type EnterAction,
+  type EscapeAction,
+  allowSagaWhileBusyAction,
+  disallowSagaWhileBusyAction,
+} from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
   removeSegmentAction,
@@ -108,7 +113,7 @@ function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   };
 }
 
-export const PROOFREADING_BUSY_REASON = "Proofreading in progress";
+const PROOFREADING_BUSY_REASON = "Proofreading in progress";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
@@ -200,6 +205,12 @@ function proofreadCoarseMagIndex(): number {
 function proofreadUsingMeshes(): boolean {
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
+}
+
+function* syncWithBackend() {
+  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+  yield* call([Model, Model.ensureSavedState]);
+  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
 }
 
 let coarselyLoadedSegmentIds: number[] = [];
@@ -510,7 +521,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   }
 
   yield* put(pushSaveQueueTransaction(items));
-  yield* call([Model, Model.ensureSavedState]);
+  yield* call(syncWithBackend);
 
   activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
@@ -715,7 +726,8 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   }
 
   yield* put(pushSaveQueueTransaction(items));
-  yield* call([Model, Model.ensureSavedState]);
+  yield* call(syncWithBackend);
+
   yield* put(resetMultiCutToolPartitionsAction());
 
   const activeMapping = yield* select(
@@ -1014,7 +1026,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   yield* put(pushSaveQueueTransaction(updateActions));
-  yield* call([Model, Model.ensureSavedState]);
+  yield* call(syncWithBackend);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
@@ -1200,7 +1212,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   }
 
   yield* put(pushSaveQueueTransaction(updateActions));
-  yield* call([Model, Model.ensureSavedState]);
+  yield* call(syncWithBackend);
 
   // Get active mapping after saving and thus syncing with the backend as this might have changed the mapping.
   const activeMapping = yield* select(

@@ -267,6 +267,7 @@ const defaultState: WebknossosState = {
     theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
+      allowedSagas: [],
     },
     isWkInitialized: false,
     isUiReady: false,

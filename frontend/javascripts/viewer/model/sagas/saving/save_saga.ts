@@ -7,6 +7,7 @@ import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import {
   type EnsureHasNewestVersionAction,
@@ -33,12 +34,11 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "viewer/store";
-import { enforceExecutionAsBusyBlocking, takeEveryWithBatchActionSupport } from "../saga_helpers";
 import {
-  PROOFREADING_BUSY_REASON,
-  splitAgglomerateInMapping,
-  updateMappingWithMerge,
-} from "../volume/proofread_saga";
+  enforceExecutionAsBusyBlockingUnlessAllowed,
+  takeEveryWithBatchActionSupport,
+} from "../saga_helpers";
+import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
 import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
@@ -332,12 +332,11 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     }
     const { successful, shouldTerminate } = yield* call(
       // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-      enforceExecutionAsBusyBlocking<RebasingSuccessInfo>,
+      enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
       performRebasingIfNecessary,
       REBASING_BUSY_BLOCK_REASON,
-      // Whitelisting the reason used during proofreading interactions as the proofreading saga includes saving the update actions already
-      // and ensures wk is busy until the proofreading actions are saved.
-      [PROOFREADING_BUSY_REASON],
+      // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
+      SagaIdentifier.SAVE_SAGA,
     );
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.

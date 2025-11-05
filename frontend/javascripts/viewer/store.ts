@@ -42,6 +42,7 @@ import type {
   OrthoViewWithoutTD,
   OverwriteMode,
   Rect,
+  SagaIdentifier,
   TDViewDisplayMode,
   Vector2,
   Vector3,
@@ -434,6 +435,9 @@ export type AnnotationMutexInformation = {
 // After successfully pulling and applying the latest updates from the server,
 // it must be updated to match that version.
 //
+// TODO: add that after saving the saved changes should also be store in RebaseRelevantAnnotationState.
+// TODO: add mini example
+//
 // Note: Unsaved local changes should never be included in the RebaseRelevantAnnotationState.
 
 export type RebaseRelevantAnnotationState = {
@@ -505,6 +509,7 @@ export type Theme = "light" | "dark";
 export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
+  allowedSagas: SagaIdentifier[];
 };
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;

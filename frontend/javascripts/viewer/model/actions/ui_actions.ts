@@ -1,4 +1,4 @@
-import type { OrthoView, Vector3 } from "viewer/constants";
+import type { OrthoView, SagaIdentifier, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAIJobModalState } from "viewer/view/action-bar/ai_job_modals/constants";
@@ -17,6 +17,8 @@ type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibi
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
 export type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type AllowSagaWhileBusyAction = ReturnType<typeof allowSagaWhileBusyAction>;
+type DisallowSagaWhileBusyAction = ReturnType<typeof disallowSagaWhileBusyAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
@@ -59,6 +61,8 @@ export type UiAction =
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
+  | AllowSagaWhileBusyAction
+  | DisallowSagaWhileBusyAction
   | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
@@ -164,6 +168,21 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
     value: {
       isBusy,
       reason,
+    },
+  }) as const;
+export const allowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
+  ({
+    type: "ALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
+    },
+  }) as const;
+
+export const disallowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
+  ({
+    type: "DISALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
     },
   }) as const;
 export const setIsWkInitializedAction = (isInitialized: boolean) =>

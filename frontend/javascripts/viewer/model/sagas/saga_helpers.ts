@@ -3,12 +3,9 @@ import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { call, fork, put, take, takeEvery } from "typed-redux-saga";
-import { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-import {
-  type SetBusyBlockingInfoAction,
-  setBusyBlockingInfoAction,
-} from "viewer/model/actions/ui_actions";
+import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Store } from "viewer/singletons";
@@ -52,22 +49,17 @@ export function* takeEveryUnlessBusy<P extends ActionPattern>(
 }
 
 // A little helper function executing a passed saga while setting wks busy state to busy with the passed reason.
-// Additionally, the saga can be executed while wk is already in a busy state, in case the current reason for being busy is in the white list.
-// If the current reason is not whitelisted the saga waits until wk is not busy anymore before proceeding with executing the passed saga
-// while making wk busy with the passed reason again.
-export function* enforceExecutionAsBusyBlocking<T>(
+// Additionally, the saga can be executed while wk is already in a busy state, in case the current saga's identifier is whitelisted.
+// If it is not whitelisted, it will wait until the busy state is available again.
+export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
   saga: () => Saga<T>,
   reason: string,
-  reasonWhitelist: string[] = [],
+  sagaIdentifier: SagaIdentifier,
 ): Saga<T> {
   let busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-  const isNotWhitelistedReason = () =>
-    reasonWhitelist.some((reason) => reason === busyInfo.reason) == null;
-  while (busyInfo.isBusy && isNotWhitelistedReason()) {
-    const blockingAction = (yield* take(
-      "SET_BUSY_BLOCKING_INFO_ACTION",
-    )) as SetBusyBlockingInfoAction;
-    busyInfo = blockingAction.value;
+  while (busyInfo.isBusy && !busyInfo.allowedSagas.includes(sagaIdentifier)) {
+    yield* take("SET_BUSY_BLOCKING_INFO_ACTION");
+    busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
   }
 
   if (!busyInfo.isBusy) {

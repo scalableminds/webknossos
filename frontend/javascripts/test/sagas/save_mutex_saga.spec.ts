@@ -438,6 +438,27 @@ describe("Save Mutex Saga", () => {
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       });
+
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should no longer try to continuously acquire the mutex when switching from ${annotationToolWithoutLiveCollabSupport.id} to Move Tool.`, async (context: WebknossosTestContext) => {
+        WkDevFlags.liveCollab = true;
+        await setupWebknossosForTestingWithRestrictions(context, true, true, true);
+        mockInitialBucketAndAgglomerateData(context);
+        // Switch to tool without live collab support.
+        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+        await sleep(100);
+        expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+        expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+        // Switch to move tool which has live collab support.
+        Store.dispatch(setToolAction(AnnotationTool.MOVE));
+        await sleep(1);
+        expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+        context.mocks.acquireAnnotationMutex.mockReset();
+        context.mocks.releaseAnnotationMutex.mockReset();
+        await sleep(1000);
+        // Due to move tool being active, the saga should not try to acquire the mutex.
+        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+      });
     },
   );
 

@@ -146,20 +146,28 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 }
 
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
-  console.log("restartMutexAcquiringSaga called");
-  if (mutexLogicState.runningMutexAcquiringSaga != null) {
+  const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
+  const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
+  const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
+  if (didStrategyChange && mutexLogicState.runningMutexAcquiringSaga != null) {
     yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
+    if (oldFetchingStrategy === MutexFetchingStrategy.Continuously) {
+      // Switching from continuously acquiring the mutex to ad-hoc mutex fetching. Thus, the mutex must be released.
+      yield* call(releaseMutex);
+    }
   }
-  mutexLogicState.runningMutexAcquiringSaga = yield* fork(
-    startSagaWithAppropriateMutexFetchingStrategy,
-    mutexLogicState,
-  );
+  if (didStrategyChange || mutexLogicState.runningMutexAcquiringSaga == null) {
+    mutexLogicState.fetchingStrategy = newFetchingStrategy;
+    mutexLogicState.runningMutexAcquiringSaga = yield* fork(
+      startSagaWithAppropriateMutexFetchingStrategy,
+      mutexLogicState,
+    );
+  }
 }
 
 function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
-  mutexLogicState.fetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
   console.log("Acquiring mutex fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(tryAcquireMutexAdHoc, mutexLogicState);

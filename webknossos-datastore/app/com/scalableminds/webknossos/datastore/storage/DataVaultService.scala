@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
-import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, ManagedS3Service}
 import play.api.libs.ws.WSClient
 
 import java.nio.file.Path
@@ -27,7 +27,8 @@ case class CredentializedUPath(upath: UPath, credential: Option[DataVaultCredent
 
 class DataVaultService @Inject()(ws: WSClient,
                                  config: DataStoreConfig,
-                                 remoteWebknossosClient: DSRemoteWebknossosClient)
+                                 remoteWebknossosClient: DSRemoteWebknossosClient,
+                                 managedS3Service: ManagedS3Service)
     extends LazyLogging
     with FoxImplicits {
 
@@ -35,7 +36,7 @@ class DataVaultService @Inject()(ws: WSClient,
     AlfuCache(maxCapacity = 100)
 
   def vaultPathFor(upath: UPath)(implicit ec: ExecutionContext): Fox[VaultPath] = {
-    val credentialOpt = findGlobalCredentialFor(Some(upath))
+    val credentialOpt = managedS3Service.findGlobalCredentialFor(Some(upath))
     vaultPathFor(CredentializedUPath(upath, credentialOpt))
   }
 
@@ -102,17 +103,6 @@ class DataVaultService @Inject()(ws: WSClient,
     resolveMagPath(magLocator, localDatasetDir, localLayerDir)
   }
 
-  private lazy val globalCredentials = {
-    val res = config.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-      new CredentialConfigReader(credentialConfig).getCredential
-    }
-    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
-    res
-  }
-
-  private def findGlobalCredentialFor(pathOpt: Option[UPath]): Option[DataVaultCredential] =
-    pathOpt.flatMap(path => globalCredentials.find(c => path.toString.startsWith(c.name)))
-
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
@@ -120,7 +110,7 @@ class DataVaultService @Inject()(ws: WSClient,
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)
-          case None             => findGlobalCredentialFor(magLocator.path).toFox
+          case None             => managedS3Service.findGlobalCredentialFor(magLocator.path).toFox
         }
     }
 
@@ -129,14 +119,14 @@ class DataVaultService @Inject()(ws: WSClient,
       case Some(credentialId) =>
         remoteWebknossosClient.getCredential(credentialId)
       case None =>
-        findGlobalCredentialFor(Some(attachment.path)).toFox
+        managedS3Service.findGlobalCredentialFor(Some(attachment.path)).toFox
     }
 
   def pathIsAllowedToAddDirectly(path: UPath): Boolean =
     if (path.isLocal)
       pathIsDataSourceLocal(path) || pathIsInLocalDirectoryWhitelist(path)
     else
-      !pathMatchesGlobalCredentials(path)
+      !managedS3Service.pathIsInManagedS3(path)
 
   private def pathIsDataSourceLocal(path: UPath): Boolean =
     path.isLocal && {
@@ -144,9 +134,6 @@ class DataVaultService @Inject()(ws: WSClient,
       val inWorkingDir = workingDir.resolve(path.toLocalPathUnsafe).toAbsolutePath.normalize
       !path.isAbsolute && inWorkingDir.startsWith(workingDir)
     }
-
-  private def pathMatchesGlobalCredentials(path: UPath): Boolean =
-    findGlobalCredentialFor(Some(path)).isDefined
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =
     path.isLocal &&

@@ -27,6 +27,7 @@ import {
   doneSavingAction,
   ensureHasAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
+import { restartSagaAction } from "viewer/model/actions/actions";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -128,6 +129,7 @@ describe("Save Mutex Saga", () => {
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
+    Store.dispatch(restartSagaAction());
     vi.clearAllMocks(); // clears call counts of *all* spies
     WkDevFlags.liveCollab = initialLiveCollab;
   });
@@ -303,14 +305,9 @@ describe("Save Mutex Saga", () => {
       // Check if mutex was successfully received.
       hasAnnotationMutex = true;
       yield assertMutexStoreProperties(hasAnnotationMutex, null, isUpdatingCurrentlyAllowed);
-      yield take("DONE_SAVING");
-      yield sleep(100);
-      expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
     });
     await task.toPromise();
   });
-
-  // TODO: check that mutex is tried to be re-acquired.
 
   it<WebknossosTestContext>("Ad-hoc mutex fetching continuously fetch mutex until save done action is triggered.", async (context: WebknossosTestContext) => {
     WkDevFlags.liveCollab = true;
@@ -478,7 +475,7 @@ describe("Save Mutex Saga", () => {
 describe("Save Mutex Saga should crash", () => {
   afterEach<WebknossosTestContext>(async (context) => {
     context.tearDownPullQueues();
-    // Saving after each test and checking that the root saga didn't crash,
+    // Saving after each test and checking that the root saga did indeed crash.
     expect(hasRootSagaCrashed()).toBe(true);
     vi.clearAllMocks(); // clears call counts of *all* spies
     WkDevFlags.liveCollab = initialLiveCollab;

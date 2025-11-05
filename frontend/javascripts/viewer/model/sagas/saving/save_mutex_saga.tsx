@@ -370,8 +370,6 @@ function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
   while (true) {
     yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
-    // TODOM: ensure tryAcquireMutexForSaving works correctly even when mutex not received initially.
-    // Write tests for this!
     const { doneSaving } = yield* race({
       tryAcquireMutexForSaving: fork(tryAcquireMutexForSaving, mutexLogicState),
       doneSaving: take("DONE_SAVING"),

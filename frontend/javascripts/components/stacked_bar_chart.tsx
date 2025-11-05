@@ -1,10 +1,12 @@
-import _ from "lodash";
+import sum from "lodash/sum";
+
 export const colors = {
   finished: "#52c41a",
   active: "#1890ff",
   open: "rgb(255, 85, 0)",
 };
 const indexToType = ["finished", "active", "open"];
+
 export default function StackedBarChart({ a, b, c }: { a: number; b: number; c: number }) {
   const total = a + b + c;
   const percentages = [a, b, c].map((el) => Math.ceil((el / total) * 100));
@@ -15,7 +17,7 @@ export default function StackedBarChart({ a, b, c }: { a: number; b: number; c: 
     p === 0 ? 0 : Math.max(minPercentage, p * bufferFactor),
   );
 
-  const upscaleFactor = 100 / _.sum(renderedPercentages);
+  const upscaleFactor = 100 / sum(renderedPercentages);
 
   renderedPercentages = renderedPercentages.map((p) => p * upscaleFactor);
   return (

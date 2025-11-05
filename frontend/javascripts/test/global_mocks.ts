@@ -140,6 +140,9 @@ vi.mock("antd", () => {
     Form: {
       Item: {},
     },
+    Typography: {
+      Text: {},
+    },
   };
 });
 

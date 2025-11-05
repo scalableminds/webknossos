@@ -4,14 +4,8 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
 import * as THREE from "three";
-import { type Euler, Matrix3, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
-import Constants, {
-  OrthoViews,
-  Vector3Indices,
-  Vector2Indices,
-  OrthoBaseRotations,
-} from "viewer/constants";
+import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -28,6 +22,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -194,7 +189,7 @@ class SectionLabeler {
     public readonly plane: OrthoView,
     thirdDimensionValue: number,
     public readonly activeMag: Vector3,
-    public readonly isFlipped: boolean,
+    public readonly isSwapped: boolean,
   ) {
     this.maxCoord = null;
     this.minCoord = null;
@@ -204,7 +199,7 @@ class SectionLabeler {
     this.fast3DCoordinateFunction = getFast3DCoordinateFn(
       this.plane,
       this.thirdDimensionValue,
-      isFlipped,
+      isSwapped,
     );
   }
 
@@ -483,24 +478,12 @@ class SectionLabeler {
     let [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     );
-    // if (window.wscale) {
-    //   scaleX = window.wscale[0];
-    //   scaleY = window.wscale[1];
+    // if (this.isSwapped) {
+    //   [scaleX, scaleY] = [scaleY, scaleX];
     // }
-    if (this.isFlipped) {
-      [scaleX, scaleY] = [scaleY, scaleX];
-    }
     if (scale) {
       [scaleX, scaleY] = scale;
     }
-    if (window.wscale) {
-      // Original scale is 1, 1, 0.39
-      // XY -> XZ -> 1, 1
-      // XZ -> XY -> 1, 0.39285714285714285
-      // YZ -> YZ _> 1, 0.39285714285714285
-      [scaleX, scaleY] = window.wscale;
-    }
-
     console.log("this.plane", this.plane);
     console.log(`scaleX=${scaleX}, scaleY=${scaleY}`);
 
@@ -547,6 +530,7 @@ class SectionLabeler {
     // Throw out 'thirdCoordinate' which is always the same, anyway.
     const transposed = Dimensions.transDim(coord3d, plane ?? this.plane);
     return [transposed[0], transposed[1]];
+    // return this.isSwapped ? [transposed[1], transposed[0]] : [transposed[0], transposed[1]];
   }
 
   getUnzoomedCentroid(): Vector3 {
@@ -587,52 +571,108 @@ class SectionLabeler {
   }
 }
 
-function eulerToNormal(e: Euler): ThreeVector3 {
-  const m = new Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromEuler(e));
-  const n = new ThreeVector3(0, 0, 1);
-  n.applyMatrix3(m).normalize();
-  return n;
-}
-
 export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
-): [OrthoView, boolean] {
-  if (originalPlane === "PLANE_XY") {
-    return ["PLANE_XZ", false];
-  }
-  if (originalPlane === "PLANE_XZ") {
-    return ["PLANE_XY", false];
-  }
-  if (originalPlane === "PLANE_YZ") {
-    return ["PLANE_YZ", true];
-  }
-  throw new Error("Unexpected input plane");
-
-  const originalNormal = eulerToNormal(OrthoBaseRotations[originalPlane]);
-  const transformedNormal = originalNormal
-    .clone()
-    .applyMatrix4(new THREE.Matrix4(...transform.affineMatrix))
-    .normalize();
-
-  const canonical: Record<OrthoView, ThreeVector3> = {
-    [OrthoViews.PLANE_XY]: new ThreeVector3(0, 0, 1),
-    [OrthoViews.PLANE_YZ]: new ThreeVector3(1, 0, 0),
-    [OrthoViews.PLANE_XZ]: new ThreeVector3(0, 1, 0),
-    [OrthoViews.TDView]: new ThreeVector3(1, 1, 1).normalize(),
+): [OrthoView, boolean /* swapped */, (scale: Vector3) => Vector2 /* scaleAdaptFn */] {
+  const canonicalBases: Record<
+    OrthoView,
+    { u: THREE.Vector3; v: THREE.Vector3; n: THREE.Vector3 }
+  > = {
+    [OrthoViews.PLANE_XY]: {
+      u: new THREE.Vector3(1, 0, 0),
+      v: new THREE.Vector3(0, 1, 0),
+      n: new THREE.Vector3(0, 0, 1),
+    },
+    [OrthoViews.PLANE_YZ]: {
+      u: new THREE.Vector3(0, 1, 0),
+      v: new THREE.Vector3(0, 0, 1),
+      n: new THREE.Vector3(1, 0, 0),
+    },
+    [OrthoViews.PLANE_XZ]: {
+      u: new THREE.Vector3(1, 0, 0),
+      v: new THREE.Vector3(0, 0, 1),
+      n: new THREE.Vector3(0, -1, 0),
+    },
   };
-  let bestView = OrthoViews.PLANE_XY;
+
+  const basis = canonicalBases[originalPlane];
+
+  const m = new THREE.Matrix4(
+    // @ts-ignore
+    ...invertAndTranspose(transform.affineMatrix),
+  );
+
+  console.log("base", basis);
+
+  // transform each basis vector
+  const u2 = basis.u.clone().applyMatrix4(m).normalize();
+  const v2 = basis.v.clone().applyMatrix4(m).normalize();
+  const n2 = basis.n.clone().applyMatrix4(m).normalize();
+
+  console.log("transformed base", { u2, v2, n2 });
+
+  // find which canonical plane the transformed normal aligns with
+  const canonicalNormals: Record<OrthoView, THREE.Vector3> = {
+    [OrthoViews.PLANE_XY]: new THREE.Vector3(0, 0, 1),
+    [OrthoViews.PLANE_YZ]: new THREE.Vector3(1, 0, 0),
+    [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
+  };
+
+  let bestView: OrthoView = OrthoViews.PLANE_XY;
   let bestDot = Number.NEGATIVE_INFINITY;
 
-  for (const [view, normal] of Object.entries(canonical)) {
-    const dot = Math.abs(transformedNormal.dot(normal as ThreeVector3));
+  for (const [view, normal] of Object.entries(canonicalNormals)) {
+    const dot = Math.abs(n2.dot(normal as THREE.Vector3));
     if (dot > bestDot) {
       bestDot = dot;
       bestView = view as OrthoView;
     }
   }
 
-  return bestView;
+  // determine if u/v got swapped within the plane
+  // (we can check orientation: n2 should ≈ u2 × v2)
+  // const cross1 = basis.u.clone().cross(basis.v).normalize();
+  // console.log("cross1", cross1);
+  // console.log("cross1.dot(basis.n)", cross1.dot(basis.n));
+
+  // const cross2 = u2.clone().cross(v2).normalize();
+  // console.log("cross2", cross1);
+  // console.log("cross2.dot(n2)", cross2.dot(n2));
+  // const swapped = Math.sign(cross1.dot(basis.n)) !== Math.sign(cross2.dot(n2));
+  // const swapped = cross1.dot(cross2) < 0;
+
+  // console.log("basis.u", basis.u);
+  // console.log("u2", u2);
+  const swapped = basis.u.dot(u2) === 0;
+  // console.log("v2.clone().normalize()", v2.clone().length());
+
+  const scaleAdaptFn = (scale: Vector3): Vector2 => {
+    const transposed = Dimensions.transDim(scale, originalPlane);
+    if (swapped) {
+      return [transposed[1], transposed[0]];
+    } else {
+      return [transposed[0], transposed[1]];
+    }
+  };
+
+  return [bestView, bestView === originalPlane && swapped, scaleAdaptFn];
+}
+
+export function mapTransformedPlane2(
+  originalPlane: OrthoView,
+  _transform: Transform,
+): [OrthoView, boolean] {
+  if (originalPlane === "PLANE_XY") {
+    return ["PLANE_XY", true];
+  }
+  if (originalPlane === "PLANE_XZ") {
+    return ["PLANE_YZ", true];
+  }
+  if (originalPlane === "PLANE_YZ") {
+    return ["PLANE_XZ", true];
+  }
+  throw new Error("Unexpected input plane");
 }
 
 export class TransformedSectionLabeler {
@@ -640,7 +680,8 @@ export class TransformedSectionLabeler {
   applyTransform: (pos: Vector3) => Vector3;
   applyInverseTransform: (pos: Vector3) => Vector3;
   readonly mappedPlane: OrthoView;
-  private readonly isFlipped: boolean;
+  private readonly isSwapped: boolean;
+  private scaleAdaptFn: (scale: Vector3) => Vector2;
 
   constructor(
     volumeTracingId: string,
@@ -650,7 +691,10 @@ export class TransformedSectionLabeler {
     private readonly transform: Transform,
   ) {
     this.assertOrthogonalTransform(transform);
-    [this.mappedPlane, this.isFlipped] = mapTransformedPlane(originalPlane, transform);
+    [this.mappedPlane, this.isSwapped, this.scaleAdaptFn] = mapTransformedPlane(
+      originalPlane,
+      transform,
+    );
 
     const thirdDimensionValue = getThirdDimValue(
       Dimensions.thirdDimensionForPlane(this.mappedPlane),
@@ -662,7 +706,7 @@ export class TransformedSectionLabeler {
       this.mappedPlane,
       thirdDimensionValue,
       activeMag,
-      this.isFlipped,
+      this.isSwapped,
     );
 
     this.applyTransform = transformPointUnscaled(this.transform);
@@ -723,15 +767,14 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    // const p = this.applyTransform(position);
-
-    let scale = this.base.get2DCoordinate(
+    console.log(
+      "global scale:",
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
-      this.originalPlane,
     );
-    if (this.isFlipped) {
-      scale = [scale[1], scale[0]];
-    }
+
+    const scale = this.scaleAdaptFn(
+      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
+    );
 
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
@@ -749,10 +792,10 @@ export class TransformedSectionLabeler {
 function getFast3DCoordinateFn(
   plane: OrthoView,
   thirdDimensionValue: number,
-  _isFlipped: boolean,
+  _isSwapped: boolean,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {
   let [u, v, w] = Dimensions.getIndices(plane);
-  // if (isFlipped) {
+  // if (_isSwapped) {
   //   [u, v] = [v, u];
   // }
   return (coordX, coordY, out) => {

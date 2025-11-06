@@ -575,10 +575,10 @@ export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
 ): [OrthoView, boolean /* swapped */, (scale: Vector3) => Vector2 /* adaptScaleFn */] {
-  const canonicalBases: Record<
-    OrthoView,
-    { u: THREE.Vector3; v: THREE.Vector3; n: THREE.Vector3 }
-  > = {
+  if (originalPlane === "TDView") {
+    throw new Error("Unexpected 3D view");
+  }
+  const canonicalBases = {
     [OrthoViews.PLANE_XY]: {
       u: new THREE.Vector3(1, 0, 0),
       v: new THREE.Vector3(0, 1, 0),
@@ -603,17 +603,12 @@ export function mapTransformedPlane(
     ...invertAndTranspose(transform.affineMatrix),
   );
 
-  console.log("base", basis);
-
   // transform each basis vector
   const u2 = basis.u.clone().applyMatrix4(m).normalize();
-  const v2 = basis.v.clone().applyMatrix4(m).normalize();
   const n2 = basis.n.clone().applyMatrix4(m).normalize();
 
-  console.log("transformed base", { u2, v2, n2 });
-
   // find which canonical plane the transformed normal aligns with
-  const canonicalNormals: Record<OrthoView, THREE.Vector3> = {
+  const canonicalNormals = {
     [OrthoViews.PLANE_XY]: new THREE.Vector3(0, 0, 1),
     [OrthoViews.PLANE_YZ]: new THREE.Vector3(1, 0, 0),
     [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
@@ -630,22 +625,7 @@ export function mapTransformedPlane(
     }
   }
 
-  // determine if u/v got swapped within the plane
-  // (we can check orientation: n2 should ≈ u2 × v2)
-  // const cross1 = basis.u.clone().cross(basis.v).normalize();
-  // console.log("cross1", cross1);
-  // console.log("cross1.dot(basis.n)", cross1.dot(basis.n));
-
-  // const cross2 = u2.clone().cross(v2).normalize();
-  // console.log("cross2", cross1);
-  // console.log("cross2.dot(n2)", cross2.dot(n2));
-  // const swapped = Math.sign(cross1.dot(basis.n)) !== Math.sign(cross2.dot(n2));
-  // const swapped = cross1.dot(cross2) < 0;
-
-  console.log("basis.u", basis.u);
-  console.log("u2", u2);
   const swapped = basis.u.dot(u2) === 0;
-  // console.log("v2.clone().normalize()", v2.clone().length());
 
   const adaptScaleFn = (scale: Vector3): Vector2 => {
     const transposed = Dimensions.transDim(scale, originalPlane);

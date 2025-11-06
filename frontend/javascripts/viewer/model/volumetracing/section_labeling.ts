@@ -671,7 +671,6 @@ export class TransformedSectionLabeler {
     activeMag: Vector3,
     private readonly transform: Transform,
   ) {
-    this.assertOrthogonalTransform(transform);
     [this.mappedPlane, this.isSwapped, this.adaptScaleFn] = mapTransformedPlane(
       originalPlane,
       transform,
@@ -703,17 +702,6 @@ export class TransformedSectionLabeler {
   // private applyInverseTransformList(list: Vector3[]): Vector3[] {
   //   return list.map((v) => this.applyInverseTransform(v));
   // }
-
-  private assertOrthogonalTransform(_m: Transform): void {
-    // todop
-    // Quick check for orthogonal ±1 rotation/flip matrices
-    // const shouldBeIdentity = Transform.multiply(m, Transform.transpose(m));
-    // const isOrtho = Transform.isCloseToIdentity(shouldBeIdentity);
-    // const hasValidEntries = m.flat().every((x) => Math.abs(x) === 0 || Math.abs(x) === 1);
-    // if (!isOrtho || !hasValidEntries) {
-    //   throw new Error("Transformation matrix must be an orthogonal ±1 rotation/flip/scale matrix");
-    // }
-  }
 
   // --- Delegated methods with coordinate adaptation ---
 

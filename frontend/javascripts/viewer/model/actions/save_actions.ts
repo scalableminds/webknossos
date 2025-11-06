@@ -18,6 +18,7 @@ export type PushSaveQueueTransaction = {
   items: UpdateAction[];
   transactionId: string;
 };
+export type NotifyAboutUpdatedBucketsAction = ReturnType<typeof notifyAboutUpdatedBucketsAction>;
 type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
@@ -50,6 +51,7 @@ export type SaveAction =
   | SaveNowAction
   | ShiftSaveQueueAction
   | DiscardSaveQueueAction
+  | NotifyAboutUpdatedBucketsAction
   | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
@@ -88,6 +90,9 @@ export const pushSaveQueueTransactionIsolated = (
     items: [item],
     transactionId: getUid(),
   }) as const;
+
+export const notifyAboutUpdatedBucketsAction = (count: number) =>
+  ({ type: "NOTIFY_ABOUT_UPDATED_BUCKETS", count }) as const;
 
 export const saveNowAction = () =>
   ({

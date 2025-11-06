@@ -97,6 +97,7 @@ import {
   refreshMeshesAction,
   removeMeshAction,
   updateCurrentMeshFileAction,
+  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
@@ -2758,14 +2759,17 @@ class DataApi {
 
   /**
    * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
-   * the currently visible segmentation layer will be used.
+   * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
    *
    * @example
-   * api.data.setSegmentColor(3, [0, 1, 1]);
+   * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string) {
+  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+    const state = Store.getState();
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
 
@@ -2780,6 +2784,23 @@ class DataApi {
         true,
       ),
     );
+
+    if (meshOpacity != null) {
+      if (meshOpacity < 0 || meshOpacity > 1) {
+        throw new Error(`meshOpacity must be between 0 and 1, but got ${meshOpacity}`);
+      }
+      if (
+        state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+          segmentId
+        ] != null
+      ) {
+        Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
+      } else {
+        throw new Error(
+          `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        );
+      }
+    }
   }
 }
 /**

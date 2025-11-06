@@ -1414,3 +1414,13 @@ export async function retryAsyncFunction<T>(
     }
   }
 }
+
+/**
+ * Converts a string to a boolean value.
+ * Returns false for invalid inputs.
+ */
+export function stringToBoolean(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  return false;
+}

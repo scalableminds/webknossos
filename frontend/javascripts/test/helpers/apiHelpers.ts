@@ -76,6 +76,7 @@ import type {
 } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import { __setFeatures } from "features";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -494,6 +495,8 @@ export async function setupWebknossosForTesting(
       updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
     },
   });
+
+  __setFeatures({});
 
   try {
     await Model.fetch(

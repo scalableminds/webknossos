@@ -434,11 +434,19 @@ export type AnnotationMutexInformation = {
 // on the server that is known to the user.
 // After successfully pulling and applying the latest updates from the server,
 // it must be updated to match that version.
+// Moreover, after successfully saving, it should also be updated.
 //
-// TODO: add that after saving the saved changes should also be store in RebaseRelevantAnnotationState.
-// TODO: add mini example
+// Mini example of a shared annotation with liveCollab enabled:
+// - user A adds a new node to tree 1 and saves.
+//   Meanwhile user B already added a node to another tree and already stored this on the server.
+// - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
+//   Then missing backend updates are pulled and applyied on top of that.
+//   - Update RebaseRelevantAnnotationState as the current state is a newest version stored on the server.
+//   Re-apply local changes of adding a node to tree 1 via reapplying the actions stored in the save queue.
+//   Now save the changes and as this is now in sync with the backend, update RebaseRelevantAnnotationState again.
+// - Synchronizing local update with those from the backend is done.
 //
-// Note: Unsaved local changes should never be included in the RebaseRelevantAnnotationState.
+// Note: Unsaved local changes should never be included in the RebaseRelevantAnnotationState!
 
 export type RebaseRelevantAnnotationState = {
   readonly annotationVersion: number;

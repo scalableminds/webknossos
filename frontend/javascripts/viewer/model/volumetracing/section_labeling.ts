@@ -478,14 +478,10 @@ class SectionLabeler {
     let [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     );
-    // if (this.isSwapped) {
-    //   [scaleX, scaleY] = [scaleY, scaleX];
-    // }
+
     if (scale) {
       [scaleX, scaleY] = scale;
     }
-    console.log("this.plane", this.plane);
-    console.log(`scaleX=${scaleX}, scaleY=${scaleY}`);
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -666,7 +662,7 @@ export class TransformedSectionLabeler {
 
   constructor(
     volumeTracingId: string,
-    private readonly originalPlane: OrthoView,
+    originalPlane: OrthoView,
     getThirdDimValue: (thirdDim: number) => number,
     activeMag: Vector3,
     private readonly transform: Transform,
@@ -692,16 +688,6 @@ export class TransformedSectionLabeler {
     this.applyTransform = transformPointUnscaled(this.transform);
     this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
   }
-
-  // --- Core coordinate helpers ---
-
-  // private applyTransformList(list: Vector3[]): Vector3[] {
-  //   return list.map((v) => this.applyTransform(v));
-  // }
-
-  // private applyInverseTransformList(list: Vector3[]): Vector3[] {
-  //   return list.map((v) => this.applyInverseTransform(v));
-  // }
 
   // --- Delegated methods with coordinate adaptation ---
 
@@ -736,11 +722,6 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    console.log(
-      "global scale:",
-      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
-    );
-
     let scale = this.adaptScaleFn(
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
@@ -764,9 +745,6 @@ function getFast3DCoordinateFn(
   _isSwapped: boolean,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {
   let [u, v, w] = Dimensions.getIndices(plane);
-  // if (_isSwapped) {
-  //   [u, v] = [v, u];
-  // }
   return (coordX, coordY, out) => {
     out[u] = coordX;
     out[v] = coordY;

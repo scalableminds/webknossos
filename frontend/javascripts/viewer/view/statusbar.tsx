@@ -16,7 +16,6 @@ import {
   type ActionDescriptor,
   getToolControllerForAnnotationTool,
 } from "viewer/controller/combinations/tool_controls";
-import { getUntransformedSegmentationPosition } from "viewer/controller/combinations/volume_handlers";
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,

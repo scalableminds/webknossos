@@ -11,6 +11,7 @@ import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
+import { IdentityTransform } from "viewer/constants";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
@@ -18,9 +19,8 @@ import {
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { IdentityTransform } from "viewer/constants";
+import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
 
 export type DisabledInfo = {
   isDisabled: boolean;

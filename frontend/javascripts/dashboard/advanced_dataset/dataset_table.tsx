@@ -6,8 +6,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Tag, Tooltip } from "antd";
-import { Space } from "antd/lib";
+import { Dropdown, type MenuProps, Space, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
@@ -65,8 +64,7 @@ type Props = {
   subfolders: FolderItem[];
   searchQuery: string;
   searchTags: Array<string>;
-  isUserAdmin: boolean;
-  isUserDatasetManager: boolean;
+  isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (datasetId: string) => Promise<void>;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
@@ -309,9 +307,10 @@ class DatasetRenderer {
             The storage may be zero because:
             <ul>
               <li>The storage hasn't been scanned yet</li>
-              <li>The data is streamed from outside sources</li>
-              <li>It’s counted in other datasets</li>
+              <li>The data is streamed from external sources</li>
+              <li>The data layers are already counted in other (linked) datasets</li>
               <li>The dataset belongs to another organization</li>
+              <li>The dataset is empty</li>
             </ul>
           </>
         }
@@ -447,9 +446,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
   // rendering). That's why it's not included in this.state (also it
   // would lead to infinite loops, too).
   currentPageData: RowRenderer[] = [];
-  getIsUserAdminOrDatasetManager(): boolean {
-    return this.props.isUserAdmin || this.props.isUserDatasetManager;
-  }
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
     const maybeSortedInfo: { sortedInfo: SorterResult<string> } | EmptyObject = // Clear the sorting exactly when the search box is initially filled
@@ -502,7 +498,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
-      this.getIsUserAdminOrDatasetManager()
+      this.props.isUserAdminOrDatasetManager
         ? datasets
         : datasets.filter((dataset) => dataset.isActive);
 
@@ -652,7 +648,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       },
     ];
     if (
-      this.getIsUserAdminOrDatasetManager() &&
+      this.props.isUserAdminOrDatasetManager &&
       context.usedStorageInOrga != null &&
       context.usedStorageInOrga > 0
     ) {

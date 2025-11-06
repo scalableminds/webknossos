@@ -52,6 +52,7 @@ import {
 } from "test/fixtures/hybridtracing_server_objects";
 import type { ElementClass, ServerTracing } from "types/api_types";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import { __setFeatures } from "features";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -376,6 +377,8 @@ export async function setupWebknossosForTesting(
     // @ts-ignore
     segmentMeshController: { meshesGroupsPerSegmentId: {} },
   });
+
+  __setFeatures({});
 
   try {
     await Model.fetch(

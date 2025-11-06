@@ -31,7 +31,9 @@ object PathStorageUsageResponse {
 
 case class PathPair(original: String, upath: UPath)
 
-class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
+class DSUsedStorageService @Inject()(config: DataStoreConfig,
+                                     dataVaultService: DataVaultService,
+                                     managedS3Service: ManagedS3Service)
     extends FoxImplicits
     with LazyLogging {
 
@@ -55,14 +57,8 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig, dataVaultService: 
           pathPair
       })
       // Check to only measure remote paths that are part of a vault that is configured.
-      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(
-        path =>
-          path.upath.isLocal || config.Datastore.DataVaults.credentials.exists(
-            vaultCredentialConfig =>
-              UPath
-                .fromString(vaultCredentialConfig.getString("name"))
-                .map(registeredPath => path.upath.startsWith(registeredPath))
-                .getOrElse(false)))
+      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(path =>
+        path.upath.isLocal || managedS3Service.pathIsInManagedS3(path.upath))
       vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
         dataVaultService.vaultPathFor(pathPair.upath))
       usedBytes <- Fox.fromFuture(

@@ -537,7 +537,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       prefix: String
   ): Fox[Unit] =
     for {
-      transferManager <- managedS3Service.transferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
+      transferManager <- managedS3Service.s3UploadTransferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )

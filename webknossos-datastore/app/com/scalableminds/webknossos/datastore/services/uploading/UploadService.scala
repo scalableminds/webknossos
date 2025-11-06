@@ -269,6 +269,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      _ <- Fox.runIf(!isFileKnown) {
+        runningUploadMetadataStore
+          .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
+          .flatMap(_ =>
+            runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
+                                              String.valueOf(totalChunkCount)))
+      }
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       alreadyNotifiedAboutExceedingLimitOpt <- runningUploadMetadataStore.find(
         redisKeyForReportedTooLargeUpload(uploadId))
@@ -296,17 +303,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             })
         }
       }
-      _ <- Fox.runIf(!isFileKnown) {
-        runningUploadMetadataStore
-          .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
-          .flatMap(_ =>
-            runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
-                                              String.valueOf(totalChunkCount)))
-      }
-    } yield
-      if (isNewChunk) {
+      _ <- Fox.runIf(isNewChunk) {
         try {
           val bytes = Files.readAllBytes(chunkFile.toPath)
+          if (bytes.length > currentChunkSize) {
+            throw new Exception(s"Chunk request currentChunkSize $currentChunkSize doesn’t match passed file length ${bytes.length}")
+          }
           this.synchronized {
             PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
             val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
@@ -324,7 +326,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             logger.warn(errorMsg)
             Fox.failure(errorMsg)
         }
-      } else Fox.successful(())
+      }
+    } yield ()
   }
 
   def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {

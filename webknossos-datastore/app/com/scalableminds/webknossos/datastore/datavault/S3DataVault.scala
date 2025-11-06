@@ -14,10 +14,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
   AnonymousCredentialsProvider,
-  AwsBasicCredentials,
   AwsCredentialsProvider,
   EnvironmentVariableCredentialsProvider,
-  StaticCredentialsProvider
 }
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.ResponseBytes
@@ -193,12 +191,7 @@ object S3DataVault {
 
   private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
     credentialOpt match {
-      case Some(s3AccessKeyCredential: S3AccessKeyCredential) =>
-        StaticCredentialsProvider.create(
-          AwsBasicCredentials.builder
-            .accessKeyId(s3AccessKeyCredential.accessKeyId)
-            .secretAccessKey(s3AccessKeyCredential.secretAccessKey)
-            .build())
+      case Some(s3AccessKeyCredential: S3AccessKeyCredential) => s3AccessKeyCredential.toCredentialsProvider
       case None if sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_ACCESS_KEY") =>
         EnvironmentVariableCredentialsProvider.create()
       case None =>

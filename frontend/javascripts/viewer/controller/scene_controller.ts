@@ -432,7 +432,7 @@ class SceneController {
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
-    this.annotationToolsGeometryGroup.visible = true; // todop id !== OrthoViews.TDView;
+    this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 
     const originalPosition = getPosition(flycam);

@@ -307,7 +307,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         try {
           val bytes = Files.readAllBytes(chunkFile.toPath)
           if (bytes.length > currentChunkSize) {
-            throw new Exception(s"Chunk request currentChunkSize $currentChunkSize doesn’t match passed file length ${bytes.length}")
+            throw new Exception(
+              s"Chunk request currentChunkSize $currentChunkSize doesn’t match passed file length ${bytes.length}")
           }
           this.synchronized {
             PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)

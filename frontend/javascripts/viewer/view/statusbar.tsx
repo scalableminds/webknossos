@@ -16,6 +16,7 @@ import {
   type ActionDescriptor,
   getToolControllerForAnnotationTool,
 } from "viewer/controller/combinations/tool_controls";
+import { getUntransformedSegmentationPosition } from "viewer/controller/combinations/volume_handlers";
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
@@ -42,7 +43,6 @@ import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
 import { CommandPalette } from "./components/command_palette";
-import { getUntransformedSegmentationPosition } from "viewer/controller/combinations/volume_handlers";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {

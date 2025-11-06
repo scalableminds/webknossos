@@ -17,12 +17,12 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
+import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
 import {
   type Transform,
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice

@@ -3,7 +3,7 @@ import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typogr
 import FormItem from "antd/es/form/FormItem";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
-import type { AffineTransformation, APIDataLayer } from "types/api_types";
+import type { APIDataLayer, AffineTransformation } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_TRANSFORMATION_LENGTH,

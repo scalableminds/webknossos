@@ -566,6 +566,29 @@ class SectionLabeler {
   }
 }
 
+const CANONICAL_BASES = {
+  [OrthoViews.PLANE_XY]: {
+    u: new THREE.Vector3(1, 0, 0),
+    v: new THREE.Vector3(0, 1, 0),
+    n: new THREE.Vector3(0, 0, 1),
+  },
+  [OrthoViews.PLANE_YZ]: {
+    u: new THREE.Vector3(0, 1, 0),
+    v: new THREE.Vector3(0, 0, 1),
+    n: new THREE.Vector3(1, 0, 0),
+  },
+  [OrthoViews.PLANE_XZ]: {
+    u: new THREE.Vector3(1, 0, 0),
+    v: new THREE.Vector3(0, 0, 1),
+    n: new THREE.Vector3(0, -1, 0),
+  },
+};
+const CANONICAL_NORMALS = {
+  [OrthoViews.PLANE_XY]: new THREE.Vector3(0, 0, 1),
+  [OrthoViews.PLANE_YZ]: new THREE.Vector3(1, 0, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
+};
+
 export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
@@ -573,25 +596,8 @@ export function mapTransformedPlane(
   if (originalPlane === "TDView") {
     throw new Error("Unexpected 3D view");
   }
-  const canonicalBases = {
-    [OrthoViews.PLANE_XY]: {
-      u: new THREE.Vector3(1, 0, 0),
-      v: new THREE.Vector3(0, 1, 0),
-      n: new THREE.Vector3(0, 0, 1),
-    },
-    [OrthoViews.PLANE_YZ]: {
-      u: new THREE.Vector3(0, 1, 0),
-      v: new THREE.Vector3(0, 0, 1),
-      n: new THREE.Vector3(1, 0, 0),
-    },
-    [OrthoViews.PLANE_XZ]: {
-      u: new THREE.Vector3(1, 0, 0),
-      v: new THREE.Vector3(0, 0, 1),
-      n: new THREE.Vector3(0, -1, 0),
-    },
-  };
 
-  const basis = canonicalBases[originalPlane];
+  const basis = CANONICAL_BASES[originalPlane];
 
   const m = new THREE.Matrix4(
     // @ts-ignore
@@ -603,16 +609,11 @@ export function mapTransformedPlane(
   const n2 = basis.n.clone().applyMatrix4(m).normalize();
 
   // find which canonical plane the transformed normal aligns with
-  const canonicalNormals = {
-    [OrthoViews.PLANE_XY]: new THREE.Vector3(0, 0, 1),
-    [OrthoViews.PLANE_YZ]: new THREE.Vector3(1, 0, 0),
-    [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
-  };
 
   let bestView: OrthoView = OrthoViews.PLANE_XY;
   let bestDot = Number.NEGATIVE_INFINITY;
 
-  for (const [view, normal] of Object.entries(canonicalNormals)) {
+  for (const [view, normal] of Object.entries(CANONICAL_NORMALS)) {
     const dot = Math.abs(n2.dot(normal as THREE.Vector3));
     if (dot > bestDot) {
       bestDot = dot;
@@ -631,7 +632,6 @@ export function mapTransformedPlane(
     }
   };
 
-  // bestView === originalPlane is probably incorrect
   return [bestView, bestView === originalPlane && swapped, adaptScaleFn];
 }
 
@@ -688,8 +688,6 @@ export class TransformedSectionLabeler {
     this.applyInverseTransform = transformPointUnscaled(invertTransform(this.transform));
   }
 
-  // --- Delegated methods with coordinate adaptation ---
-
   createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
     return this.base.createVoxelBuffer2D(minCoord2d, width, height, fillValue);
   }
@@ -703,7 +701,6 @@ export class TransformedSectionLabeler {
   }
 
   getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
-    // Buffer orientation could be left unchanged unless 2D plane transforms are needed.
     return this.base.getFillingVoxelBuffer2D(mode);
   }
 

@@ -522,11 +522,10 @@ class SectionLabeler {
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
 
-  public get2DCoordinate(coord3d: Vector3, plane?: OrthoView): Vector2 {
+  public get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is always the same, anyway.
-    const transposed = Dimensions.transDim(coord3d, plane ?? this.plane);
+    const transposed = Dimensions.transDim(coord3d, this.plane);
     return [transposed[0], transposed[1]];
-    // return this.isSwapped ? [transposed[1], transposed[0]] : [transposed[0], transposed[1]];
   }
 
   getUnzoomedCentroid(): Vector3 {

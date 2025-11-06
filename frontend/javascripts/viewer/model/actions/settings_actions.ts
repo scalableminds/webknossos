@@ -206,6 +206,8 @@ export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
+  // If true, the mapping saga automatically makes sure that the new mapping info is stored in RebaseRelevantAnnotationState
+  // for future rebases. Only set to true, if this info is really stored this was on the server.
   isVersionStoredOnServer: boolean,
   {
     mapping,

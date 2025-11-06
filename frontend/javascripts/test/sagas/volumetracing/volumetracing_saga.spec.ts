@@ -163,6 +163,7 @@ describe("VolumeTracingSaga", () => {
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
+      false,
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
@@ -218,6 +219,7 @@ describe("VolumeTracingSaga", () => {
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
+      false,
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
@@ -286,6 +288,7 @@ describe("VolumeTracingSaga", () => {
       OrthoViews.PLANE_XY,
       10,
       [1, 1, 1],
+      false,
     );
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);

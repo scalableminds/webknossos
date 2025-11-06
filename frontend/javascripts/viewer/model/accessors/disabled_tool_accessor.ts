@@ -9,7 +9,7 @@ import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_acce
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { isSkeletonLayerVisible } from "./skeletontracing_accessor";
+import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
 import {
   type AgglomerateState,

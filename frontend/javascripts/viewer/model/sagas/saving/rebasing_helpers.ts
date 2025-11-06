@@ -115,9 +115,19 @@ export function* addMissingSegmentsToLoadedMappings(
       ),
     );
     yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: mergedMapping as Mapping,
-      }),
+      setMappingAction(
+        volumeTracingId,
+        activeMapping.mappingName,
+        activeMapping.mappingType,
+        // Although this version is stored on the server, the used version to fetch the mapping info might be different
+        // from the version stored in RebaseRelevantAnnotationState. Thus, we update RebaseRelevantAnnotationState not via the
+        // isVersionStoredOnServer below. Instead the higher level function of the rebasing process take care of updating the
+        // RebaseRelevantAnnotationState.
+        false,
+        {
+          mapping: mergedMapping as Mapping,
+        },
+      ),
     );
   }
 }

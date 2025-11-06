@@ -47,7 +47,7 @@ export function* initializeMappingAndTool(
   // Activate agglomerate mapping and wait for finished mapping initialization
   // (unfortunately, that action is dispatched twice; once for the activation and once
   // for the changed BucketRetrievalSource). Ideally, this should be refactored away.
-  yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5"));
+  yield put(setMappingAction(tracingId, sampleHdf5AgglomerateName, "HDF5", false));
   yield take("FINISH_MAPPING_INITIALIZATION");
 
   yield take("FINISH_MAPPING_INITIALIZATION");

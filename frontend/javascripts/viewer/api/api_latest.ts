@@ -1735,7 +1735,9 @@ class DataApi {
       showLoadingIndicator,
       isMergerModeMapping,
     };
-    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
+    Store.dispatch(
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+    );
   }
 
   /**
@@ -1804,7 +1806,7 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
   }
 
   /**

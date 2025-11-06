@@ -100,7 +100,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       throw new Error("Invalid mapping type");
     }
 
-    this.props.setMapping(this.props.layerName, mappingName, mappingType, {
+    this.props.setMapping(this.props.layerName, mappingName, mappingType, false, {
       showLoadingIndicator: true,
     });
     // @ts-ignore

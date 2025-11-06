@@ -166,13 +166,15 @@ export default function* watchActivatedMappings(): Saga<void> {
     // The following saga will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
+  // Keep RebaseRelevantAnnotationState updated.
+  yield* takeEvery("SET_MAPPING", keepMappingInfoInUpdated);
 }
 
 export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
   const newMapping = new Map();
 
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, false, {
       mapping: newMapping,
     }),
   );
@@ -576,8 +578,7 @@ export function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
-  yield* put(snapshotMappingDataForNextRebaseAction(layerName));
+  yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping }));
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 
@@ -635,7 +636,7 @@ function* handleSetJsonMapping(
       `${exception}`,
     );
     console.error(exception);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, false));
     return;
   }
   const fetchedMapping = fetchedMappings[mappingName];
@@ -654,7 +655,7 @@ function* handleSetJsonMapping(
   }
 
   console.timeEnd("MappingSaga JSON");
-  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+  yield* put(setMappingAction(layerName, mappingName, mappingType, false, mappingProperties));
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
@@ -797,11 +798,18 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
       duration: 10,
     });
     console.error(errorMessage);
-    yield* put(setMappingAction(layerName, null, mappingType, {}));
-    yield* put(snapshotMappingDataForNextRebaseAction(layerName));
+    yield* put(setMappingAction(layerName, null, mappingType, true, {}));
 
     return false;
   }
 
   return true;
+}
+
+// On every setMappingAction make sure in case it only updates the mapping with info already stored on the server
+// the RebaseRelevantAnnotationState is updated as well.
+function* keepMappingInfoInUpdated(setMappingAction: SetMappingAction) {
+  if (setMappingAction.isVersionStoredOnServer) {
+    yield put(snapshotMappingDataForNextRebaseAction(setMappingAction.layerName));
+  }
 }

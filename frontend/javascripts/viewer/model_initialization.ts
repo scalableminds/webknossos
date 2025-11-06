@@ -890,11 +890,12 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
       Store.dispatch(
-        setMappingAction(effectiveLayerName, mappingName, mappingType, {
+        setMappingAction(effectiveLayerName, mappingName, mappingType, true, {
           showLoadingIndicator: true,
         }),
       );
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
+      // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
       Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
 
       if (agglomerateIdsToImport != null) {

@@ -206,6 +206,7 @@ export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
+  isVersionStoredOnServer: boolean,
   {
     mapping,
     mappingColors,
@@ -224,6 +225,7 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    isVersionStoredOnServer,
   }) as const;
 
 export const setMappingNameAction = (

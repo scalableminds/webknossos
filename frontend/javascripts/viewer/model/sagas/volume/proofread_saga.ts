@@ -51,10 +51,7 @@ import {
   type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
-import {
-  pushSaveQueueTransaction,
-  snapshotMappingDataForNextRebaseAction,
-} from "viewer/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -555,12 +552,17 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
     console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: splitMapping,
-      }),
+      setMappingAction(
+        volumeTracingId,
+        activeMapping.mappingName,
+        activeMapping.mappingType,
+        // As these split actions were already sent to the server, splitMapping is stored on the server already.
+        true,
+        {
+          mapping: splitMapping,
+        },
+      ),
     );
-    // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
-    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
   }
 
   const newMapping = yield* select(
@@ -763,12 +765,17 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   );
 
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: splitMapping,
-    }),
+    setMappingAction(
+      volumeTracingId,
+      activeMapping.mappingName,
+      activeMapping.mappingType,
+      // As these split actions were already sent to the server, splitMapping is stored on the server already.
+      true,
+      {
+        mapping: splitMapping,
+      },
+    ),
   );
-  // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
-  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   /* Reload meshes */
   const newMapping = yield* select(
@@ -1070,12 +1077,17 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: splitMapping,
-      }),
+      setMappingAction(
+        volumeTracingId,
+        activeMapping.mappingName,
+        activeMapping.mappingType,
+        // As these split actions were already sent to the server, splitMapping is stored on the server already.
+        true,
+        {
+          mapping: splitMapping,
+        },
+      ),
     );
-    // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
-    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
     console.log("finished updating the mapping after a min-cut");
   }
@@ -1235,12 +1247,17 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
   console.log("dispatch setMappingAction in proofreading saga");
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: mappingAfterSplit,
-    }),
+    setMappingAction(
+      volumeTracingId,
+      activeMapping.mappingName,
+      activeMapping.mappingType,
+      // As these split actions were already sent to the server, splitMapping is stored on the server already.
+      true,
+      {
+        mapping: mappingAfterSplit,
+      },
+    ),
   );
-  // As these split actions were already sent to the server, splitMapping is in sync with the server state. Thus, snapshot it for the next rebase.
-  yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
     call(getDataValue, targetPosition, mappingAfterSplit),
@@ -1625,7 +1642,7 @@ export function* updateMappingWithMerge(
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
   // Must be true if we know that the updated mapping info was already saved on the server.
-  isSyncedWithServer: boolean,
+  isVersionStoredOnServer: boolean,
 ) {
   const mergedMapping = yield* call(
     mergeAgglomeratesInMapping,
@@ -1655,13 +1672,16 @@ export function* updateMappingWithMerge(
     return;
   }
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-      mapping: mergedMapping,
-    }),
+    setMappingAction(
+      volumeTracingId,
+      activeMapping.mappingName,
+      activeMapping.mappingType,
+      isVersionStoredOnServer,
+      {
+        mapping: mergedMapping,
+      },
+    ),
   );
-  if (isSyncedWithServer) {
-    yield* put(snapshotMappingDataForNextRebaseAction(volumeTracingId));
-  }
 }
 
 function* gatherInfoForOperation(

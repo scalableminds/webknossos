@@ -573,6 +573,7 @@ function SegmentAndMousePosition() {
   const mousePosition = useWkSelector((state) => state.temporaryConfiguration.mousePosition);
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
+  const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const globalMousePositionRounded = useWkSelector((state) => {
     const { activeViewport } = state.viewModeData.plane;
 
@@ -587,7 +588,7 @@ function SegmentAndMousePosition() {
     return undefined;
   });
   const untransformedPos =
-    globalMousePositionRounded != null
+    globalMousePositionRounded != null && visibleSegmentationLayer != null
       ? getUntransformedSegmentationPosition(Store.getState(), globalMousePositionRounded)
       : [0, 0, 0];
 

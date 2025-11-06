@@ -574,7 +574,7 @@ class SectionLabeler {
 export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
-): [OrthoView, boolean /* swapped */, (scale: Vector3) => Vector2 /* scaleAdaptFn */] {
+): [OrthoView, boolean /* swapped */, (scale: Vector3) => Vector2 /* adaptScaleFn */] {
   const canonicalBases: Record<
     OrthoView,
     { u: THREE.Vector3; v: THREE.Vector3; n: THREE.Vector3 }
@@ -642,12 +642,12 @@ export function mapTransformedPlane(
   // const swapped = Math.sign(cross1.dot(basis.n)) !== Math.sign(cross2.dot(n2));
   // const swapped = cross1.dot(cross2) < 0;
 
-  // console.log("basis.u", basis.u);
-  // console.log("u2", u2);
+  console.log("basis.u", basis.u);
+  console.log("u2", u2);
   const swapped = basis.u.dot(u2) === 0;
   // console.log("v2.clone().normalize()", v2.clone().length());
 
-  const scaleAdaptFn = (scale: Vector3): Vector2 => {
+  const adaptScaleFn = (scale: Vector3): Vector2 => {
     const transposed = Dimensions.transDim(scale, originalPlane);
     if (swapped) {
       return [transposed[1], transposed[0]];
@@ -656,7 +656,8 @@ export function mapTransformedPlane(
     }
   };
 
-  return [bestView, bestView === originalPlane && swapped, scaleAdaptFn];
+  // bestView === originalPlane is probably incorrect
+  return [bestView, bestView === originalPlane && swapped, adaptScaleFn];
 }
 
 export function mapTransformedPlane2(
@@ -681,7 +682,7 @@ export class TransformedSectionLabeler {
   applyInverseTransform: (pos: Vector3) => Vector3;
   readonly mappedPlane: OrthoView;
   private readonly isSwapped: boolean;
-  private scaleAdaptFn: (scale: Vector3) => Vector2;
+  private adaptScaleFn: (scale: Vector3) => Vector2;
 
   constructor(
     volumeTracingId: string,
@@ -691,7 +692,7 @@ export class TransformedSectionLabeler {
     private readonly transform: Transform,
   ) {
     this.assertOrthogonalTransform(transform);
-    [this.mappedPlane, this.isSwapped, this.scaleAdaptFn] = mapTransformedPlane(
+    [this.mappedPlane, this.isSwapped, this.adaptScaleFn] = mapTransformedPlane(
       originalPlane,
       transform,
     );
@@ -772,7 +773,7 @@ export class TransformedSectionLabeler {
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
 
-    const scale = this.scaleAdaptFn(
+    let scale = this.adaptScaleFn(
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
 

@@ -1,8 +1,9 @@
 import { getRotationalTransformation } from "dashboard/dataset/dataset_rotation_form_item";
-import { IdentityTransform, OrthoView } from "viewer/constants";
+import type { CoordinateTransformation } from "types/api_types";
+import { IdentityTransform, type OrthoView } from "viewer/constants";
 import { combineCoordinateTransformations } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { Transform } from "viewer/model/helpers/transformation_helpers";
+import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { mapTransformedPlane as originalMapTransformedPlane } from "viewer/model/volumetracing/section_labeling";
 import { describe, expect, it } from "vitest";
 
@@ -75,7 +76,7 @@ describe("TransformedSectionLabeler", () => {
         ],
         type: "affine" as const,
       },
-    ];
+    ] as CoordinateTransformation[];
 
     const rotationalTransform = combineCoordinateTransformations(
       coordinateTransformations,
@@ -146,7 +147,7 @@ describe("TransformedSectionLabeler", () => {
           [0, 0, 0, 1],
         ],
       },
-    ];
+    ] as CoordinateTransformation[];
 
     const rotationalTransform = combineCoordinateTransformations(
       coordinateTransformations,
@@ -168,5 +169,77 @@ describe("TransformedSectionLabeler", () => {
       false,
       [2, 0],
     ]);
+  });
+
+  // Does not work yet
+  it.skip("[L4] Rotation by 90deg around all axes should be handled correctly", async () => {
+    const coordinateTransformations = [
+      {
+        type: "affine",
+        matrix: [
+          [1, 0, 0, -1529],
+          [0, 1, 0, -1478],
+          [0, 0, 1, -1476],
+          [0, 0, 0, 1],
+        ],
+      },
+      {
+        type: "affine",
+        matrix: [
+          [1, 0, 0, 0],
+          [0, 0, -1, 0],
+          [0, 1, 0, 0],
+          [0, 0, 0, 1],
+        ],
+      },
+      {
+        type: "affine",
+        matrix: [
+          [0, 0, 1, 0],
+          [0, 1, 0, 0],
+          [-1, 0, 0, 0],
+          [0, 0, 0, 1],
+        ],
+      },
+      {
+        type: "affine",
+        matrix: [
+          [0, -1, 0, 0],
+          [1, 0, 0, 0],
+          [0, 0, 1, 0],
+          [0, 0, 0, 1],
+        ],
+      },
+      {
+        type: "affine",
+        matrix: [
+          [1, 0, 0, 1529],
+          [0, 1, 0, 1478],
+          [0, 0, 1, 1476],
+          [0, 0, 0, 1],
+        ],
+      },
+    ] as CoordinateTransformation[];
+
+    const rotationalTransform = combineCoordinateTransformations(
+      coordinateTransformations,
+      [11, 19, 28],
+    );
+
+    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual([
+      "PLANE_YZ",
+      false,
+      [0, 1],
+    ]);
+    // expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
+    //   "PLANE_XY",
+    //   false,
+    //   [2, 1],
+    // ]);
+    // expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
+    //   "PLANE_XZ",
+    //   true,
+    //   [2, 0],
+    // ]);
   });
 });

@@ -292,6 +292,13 @@ class PlaneMaterialFactory {
           Identity4x4,
         ),
       };
+      const bbox = Utils.computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
+      this.uniforms[`${layerName}_bboxMin`] = {
+        value: bbox.min,
+      };
+      this.uniforms[`${layerName}_bboxMax`] = {
+        value: bbox.max,
+      };
     }
 
     for (const name of getSanitizedColorLayerNames()) {

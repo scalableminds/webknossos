@@ -32,7 +32,7 @@ import {
 import sampleVoxelMapToMagnification, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
-import { Model, Store } from "viewer/singletons";
+import { Model } from "viewer/singletons";
 import type { BoundingBoxObject, VolumeTracing } from "viewer/store";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
@@ -279,15 +279,16 @@ export function* labelWithVoxelBuffer2D(
   }
 }
 
-export function createSectionLabeler(
+export function* createSectionLabeler(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledMags: Vector3,
   getThirdDimValue: (thirdDim: number) => number,
-): SectionLabeler | TransformedSectionLabeler {
-  const state = Store.getState();
-  const { dataset } = state;
-  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+): Saga<SectionLabeler | TransformedSectionLabeler> {
+  const dataset = yield* select((state) => state.dataset);
+  const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
+
+  const { nativelyRenderedLayerName } = datasetConfiguration;
   const layer = getLayerByName(dataset, volumeTracing.tracingId);
   const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
 

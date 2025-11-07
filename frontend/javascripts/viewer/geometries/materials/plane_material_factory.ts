@@ -12,7 +12,6 @@ import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "
 import {
   getColorLayers,
   getDataLayers,
-  getDatasetBoundingBox,
   getElementClass,
   getEnabledLayers,
   getLayerByName,
@@ -216,12 +215,6 @@ class PlaneMaterialFactory {
       },
       planeID: {
         value: OrthoViewValues.indexOf(this.planeID),
-      },
-      bboxMin: {
-        value: new ThreeVector3(0, 0, 0),
-      },
-      bboxMax: {
-        value: new ThreeVector3(0, 0, 0),
       },
       renderBucketIndices: {
         value: false,
@@ -574,15 +567,6 @@ class PlaneMaterialFactory {
         (storeState) => storeState.viewModeData.plane.activeViewport === this.planeID,
         (isMouseInActiveViewport) => {
           this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
-        },
-        true,
-      ),
-      listenToStoreProperty(
-        (storeState) => storeState.dataset,
-        (dataset) => {
-          const { min, max } = getDatasetBoundingBox(dataset);
-          this.uniforms.bboxMin.value.set(...min);
-          this.uniforms.bboxMax.value.set(...max);
         },
         true,
       ),

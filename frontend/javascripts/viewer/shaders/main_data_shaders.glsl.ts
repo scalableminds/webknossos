@@ -137,8 +137,6 @@ uniform bool selectiveVisibilityInProofreading;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
-uniform vec3 bboxMin;
-uniform vec3 bboxMax;
 uniform vec3 positionOffset;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;

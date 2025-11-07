@@ -2,9 +2,9 @@ import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
 import { useFetch } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
 import _ from "lodash";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -69,16 +69,7 @@ export default function VoxelValueTooltip() {
 
   const positionToPick = pinnedPosition ?? globalMousePosition;
 
-  const [debouncedPosition, setDebouncedPosition] = useState(positionToPick);
-
-  useEffect(() => {
-    const handler = _.debounce(() => {
-      setDebouncedPosition(positionToPick);
-    }, 50);
-
-    handler();
-    return handler.cancel;
-  }, [positionToPick]);
+  const debouncedPosition = useDebouncedValue(positionToPick, 50);
 
   const tooltipPosition = useWkSelector((state) =>
     positionToPick ? calculateMaybePlaneScreenPos(state, positionToPick, orthoView) : null,

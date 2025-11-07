@@ -7,7 +7,7 @@ import { chunk3 } from "viewer/model/helpers/chunk";
 
 import mjs from "mjs";
 
-const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Float32Array);
+const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Float32Array); // todo_c can we change this
 
 type Vector3Like = Vector3 | Float32Array;
 type Vector2Like = Vector2 | Float32Array;
@@ -38,10 +38,10 @@ const M4x4 = {
   transformPointsAffine(
     m: Matrix4x4,
     points: number[] | Float32Array,
-    r?: Float32Array | Int32Array | null | undefined,
-  ): Float32Array | Int32Array {
+    r?: Float32Array | Int32Array | Array<number> | null | undefined,
+  ): Float32Array | Int32Array | Array<number> {
     if (r == null) {
-      r = new Float32Array(points.length);
+      r = new Array(points.length);
     }
 
     const m00 = m[0];
@@ -84,10 +84,10 @@ const M4x4 = {
   transformPoints(
     m: Matrix4x4,
     points: number[],
-    r?: Float32Array | null | undefined,
-  ): Float32Array {
+    r?: Float32Array | Array<number> | null | undefined,
+  ): Float32Array | Array<number> {
     if (r == null) {
-      r = new Float32Array(points.length);
+      r = new Array(points.length);
     }
 
     for (let i = 0; i < points.length; i += 3) {
@@ -111,7 +111,7 @@ const M4x4 = {
 
   inverse(mat: Matrix4x4, dest?: Matrix4x4): Matrix4x4 {
     if (dest == null) {
-      dest = new Float32Array(16);
+      dest = new Array(16) as Vector16;
     }
 
     const a00 = mat[0];
@@ -187,7 +187,7 @@ const M4x4 = {
       return m;
     }
 
-    if (r == null) r = new Float32Array(16);
+    if (r == null) r = new Array(16) as Vector16;
 
     r[0] = m[0];
     r[1] = m[4];
@@ -209,9 +209,12 @@ const M4x4 = {
     return r;
   },
 
-  extractTranslation(m: Matrix4x4, r?: Float32Array | null | undefined): Float32Array {
+  extractTranslation(
+    m: Matrix4x4,
+    r?: Float32Array | Vector3 | null | undefined,
+  ): Float32Array | Vector3 {
     if (r == null) {
-      r = new Float32Array(3);
+      r = new Array(3) as Vector3;
     }
 
     r[0] = m[12];
@@ -262,9 +265,9 @@ const _tmpVec: Vector3 = [0, 0, 0];
 
 // @ts-ignore TS claims that the implementation doesn't match the overloading
 function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
-function round(v: Vector3Like, r?: Float32Array | null | undefined) {
+function round(v: Vector3Like, r?: Vector3Like | null | undefined) {
   if (r == null) {
-    r = new Float32Array(3);
+    r = new Array(3) as Vector3;
   }
 
   r[0] = Math.round(v[0]);
@@ -275,8 +278,8 @@ function round(v: Vector3Like, r?: Float32Array | null | undefined) {
 
 // @ts-ignore TS claims that the implementation doesn't match the overloading
 function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
-function divide3(a: Float32Array, k: Float32Array, r?: Float32Array) {
-  if (r == null) r = new Float32Array(3);
+function divide3(a: Float32Array, k: Float32Array, r?: Vector3Like) {
+  if (r == null) r = new Array(3) as Vector3;
   r[0] = a[0] / k[0];
   r[1] = a[1] / k[1];
   r[2] = a[2] / k[2];
@@ -285,7 +288,7 @@ function divide3(a: Float32Array, k: Float32Array, r?: Float32Array) {
 
 function scale3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
 function scale3(a: Vector3Like, k: Vector3Like, r?: Vector3Like): Vector3Like {
-  if (r == null) r = new Float32Array(3);
+  if (r == null) r = new Array(3) as Vector3;
   r[0] = a[0] * k[0];
   r[1] = a[1] * k[1];
   r[2] = a[2] * k[2];

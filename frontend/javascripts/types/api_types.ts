@@ -330,6 +330,7 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
+  suppressManyBucketUpdatesWarning?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -760,6 +761,7 @@ export type APIFeatureToggles = {
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
+  readonly bucketSaveWarningThreshold: number;
   readonly defaultToLegacyBindings: boolean;
   readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;

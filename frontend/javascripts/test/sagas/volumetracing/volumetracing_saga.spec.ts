@@ -1,3 +1,5 @@
+import update from "immutability-helper";
+
 import { it, expect, describe, beforeEach, afterEach } from "vitest";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { take, put, call } from "redux-saga/effects";
@@ -22,6 +24,8 @@ import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumet
 import { Model, Store } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
+import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
+import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 
@@ -41,6 +45,14 @@ const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
+
+const mockedDataset = update(defaultVolumeState.dataset, {
+  dataSource: {
+    dataLayers: {
+      $set: [sampleTracingLayer],
+    },
+  },
+});
 
 describe("VolumeTracingSaga", () => {
   describe("With Saga Middleware", () => {
@@ -114,12 +126,13 @@ describe("VolumeTracingSaga", () => {
         ),
       ),
     );
-    const startEditingSaga = execCall(expect, saga.next());
-    startEditingSaga.next();
+    const createSectionLabelerSaga = execCall(expect, saga.next());
+    createSectionLabelerSaga.next(); // kick off saga
+    createSectionLabelerSaga.next(mockedDataset);
 
-    // Pass position
-    const layer = startEditingSaga.next([1, 1, 1]).value;
-    expect(layer.plane).toBe(OrthoViews.PLANE_XY);
+    // Pass datasource config
+    const labeller = createSectionLabelerSaga.next({ nativelyRenderedLayerName: undefined }).value;
+    expect(labeller.getPlane()).toBe(OrthoViews.PLANE_XY);
   });
 
   it("should add values to volume layer (saga test)", () => {

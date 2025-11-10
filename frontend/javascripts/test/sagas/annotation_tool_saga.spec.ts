@@ -38,7 +38,7 @@ import {
   DrawToolController,
   EraseToolController,
   FillCellToolController,
-  PickCellToolController,
+  VoxelPipetteToolController,
   QuickSelectToolController,
   ProofreadToolController,
   LineMeasurementToolController,
@@ -56,7 +56,7 @@ describe("Annotation Tool Saga", () => {
     DrawToolController,
     EraseToolController,
     FillCellToolController,
-    PickCellToolController,
+    VoxelPipetteToolController,
     QuickSelectToolController,
     ProofreadToolController,
     LineMeasurementToolController,
@@ -98,7 +98,7 @@ describe("Annotation Tool Saga", () => {
     cycleTool();
     expect(FillCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(PickCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(VoxelPipetteToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
     expect(QuickSelectToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
@@ -139,10 +139,10 @@ describe("Annotation Tool Saga", () => {
     expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(2);
     cycleTool(AnnotationTool.FILL_CELL);
     expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(2);
-    cycleTool(AnnotationTool.PICK_CELL);
+    cycleTool(AnnotationTool.VOXEL_PIPETTE);
     expect(FillCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool(AnnotationTool.BOUNDING_BOX);
-    expect(PickCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(VoxelPipetteToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool(AnnotationTool.PROOFREAD);
     expect(BoundingBoxToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool(AnnotationTool.LINE_MEASUREMENT);

@@ -174,38 +174,6 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
-  it("Dataset Paths", async () => {
-    const datasetId = await getTestDatasetId();
-    const paths = await fetch(
-      `/api/datastores/localhost/datasources/${datasetId}/paths?key=something-secure`,
-    );
-    const pathsJson = await paths.json();
-
-    // Dataset paths are absolute, we will relativize them here to make the snapshot stable
-    const makeRelative = (path: string) =>
-      path.split("Organization_X")[1] ? "Organization_X" + path.split("Organization_X")[1] : path;
-
-    interface MagLink {
-      mag: {
-        path: string;
-        realPath: string;
-      };
-    }
-
-    interface PathInfo {
-      magLinkInfos: MagLink[];
-    }
-
-    pathsJson.forEach((pathInfo: PathInfo) =>
-      pathInfo.magLinkInfos.forEach((magLink: MagLink) => {
-        magLink.mag.path = makeRelative(magLink.mag.path);
-        magLink.mag.realPath = makeRelative(magLink.mag.realPath);
-      }),
-    );
-
-    expect(pathsJson).toMatchSnapshot();
-  });
-
   /**
    * WARNING: This test creates a side effect by uploading and saving a dataset in your binaryData folder.
    * There is no clean up after the test, and the dataset will remain after each test run.

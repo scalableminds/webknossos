@@ -1,4 +1,5 @@
-import { select, take, takeEvery } from "typed-redux-saga";
+import { take, takeEvery } from "typed-redux-saga";
+import { select } from "viewer/model/sagas/effect-generators";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import type { WebknossosState } from "viewer/store";
 

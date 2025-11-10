@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
@@ -24,7 +24,8 @@ import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    managedS3Service: ManagedS3Service,
+    dataVaultService: DataVaultService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val actorSystem: ActorSystem
@@ -130,7 +131,12 @@ class DataSourceService @Inject()(
                              absoluteRawLayerPath: Path,
                              dataLayer: DataLayer,
                              mag: MagLocator) = {
-    val resolvedMagPath = resolveMagPath(absoluteDatasetPath, absoluteRealLayerPath, mag)
+    val resolvedMagPath = dataVaultService.resolveMagPath(
+      mag,
+      absoluteDatasetPath,
+      absoluteRealLayerPath,
+      absoluteRealLayerPath.getFileName.toString,
+    )
     if (resolvedMagPath.isRemote) {
       MagPathInfo(dataLayer.name, mag.mag, resolvedMagPath, resolvedMagPath, hasLocalData = false)
     } else {
@@ -146,14 +152,6 @@ class DataSourceService @Inject()(
                   hasLocalData = isDatasetLocal)
     }
   }
-
-  private def resolveMagPath(datasetPath: Path, layerPath: Path, mag: MagLocator): UPath =
-    remoteSourceDescriptorService.resolveMagPath(
-      datasetPath,
-      layerPath,
-      layerPath.getFileName.toString,
-      mag
-    )
 
   private def resolveRelativePath(basePath: Path, relativePath: Path): Path =
     if (relativePath.isAbsolute) {
@@ -293,11 +291,21 @@ class DataSourceService @Inject()(
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
-        _ = dataLayer.mags.foreach(mag =>
-          remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
         _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
-          remoteSourceDescriptorService.removeVaultFromCache(attachment)))
+          dataVaultService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
+  def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
+    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath)
+    val managedS3Paths = paths.filter(managedS3Service.pathIsInManagedS3)
+    for {
+      _ <- Fox.serialCombined(localPaths)(PathUtils.deleteDirectoryRecursively(_).toFox)
+      _ <- managedS3Service.deletePaths(managedS3Paths)
+    } yield ()
+  }
+
+  def existsOnDisk(dataSourceId: DataSourceId): Boolean =
+    Files.exists(dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
 }

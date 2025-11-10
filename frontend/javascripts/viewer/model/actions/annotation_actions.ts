@@ -77,6 +77,9 @@ export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshActio
 export type SetOthersMayEditForAnnotationAction = ReturnType<
   typeof setOthersMayEditForAnnotationAction
 >;
+export type ShowManyBucketUpdatesWarningAction = ReturnType<
+  typeof showManyBucketUpdatesWarningAction
+>;
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
@@ -371,6 +374,11 @@ export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>
   ({
     type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
     othersMayEdit,
+  }) as const;
+
+export const showManyBucketUpdatesWarningAction = () =>
+  ({
+    type: "SHOW_MANY_BUCKET_UPDATES_WARNING",
   }) as const;
 
 export const dispatchMaybeFetchMeshFilesAsync = async (

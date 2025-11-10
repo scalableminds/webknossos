@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import constants from "viewer/constants";
@@ -291,4 +291,35 @@ export function useIsMounted() {
  */
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
   return useSelector(fn, equalityFn);
+}
+
+/**
+ * Hook that returns a debounced version of the passed value.
+ * @param value
+ * @param delay - debounce delay
+ * @returns Debounced value
+ */
+export function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  const debouncedSetter = useMemo(
+    () =>
+      _.debounce((val: T) => {
+        setDebouncedValue(val);
+      }, delay),
+    [delay],
+  );
+
+  useEffect(() => {
+    debouncedSetter(value);
+  }, [value, debouncedSetter]);
+
+  // Cancel debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSetter.cancel();
+    };
+  }, [debouncedSetter]);
+
+  return debouncedValue;
 }

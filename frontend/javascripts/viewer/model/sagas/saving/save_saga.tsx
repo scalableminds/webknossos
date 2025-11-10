@@ -1,19 +1,24 @@
 import { getUpdateActionLog } from "admin/rest_api";
+import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
-import { call, fork, put, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getLayerByName, getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setVersionNumberAction } from "viewer/model/actions/save_actions";
+import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
+import {
+  type NotifyAboutUpdatedBucketsAction,
+  setVersionNumberAction,
+} from "viewer/model/actions/save_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
 import { updateLocalHdf5Mapping } from "../volume/mapping_saga";
@@ -31,11 +36,40 @@ export function* setupSavingToServer(): Saga<void> {
   yield* takeEvery("INITIALIZE_ANNOTATION_WITH_TRACINGS", setupSavingForAnnotation);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
+  yield* takeEvery("WK_READY", watchForNumberOfBucketsInSaveQueue);
 }
 
 const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+// interval at which the number of buckets in save queue is checked
+const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS = 10 * 1000;
+// sliding time window for which the number of buckets in save queue is summed up
+const CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS = 120 * 1000;
+
+function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
+  const bucketSaveWarningThreshold = features().bucketSaveWarningThreshold;
+  let bucketsForCurrentInterval = 0;
+  let currentBucketCounts: Array<number> = [];
+  const bucketCountArrayLength = Math.floor(
+    CHECK_NUMBER_OF_BUCKETS_SLIDING_WINDOW_MS / CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS,
+  );
+  yield* takeEvery("NOTIFY_ABOUT_UPDATED_BUCKETS", (action: NotifyAboutUpdatedBucketsAction) => {
+    bucketsForCurrentInterval += action.count;
+  });
+  while (true) {
+    yield* delay(CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS);
+    const sumOfBuckets = _.sum(currentBucketCounts);
+    if (sumOfBuckets > bucketSaveWarningThreshold) {
+      Store.dispatch(showManyBucketUpdatesWarningAction());
+    }
+    currentBucketCounts.push(bucketsForCurrentInterval);
+    if (currentBucketCounts.length > bucketCountArrayLength) {
+      currentBucketCounts.shift();
+    }
+    bucketsForCurrentInterval = 0;
+  }
+}
 
 function* watchForSaveConflicts(): Saga<void> {
   function* checkForNewVersion(): Saga<boolean> {

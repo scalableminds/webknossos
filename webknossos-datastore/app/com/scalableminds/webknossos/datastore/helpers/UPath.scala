@@ -179,7 +179,7 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
 
   override def basename: String = segments.findLast(_.nonEmpty).getOrElse("")
 
-  override def parent: UPath =
+  override def parent: RemoteUPath =
     // < 2 check to avoid deleting “authority” (hostname:port)
     if (segments.length < 2) this else RemoteUPath(scheme, segments.dropRight(1))
 
@@ -196,8 +196,11 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def toAbsolute: UPath = this
 
   def startsWith(other: UPath): Boolean = other match {
-    case otherRemote: RemoteUPath =>
-      this.normalize.toString.startsWith(otherRemote.normalize.toString)
+    case otherRemote: RemoteUPath => {
+      val thisNormalized = this.normalize
+      val otherNormalized = otherRemote.normalize
+      thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherNormalized.segments)
+    }
     case _ => false
   }
 

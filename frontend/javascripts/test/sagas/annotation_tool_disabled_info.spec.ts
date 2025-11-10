@@ -6,7 +6,7 @@ import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accesso
 import type { CoordinateTransformation } from "types/api_types";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(
-  (name) => name !== AnnotationTool.PICK_CELL,
+  (name) => name !== AnnotationTool.VOXEL_PIPETTE,
 ) as AnnotationTool[];
 
 const zoomedInInitialState = update(initialState, {
@@ -152,6 +152,7 @@ describe("Annotation Tool Disabled Info", () => {
       AnnotationTool.MOVE,
       AnnotationTool.LINE_MEASUREMENT,
       AnnotationTool.AREA_MEASUREMENT,
+      AnnotationTool.VOXEL_PIPETTE,
     ] as AnnotationTool[];
     const disabledInfo = getDisabledInfoForTools(rotatedState);
     for (const tool of Object.values(AnnotationTool)) {

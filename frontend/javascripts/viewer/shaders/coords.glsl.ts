@@ -78,7 +78,7 @@ export const getUnrotatedWorldCoordUVW: ShaderModule = {
 
 export const isOutsideOfBoundingBox: ShaderModule = {
   code: `
-    bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {
+    bool isOutsideOfBoundingBox(vec3 worldCoordUVW, vec3 bboxMin, vec3 bboxMax) {
       vec3 worldCoord = transDim(worldCoordUVW);
       return (
         worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||

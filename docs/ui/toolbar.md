@@ -125,6 +125,9 @@ And many other tools. For detailed information, see the [volume annotation guide
 ![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
 **Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
 
+![Voxel Pipette Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
+**Voxel Pipette**: Hover over your data to see the exact values at a specific voxel. A tooltip will be shown that shows the intensity values for color layers and the segment id for the visible segmentation layer. The tooltip can be pinned by clicking so that the values can be copied. Pressing shift while clicking will activate the hovered segment id. This is alternative to selecting the segment ID from the [Segments list](./segments_list.md) sidebar or context menu.
+
 ![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
 **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
 

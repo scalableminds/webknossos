@@ -192,6 +192,7 @@ class JobController @Inject()(jobDAO: JobDAO,
         _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
+          "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "dataset_directory_name" -> dataset.directoryName,
@@ -475,6 +476,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,

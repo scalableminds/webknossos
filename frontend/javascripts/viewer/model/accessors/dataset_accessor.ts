@@ -542,6 +542,24 @@ function _getColorLayers(dataset: APIDataset): Array<DataLayerType> {
 }
 export const getColorLayers = memoizeOne(_getColorLayers);
 
+function _getOrderedColorLayers(dataset: APIDataset, colorLayerOrder: string[]) {
+  const colorLayers = getColorLayers(dataset);
+
+  // Sort based on the provided order, keeping unlisted layers at the end
+  const ordered = [...colorLayers].sort((a, b) => {
+    const indexA = colorLayerOrder.indexOf(a.name);
+    const indexB = colorLayerOrder.indexOf(b.name);
+
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  return ordered;
+}
+export const getOrderedColorLayers = memoizeOne(_getOrderedColorLayers);
+
 function _getEnabledLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,

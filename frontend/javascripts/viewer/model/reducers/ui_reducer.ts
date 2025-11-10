@@ -175,6 +175,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         lastMeasuredPosition: action.position,
       });
     }
+    case "SET_VOXEL_PIPETTE_TOOLTIP_PINNED_POSITION": {
+      return updateKey2(state, "uiInformation", "voxelPipetteToolInfo", {
+        pinnedPosition: action.position,
+      });
+    }
     case "SET_IS_MEASURING": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
         isMeasuring: action.isMeasuring,

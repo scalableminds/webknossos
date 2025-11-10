@@ -163,12 +163,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for { _ <- run(query.update(url)) } yield ()
   }
 
-  def updateReportUsedStorageEnabledByName(name: String, reportUsedStorageEnabled: Boolean): Fox[Unit] =
-    for {
-      _ <- run(
-        q"UPDATE webknossos.dataStores SET reportUsedStorageEnabled = $reportUsedStorageEnabled WHERE name = $name".asUpdate)
-    } yield ()
-
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.dataStores

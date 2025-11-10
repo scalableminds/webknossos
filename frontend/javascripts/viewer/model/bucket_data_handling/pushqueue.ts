@@ -6,7 +6,7 @@ import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import { createCompressedUpdateBucketActions } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import Store from "viewer/store";
 import { escalateErrorAction } from "../actions/actions";
-import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { notifyAboutUpdatedBucketsAction, pushSaveQueueTransaction } from "../actions/save_actions";
 import type { UpdateActionWithoutIsolationRequirement } from "../sagas/volume/update_actions";
 
 // Only process the PushQueue after there was no user interaction (or bucket modification due to
@@ -155,7 +155,7 @@ class PushQueue {
         createCompressedUpdateBucketActions(batch),
       );
       Store.dispatch(pushSaveQueueTransaction(items));
-
+      Store.dispatch(notifyAboutUpdatedBucketsAction(items.length));
       this.compressingBucketCount -= batch.length;
     } catch (error) {
       // See other usage of escalateErrorAction for a detailed explanation.

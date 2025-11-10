@@ -25,7 +25,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
 
     const onClose = () => {
       Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-      if (neverShowAgain) {
+      if (neverShowAgain && activeUser) {
         updateNovelUserExperienceInfos(activeUser, {
           suppressManyBucketUpdatesWarning: true,
         });

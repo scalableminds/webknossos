@@ -196,11 +196,7 @@ class SectionLabeler {
     const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeMag[thirdDim]);
 
-    this.fast3DCoordinateFunction = getFast3DCoordinateFn(
-      this.plane,
-      this.thirdDimensionValue,
-      isSwapped,
-    );
+    this.fast3DCoordinateFunction = getFast3DCoordinateFn(this.plane, this.thirdDimensionValue);
   }
 
   updateArea(globalPos: Vector3): void {
@@ -475,13 +471,8 @@ class SectionLabeler {
     ];
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    let [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-    );
-
-    if (scale) {
-      [scaleX, scaleY] = scale;
-    }
+    const [scaleX, scaleY] =
+      scale ?? this.get2DCoordinate(getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale));
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -589,6 +580,10 @@ const CANONICAL_NORMALS = {
   [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
 };
 
+function isAlmostZero(num: number, threshold: number = 0.01) {
+  return Math.abs(num) < threshold;
+}
+
 export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
@@ -604,7 +599,7 @@ export function mapTransformedPlane(
     ...invertAndTranspose(transform.affineMatrix),
   );
 
-  // transform each basis vector
+  // transform basis vectors
   const u2 = basis.u.clone().applyMatrix4(m).normalize();
   const n2 = basis.n.clone().applyMatrix4(m).normalize();
 
@@ -621,7 +616,7 @@ export function mapTransformedPlane(
     }
   }
 
-  const swapped = basis.u.dot(u2) === 0;
+  const swapped = isAlmostZero(basis.u.dot(u2));
 
   const adaptScaleFn = (scale: Vector3): Vector2 => {
     const transposed = Dimensions.transDim(scale, originalPlane);
@@ -633,22 +628,6 @@ export function mapTransformedPlane(
   };
 
   return [bestView, bestView === originalPlane && swapped, adaptScaleFn];
-}
-
-export function mapTransformedPlane2(
-  originalPlane: OrthoView,
-  _transform: Transform,
-): [OrthoView, boolean] {
-  if (originalPlane === "PLANE_XY") {
-    return ["PLANE_XY", true];
-  }
-  if (originalPlane === "PLANE_XZ") {
-    return ["PLANE_YZ", true];
-  }
-  if (originalPlane === "PLANE_YZ") {
-    return ["PLANE_XZ", true];
-  }
-  throw new Error("Unexpected input plane");
 }
 
 export class TransformedSectionLabeler {
@@ -738,7 +717,6 @@ export class TransformedSectionLabeler {
 function getFast3DCoordinateFn(
   plane: OrthoView,
   thirdDimensionValue: number,
-  _isSwapped: boolean,
 ): (coordX: number, coordY: number, out: Vector3 | Float32Array) => void {
   let [u, v, w] = Dimensions.getIndices(plane);
   return (coordX, coordY, out) => {

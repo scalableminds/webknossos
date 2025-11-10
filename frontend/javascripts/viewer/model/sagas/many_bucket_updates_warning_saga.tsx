@@ -3,6 +3,7 @@ import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
 import { select, takeEvery } from "typed-redux-saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { WebknossosState } from "viewer/store";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
 
@@ -12,7 +13,8 @@ function* manyBucketUpdatesWarning(): Saga<void> {
     showWarningToastInThisSession = value;
   };
   const suppressWarningToast = yield* select(
-    (state) => state.activeUser.novelUserExperienceInfos.suppressManyBucketUpdatesWarning,
+    (state: WebknossosState) =>
+      state.activeUser?.novelUserExperienceInfos.suppressManyBucketUpdatesWarning,
   );
   if (suppressWarningToast) {
     return;

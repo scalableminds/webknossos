@@ -96,6 +96,7 @@ class UserService @Inject()(conf: WkConf,
              isActive: Boolean,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean,
+             isDatasetManager: Boolean,
              isOrganizationOwner: Boolean,
              isEmailVerified: Boolean): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
@@ -124,7 +125,7 @@ class UserService @Inject()(conf: WkConf,
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
         isOrganizationOwner,
-        isDatasetManager = false,
+        isDatasetManager = isDatasetManager,
         isDeactivated = !isActive,
         isUnlisted = false,
         lastTaskTypeId = None
@@ -142,7 +143,12 @@ class UserService @Inject()(conf: WkConf,
         .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
         .shiftBox
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
-        joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
+        joinOrganization(originalUser,
+                         organizationId,
+                         autoActivate = true,
+                         isAdmin = true,
+                         isDatasetManager = false,
+                         isUnlisted = true)
       } else Fox.successful(())
     } yield ()
 
@@ -150,6 +156,7 @@ class UserService @Inject()(conf: WkConf,
                        organizationId: String,
                        autoActivate: Boolean,
                        isAdmin: Boolean,
+                       isDatasetManager: Boolean,
                        isUnlisted: Boolean = false,
                        isOrganizationOwner: Boolean = false): Fox[User] =
     for {
@@ -163,7 +170,7 @@ class UserService @Inject()(conf: WkConf,
         loginInfo = loginInfo,
         lastActivity = Instant.now,
         isAdmin = isAdmin,
-        isDatasetManager = false,
+        isDatasetManager = isDatasetManager,
         isDeactivated = !autoActivate,
         lastTaskTypeId = None,
         isOrganizationOwner = isOrganizationOwner,

@@ -570,7 +570,6 @@ CREATE TABLE webknossos.invites(
   _organization TEXT NOT NULL,
   autoActivate BOOLEAN NOT NULL,
   isAdmin BOOLEAN NOT NULL DEFAULT FALSE,
-  isOrganizationOwner BOOLEAN NOT NULL DEFAULT FALSE,
   isDatasetManager BOOLEAN NOT NULL DEFAULT FALSE,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),

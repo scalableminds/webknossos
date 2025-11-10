@@ -290,15 +290,18 @@ class AuthenticationController @Inject()(
                          isEmailVerified: Boolean = false): Fox[User] = {
     val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
-      user <- userService.insert(organization._id,
-                                 email,
-                                 firstName,
-                                 lastName,
-                                 autoActivate,
-                                 passwordInfo,
-                                 isAdmin = false,
-                                 isOrganizationOwner = false,
-                                 isEmailVerified = isEmailVerified) ?~> "user.creation.failed"
+      user <- userService.insert(
+        organization._id,
+        email,
+        firstName,
+        lastName,
+        autoActivate,
+        passwordInfo,
+        isAdmin = inviteBox.map(_.isAdmin).getOrElse(false),
+        isDatasetManager = inviteBox.map(_.isDatasetManager).getOrElse(false),
+        isOrganizationOwner = false,
+        isEmailVerified = isEmailVerified
+      ) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -417,7 +420,8 @@ class AuthenticationController @Inject()(
       _ <- userService.joinOrganization(request.identity,
                                         organization._id,
                                         autoActivate = invite.autoActivate,
-                                        isAdmin = false)
+                                        isAdmin = invite.isAdmin,
+                                        isDatasetManager = invite.isDatasetManager)
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
@@ -434,8 +438,13 @@ class AuthenticationController @Inject()(
   def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
     implicit request =>
       for {
-        _ <- Fox.serialCombined(request.body.recipients)(recipient =>
-          inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
+        _ <- Fox.serialCombined(request.body.recipients)(
+          recipient =>
+            inviteService.inviteOneRecipient(recipient,
+                                             request.identity,
+                                             request.body.autoActivate,
+                                             request.body.isAdmin,
+                                             request.body.isDatasetManager))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
@@ -860,6 +869,7 @@ class AuthenticationController @Inject()(
                       isActive = true,
                       passwordHasher.hash(signUpData.password),
                       isAdmin = true,
+                      isDatasetManager = false,
                       isOrganizationOwner = true,
                       isEmailVerified = false
                     ) ?~> "user.creation.failed"
@@ -973,7 +983,10 @@ class AuthenticationController @Inject()(
 
 case class InviteParameters(
     recipients: List[String],
-    autoActivate: Boolean
+    autoActivate: Boolean,
+    isAdmin: Boolean,
+    isDatasetManager: Boolean
+    // TODO team roles
 )
 
 object InviteParameters {

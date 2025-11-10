@@ -81,6 +81,7 @@ class OrganizationController @Inject()(
                                           org._id,
                                           autoActivate = true,
                                           isAdmin = true,
+                                          isDatasetManager = false,
                                           isOrganizationOwner = true)
         _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
@@ -179,7 +180,11 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
-        user <- userService.joinOrganization(user, organization._id, autoActivate = true, isAdmin = false)
+        user <- userService.joinOrganization(user,
+                                             organization._id,
+                                             autoActivate = true,
+                                             isAdmin = false,
+                                             isDatasetManager = false)
       } yield Ok(user._id.toString)
     }
 

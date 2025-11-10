@@ -206,7 +206,7 @@ class Drawing {
     while (ranges.length) {
       const r = ranges.pop();
       if (r == null) {
-        throw new Error("Array is exptected to be not empty.");
+        throw new Error("Array is expected to be not empty.");
       }
       let minX = r[0];
       let maxX = r[1];

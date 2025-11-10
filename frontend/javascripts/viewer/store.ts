@@ -514,6 +514,7 @@ type UiInformation = {
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };
   readonly navbarHeight: number;
   readonly contextInfo: ContextMenuInfo;
 };
